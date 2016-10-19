@@ -32,6 +32,7 @@ public class LVeGLearner extends Recorder {
 	private static Logger logger = null;
 	
 	public final static String KEY_TAG_SET = "tags";
+	public final static String TOKEN_UNKNOWN = "UNK";
 	
 	private final static boolean LVG = true;
 	private final static String ID_TRAINING = "training";

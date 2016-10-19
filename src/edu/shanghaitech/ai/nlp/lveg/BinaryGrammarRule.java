@@ -15,8 +15,8 @@ public class BinaryGrammarRule extends GrammarRule implements Comparable<Object>
 	/**
 	 * the IDs of the two right-hand side nonterminals
 	 */
-	protected short rhsLeft;
-	protected short rhsRight;
+	protected short lchild;
+	protected short rchild;
 	
 	
 	public BinaryGrammarRule() {
@@ -24,26 +24,33 @@ public class BinaryGrammarRule extends GrammarRule implements Comparable<Object>
 	}
 	
 	
-	public BinaryGrammarRule(short lhs, short rhsLeft, short rhsRight) {
+	public BinaryGrammarRule(short lhs, short lchild, short rchild) {
 		this.lhs = lhs;
-		this.rhsLeft = rhsLeft;
-		this.rhsRight = rhsRight;
-		
+		this.lchild = lchild;
+		this.rchild = rchild;
+	}
+	
+	
+	/**
+	 * Constructor with the rule weight initialized.
+	 * 
+	 * @param lhs    id of the tag on the left hand side
+	 * @param lchild id of the tag, representing the left child
+	 * @param rchild id of the tag, representing the right child
+	 * @param flag   to distinguish from the above constructor (without weight initialized)
+	 */
+	public BinaryGrammarRule(short lhs, short lchild, short rchild, boolean flag) {
+		this.lhs = lhs;
+		this.lchild = lchild;
+		this.rchild = rchild;
 		initializeWeight();
 	}
 	
 	
-	public BinaryGrammarRule(short lhs, short rhsLeft, short rhsRight, boolean flag) {
+	public BinaryGrammarRule(short lhs, short lchild, short rchild, GaussianMixture weight) {
 		this.lhs = lhs;
-		this.rhsLeft = rhsLeft;
-		this.rhsRight = rhsRight;
-	}
-	
-	
-	public BinaryGrammarRule(short lhs, short rhsLeft, short rhsRight, GaussianMixture weight) {
-		this.lhs = lhs;
-		this.rhsLeft = rhsLeft;
-		this.rhsRight = rhsRight;
+		this.lchild = lchild;
+		this.rchild = rchild;
 		this.weight = weight;
 	}
 	
@@ -56,9 +63,9 @@ public class BinaryGrammarRule extends GrammarRule implements Comparable<Object>
 			Set<GaussianDistribution> set0 = new HashSet<GaussianDistribution>();
 			Set<GaussianDistribution> set1 = new HashSet<GaussianDistribution>();
 			Set<GaussianDistribution> set2 = new HashSet<GaussianDistribution>();
-			set0.add(new GaussianDistribution());
-			set1.add(new GaussianDistribution());
-			set2.add(new GaussianDistribution());
+			set0.add(new GaussianDistribution(LVeGLearner.dim));
+			set1.add(new GaussianDistribution(LVeGLearner.dim));
+			set2.add(new GaussianDistribution(LVeGLearner.dim));
 			map.put(Unit.P, set0);
 			map.put(Unit.LC, set1);
 			map.put(Unit.RC, set2);
@@ -67,23 +74,23 @@ public class BinaryGrammarRule extends GrammarRule implements Comparable<Object>
 	}
 
 
-	public short getRhsLeft() {
-		return rhsLeft;
+	public short getLchild() {
+		return lchild;
 	}
 
 
-	public void setRhsLeft(short rhsLeft) {
-		this.rhsLeft = rhsLeft;
+	public void setLchild(short lchild) {
+		this.lchild = lchild;
 	}
 
 
-	public short getRhsRight() {
-		return rhsRight;
+	public short getRchild() {
+		return rchild;
 	}
 
 
-	public void setRhsRight(short rhsRight) {
-		this.rhsRight = rhsRight;
+	public void setRchild(short rchild) {
+		this.rchild = rchild;
 	}
 
 
@@ -95,7 +102,7 @@ public class BinaryGrammarRule extends GrammarRule implements Comparable<Object>
 	
 	@Override
 	public int hashCode() {
-		return (lhs << 16) ^ (rhsLeft << 8) ^ (rhsRight);
+		return (lhs << 16) ^ (lchild << 8) ^ (rchild);
 	}
 
 	
@@ -105,7 +112,7 @@ public class BinaryGrammarRule extends GrammarRule implements Comparable<Object>
 		
 		if (o instanceof BinaryGrammarRule) {
 			BinaryGrammarRule rule = (BinaryGrammarRule) o;
-			if (lhs == rule.lhs && rhsLeft == rule.rhsLeft && rhsRight == rule.rhsRight) {
+			if (lhs == rule.lhs && lchild == rule.lchild && rchild == rule.rchild) {
 				return true;
 			}
 		}
@@ -119,17 +126,17 @@ public class BinaryGrammarRule extends GrammarRule implements Comparable<Object>
 		BinaryGrammarRule rule = (BinaryGrammarRule) o;
 		if (lhs < rule.lhs) { return -1; }
 		if (lhs > rule.lhs) { return 1; }
-		if (rhsLeft < rule.rhsLeft) { return -1; }
-		if (rhsLeft > rule.rhsLeft) { return 1; }
-		if (rhsRight < rule.rhsRight) { return -1; }
-		if (rhsRight > rule.rhsRight) { return 1; }
+		if (lchild < rule.lchild) { return -1; }
+		if (lchild > rule.lchild) { return 1; }
+		if (rchild < rule.rchild) { return -1; }
+		if (rchild > rule.rchild) { return 1; }
 		return 0;
 	}
 	
 	
 	@Override
 	public String toString() {
-		return "BinaryGrammarRule [P: " + lhs +", LC: " + rhsLeft + ", RC: " + rhsRight + "]";
+		return "BinaryGrammarRule [P: " + lhs +", LC: " + lchild + ", RC: " + rchild + "]";
 	}
 	
 }

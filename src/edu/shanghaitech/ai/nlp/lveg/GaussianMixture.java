@@ -19,7 +19,8 @@ import edu.shanghaitech.ai.nlp.util.MethodUtil;
  * </p>
  * TODO Method {@code mulAndMarginlize()} can be implemented efficiently by hacks. But when we 
  * take consideration into the further parallel optimization, explicitly implementing each step 
- * in order may be a better choice, which is exactly what we did.
+ * in order may be a better choice, which is exactly what I am doing now (DONE I have implement
+ * -ed specifically for the calculation of the inside score). 
  * </p>
  * TODO Implement the comparison between GMs.
  * </p>
@@ -171,19 +172,24 @@ public class GaussianMixture {
 			gausses.addAll(value);
 		}
 	}
-	
+
 	
 	/**
 	 * Make a copy of the instance.
 	 * 
+	 * @param deep boolean value, indicating deep (true) or shallow (false) copy
 	 * @return
 	 */
-	public GaussianMixture copy() {
+	public GaussianMixture copy(boolean deep) {
 		GaussianMixture gm = new GaussianMixture();
 		gm.ncomponent = ncomponent;
 		gm.weights.addAll(weights);
 		for (Map<String, Set<GaussianDistribution>> component : mixture) {
-			gm.mixture.add(copy(component));
+			if (deep) {
+				gm.mixture.add(copy(component));
+			} else {
+				gm.mixture.add(component);
+			}
 		}
 		return gm;
 	}
@@ -220,6 +226,32 @@ public class GaussianMixture {
 	
 	
 	/**
+	 * Replace the existing keys with a new key.
+	 * 
+	 * @param gm     mixture of gaussians
+	 * @param newkey the new key
+	 * @return
+	 */
+	public static GaussianMixture replaceKeys(GaussianMixture gm, String newkey) {
+		GaussianMixture agm = new GaussianMixture();
+		agm.weights.addAll(gm.weights);
+		for (Map<String, Set<GaussianDistribution>> component : gm.mixture) {
+			Map<String, Set<GaussianDistribution>> acomponent = 
+					new HashMap<String, Set<GaussianDistribution>>();
+			Set<GaussianDistribution> gausses = new HashSet<GaussianDistribution>();
+			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
+				gausses.addAll(gaussian.getValue());
+			}
+			acomponent.put(newkey, gausses);
+			agm.mixture.add(acomponent);
+			agm.ncomponent++;
+		}
+		
+		return agm;
+	}
+	
+	
+	/**
 	 * Multiply two gaussian mixtures and marginlize the specific portions of the result.
 	 * 
 	 * @param gm0  one mixture of gaussians
@@ -229,8 +261,8 @@ public class GaussianMixture {
 	 */
 	public static GaussianMixture mulAndMargin(GaussianMixture gm0, GaussianMixture gm1, List<String> keys) {
 		if (gm0 == null && gm1 == null) { return null; }
-		if (gm0 == null) { return gm1.copy(); }
-		if (gm1 == null) { return gm0.copy(); }
+		if (gm0 == null) { return gm1.copy(true); }
+		if (gm1 == null) { return gm0.copy(true); }
 		
 		GaussianMixture gm = multiply(gm0, gm1);
 		
@@ -377,23 +409,63 @@ public class GaussianMixture {
 	
 
 	/**
-	 * Multiply two Gaussian mixtures, whose variables (node IDs) may or may not overlap.
+	 * Problem-specific multiplication (calculation of the inside score). Inside score 
+	 * of the current non-terminal relates to the inside scores (mixture of gaussians) 
+	 * of the children only partially, since the gaussians are afterwards marginalized
+	 * and thus only weights matter.
 	 * 
-	 * @param m
-	 * @return the product
+	 * @param gm   mixture of gaussians that needs to be marginalized
+	 * @param key  which denotes the portion, to be marginalized, of the component
+	 * @param deep deep (true) or shallow (false) copy of the instance
+	 * @return 
 	 * 
 	 */
-	public GaussianMixture multiply(GaussianMixture gm) {
-		// TODO
-		return null;
+	public GaussianMixture multiplyForInsideScore(GaussianMixture gm, String key, boolean deep) {
+		GaussianMixture amixture = this.copy(deep);
+		double sum = MethodUtil.sum(gm.weights);
+		for (int i = 0; i < ncomponent; i++) {
+			amixture.weights.set(i, amixture.weights.get(i) * sum);
+			amixture.mixture.get(i).remove(key);
+		}
+		return amixture;
 	}
 	
 	
+	/**
+	 * Eval the mixture of gaussians, treat the component as 1 if it is 
+	 * empty, and sample its value otherwise.
+	 * 
+	 * @return
+	 */
+	public double eval() {
+		double ret = 0.0;
+		for (int i = 0; i < ncomponent; i++) {
+			Map<String, Set<GaussianDistribution>> component = mixture.get(i);
+			if (component.size() != 0) {
+				System.err.println("You may not wanna see this message now.");
+			} else {
+				ret += weights.get(i);
+			}
+		}
+		return ret;
+	}
+	
+	
+	/**
+	 * Get the bias term of the mixture of gaussians.
+	 * 
+	 * @return
+	 */
 	public double getBias() {
 		return bias;
 	}
 
 
+	/**
+	 * Set the bias term of the mixture of gaussians.
+	 * 
+	 * @param bias constant in double
+	 */
 	public void setBias(double bias) {
 		this.bias = bias;
 	}

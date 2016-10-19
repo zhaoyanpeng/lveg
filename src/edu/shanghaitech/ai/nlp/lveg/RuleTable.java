@@ -80,9 +80,9 @@ public class RuleTable<T> implements Serializable {
 	public void increaseCount(GrammarRule key, double increment) {
 		GaussianMixture count = getCount(key);
 		if (count == null) {
-			GaussianMixture mog = new GaussianMixture((short) 0);
-			mog.add(increment);
-			setCount(key, mog);
+			GaussianMixture gm = new GaussianMixture();
+			gm.add(increment);
+			setCount(key, gm);
 			return;
 		}
 		count.add(increment);
@@ -92,9 +92,9 @@ public class RuleTable<T> implements Serializable {
 	public void increaseCount(GrammarRule key, GaussianMixture increment) {
 		GaussianMixture count = getCount(key);
 		if (count == null) {
-			GaussianMixture mog = new GaussianMixture((short) 0);
-			mog.add(increment);
-			setCount(key, mog);
+			GaussianMixture gm = new GaussianMixture();
+			gm.add(increment);
+			setCount(key, gm);
 			return;
 		}
 		count.add(increment);

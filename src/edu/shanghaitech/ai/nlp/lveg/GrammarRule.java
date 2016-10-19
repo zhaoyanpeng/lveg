@@ -2,7 +2,7 @@ package edu.shanghaitech.ai.nlp.lveg;
 
 import java.io.Serializable;
 
-public class GrammarRule implements Serializable {
+public abstract class GrammarRule implements Serializable {
 
 	/**
 	 * 
@@ -35,9 +35,7 @@ public class GrammarRule implements Serializable {
 	}
 	
 	
-	public boolean isUnary() {
-		return false;
-	}
+	public abstract boolean isUnary();
 	
 	
 	public short getLhs() {

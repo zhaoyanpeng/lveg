@@ -17,7 +17,7 @@ import edu.shanghaitech.ai.nlp.syntax.State;
  */
 public class MethodUtil {
 	
-	private static Random random = new Random(0/*LVeGLearner.randomseed*/);
+	private static Random random = new Random(LVeGLearner.randomseed);
 	
 	
 	public static void isParentEqualToChild(StateTreeList stateTreeList) {
@@ -148,6 +148,15 @@ public class MethodUtil {
 			strs.add(String.format(format, d));
 		}
 		return strs;
+	}
+	
+	
+	public static double sum(List<Double> list) {
+		double sum = 0.0;
+		for (Double d : list) {
+			sum += d;
+		}
+		return sum;
 	}
 	
 	

@@ -15,9 +15,11 @@ public class RuleTableTest {
 		GrammarRule rule0 = new UnaryGrammarRule((short) 1, (short) 2, GrammarRule.GENERAL);
 		GrammarRule rule1 = new UnaryGrammarRule((short) 1, (short) 2, GrammarRule.GENERAL);
 		GrammarRule rule5 = new UnaryGrammarRule((short) 1, (short) 2, GrammarRule.RHSPACE);	
+		GrammarRule rule8 = new UnaryGrammarRule((short) 1, (short) 2);	
 		
 		GrammarRule rule3 = new BinaryGrammarRule((short) 1, (short) 2, (short) 3, false);
 		GrammarRule rule4 = new BinaryGrammarRule((short) 1, (short) 2, (short) 3, false);
+		GrammarRule rule10= new BinaryGrammarRule((short) 1, (short) 2, (short) 3);
 		
 		GrammarRule rule6 = new UnaryGrammarRule((short) 4, (short) 2);
 		GrammarRule rule7 = new UnaryGrammarRule((short) 4, (short) 2);
@@ -41,6 +43,7 @@ public class RuleTableTest {
 		}
 		assertTrue(unaryRuleTable.containsKey(rule1));
 		assertFalse(unaryRuleTable.containsKey(rule5));
+		assertTrue(unaryRuleTable.containsKey(rule8));
 
 		unaryRuleTable.increaseCount(rule6, 1);
 		assertTrue(unaryRuleTable.containsKey(rule7));
@@ -57,6 +60,7 @@ public class RuleTableTest {
 			System.err.println("BinaryGrammarRule:Oops.");
 		}
 		assertTrue(binaryRuleTable.containsKey(rule4));
+		assertTrue(binaryRuleTable.containsKey(rule10));
 		
 		
 		RuleTableGeneric<UnaryGrammarRule> uTable = new RuleTableGeneric<UnaryGrammarRule>(UnaryGrammarRule.class);

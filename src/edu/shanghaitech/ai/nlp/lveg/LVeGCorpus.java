@@ -6,6 +6,10 @@ import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.util.Counter;
 import edu.shanghaitech.ai.nlp.syntax.State;
 
+/**
+ * @author Yanpeng Zhao
+ *
+ */
 public class LVeGCorpus {
 
 

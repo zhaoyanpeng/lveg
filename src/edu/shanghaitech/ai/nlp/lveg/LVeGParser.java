@@ -5,6 +5,10 @@ import java.util.List;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.syntax.State;
 
+/**
+ * @author Yanpeng Zhao
+ *
+ */
 public class LVeGParser {
 	
 	private LVeGLexicon lexicon;
@@ -30,7 +34,8 @@ public class LVeGParser {
 		if (tree.isPreTerminal()) {
 			State word = children.get(0).getLabel();
 			GaussianMixture inScore = lexicon.score(word, idParent);
-			parent.setInsideScore(inScore);
+			
+			parent.setInsideScore(inScore.copy(true));
 		} else {
 			switch (children.size()) {
 			case 0:
@@ -43,16 +48,29 @@ public class LVeGParser {
 				
 				if (idParent != 0) {
 					ruleScore = grammar.getUnaryRuleScore(idParent, idChild, GrammarRule.GENERAL);
-				} else {
+					inScore = ruleScore.multiplyForInsideScore(childInScore, GrammarRule.Unit.UC, true);
+				} else { // root
 					ruleScore = grammar.getUnaryRuleScore(idParent, idChild, GrammarRule.RHSPACE);
+					inScore = ruleScore.multiplyForInsideScore(childInScore, GrammarRule.Unit.C, true);
 				}
 				
-//				inScore = 
-				
-				parent.setInsideScore(ruleScore);
+				parent.setInsideScore(inScore);
 				break;
 			}
 			case 2: {
+				GaussianMixture ruleScore, inScore, lchildInScore, rchildInScore;
+				State lchild = children.get(0).getLabel();
+				State rchild = children.get(1).getLabel();
+				short idlChild = lchild.getId();
+				short idrChild = rchild.getId();
+				lchildInScore = lchild.getInsideScore();
+				rchildInScore = rchild.getInsideScore();
+				
+				ruleScore = grammar.getBinaryRuleScore(idParent, idlChild, idrChild);
+				inScore = ruleScore.multiplyForInsideScore(lchildInScore, GrammarRule.Unit.LC, true);
+				inScore = inScore.multiplyForInsideScore(rchildInScore, GrammarRule.Unit.RC, false);
+				
+				parent.setInsideScore(inScore);
 				break;
 			}
 			default:
@@ -62,4 +80,6 @@ public class LVeGParser {
 			}
 		}
 	}
+	
+	
 }

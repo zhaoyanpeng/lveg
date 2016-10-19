@@ -87,8 +87,8 @@ public class LVeGGrammar implements Serializable {
 	public void addBinaryRule(BinaryGrammarRule rule) {
 		if (binaryRulesWithP[rule.lhs].contains(rule)) { return; }
 		binaryRulesWithP[rule.lhs].add(rule);
-		binaryRulesWithLC[rule.rhsLeft].add(rule);
-		binaryRulesWithRC[rule.rhsRight].add(rule);
+		binaryRulesWithLC[rule.lchild].add(rule);
+		binaryRulesWithRC[rule.rchild].add(rule);
 		
 		binaryRuleMap.put(rule, rule);
 	}
@@ -107,11 +107,11 @@ public class LVeGGrammar implements Serializable {
 		// TODO
 	}
 	
+	
 	/**
 	 * Tally (go over and record) the rules existing in the parse tree.
 	 * 
 	 * @param tree the parse tree
-	 * 
 	 */
 	public void tallyStateTree(Tree<State> tree) {
 		/* LVeGLexicon will handle pre-terminal nodes */
@@ -137,7 +137,7 @@ public class LVeGGrammar implements Serializable {
 		case 2: {
 			short idLeftChild = children.get(0).getLabel().getId();
 			short idRightChild = children.get(1).getLabel().getId();
-			BinaryGrammarRule rule = new BinaryGrammarRule(idParent, idLeftChild, idRightChild);
+			BinaryGrammarRule rule = new BinaryGrammarRule(idParent, idLeftChild, idRightChild, true);
 			binaryRuleTable.increaseCount(rule, 1.0);
 			break;
 		}
@@ -155,8 +155,19 @@ public class LVeGGrammar implements Serializable {
 	public GaussianMixture getUnaryRuleScore(short idParent, short idChild, char type) {
 		UnaryGrammarRule rule = getUnaryRule(idParent, idChild, type);
 		if (rule != null) {
-			rule.getWeight();
+			return rule.getWeight();
 		}
+		System.err.println("Unary Rule NOT Found: [P: " + idParent + ", C: " + idChild + ", TYPE: " + type);
+		return null;
+	}
+	
+	
+	public GaussianMixture getBinaryRuleScore(short idParent, short idlChild, short idrChild) {
+		BinaryGrammarRule rule = getBinaryRule(idParent, idlChild, idrChild);
+		if (rule != null) {
+			return rule.getWeight();
+		}
+		System.err.println("Binary Rule NOT Found: [P: " + idParent + ", LC: " + idlChild + ", RC: " + idrChild);
 		return null;
 	}
 	
@@ -165,4 +176,11 @@ public class LVeGGrammar implements Serializable {
 		UnaryGrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
 		return unaryRuleMap.get(rule);
 	}
+	
+	
+	public BinaryGrammarRule getBinaryRule(short idParent, short idlChild, short idrChild) {
+		BinaryGrammarRule rule = new BinaryGrammarRule(idParent, idlChild, idrChild);
+		return binaryRuleMap.get(rule);
+	}
+	
 }
