@@ -6,6 +6,10 @@ import java.util.Map;
 import java.util.Set;
 
 
+/**
+ * @author Yanpeng Zhao
+ *
+ */
 public class UnaryGrammarRule extends GrammarRule implements Comparable<Object> {
 
 	/**

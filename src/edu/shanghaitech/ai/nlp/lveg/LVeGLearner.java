@@ -18,12 +18,17 @@ import edu.shanghaitech.ai.nlp.util.MethodUtil;
 import edu.shanghaitech.ai.nlp.util.Recorder;
 import edu.shanghaitech.ai.nlp.syntax.State;
 
+/**
+ * @author Yanpeng Zhao
+ *
+ */
 public class LVeGLearner extends Recorder {
 	
 	public static short dim        =  2;
 	public static short maxrandom  =  1;
 	public static short batchsize  = 50;
 	public static short ncomponent =  2;
+	public static short maxlength  = 30;
 	
 	public static int randomseed = 0;
 	public static int precision  = 3;
@@ -150,10 +155,12 @@ public class LVeGLearner extends Recorder {
 		StateTreeList trainTrees = new StateTreeList(stateTrees.get(ID_TRAINING));
 		StateTreeList validationTrees = new StateTreeList(stateTrees.get(ID_VALIDATION));
 		
+		// MethodUtil.isChildrenSizeZero(trainTrees);
+		
 		// MethodUtil.isParentEqualToChild(trainTrees);
 		LVeGGrammar grammar = new LVeGGrammar(null, opts.filterThreshold);
 		LVeGLexicon lexicon = new SimpleLVeGLexicon(trainTrees, numbererTag.size(), opts.filterThreshold);
-				
+		/*	
 		for (Tree<State> tree : trainTrees) {
 			lexicon.tallyStateTree(tree);
 			grammar.tallyStateTree(tree);
@@ -195,7 +202,8 @@ public class LVeGLearner extends Recorder {
 				break;
 			}
 		// relative error could be negative
-		} while (/*cnt > 1 && Math.abs(relativError) < opts.relativerror &&*/ droppingiter < opts.droppintiter);
+		} while (cnt > 1 && Math.abs(relativError) < opts.relativerror && droppingiter < opts.droppintiter);
+		*/
 		
 		/*
 		if (relativError < opts.relativerror) {
@@ -211,9 +219,15 @@ public class LVeGLearner extends Recorder {
 		double ll = 0, sumll = 0;
 		LVeGParser parser = new LVeGParser(grammar, lexicon);
 		for (Tree<State> tree : stateTreeList) {
-			parser.calculateInsideScore(tree);
-//			ll = tree.getLabel().getInsideScore();
+			ll = parser.probability(tree);
+			ll = Math.log(ll);
+			if (Double.isInfinite(ll) || Double.isNaN(ll)) {
+				nUnparsable++;
+			} else {
+				sumll += ll;
+			}
 		}
+		logger.trace("There is (are) " + nUnparsable + " unparsable sample(s)");
 		return sumll;
 	}
 	

@@ -1,13 +1,22 @@
 package edu.shanghaitech.ai.nlp.lveg;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import edu.berkeley.nlp.PCFGLA.Corpus;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.util.Indexer;
 import edu.shanghaitech.ai.nlp.syntax.State;
 
+/**
+ * @author Yanpeng Zhao
+ *
+ */
 public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
 
 	/**
@@ -15,8 +24,9 @@ public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
 	 */
 	private static final long serialVersionUID = 1L;
 	
+	public IndexMap[] wordIndexMap;
 	public Indexer<String> wordIndexer;
-	
+
 	protected int nTag;
 	protected int nWord;
 	protected int[] wordCounter;
@@ -68,13 +78,38 @@ public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
 		}
 		
 		this.nWord = wordIndexer.size();
-		this.counts = new GaussianMixture[nTag][nWord];
-		this.urules = new UnaryGrammarRule[nTag][nWord];
+		this.counts = new GaussianMixture[nTag][];
+		this.urules = new UnaryGrammarRule[nTag][];
+		this.wordIndexMap = new IndexMap[nTag];
+		this.wordCounter = new int[nWord];
+		
+		for (int i = 0; i < nTag; i++) {
+			wordIndexMap[i] = new IndexMap(nWord);
+		}
+		
+		for (Tree<State> tree : trees) {
+			List<State> tags = tree.getPreTerminalYield();
+			List<State> words = tree.getTerminalYield();
+			
+			for (int i = 0; i < words.size(); i++) {
+				int wordIdx = wordIndexer.indexOf(words.get(i).getName());
+				if (wordIdx < 0) { 
+					System.err.println("Word \"" + words.get(i).getName() + "\" NOT Found.");
+					continue; 
+				}
+				wordCounter[wordIdx]++;
+				wordIndexMap[tags.get(i).getId()].add(wordIdx);
+			}
+		}
 		
 		for (short i = 0; i < nTag; i++) {
-			for (short j = 0; j < nWord; j++) {
-				urules[i][j] = new UnaryGrammarRule(i, j, GrammarRule.LHSPACE);
+			int nmap = wordIndexMap[i].size();
+			counts[i] = new GaussianMixture[nmap];
+			urules[i] = new UnaryGrammarRule[nmap];
+			for (short j = 0; j < nmap; j++) {
+				int wordIdx = wordIndexMap[i].get(j);
 				counts[i][j] = new GaussianMixture();
+				urules[i][j] = new UnaryGrammarRule(i, (short) wordIdx, GrammarRule.LHSPACE);
 			}
 		}
 		
@@ -83,12 +118,11 @@ public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
 	
 	
 	/**
-	 * What is the method used for?
+	 * Initialize word index.
 	 * 
 	 * @param trees
 	 */
 	public void labelTrees(StateTreeList trees) {
-		// TODO whether we need it or not
 		for (Tree<State> tree : trees) {
 			List<State> words = tree.getYield();
 			for (State word : words) {
@@ -96,6 +130,19 @@ public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
 				word.signIdx = -1;
 			}
 		}
+	}
+	
+	
+	@Override
+	protected List<UnaryGrammarRule> getRules(int wordIdx) {
+		List<UnaryGrammarRule> list = new ArrayList<UnaryGrammarRule>();
+		for (short i = 0; i < nTag; i++) {
+			int ruleIdx = wordIndexMap[i].indexOf(wordIdx);
+			if (ruleIdx > 0) {
+				list.add(urules[i][ruleIdx]);
+			}
+		}
+		return list;
 	}
 	
 
@@ -114,8 +161,10 @@ public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
 			
 			int wordIdx = wordIndexer.indexOf(word);
 			
-			// expected counts have been initialized when instantiated
-			// TODO nothing to do
+			// This method corresponds to the trainTree() in Berkeley's implementation, in 
+			 * which expected counts are initialized according to some random strategies. 
+			 * But we do not need it since the counts have been already initialized before. 
+			// TODO nothing to do (see reasons above)
 		}
 		*/
 	}
@@ -123,7 +172,6 @@ public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
 
 	@Override
 	public GaussianMixture score(State word, short idTag) {
-		// TODO Auto-generated method stub
 		int wordIdx = word.wordIdx;
 		if (wordIdx == -1) {
 			System.err.println("Unknown word: " + word.getName());
@@ -141,18 +189,96 @@ public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
 
 	@Override
 	public void tieRareWordStats(int threshold) {
-		// TODO Auto-generated method stub
+		// TODO nothing to do (the same as the Berkeley's implementation)
+		// DONE nothing to do
 		return;
 	}
 
 
 	@Override
 	public void optimize() {
-		// TODO Auto-generated method stub
-		for (int i = 0; i < nTag; i++) {
-			//
+		// TODO smooth the score
+		// In Berkeley's implementation, scores are initialized with the expected counts. 
+		// The same for the unary or binary rule probability initialization, which first
+		// is randomly initialized to a double value, and then is normalized.
+		// 
+		// How should we implement the same mechanism with MixtureGaussian counts? 
+		// DONE We can start training with E-Step or M-Step in EM. And Berkeley's
+		// way can be seen as starting training with M-Step.
+		return;
+	}
+	
+	
+	/**
+	 * @author Yanpeng Zhao
+	 *
+	 */
+	protected static class IndexMap implements Serializable {
+
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 1L;
+		
+		private int count;
+		private List<Integer> to;
+		private List<Integer> from;
+		
+		public IndexMap(int n) {
+			this.count = 0;
+			this.to = new ArrayList<Integer>(n);
+			this.from = new ArrayList<Integer>(n);
+			// initialization
+			for (int i = 0; i < n; i++) {
+				to.add(-1);
+				from.add(-1);
+			}
 		}
 		
-		// TODO smooth the score
+		
+		public void add(int i) {
+			if (i < 0 || i > to.size()) { return; }
+			if (to.get(i) == -1) {
+				to.set(i, count);
+				from.set(count, i);
+				count++;
+			}
+		}
+		
+		
+		public int get(int i) {
+			if (i < 0 || i > to.size()) { return -1; }
+			return from.get(i);
+		}
+		
+		
+		public int indexOf(int i) {
+			if (i < 0 || i > to.size()) { return -1; }
+			return to.get(i);
+		}
+		
+		
+		public int size() {
+			return this.count;
+		}
+		
+		
+		public IndexMap copy() {
+			IndexMap map = new IndexMap(to.size());
+			map.to    = new ArrayList<Integer>(to.size());
+			map.from  = new ArrayList<Integer>(to.size());
+			map.count = count;
+			map.to.addAll(to);
+			map.from.addAll(from);
+			return map;
+		}
+		
+		
+		public void clear() {
+			this.count = 0;
+			this.to.clear();
+			this.from.clear();
+		}
 	}
+	
 }

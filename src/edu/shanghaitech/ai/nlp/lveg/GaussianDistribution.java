@@ -5,6 +5,10 @@ import java.util.List;
 
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
 
+/**
+ * @author Yanpeng Zhao
+ *
+ */
 public class GaussianDistribution implements Comparable<Object> {
 	
 	protected short dim;
@@ -53,10 +57,13 @@ public class GaussianDistribution implements Comparable<Object> {
 	}
 	
 	
+	/**
+	 * Memory clean.
+	 */
 	public void clear() {
-		dim = 0;
-		mus.clear();
-		sigmas.clear();
+		this.dim = 0;
+		this.mus.clear();
+		this.sigmas.clear();
 	}
 	
 	

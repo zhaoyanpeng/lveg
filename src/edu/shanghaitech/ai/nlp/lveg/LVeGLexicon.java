@@ -1,5 +1,8 @@
 package edu.shanghaitech.ai.nlp.lveg;
 
+import java.util.List;
+import java.util.Set;
+
 import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.syntax.State;
 
@@ -12,6 +15,7 @@ public abstract class LVeGLexicon {
 	protected transient String lastWord;
 	protected transient String lastSignature;
 	protected transient int lastPosition;
+	
 	
 	/**
 	 * Different modes for unknown words. See {@link #SimpleLVeGLexicon()}.
@@ -31,10 +35,21 @@ public abstract class LVeGLexicon {
 	 * @param threshold which measures how rare the word is
 	 */
 	protected abstract void tieRareWordStats(int threshold);
+
 	
-	
-	
+	/**
+	 * TODO TBD
+	 */
 	protected abstract void optimize();
+	
+	
+	/**
+	 * Get the unary rules that contain the word specified by the index (by reference).
+	 * 
+	 * @param wordIdx id of the word
+	 * @return
+	 */
+	protected abstract List<UnaryGrammarRule> getRules(int wordIdx);
 	
 	
 	/**
@@ -59,13 +74,12 @@ public abstract class LVeGLexicon {
 	 * implementation, the first null word produces empty string, which can 
 	 * be divided into "UNK" since the empty string is of length 0.
 	 * 
-	 * 
 	 * @param word the word
 	 * @param pos  the position of the word in the sentence
 	 * @return
 	 */
 	protected String getCachedSignature(String word, int pos) {
-		// TODO count the use frequency of the if branch
+		// TODO determine the frequency of the usage of "if" branch
 		if (word == null) { return lastWord; }
 		if (word.equals(lastWord) && pos == lastPosition) {
 			return lastSignature;

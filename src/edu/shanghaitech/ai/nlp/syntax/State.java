@@ -22,7 +22,7 @@ public class State {
 	
 	/* when the node is a terminal */
 	public int wordIdx; // index of the word 
-	public int signIdx; // signature index of the word
+	public int signIdx; // signature index of the word 
 	
 	protected GaussianMixture insideScore;
 	protected GaussianMixture outsideScore;

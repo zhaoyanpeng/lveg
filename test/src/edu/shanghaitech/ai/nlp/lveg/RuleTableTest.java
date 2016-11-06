@@ -2,6 +2,9 @@ package edu.shanghaitech.ai.nlp.lveg;
 
 import static org.junit.Assert.*;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import org.junit.Test;
 
 public class RuleTableTest {
@@ -61,6 +64,13 @@ public class RuleTableTest {
 		}
 		assertTrue(binaryRuleTable.containsKey(rule4));
 		assertTrue(binaryRuleTable.containsKey(rule10));
+		
+		// test the reference mechanism of add() method of Set 
+		Set<UnaryGrammarRule> set = new HashSet<UnaryGrammarRule>();
+		set.add((UnaryGrammarRule) rule0);
+		System.out.println(set);
+		rule0.setLhs((short) 100);
+		System.out.println(set);
 		
 		
 		RuleTableGeneric<UnaryGrammarRule> uTable = new RuleTableGeneric<UnaryGrammarRule>(UnaryGrammarRule.class);

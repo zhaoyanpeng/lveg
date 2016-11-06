@@ -2,6 +2,10 @@ package edu.shanghaitech.ai.nlp.lveg;
 
 import java.io.Serializable;
 
+/**
+ * @author Yanpeng Zhao
+ *
+ */
 public abstract class GrammarRule implements Serializable {
 
 	/**

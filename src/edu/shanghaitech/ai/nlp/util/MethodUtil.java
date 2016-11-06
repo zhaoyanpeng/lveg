@@ -1,12 +1,20 @@
 package edu.shanghaitech.ai.nlp.util;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 import java.util.Random;
+import java.util.Set;
 
 import edu.berkeley.nlp.syntax.Tree;
+import edu.shanghaitech.ai.nlp.lveg.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
+import edu.shanghaitech.ai.nlp.lveg.LVeGLexicon;
 import edu.shanghaitech.ai.nlp.lveg.StateTreeList;
+import edu.shanghaitech.ai.nlp.lveg.UnaryGrammarRule;
 import edu.shanghaitech.ai.nlp.syntax.State;
 
 /**
@@ -18,21 +26,8 @@ import edu.shanghaitech.ai.nlp.syntax.State;
 public class MethodUtil {
 	
 	private static Random random = new Random(LVeGLearner.randomseed);
-	
-	
-	public static void isParentEqualToChild(StateTreeList stateTreeList) {
-		int count = 0;
-		for (Tree<State> tree : stateTreeList) {
-			if (isParentEqualToChild(tree)) {
-				System.out.println("The parent and children are the same in the tree " + count + ":");
-				System.out.println(tree);
-				return;
-			}
-			count++;
-		}
-		System.out.println("Oops!");
-	}
-	
+	private static LVeGGrammar grammar;
+	private static LVeGLexicon lexicon;
 
 	/**
 	 * @param trees
@@ -54,6 +49,102 @@ public class MethodUtil {
 	}
 	
 	
+	/**
+	 * Check if the unary grammar rules could make a circle.
+	 * 
+	 * @param grammar the grammar
+	 */
+	public static void checkUnaryRuleCircle(LVeGGrammar agrammar, LVeGLexicon alexicon) {
+		grammar = agrammar;
+		lexicon = alexicon;
+		int nword = 0;
+		Queue<Short> children = new LinkedList<Short>();
+		for (int i = 0; i < nword; i++) {
+			Set<Integer> visited = new LinkedHashSet<Integer>();
+			if (checkUnaryRuleCircle(i, visited)) {
+				System.out.println(visited);
+				break;
+			}
+		}
+	}
+	
+	
+	public static boolean checkUnaryRuleCircle(int index, Set<Integer> visited) {	
+		if (visited.contains(index)) { 
+			return true; 
+		} else {
+			visited.add(index);
+		}
+		
+		List<UnaryGrammarRule> rules = grammar.getUnaryRuleWithC(index);
+		for (UnaryGrammarRule rule : rules) {
+			if (checkUnaryRuleCircle(rule.getLhs(), visited)) {
+				return true;
+			}
+		}
+		visited.remove(index);
+		return false;
+	}
+	
+	
+	public static void isParentEqualToChild(StateTreeList stateTreeList) {
+		int count = 0;
+		for (Tree<State> tree : stateTreeList) {
+			if (isParentEqualToChild(tree)) {
+				System.out.println("The parent and children are the same in the tree " + count + ":");
+				System.out.println(tree);
+				return;
+			}
+			count++;
+		}
+		System.out.println("Oops!");
+	}
+	
+	
+	public static void isChildrenSizeZero(StateTreeList stateTreeList) {
+		int count = 0;
+		for (Tree<State> tree : stateTreeList) {
+			if (isChildrenSizeZero(tree)) {
+				System.out.println("Pre-terminal node has no children in the tree: " + count + ":");
+				System.out.println(tree);
+				return;
+			}
+			count++;
+		}
+		System.out.println("Oops!");
+	}
+	
+	
+	public static boolean isChildrenSizeZero(Tree<State> tree) {
+		if (tree.isLeaf()) { return false; }
+		
+		List<Tree<State>> children = tree.getChildren();
+		
+		switch (children.size()) {
+		case 0:
+			if (tree.isPreTerminal()) {
+				System.out.println("Pre-terminal: " + tree.getLabel());
+			}
+			System.out.println("Non-terminal: " + tree.getLabel());
+			return true;
+		case 1:
+			break;
+		case 2:
+			break;
+		default:
+			System.err.println("Malformed tree: more than two children. Exiting...");
+			System.exit(0);
+		}
+		
+		for (Tree<State> child : children) {
+			if (isChildrenSizeZero(child)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	
 	public static boolean isParentEqualToChild(Tree<State> tree) {
 		if (tree.isLeaf() || tree.isPreTerminal()) { return false; }
 		
@@ -62,6 +153,7 @@ public class MethodUtil {
 		
 		switch (children.size()) {
 		case 0:
+			
 			break;
 		case 1:
 			short idChild = children.get(0).getLabel().getId();

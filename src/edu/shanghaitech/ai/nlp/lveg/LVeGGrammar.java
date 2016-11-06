@@ -109,7 +109,7 @@ public class LVeGGrammar implements Serializable {
 	
 	
 	/**
-	 * Tally (go over and record) the rules existing in the parse tree.
+	 * Tally (go through and record) the rules existing in the parse tree.
 	 * 
 	 * @param tree the parse tree
 	 */
@@ -181,6 +181,41 @@ public class LVeGGrammar implements Serializable {
 	public BinaryGrammarRule getBinaryRule(short idParent, short idlChild, short idrChild) {
 		BinaryGrammarRule rule = new BinaryGrammarRule(idParent, idlChild, idrChild);
 		return binaryRuleMap.get(rule);
+	}
+	
+	
+	public List<BinaryGrammarRule> getBinaryRuleWithRC(int iTag) {
+		return this.binaryRulesWithRC[iTag];
+	}
+	
+	
+	public List<BinaryGrammarRule> getBinaryRuleWithLC(int iTag) {
+		return this.binaryRulesWithLC[iTag];
+	}
+	
+	
+	public List<BinaryGrammarRule> getBinaryRuleWithP(int iTag) {
+		return this.binaryRulesWithP[iTag];
+	}
+	
+	
+	public List<UnaryGrammarRule> getUnaryRuleWithP(int iTag) {
+		return this.unaryRulesWithP[iTag];
+	}
+	
+	
+	public List<UnaryGrammarRule> getUnaryRuleWithC(int iTag) {
+		return this.unaryRulesWithC[iTag];
+	}
+	
+	
+	public Map<UnaryGrammarRule, UnaryGrammarRule> getUnaryRuleMap() {
+		return this.unaryRuleMap;
+	}
+	
+	
+	public Map<BinaryGrammarRule, BinaryGrammarRule> getBinaryRuleMap() {
+		return this.binaryRuleMap;
 	}
 	
 }

@@ -17,7 +17,6 @@ public class LVeGCorpus {
 	 * @param trees         the parse tree
 	 * @param lexicon       temporary data holder (wordIndexer)
 	 * @param rareThreshold words with frequencies lower than this value will be replaced with its signature
-	 * 
 	 */
 	public static void replaceRareWords(
 			StateTreeList trees, SimpleLVeGLexicon lexicon, int rareThreshold) {

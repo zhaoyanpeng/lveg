@@ -10,9 +10,6 @@ import java.util.Set;
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
 
 /**
- * TODO Method {@code add()} is implemented by reference when the data type of the added items 
- * is not the basic one. Implementing them by deep copy is simple, but not necessary for now.
- * </p>
  * Variable declaration rules: mixture (mixture of gaussians), component (component of the GM), 
  * gaussians (details of the component), gaussian (portion of the component), gausses (list of  
  * GD of the portion), gauss (GD). 
@@ -20,7 +17,7 @@ import edu.shanghaitech.ai.nlp.util.MethodUtil;
  * TODO Method {@code mulAndMarginlize()} can be implemented efficiently by hacks. But when we 
  * take consideration into the further parallel optimization, explicitly implementing each step 
  * in order may be a better choice, which is exactly what I am doing now (DONE I have implement
- * -ed specifically for the calculation of the inside score). 
+ * -ed specifically for the multiplication in the inside score). 
  * </p>
  * TODO Implement the comparison between GMs.
  * </p>
@@ -226,13 +223,13 @@ public class GaussianMixture {
 	
 	
 	/**
-	 * Replace the existing keys with a new key.
+	 * Replace all the existing keys with a new key (by reference).
 	 * 
 	 * @param gm     mixture of gaussians
 	 * @param newkey the new key
 	 * @return
 	 */
-	public static GaussianMixture replaceKeys(GaussianMixture gm, String newkey) {
+	public static GaussianMixture replaceAllKeys(GaussianMixture gm, String newkey) {
 		GaussianMixture agm = new GaussianMixture();
 		agm.weights.addAll(gm.weights);
 		for (Map<String, Set<GaussianDistribution>> component : gm.mixture) {
@@ -246,7 +243,6 @@ public class GaussianMixture {
 			agm.mixture.add(acomponent);
 			agm.ncomponent++;
 		}
-		
 		return agm;
 	}
 	
@@ -412,7 +408,7 @@ public class GaussianMixture {
 	 * Problem-specific multiplication (calculation of the inside score). Inside score 
 	 * of the current non-terminal relates to the inside scores (mixture of gaussians) 
 	 * of the children only partially, since the gaussians are afterwards marginalized
-	 * and thus only weights matter.
+	 * and thus only weights matter. The same rules for the outside score.
 	 * 
 	 * @param gm   mixture of gaussians that needs to be marginalized
 	 * @param key  which denotes the portion, to be marginalized, of the component
@@ -420,7 +416,7 @@ public class GaussianMixture {
 	 * @return 
 	 * 
 	 */
-	public GaussianMixture multiplyForInsideScore(GaussianMixture gm, String key, boolean deep) {
+	public GaussianMixture mulForInsideOutside(GaussianMixture gm, String key, boolean deep) {
 		GaussianMixture amixture = this.copy(deep);
 		double sum = MethodUtil.sum(gm.weights);
 		for (int i = 0; i < ncomponent; i++) {
@@ -448,6 +444,26 @@ public class GaussianMixture {
 			}
 		}
 		return ret;
+	}
+	
+	
+	/**
+	 * Memory clean.
+	 */
+	public void clear() {
+		this.bias = 0.0;
+		this.ncomponent = 0;
+		this.weights.clear();
+		for (Map<String, Set<GaussianDistribution>> component : mixture) {
+			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
+				for (GaussianDistribution gd : gaussian.getValue()) {
+					gd.clear();
+				}
+				gaussian.getValue().clear();
+			}
+			component.clear();
+		}
+		this.mixture.clear();
 	}
 	
 	

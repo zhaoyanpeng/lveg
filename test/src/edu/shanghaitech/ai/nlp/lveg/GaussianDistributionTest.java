@@ -55,6 +55,8 @@ public class GaussianDistributionTest {
 		
 		System.out.println(xx);
 		System.out.println(yy);
+		xx.clear();
+		System.out.println(yy);
 	}
 
 	

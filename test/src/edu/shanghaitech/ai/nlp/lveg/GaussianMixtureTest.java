@@ -109,7 +109,7 @@ public class GaussianMixtureTest {
 		GaussianMixture cgm2 = gm2.copy(true);
 		
 		System.out.println("---multiplication and marginalization---");
-		GaussianMixture gm3 = cgm0.multiplyForInsideScore(cgm2, GrammarRule.Unit.UC, true);
+		GaussianMixture gm3 = cgm0.mulForInsideOutside(cgm2, GrammarRule.Unit.UC, true);
 		System.out.println("InScore uc--" + gm3);
 		
 		System.out.println("---deep copy---");
@@ -119,7 +119,7 @@ public class GaussianMixtureTest {
 		System.out.println("---shallow copy---");
 		cgm0 = gm0.copy(true);
 		System.out.println(cgm0);
-		GaussianMixture gm5 = cgm0.multiplyForInsideScore(cgm2, GrammarRule.Unit.UC, false);
+		GaussianMixture gm5 = cgm0.mulForInsideOutside(cgm2, GrammarRule.Unit.UC, false);
 		System.out.println(gm5);
 		System.out.println(cgm0);
 	}
@@ -145,7 +145,7 @@ public class GaussianMixtureTest {
 		GaussianMixture gm4 = GaussianMixture.multiply(gm0, gm2);
 		System.out.println("gm0 X gm2---" + gm4);
 		
-		GaussianMixture gm8 = GaussianMixture.replaceKeys(gm4, "uc");
+		GaussianMixture gm8 = GaussianMixture.replaceAllKeys(gm4, "uc");
 		System.out.println("Repwith uc--" + gm8);
 
 		GaussianMixture.marginalize(gm4, keys);

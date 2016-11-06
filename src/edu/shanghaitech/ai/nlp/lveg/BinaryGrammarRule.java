@@ -5,6 +5,10 @@ import java.util.Set;
 import java.util.HashMap;
 import java.util.HashSet;
 
+/**
+ * @author Yanpeng Zhao
+ *
+ */
 public class BinaryGrammarRule extends GrammarRule implements Comparable<Object> {
 
 	/**
