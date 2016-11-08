@@ -20,7 +20,7 @@ public class State {
 	public short from;
 	public short to;
 	
-	/* when the node is a terminal */
+	/* if the node is a terminal */
 	public int wordIdx; // index of the word 
 	public int signIdx; // signature index of the word 
 	

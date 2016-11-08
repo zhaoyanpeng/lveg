@@ -77,6 +77,13 @@ public class BinaryGrammarRule extends GrammarRule implements Comparable<Object>
 		}
 	}
 
+	
+	public GrammarRule copy() {
+		BinaryGrammarRule rule = new BinaryGrammarRule(lhs, lchild, rchild);
+		rule.weight = weight.copy(true);
+		return rule;
+	}
+	
 
 	public short getLchild() {
 		return lchild;
@@ -140,7 +147,7 @@ public class BinaryGrammarRule extends GrammarRule implements Comparable<Object>
 	
 	@Override
 	public String toString() {
-		return "BinaryGrammarRule [P: " + lhs +", LC: " + lchild + ", RC: " + rchild + "]";
+		return "B-Rule [P: " + lhs +", LC: " + lchild + ", RC: " + rchild + "]";
 	}
 	
 }

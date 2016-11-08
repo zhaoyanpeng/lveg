@@ -96,6 +96,14 @@ public class UnaryGrammarRule extends GrammarRule implements Comparable<Object> 
 	}
 	
 	
+	public GrammarRule copy() {
+		UnaryGrammarRule rule = new UnaryGrammarRule(lhs, rhs);
+		rule.weight = weight.copy(true);
+		rule.type = type;
+		return rule;
+	}
+	
+	
 	public short getRhs() {
 		return rhs;
 	}
@@ -156,7 +164,7 @@ public class UnaryGrammarRule extends GrammarRule implements Comparable<Object> 
 	
 	@Override
 	public String toString() {
-		return "UnaryGrammarRule [P: " + lhs +", UC: " + rhs + "]";
+		return "U-Rule [P: " + lhs +", UC: " + rhs + "]";
 	}
 
 }

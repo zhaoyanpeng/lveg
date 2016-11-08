@@ -2,6 +2,7 @@ package edu.shanghaitech.ai.nlp.lveg;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -11,6 +12,7 @@ import java.util.Set;
 import edu.berkeley.nlp.PCFGLA.Corpus;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.util.Indexer;
+import edu.berkeley.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.syntax.State;
 
 /**
@@ -33,6 +35,13 @@ public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
 	
 	protected GaussianMixture[][] counts;  // tag-word
 	protected UnaryGrammarRule[][] urules; // tag-word
+	
+	/**
+	 * count0 stores rule counts that are evaluated given the parse tree
+	 * count1 stores rule counts that are evaluated without the parse tree 
+	 */
+	private Map<GrammarRule, Double> count0;
+	private Map<GrammarRule, Double> count1;
 
 	
 	/**
@@ -55,28 +64,13 @@ public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
 	}
 	
 	
-	public SimpleLVeGLexicon(StateTreeList trees, int nTag, double filterThreshold) {
-		this();
-		this.nTag = nTag;
-		this.filterThreshold = filterThreshold;
-		initialize(trees);
-	}
-	
-	
 	/**
 	 * Assume that rare words have been replaced by their signature.
 	 * 
 	 * @param trees a set of trees
 	 */
-	private void initialize(StateTreeList trees) {
-		for (Tree<State> tree : trees) {
-			List<State> words = tree.getYield();
-			for (State word : words) {
-				String name = word.getName();
-				wordIndexer.add(name);
-			}
-		}
-		
+	public void postInitialize(StateTreeList trees, int nTag) {
+		this.nTag = nTag;
 		this.nWord = wordIndexer.size();
 		this.counts = new GaussianMixture[nTag][];
 		this.urules = new UnaryGrammarRule[nTag][];
@@ -110,10 +104,41 @@ public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
 				int wordIdx = wordIndexMap[i].get(j);
 				counts[i][j] = new GaussianMixture();
 				urules[i][j] = new UnaryGrammarRule(i, (short) wordIdx, GrammarRule.LHSPACE);
+				
+				count0.put(urules[i][j], 0.0);
+				count1.put(urules[i][j], 0.0);
 			}
 		}
 		
 		labelTrees(trees);
+	}
+	
+
+	@Override
+	public void tallyStateTree(Tree<State> tree) {
+		
+		List<State> words = tree.getYield();
+		for (State word : words) {
+			String name = word.getName();
+			wordIndexer.add(name);
+		}
+		
+		/*
+		List<State> words = tree.getYield();
+		List<State> tags = tree.getPreTerminalYield();
+		
+		for (int pos = 0; pos < words.size(); pos++) {
+			short tag = tags.get(pos).getId();
+			String word = words.get(pos).getName();
+			
+			int wordIdx = wordIndexer.indexOf(word);
+			
+			// This method corresponds to the trainTree() in Berkeley's implementation, in 
+			 * which expected counts are initialized according to some random strategies. 
+			 * But we do not need it since the counts have been already initialized before. 
+			// TODO nothing to do (see reasons above)
+		}
+		*/
 	}
 	
 	
@@ -133,9 +158,27 @@ public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
 	}
 	
 	
+	public void addCount(short idParent, short idChild, char type, double increment, boolean withTree) {
+		Map<GrammarRule, Double> count = null;
+		if (withTree) {
+			count = count0;
+		} else {
+			count = count1;
+		}
+		
+		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
+		Double cnt = count.get(rule);
+		if (cnt != null) {
+			count.put(rule, cnt + increment);
+			return;
+		}
+		System.err.println("Unary Rule NOT Found: [P: " + idParent + ", C: " + idChild + ", TYPE: " + type + "]");
+	}
+	
+	
 	@Override
-	protected List<UnaryGrammarRule> getRules(int wordIdx) {
-		List<UnaryGrammarRule> list = new ArrayList<UnaryGrammarRule>();
+	protected List<GrammarRule> getRulesWithWord(int wordIdx) {
+		List<GrammarRule> list = new ArrayList<GrammarRule>();
 		for (short i = 0; i < nTag; i++) {
 			int ruleIdx = wordIndexMap[i].indexOf(wordIdx);
 			if (ruleIdx > 0) {
@@ -144,40 +187,17 @@ public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
 		}
 		return list;
 	}
-	
-
-	@Override
-	public void tallyStateTree(Tree<State> tree) {
-		
-		return; // nothing to do
-		
-		/*
-		List<State> words = tree.getYield();
-		List<State> tags = tree.getPreTerminalYield();
-		
-		for (int pos = 0; pos < words.size(); pos++) {
-			short tag = tags.get(pos).getId();
-			String word = words.get(pos).getName();
-			
-			int wordIdx = wordIndexer.indexOf(word);
-			
-			// This method corresponds to the trainTree() in Berkeley's implementation, in 
-			 * which expected counts are initialized according to some random strategies. 
-			 * But we do not need it since the counts have been already initialized before. 
-			// TODO nothing to do (see reasons above)
-		}
-		*/
-	}
 
 
 	@Override
 	public GaussianMixture score(State word, short idTag) {
-		int wordIdx = word.wordIdx;
-		if (wordIdx == -1) {
+		// map the word to its real index
+		int ruleIdx = wordIndexMap[idTag].indexOf(word.wordIdx); 
+		if (ruleIdx == -1) {
 			System.err.println("Unknown word: " + word.getName());
 			return null;
 		}
-		return urules[idTag][wordIdx].getWeight();
+		return urules[idTag][ruleIdx].getWeight();
 	}                                           
 	
 	
@@ -209,6 +229,43 @@ public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
 	}
 	
 	
+	@Override
+	public String toString() {
+		String word = null;
+		int count = 0, ncol = 5;
+		StringBuffer sb = new StringBuffer();
+		sb.append("Grammar [nWord=" + nWord + "]\n");
+		
+		sb.append("---Words. Total: " + nWord + "\n");
+		for (int i = 0; i < wordIndexer.size(); i++) {
+			word = wordIndexer.get(i);
+			sb.append(wordIndexer.indexOf(word) + " : " + word + "\t");
+			if (++count % ncol == 0) {
+				sb.append("\n");
+			}
+		}
+		
+		Numberer numberer = Numberer.getGlobalNumberer(LVeGLearner.KEY_TAG_SET);
+
+		sb.append("\n");
+		sb.append("---Unary Rules---\n");
+		for (int i = 0; i < nTag; i++) {
+			count = 0;
+			int nmap = wordIndexMap[i].size();
+			sb.append("Tag " + i + "\t[" + numberer.object(i) + "] has " + nmap + " rules\n" );
+			for (int j = 0; j < nmap; j++) {
+				sb.append(urules[i][j] + "\t");
+				if (++count % ncol == 0) {
+					sb.append("\n");
+				}
+			}
+			sb.append("\n");
+		}
+		
+		return sb.toString();
+	}
+
+
 	/**
 	 * @author Yanpeng Zhao
 	 *

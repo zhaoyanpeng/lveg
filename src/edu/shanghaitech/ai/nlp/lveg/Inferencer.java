@@ -2,6 +2,7 @@ package edu.shanghaitech.ai.nlp.lveg;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -11,6 +12,17 @@ import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.syntax.State;
 
 /**
+ * Compute the inside and outside scores and store them in a chart. 
+ * Imagine the upper right triangle chart as the pyramid. E.g., see
+ * the pyramid below, which could represent a sentence of length 6.
+ * <pre>
+ * + + + + + +
+ *   + + + + +
+ *     + + + +
+ *       + + +
+ *         + +
+ *           + 
+ * </pre>
  * @author Yanpeng Zhao
  *
  */
@@ -27,141 +39,63 @@ public class Inferencer {
 	
 	
 	/**
-	 * Compute the inside score.
+	 * Compute the inside score given the sentence and grammar rules.
 	 * 
 	 * @param tree in which only the sentence is used.
 	 * @return
 	 */
 	protected void insideScore(Chart chart, List<State> sentence, int nword, boolean recursive) {
-		
-		Queue<Short> newTags = new LinkedList<Short>(); 
-		GaussianMixture inside, prule, linside, rinside;
+		int x0, y0, x1, y1, l0, l1, l2;
+		Queue<Short> tagQueue = new LinkedList<Short>(); 
+		GaussianMixture pinScore, linScore, rinScore, ruleScore;
 		
 		// base case
 		for (int i = 0; i < nword; i++) {
-			int index = sentence.get(i).wordIdx;
-			List<UnaryGrammarRule> rules = lexicon.getRules(index);
-			for (UnaryGrammarRule rule : rules) {
-				newTags.offer(rule.lhs);
+			int wordIdx = sentence.get(i).wordIdx;
+			List<GrammarRule> rules = lexicon.getRulesWithWord(wordIdx);
+			// pre-terminals
+			for (GrammarRule rule : rules) {
+				tagQueue.offer(rule.lhs);
 				chart.addInsideScore(rule.lhs, i, nword, rule.getWeight().copy(true));
 			}
-			// consider rules A->B->w and B->C->w. So p(w | B) = p(B->w) + p(B->C) * p(C->w).
-			// TODO Could it be a dead loop? BUG.
-			while (!newTags.isEmpty()) {
-				index = newTags.poll();
-				rules = grammar.getUnaryRuleWithC(index);
-				for (UnaryGrammarRule rule : rules) {
-					newTags.offer(rule.lhs);		
-					prule = rule.getWeight();
-					inside = chart.getInsideScore(rule.rhs, i, nword);
-					prule.mulForInsideOutside(inside, GrammarRule.Unit.UC, true);
-					chart.addInsideScore(rule.lhs, i, nword, prule);
-				}
-			}
+			// unary grammar rules
+			insideScoreForUnaryRule(chart, tagQueue, i, nword);
 		}		
 		
-		Map<UnaryGrammarRule, UnaryGrammarRule> uRuleMap = grammar.getUnaryRuleMap();
-		Map<BinaryGrammarRule, BinaryGrammarRule> bRuleMap = grammar.getBinaryRuleMap();
+		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBinaryRuleMap();
 		
 		// inside score
 		for (int ilayer = 1; ilayer < nword; ilayer++) {
 			for (int left = 0; left < nword - ilayer; left++) {
 				for (int right = left; right < left + ilayer; right++) {				
-					int x0 = left, y0 = right;
-					int x1 = right + 1, y1 = left + ilayer;
-					int l0 = nword - (y0 - x0), l1 = nword - (y1 - x1);
-
-					// unary grammar rules
-					for (Map.Entry<UnaryGrammarRule, UnaryGrammarRule> rmap : uRuleMap.entrySet()) {
-						
-					}
-					
+					x0 = left;
+					y0 = right;
+					x1 = right + 1;
+					y1 = left + ilayer;
+					l0 = nword - (y0 - x0);
+					l1 = nword - (y1 - x1);
+					l2 = nword - ilayer;
+					// to ensure...
+					tagQueue.clear();
 					// binary grammar rules
-					for (Map.Entry<BinaryGrammarRule, BinaryGrammarRule> rmap : bRuleMap.entrySet()) {
-						BinaryGrammarRule rule = rmap.getValue();
+					for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
+						BinaryGrammarRule rule = (BinaryGrammarRule) rmap.getValue();
 						if (chart.containsKey(rule.lchild, x0, l0) && chart.containsKey(rule.rchild, x1, l1)) {
-							prule = rule.getWeight();
-							linside = chart.getInsideScore(rule.lchild, x0, l0);
-							rinside = chart.getInsideScore(rule.rchild, x1, l1);
+							tagQueue.offer(rule.lhs);
+							ruleScore = rule.getWeight();
+							linScore = chart.getInsideScore(rule.lchild, x0, l0);
+							rinScore = chart.getInsideScore(rule.rchild, x1, l1);
 							
-							prule = prule.mulForInsideOutside(linside, GrammarRule.Unit.LC, true);
-							prule = prule.mulForInsideOutside(rinside, GrammarRule.Unit.RC, false);
-							chart.addInsideScore(rule.lhs, left, nword - ilayer, prule);
+							pinScore = ruleScore.mulForInsideOutside(linScore, GrammarRule.Unit.LC, true);
+							pinScore = pinScore.mulForInsideOutside(rinScore, GrammarRule.Unit.RC, false);
+							chart.addInsideScore(rule.lhs, left, l2, pinScore);
 						}
 					}
+					// unary grammar rules
+					insideScoreForUnaryRule(chart, tagQueue, l2, nword);
 				}
 			}
 		}
-	}
-	
-	
-	/**
-	 * Compute the inside score. Recursive version.
-	 * 
-	 * @param chart    which stores the parse info
-	 * @param sentence the sentence
-	 * @param begin    left bound of the spanning range
-	 * @param end      right bound of the spanning range
-	 */
-	protected void insideScore(Chart chart, List<State> sentence, int begin, int end) {
-		int nword = sentence.size();
-		
-		if (begin == end) {
-			int index = sentence.get(begin).wordIdx;
-			
-			Queue<Short> newTags = new LinkedList<Short>(); 
-			GaussianMixture inside, prule, linside, rinside;
-			
-			List<UnaryGrammarRule> rules = lexicon.getRules(index);
-			for (UnaryGrammarRule rule : rules) {
-				newTags.offer(rule.lhs);
-				chart.addInsideScore(rule.lhs, begin, nword, rule.getWeight().copy(true));
-			}
-			// consider rules A->B->w and B->C->w. So p(w | B) = p(B->w) + p(B->C) * p(C->w).
-			// TODO Could it be a dead loop? BUG.
-			while (!newTags.isEmpty()) {
-				index = newTags.poll();
-				rules = grammar.getUnaryRuleWithC(index);
-				for (UnaryGrammarRule rule : rules) {
-					newTags.offer(rule.lhs);		
-					prule = rule.getWeight();
-					inside = chart.getInsideScore(rule.rhs, begin, nword);
-					prule.mulForInsideOutside(inside, GrammarRule.Unit.UC, true);
-					chart.addInsideScore(rule.lhs, begin, nword, prule);
-				}
-			}
-		}
-		
-		Map<UnaryGrammarRule, UnaryGrammarRule> uRuleMap = grammar.getUnaryRuleMap();
-		Map<BinaryGrammarRule, BinaryGrammarRule> bRuleMap = grammar.getBinaryRuleMap();
-		
-		for (int split = begin; split < end; split++) {
-			
-			int x0 = begin, y0 = split;
-			int x1 = split + 1, y1 = end;
-			int l0 = nword - (y0 - x0), l1 = nword - (y1 - x1);
-			if (!chart.getStatus(x0,  l0)) {
-				insideScore(chart, sentence, begin, split);
-			}
-			if (!chart.getStatus(x1, l1)) {
-				insideScore(chart, sentence, split + 1, end);
-			}
-			
-			GaussianMixture inside, prule, linside, rinside;
-			for (Map.Entry<BinaryGrammarRule, BinaryGrammarRule> rmap : bRuleMap.entrySet()) {
-				BinaryGrammarRule rule = rmap.getValue();
-				if (chart.containsKey(rule.lchild, x0, l0) && chart.containsKey(rule.rchild, x1, l1)) {
-					prule = rule.getWeight();
-					linside = chart.getInsideScore(rule.lchild, x0, l0);
-					rinside = chart.getInsideScore(rule.rchild, x1, l1);
-					
-					inside = prule.mulForInsideOutside(linside, GrammarRule.Unit.LC, true);
-					inside = prule.mulForInsideOutside(rinside, GrammarRule.Unit.RC, false);
-					chart.addInsideScore(rule.lhs, begin, nword - (end - begin), inside);
-				}
-			}
-		}
-		chart.setStatus(begin, nword - (end - begin), true);
 	}
 	
 	
@@ -184,46 +118,45 @@ public class Inferencer {
 		
 		if (tree.isPreTerminal()) {
 			State word = children.get(0).getLabel();
-			GaussianMixture inScore = lexicon.score(word, idParent);
-			
-			parent.setInsideScore(inScore.copy(true));
+			GaussianMixture cinScore = lexicon.score(word, idParent);
+			parent.setInsideScore(cinScore.copy(true));
 		} else {
 			switch (children.size()) {
 			case 0:
 				// in case there are some errors in the parse tree.
 				break;
 			case 1: {
-				GaussianMixture ruleScore, inScore, childInScore;
+				GaussianMixture ruleScore, cinScore, pinScore;
 				State child = children.get(0).getLabel();
-				childInScore = child.getInsideScore();
+				cinScore = child.getInsideScore();
 				short idChild = child.getId();
 				
 				if (idParent != 0) {
 					ruleScore = grammar.getUnaryRuleScore(idParent, idChild, GrammarRule.GENERAL);
-					inScore = ruleScore.mulForInsideOutside(childInScore, GrammarRule.Unit.UC, true);
+					pinScore = ruleScore.mulForInsideOutside(cinScore, GrammarRule.Unit.UC, true);
 				} else { // root, inside score of the root node is a constant in double
 					ruleScore = grammar.getUnaryRuleScore(idParent, idChild, GrammarRule.RHSPACE);
-					inScore = ruleScore.mulForInsideOutside(childInScore, GrammarRule.Unit.C, true);
+					pinScore = ruleScore.mulForInsideOutside(cinScore, GrammarRule.Unit.C, true);
 				}
 				
-				parent.setInsideScore(inScore);
+				parent.setInsideScore(pinScore);
 				break;
 			}
 			case 2: {
-				GaussianMixture ruleScore, inScore, lchildInScore, rchildInScore;
+				GaussianMixture ruleScore, pinScore, linScore, rinScore;
 				State lchild = children.get(0).getLabel();
 				State rchild = children.get(1).getLabel();
 				short idlChild = lchild.getId();
 				short idrChild = rchild.getId();
 				
-				lchildInScore = lchild.getInsideScore();
-				rchildInScore = rchild.getInsideScore();
+				linScore = lchild.getInsideScore();
+				rinScore = rchild.getInsideScore();
 				ruleScore = grammar.getBinaryRuleScore(idParent, idlChild, idrChild);
 				
-				inScore = ruleScore.mulForInsideOutside(lchildInScore, GrammarRule.Unit.LC, true);
-				inScore = inScore.mulForInsideOutside(rchildInScore, GrammarRule.Unit.RC, false);
+				pinScore = ruleScore.mulForInsideOutside(linScore, GrammarRule.Unit.LC, true);
+				pinScore = pinScore.mulForInsideOutside(rinScore, GrammarRule.Unit.RC, false);
 				
-				parent.setInsideScore(inScore);
+				parent.setInsideScore(pinScore);
 				break;
 			}
 			default:
@@ -235,21 +168,24 @@ public class Inferencer {
 	
 	
 	/**
-	 * Compute the outside score.
+	 * Compute the outside score given the sentence and grammar rules.
 	 * 
 	 * @param tree in which only the sentence is used.
 	 */
 	protected void outsideScore(Chart chart, List<State> sentence, int nword, boolean recursive) {
 		
-		int x0, y0, x1, y1, l0, l1;
-		GaussianMixture outside, prule, linside, rinside;
+		int x0, y0, x1, y1, l0, l1, l2;
+		GaussianMixture poutScore, linScore, rinScore, loutScore, routScore, ruleScore;
 		
-		Map<UnaryGrammarRule, UnaryGrammarRule> uRuleMap = grammar.getUnaryRuleMap();
-		Map<BinaryGrammarRule, BinaryGrammarRule> bRuleMap = grammar.getBinaryRuleMap();
+		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBinaryRuleMap();
 		
 		for (int ilayer = nword - 1; ilayer >= 0; ilayer--) {
 			for (int left = 0; left < nword - ilayer; left++) {
 				
+				// unary grammar rules
+				outsideScoreForUnaryRule(chart, left, nword - ilayer);
+				
+				// left child
 				for (int right = left + ilayer + 1; right < nword; right++) {
 					x0 = left; 
 					y0 = right;
@@ -257,39 +193,44 @@ public class Inferencer {
 					y1 = right;
 					l0 = nword - (y0 - x0); 
 					l1 = nword - (y1 - x1);
-					
-					for (Map.Entry<BinaryGrammarRule, BinaryGrammarRule> rmap : bRuleMap.entrySet()) {
-						BinaryGrammarRule rule = rmap.getValue();
+					l2 = nword - ilayer;
+
+					// binary grammar rules
+					for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
+						BinaryGrammarRule rule = (BinaryGrammarRule) rmap.getValue();
 						if (chart.containsKey(rule.lhs, x0, l0) && chart.containsKey(rule.rchild, x1, l1)) {
-							prule = rule.getWeight();
-							outside = chart.getOutsideScore(rule.lhs, x0, l0);
-							rinside = chart.getInsideScore(rule.rchild, x1, l1);
+							ruleScore = rule.getWeight();
+							poutScore = chart.getOutsideScore(rule.lhs, x0, l0);
+							rinScore = chart.getInsideScore(rule.rchild, x1, l1);
 							
-							prule = prule.mulForInsideOutside(outside, GrammarRule.Unit.P, true);
-							prule = prule.mulForInsideOutside(rinside, GrammarRule.Unit.RC, false);
-							chart.addInsideScore(rule.lhs, left, nword - ilayer, prule);
+							loutScore = ruleScore.mulForInsideOutside(poutScore, GrammarRule.Unit.P, true);
+							loutScore = loutScore.mulForInsideOutside(rinScore, GrammarRule.Unit.RC, false);
+							chart.addInsideScore(rule.lhs, left, l2, loutScore);
 						}
 					}
 				}
 				
+				// right child
 				for (int right = 0; right < left; right++) {
 					x0 = right; 
 					y0 = left + ilayer;
-					x1 = right; 
+					x1 = right;
 					y1 = left - 1;
 					l0 = nword - (y0 - x0); 
 					l1 = nword - (y1 - x1);
+					l2 = nword - ilayer;
 					
-					for (Map.Entry<BinaryGrammarRule, BinaryGrammarRule> rmap : bRuleMap.entrySet()) {
-						BinaryGrammarRule rule = rmap.getValue();
+					// binary grammar rules
+					for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
+						BinaryGrammarRule rule = (BinaryGrammarRule) rmap.getValue();
 						if (chart.containsKey(rule.lhs, x0, l0) && chart.containsKey(rule.lchild, x1, l1)) {
-							prule = rule.getWeight();
-							outside = chart.getOutsideScore(rule.lhs, x0, l0);
-							linside = chart.getInsideScore(rule.lchild, x1, l1);
+							ruleScore = rule.getWeight();
+							poutScore = chart.getOutsideScore(rule.lhs, x0, l0);
+							linScore = chart.getInsideScore(rule.lchild, x1, l1);
 							
-							prule = prule.mulForInsideOutside(outside, GrammarRule.Unit.P, true);
-							prule = prule.mulForInsideOutside(linside, GrammarRule.Unit.LC, false);
-							chart.addInsideScore(rule.lhs, left, nword - ilayer, prule);
+							routScore = ruleScore.mulForInsideOutside(poutScore, GrammarRule.Unit.P, true);
+							routScore = routScore.mulForInsideOutside(linScore, GrammarRule.Unit.LC, false);
+							chart.addInsideScore(rule.lhs, left, l2, routScore);
 						}
 					}
 				}
@@ -297,13 +238,6 @@ public class Inferencer {
 		}
 	}
 	
-	
-	/**
-	 * @param recursive recursive version
-	 * @return
-	 */
-	protected void outsideScore(boolean recursive) {
-	}
 	
 	
 	/**
@@ -321,13 +255,13 @@ public class Inferencer {
 		if (tree.isPreTerminal()) {
 			// nothing to do
 		} else {
-			GaussianMixture parentOutScore = parent.getOutsideScore();
+			GaussianMixture poutScore = parent.getOutsideScore();
 			
 			switch (children.size()) {
 			case 0:
 				break;
 			case 1: {
-				GaussianMixture ruleScore, outScore;
+				GaussianMixture ruleScore, coutScore;
 				State child = children.get(0).getLabel();
 				short idChild = child.getId();
 				
@@ -338,28 +272,28 @@ public class Inferencer {
 				}
 				// rule: p(root->nonterminal) does not contain "P" part, so no removing occurs when
 				// the current parent node is the root node
-				outScore = ruleScore.mulForInsideOutside(parentOutScore, GrammarRule.Unit.P, true);
+				coutScore = ruleScore.mulForInsideOutside(poutScore, GrammarRule.Unit.P, true);
 				
-				child.setOutsideScore(outScore);
+				child.setOutsideScore(coutScore);
 				break;
 			}
 			case 2: {
 				GaussianMixture ruleScore, loutScore, routScore;
-				GaussianMixture lchildInScore, rchildInScore;
+				GaussianMixture linScore, rinScore;
 				State lchild = children.get(0).getLabel();
 				State rchild = children.get(0).getLabel();
 				short idlChild = lchild.getId();
 				short idrChild = rchild.getId();
 				
-				lchildInScore = lchild.getInsideScore();
-				rchildInScore = rchild.getInsideScore();
+				linScore = lchild.getInsideScore();
+				rinScore = rchild.getInsideScore();
 				ruleScore = grammar.getBinaryRuleScore(idParent, idlChild, idrChild);
 				
-				loutScore = ruleScore.mulForInsideOutside(parentOutScore, GrammarRule.Unit.P, true);
-				loutScore = loutScore.mulForInsideOutside(rchildInScore, GrammarRule.Unit.RC, false);
+				loutScore = ruleScore.mulForInsideOutside(poutScore, GrammarRule.Unit.P, true);
+				loutScore = loutScore.mulForInsideOutside(rinScore, GrammarRule.Unit.RC, false);
 				
-				routScore = ruleScore.mulForInsideOutside(parentOutScore, GrammarRule.Unit.P, true);
-				routScore = routScore.mulForInsideOutside(lchildInScore, GrammarRule.Unit.LC, false);
+				routScore = ruleScore.mulForInsideOutside(poutScore, GrammarRule.Unit.P, true);
+				routScore = routScore.mulForInsideOutside(linScore, GrammarRule.Unit.LC, false);
 				
 				lchild.setOutsideScore(loutScore);
 				rchild.setOutsideScore(routScore);
@@ -377,6 +311,229 @@ public class Inferencer {
 	}
 	
 	
+	protected void evalRuleCount(Chart chart, List<State> sentence, int nword, double sentenceScore) {
+		double count = 0.0;
+		GaussianMixture outScore, cinScore, linScore, rinScore, ruleScore;
+		
+		Map<GrammarRule, GrammarRule> uRuleMap = grammar.getUnaryRuleMap();
+		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBinaryRuleMap();
+		
+		// base case
+		for (int i = 0; i < nword; i++) {
+			int wordIdx = sentence.get(i).wordIdx;
+			List<GrammarRule> rules = lexicon.getRulesWithWord(wordIdx);
+			// pre-terminals
+			for (GrammarRule rule : rules) {
+				cinScore = chart.getInsideScore(rule.lhs, i, nword);
+				outScore = chart.getOutsideScore(rule.lhs, i, nword);
+				count = computeUnaryRuleCount(outScore, cinScore, null) / sentenceScore;
+				lexicon.addCount(rule.lhs, (short) wordIdx, GrammarRule.LHSPACE, count, false);
+			}
+			
+			// consider rules A->B->w and B->C->w. So p(w | B) = p(B->w) + p(B->C) * p(C->w).
+			// TODO Could it be a dead loop? BUG.
+			// unary grammar rules
+			for (Map.Entry<GrammarRule, GrammarRule> rmap : uRuleMap.entrySet()) {
+				UnaryGrammarRule rule = (UnaryGrammarRule) rmap.getValue();
+				if (chart.containsKey(rule.lhs, i, nword) && chart.containsKey(rule.rhs, i, nword)) {
+					outScore = chart.getOutsideScore(rule.lhs, i, nword);
+					cinScore = chart.getInsideScore(rule.rhs, i, nword);
+					ruleScore = rule.getWeight();
+					count = computeUnaryRuleCount(outScore, cinScore, ruleScore) / sentenceScore;
+					grammar.addCount(rule.lhs, rule.rhs, GrammarRule.GENERAL, count, false);
+				}
+			}
+		}		
+		
+		for (int ilayer = 1; ilayer < nword; ilayer++) {
+			for (int left = 0; left < nword - ilayer; left++) {
+				for (int right = left; right < left + ilayer; right++) {				
+					int x0 = left, y0 = right;
+					int x1 = right + 1, y1 = left + ilayer;
+					int l0 = nword - (y0 - x0), l1 = nword - (y1 - x1), l2 = nword - ilayer;
+
+					// unary grammar rules
+					for (Map.Entry<GrammarRule, GrammarRule> rmap : uRuleMap.entrySet()) {
+						UnaryGrammarRule rule = (UnaryGrammarRule) rmap.getValue();
+						if (chart.containsKey(rule.lhs, left, l2) && chart.containsKey(rule.rhs, left, l2)) {
+							outScore = chart.getOutsideScore(rule.lhs, left, l2);
+							cinScore = chart.getInsideScore(rule.rhs, left, l2);
+							ruleScore = rule.getWeight();
+							count = computeUnaryRuleCount(outScore, cinScore, ruleScore) / sentenceScore;
+							grammar.addCount(rule.lhs, rule.rhs, GrammarRule.GENERAL, count, false);
+						}
+					}
+					
+					// binary grammar rules
+					for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
+						BinaryGrammarRule rule = (BinaryGrammarRule) rmap.getValue();
+						if (chart.containsKey(rule.lchild, x0, l0) && chart.containsKey(rule.rchild, x1, l1)) {
+							outScore = chart.getOutsideScore(rule.lhs, left, l2);
+							linScore = chart.getInsideScore(rule.lchild, x0, l0);
+							rinScore = chart.getInsideScore(rule.rchild, x1, l1);
+							ruleScore = rule.getWeight();
+							
+							count = computeBinaryRuleCount(outScore, linScore, rinScore, ruleScore) / sentenceScore;
+							grammar.addCount(rule.lhs, rule.lchild, rule.rchild, count, false);
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	
+	/**
+	 * Eval the rule counts with the parse tree known.
+	 * 
+	 * @param tree      the parse tree
+	 * @param treeScore the score of the tree
+	 */
+	protected void evalRuleCountWithTree(Tree<State> tree, double treeScore) {
+		if (tree.isLeaf()) { return; }
+		
+		List<Tree<State>> children = tree.getChildren();
+		for (Tree<State> child : children) {
+			evalRuleCountWithTree(child, treeScore);
+		}
+		
+		State parent = tree.getLabel();
+		short idParent = parent.getId();
+		GaussianMixture outScore = parent.getOutsideScore();
+		
+		if (tree.isPreTerminal()) {
+			State word = children.get(0).getLabel();
+			GaussianMixture cinScore = parent.getInsideScore();
+			double count = computeUnaryRuleCount(outScore, cinScore, null) / treeScore;
+			lexicon.addCount(idParent, (short) word.wordIdx, GrammarRule.LHSPACE, count, true);
+		} else {
+			switch (children.size()) {
+			case 0:
+				// in case there are some errors in the parse tree.
+				break;
+			case 1: {
+				GaussianMixture ruleScore, cinScore;
+				State child = children.get(0).getLabel();
+				cinScore = child.getInsideScore();
+				short idChild = child.getId();
+				
+				// root, if (idParent == 0) is true
+				char type = idParent == 0 ? GrammarRule.RHSPACE : GrammarRule.GENERAL;
+				ruleScore = grammar.getUnaryRuleScore(idParent, idChild, type);
+				
+				double count = computeUnaryRuleCount(outScore, cinScore, ruleScore) / treeScore;
+				grammar.addCount(idParent, idChild, type, count, true);
+				break;
+			}
+			case 2: {
+				GaussianMixture ruleScore, linScore, rinScore;
+				State lchild = children.get(0).getLabel();
+				State rchild = children.get(1).getLabel();
+				short idlChild = lchild.getId();
+				short idrChild = rchild.getId();
+				
+				linScore = lchild.getInsideScore();
+				rinScore = rchild.getInsideScore();
+				ruleScore = grammar.getBinaryRuleScore(idParent, idlChild, idrChild);
+				
+				double count = computeBinaryRuleCount(outScore, linScore, rinScore, ruleScore) / treeScore;
+				grammar.addCount(idParent, idlChild, idrChild, count, true);
+				break;
+			}
+			default:
+				System.err.println("Malformed tree: more than two children. Exitting...");
+				System.exit(0);	
+			}
+		}
+	}
+	
+	
+	
+	private void evalRuleCountForUnaryRule() {
+		
+	}
+	
+	
+	private void outsideScoreForUnaryRule(Chart chart, int i, int ilayer) {
+		Map<GrammarRule, GrammarRule> uRuleMap = grammar.getUnaryRuleMap();
+		for (Map.Entry<GrammarRule, GrammarRule> rmap : uRuleMap.entrySet()) {
+			UnaryGrammarRule rule = (UnaryGrammarRule) rmap.getValue();
+			
+		}
+	}
+	
+	
+	/**
+	 * @param chart    which records the inside and outside scores 
+	 * @param tagQueue which stores the right hand sides of candidate unary rules 
+	 * @param i        index of the row
+	 * @param ilayer   layer in the pyramid, from top (1) to bottom (ilayer);
+	 */
+	private void insideScoreForUnaryRule(Chart chart, Queue<Short> tagQueue, int i, int ilayer) {
+		if (tagQueue != null) {
+			short idTag;
+			String ruleType;
+			List<GrammarRule> rules;
+			GaussianMixture pinScore, cinScore, ruleScore;
+			// consider rules A->B->w and B->C->w. So p(w | B) = p(B->w) + p(B->C) * p(C->w).
+			// TODO Could it be a dead loop? BUG.
+			// DONE Grammar rules are checked before the training. See MethodUtil.checkUnaryRuleCircle().
+			while (!tagQueue.isEmpty()) {
+				idTag = tagQueue.poll();
+				rules = grammar.getUnaryRuleWithC(idTag);
+				Iterator<GrammarRule> iterator = rules.iterator();
+				while (iterator.hasNext()) {
+					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
+					tagQueue.offer(rule.lhs);
+					ruleScore = rule.getWeight();
+					cinScore = chart.getInsideScore(rule.rhs, i, ilayer);
+					// in case when the rule.lhs is the root node
+					ruleType = rule.type == GrammarRule.RHSPACE ? GrammarRule.Unit.C : GrammarRule.Unit.UC;
+					pinScore = ruleScore.mulForInsideOutside(cinScore, ruleType, true);
+					chart.addInsideScore(rule.lhs, i, ilayer, pinScore);
+				}
+			}
+		}
+	}
+	
+	
+	/**
+	 * @param outScore  outside score of the parent
+	 * @param linScore  inside score of the left child
+	 * @param rinScore  inside score of the right child
+	 * @param ruleScore binary rule score
+	 * @return
+	 */
+	private double computeBinaryRuleCount(
+			GaussianMixture outScore, 
+			GaussianMixture linScore, 
+			GaussianMixture rinScore, 
+			GaussianMixture ruleScore) {
+		double part0 = outScore == null ? 1.0 : outScore.marginalize();
+		double part1 = linScore == null ? 1.0 : linScore.marginalize();
+		double part2 = rinScore == null ? 1.0 : rinScore.marginalize();
+		double part3 = ruleScore == null ? 1.0 : ruleScore.marginalize();
+		return part0 * part1 * part2 * part3;
+	}
+	
+	
+	/**
+	 * @param outScore  outside score of the parent
+	 * @param cinScore  inside score of the child
+	 * @param ruleScore unary rule score
+	 * @return
+	 */
+	private double computeUnaryRuleCount(
+			GaussianMixture outScore, 
+			GaussianMixture cinScore, 
+			GaussianMixture ruleScore) {
+		double part0 = outScore == null ? 1.0 : outScore.marginalize();
+		double part1 = cinScore == null ? 1.0 : cinScore.marginalize();
+		double part2 = ruleScore == null ? 1.0 : ruleScore.marginalize();
+		return part0 * part1 * part2;
+	}
+	
+	
 	/**
 	 * Set the outside score of the root node to 1.
 	 * 
@@ -384,11 +541,16 @@ public class Inferencer {
 	 */
 	protected void setRootOutsideScore(Tree<State> tree) {
 		GaussianMixture gm = tree.getLabel().getOutsideScore();
-		double weight = 1.0 / gm.ncomponent;
-		for (int i = 0; i < gm.ncomponent; i++) {
-			gm.weights.set(i, weight);
-			gm.mixture.get(i).clear();
-		}
+		gm.marginalizeToOne();
+	}
+	
+	
+	/**
+	 * @param chart 
+	 */
+	protected void setRootOutsideScore(Chart chart) {
+		GaussianMixture gm = chart.getOutsideScore((short) 0, (short) 0, (short) 1);
+		gm.marginalizeToOne();
 	}
 	
 	
@@ -435,7 +597,17 @@ public class Inferencer {
 		
 		
 		/**
-		 * Imagine the upper right triangle chart as the pyramid.
+		 * Map the index to the real memory address. Imagine the upper right 
+		 * triangle chart as the pyramid. E.g., see the pyramid below, which 
+		 * could represent a sentence of length 6.
+		 * <pre>
+		 * + + + + + +
+		 *   + + + + +
+		 *     + + + +
+		 *       + + +
+		 *         + +
+		 *           + 
+		 * </pre>
 		 * 
 		 * @param i      index of the row
 		 * @param ilayer layer in the pyramid, from top (1) to bottom (ilayer);
@@ -599,6 +771,79 @@ public class Inferencer {
 			}
 			scores.clear();
 		}
+	}
+	
+	
+	/**
+	 * Compute the inside score. Recursive version.
+	 * 
+	 * @param chart    which stores the parse info
+	 * @param sentence the sentence
+	 * @param begin    left bound of the spanning range
+	 * @param end      right bound of the spanning range
+	 */
+	protected void insideScore(Chart chart, List<State> sentence, int begin, int end) {
+		int nword = sentence.size();
+		
+		if (begin == end) {
+			int index = sentence.get(begin).wordIdx;
+			
+			Queue<Short> newTags = new LinkedList<Short>(); 
+			GaussianMixture inside, prule, linside, rinside;
+			
+			List<GrammarRule> rules = lexicon.getRulesWithWord(index);
+			for (GrammarRule rule : rules) {
+				newTags.offer(rule.lhs);
+				chart.addInsideScore(rule.lhs, begin, nword, rule.getWeight().copy(true));
+			}
+			// consider rules A->B->w and B->C->w. So p(w | B) = p(B->w) + p(B->C) * p(C->w).
+			// TODO Could it be a dead loop? BUG.
+			while (!newTags.isEmpty()) {
+				index = newTags.poll();
+				rules = grammar.getUnaryRuleWithC(index);
+				
+				Iterator<GrammarRule> iterator= rules.iterator();
+				while (iterator.hasNext()) {
+					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
+					newTags.offer(rule.lhs);		
+					prule = rule.getWeight();
+					inside = chart.getInsideScore(rule.rhs, begin, nword);
+					prule.mulForInsideOutside(inside, GrammarRule.Unit.UC, true);
+					chart.addInsideScore(rule.lhs, begin, nword, prule);
+				}
+			}
+		}
+		
+		Map<GrammarRule, GrammarRule> uRuleMap = grammar.getUnaryRuleMap();
+		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBinaryRuleMap();
+		
+		for (int split = begin; split < end; split++) {
+			
+			int x0 = begin, y0 = split;
+			int x1 = split + 1, y1 = end;
+			int l0 = nword - (y0 - x0), l1 = nword - (y1 - x1);
+			if (!chart.getStatus(x0,  l0)) {
+				insideScore(chart, sentence, begin, split);
+			}
+			if (!chart.getStatus(x1, l1)) {
+				insideScore(chart, sentence, split + 1, end);
+			}
+			
+			GaussianMixture inside, prule, linside, rinside;
+			for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
+				BinaryGrammarRule rule = (BinaryGrammarRule) rmap.getValue();
+				if (chart.containsKey(rule.lchild, x0, l0) && chart.containsKey(rule.rchild, x1, l1)) {
+					prule = rule.getWeight();
+					linside = chart.getInsideScore(rule.lchild, x0, l0);
+					rinside = chart.getInsideScore(rule.rchild, x1, l1);
+					
+					inside = prule.mulForInsideOutside(linside, GrammarRule.Unit.LC, true);
+					inside = prule.mulForInsideOutside(rinside, GrammarRule.Unit.RC, false);
+					chart.addInsideScore(rule.lhs, begin, nword - (end - begin), inside);
+				}
+			}
+		}
+		chart.setStatus(begin, nword - (end - begin), true);
 	}
 	
 }

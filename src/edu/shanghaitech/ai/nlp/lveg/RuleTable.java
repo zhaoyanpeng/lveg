@@ -77,7 +77,7 @@ public class RuleTable<T> implements Serializable {
 	}
 	
 	
-	public void increaseCount(GrammarRule key, double increment) {
+	public void addCount(GrammarRule key, double increment) {
 		GaussianMixture count = getCount(key);
 		if (count == null) {
 			GaussianMixture gm = new GaussianMixture();
@@ -89,7 +89,7 @@ public class RuleTable<T> implements Serializable {
 	}
 
 	
-	public void increaseCount(GrammarRule key, GaussianMixture increment) {
+	public void addCount(GrammarRule key, GaussianMixture increment) {
 		GaussianMixture count = getCount(key);
 		if (count == null) {
 			GaussianMixture gm = new GaussianMixture();
@@ -98,5 +98,24 @@ public class RuleTable<T> implements Serializable {
 			return;
 		}
 		count.add(increment);
+	}
+	
+	
+	/**
+	 * @param deep deep copy or shallow copy
+	 * @return
+	 */
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	public RuleTable copy(boolean deep) {
+		RuleTable ruleTable = new RuleTable(type);
+		for (GrammarRule rule : table.keySet()) {
+			// copy key by reference, when only the count (value) varies
+			if (!deep) {
+				ruleTable.addCount(rule, null);
+			} else {
+				ruleTable.addCount(rule.copy(), table.get(rule).copy(true));
+			}
+		}
+		return ruleTable;
 	}
 }

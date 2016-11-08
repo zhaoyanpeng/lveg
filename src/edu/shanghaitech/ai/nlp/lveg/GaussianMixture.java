@@ -312,6 +312,17 @@ public class GaussianMixture {
 	}
 	
 	
+	
+	/**
+	 * Marginalize the mixture of gaussians.
+	 * 
+	 * @return
+	 */
+	public double marginalize() {
+		return MethodUtil.sum(weights);
+	}
+	
+	
 	/**
 	 * Marginalize the specific portions of the mixture of gaussians.
 	 * 
@@ -325,6 +336,31 @@ public class GaussianMixture {
 				gaussian.remove(key);
 			}
 		}
+	}
+	
+	
+	/**
+	 * Set the outside score of the root node to 1.
+	 */
+	protected void marginalizeToOne() {
+		if (ncomponent <= 0) {
+			System.err.println("Fatal error when marginalize the MoG to one.\n" + toString());
+			System.exit(0);
+		}
+		/*
+		double weight = 1.0 / ncomponent;
+		for (int i = 0; i < ncomponent; i++) {
+			weights.set(i, weight);
+			mixture.get(i).clear();
+		}
+		*/
+		for (int i = 1; i < ncomponent; i++) {
+			mixture.remove(i);
+			weights.remove(i);
+		}
+		ncomponent = 1;
+		weights.set(0, 1.0);
+		mixture.get(0).clear();
 	}
 	
 	
@@ -438,7 +474,7 @@ public class GaussianMixture {
 		for (int i = 0; i < ncomponent; i++) {
 			Map<String, Set<GaussianDistribution>> component = mixture.get(i);
 			if (component.size() != 0) {
-				System.err.println("You may not wanna see this message now.");
+				System.err.println("You may not wanna see this message for now.");
 			} else {
 				ret += weights.get(i);
 			}

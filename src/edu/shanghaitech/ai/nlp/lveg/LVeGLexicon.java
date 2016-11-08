@@ -23,6 +23,18 @@ public abstract class LVeGLexicon {
 	protected int unknownLevel;
 	
 	
+	public abstract void addCount(short idParent, short idChild, char type, double increment, boolean withTree);
+	
+	
+	/**
+	 * Initialize the remaining stuff after obtaining the vocabulary.
+	 * 
+	 * @param trees set of parse trees
+	 * @param nTag  the number of the pos-es
+	 */
+	public abstract void postInitialize(StateTreeList trees, int nTag);
+	
+	
 	/**
 	 * Tally (go over and record) the rules existing in the parse tree.
 	 * 
@@ -49,7 +61,7 @@ public abstract class LVeGLexicon {
 	 * @param wordIdx id of the word
 	 * @return
 	 */
-	protected abstract List<UnaryGrammarRule> getRules(int wordIdx);
+	protected abstract List<GrammarRule> getRulesWithWord(int wordIdx);
 	
 	
 	/**

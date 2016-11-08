@@ -2,7 +2,9 @@ package edu.shanghaitech.ai.nlp.lveg;
 
 import static org.junit.Assert.*;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import org.junit.Test;
@@ -12,8 +14,13 @@ public class RuleTableTest {
 	@Test
 	public void testRuleCounter() {
 		
-		RuleTable<?> unaryRuleTable = new RuleTable<UnaryGrammarRule>(UnaryGrammarRule.class);
-		RuleTable<?> binaryRuleTable = new RuleTable<BinaryGrammarRule>(BinaryGrammarRule.class);
+		Map<GrammarRule, Double> rules = new HashMap<GrammarRule, Double>();
+		
+		RuleTable<?> unaryRuleTable = new RuleTable(UnaryGrammarRule.class);
+		RuleTable<?> binaryRuleTable = new RuleTable(BinaryGrammarRule.class);
+		
+//		RuleTable<?> unaryRuleTable = new RuleTable<UnaryGrammarRule>(UnaryGrammarRule.class);
+//		RuleTable<?> binaryRuleTable = new RuleTable<BinaryGrammarRule>(BinaryGrammarRule.class);
 		
 		GrammarRule rule0 = new UnaryGrammarRule((short) 1, (short) 2, GrammarRule.GENERAL);
 		GrammarRule rule1 = new UnaryGrammarRule((short) 1, (short) 2, GrammarRule.GENERAL);
@@ -31,6 +38,19 @@ public class RuleTableTest {
 		GrammarRule rule2 = new UnaryGrammarRule((short) 7, (short) 2);
 		
 		
+		rules.put(rule0, -1.0);
+		rules.put(rule3, 20.0);
+		assertFalse(rules.containsKey(rule5));
+		assertTrue(rules.containsKey(rule1));
+		assertTrue(rules.containsKey(rule4));
+		for (GrammarRule rule : rules.keySet()) {
+			System.out.print("Is Unary: " + rule.isUnary() + "\t");
+			System.out.println(rules.get(rule));
+		}
+		System.out.println("Return Value: " + rules.get(rule5));
+		System.out.println(rules);
+		
+		
 		assertTrue(unaryRuleTable.isCompatible(rule0));
 		assertFalse(unaryRuleTable.isCompatible(rule3));
 		
@@ -38,7 +58,7 @@ public class RuleTableTest {
 		assertFalse(binaryRuleTable.isCompatible(rule1));
 		
 		
-		unaryRuleTable.increaseCount(rule0, 1);
+		unaryRuleTable.addCount(rule0, 1);
 		if (unaryRuleTable.containsKey(rule1)) {
 			System.out.println("UnaryGrammarRule: It works.");
 		} else {
@@ -48,15 +68,15 @@ public class RuleTableTest {
 		assertFalse(unaryRuleTable.containsKey(rule5));
 		assertTrue(unaryRuleTable.containsKey(rule8));
 
-		unaryRuleTable.increaseCount(rule6, 1);
+		unaryRuleTable.addCount(rule6, 1);
 		assertTrue(unaryRuleTable.containsKey(rule7));
 		
-		unaryRuleTable.increaseCount(rule3, 1);
+		unaryRuleTable.addCount(rule3, 1);
 		unaryRuleTable.containsKey(rule3);
 		assertFalse(unaryRuleTable.containsKey(rule4));
 		
 		
-		binaryRuleTable.increaseCount(rule3, 1);
+		binaryRuleTable.addCount(rule3, 1);
 		if (binaryRuleTable.containsKey(rule4)) {
 			System.out.println("BinaryGrammarRule: It works.");
 		} else {
@@ -82,6 +102,7 @@ public class RuleTableTest {
 		
 		GrammarRule rule14 = new BinaryGrammarRule((short) 1, (short) 2, (short) 3, false);
 		BinaryGrammarRule rule15 = new BinaryGrammarRule((short) 1, (short) 2, (short) 3, false);
+		System.out.println("Hello. " + rule14);
 		
 //		assertTrue(uTable.isCompatible(rule12));
 //		assertTrue(uTable.isCompatible(rule14));

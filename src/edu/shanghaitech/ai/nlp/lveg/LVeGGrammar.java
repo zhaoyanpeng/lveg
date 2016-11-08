@@ -2,6 +2,7 @@ package edu.shanghaitech.ai.nlp.lveg;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -20,27 +21,33 @@ public class LVeGGrammar implements Serializable {
 	 */
 	private static final long serialVersionUID = 1L;
 	
-	protected int nTag;
+	public int nTag;
 	protected Numberer numbererTag;
 	
 	protected RuleTable<?> unaryRuleTable;
 	protected RuleTable<?> binaryRuleTable;
 	
-	private List<UnaryGrammarRule>[] unaryRulesWithP;
-	private List<UnaryGrammarRule>[] unaryRulesWithC;
+	private List<GrammarRule>[] unaryRulesWithP;
+	private List<GrammarRule>[] unaryRulesWithC;
 	
-	private List<BinaryGrammarRule>[] binaryRulesWithP;
-	private List<BinaryGrammarRule>[] binaryRulesWithLC;
-	private List<BinaryGrammarRule>[] binaryRulesWithRC;
+	private List<GrammarRule>[] binaryRulesWithP;
+	private List<GrammarRule>[] binaryRulesWithLC;
+	private List<GrammarRule>[] binaryRulesWithRC;
 	
 	/**
 	 * Needed when we want to find a rule and access its statistics.
 	 * we first construct a rule, which is used as the key, and use 
 	 * the key to find the real rule that contains more information.
 	 */
-	private Map<UnaryGrammarRule, UnaryGrammarRule> unaryRuleMap;
-	private Map<BinaryGrammarRule, BinaryGrammarRule> binaryRuleMap;
+	private Map<GrammarRule, GrammarRule> unaryRuleMap;
+	private Map<GrammarRule, GrammarRule> binaryRuleMap;
 	
+	/**
+	 * count0 stores rule counts that are evaluated given the parse tree
+	 * count1 stores rule counts that are evaluated without the parse tree 
+	 */
+	private Map<GrammarRule, Double> count0;
+	private Map<GrammarRule, Double> count1;
 	
 	/**
 	 * Rules with probabilities below this value will be filtered.
@@ -48,12 +55,20 @@ public class LVeGGrammar implements Serializable {
 	private double filterThreshold;
 	
 	
-	public LVeGGrammar(LVeGGrammar oldGrammar, double filterThreshold) {
-		this.numbererTag = Numberer.getGlobalNumberer(LVeGLearner.KEY_TAG_SET);
-		this.unaryRuleTable = new RuleTable<UnaryGrammarRule>(UnaryGrammarRule.class);
-		this.binaryRuleTable = new RuleTable<BinaryGrammarRule>(BinaryGrammarRule.class);
+	public LVeGGrammar(LVeGGrammar oldGrammar, double filterThreshold, int nTag) {
+		this.unaryRuleTable  = new RuleTable(UnaryGrammarRule.class);
+		this.binaryRuleTable = new RuleTable(BinaryGrammarRule.class);
+		this.unaryRuleMap  = new HashMap<GrammarRule, GrammarRule>();
+		this.binaryRuleMap = new HashMap<GrammarRule, GrammarRule>();
 		this.filterThreshold = filterThreshold;
-		this.nTag = numbererTag.size();
+		
+		if (nTag < 0) {
+			this.numbererTag = Numberer.getGlobalNumberer(LVeGLearner.KEY_TAG_SET);
+			this.nTag = numbererTag.size();
+		} else {
+			this.numbererTag = null;
+			this.nTag = nTag;
+		}
 		
 		if (oldGrammar != null) {
 			// TODO
@@ -74,17 +89,17 @@ public class LVeGGrammar implements Serializable {
 		this.binaryRulesWithRC = new List[nTag];
 		
 		for (int i = 0; i < nTag; i++) {
-			unaryRulesWithP[i] = new ArrayList<UnaryGrammarRule>();
-			unaryRulesWithC[i] = new ArrayList<UnaryGrammarRule>();
+			unaryRulesWithP[i] = new ArrayList<GrammarRule>();
+			unaryRulesWithC[i] = new ArrayList<GrammarRule>();
 			
-			binaryRulesWithP[i]  = new ArrayList<BinaryGrammarRule>();
-			binaryRulesWithLC[i] = new ArrayList<BinaryGrammarRule>();
-			binaryRulesWithRC[i] = new ArrayList<BinaryGrammarRule>();
+			binaryRulesWithP[i]  = new ArrayList<GrammarRule>();
+			binaryRulesWithLC[i] = new ArrayList<GrammarRule>();
+			binaryRulesWithRC[i] = new ArrayList<GrammarRule>();
 		}
 	}
 	
 	
-	public void addBinaryRule(BinaryGrammarRule rule) {
+	protected void addBinaryRule(BinaryGrammarRule rule) {
 		if (binaryRulesWithP[rule.lhs].contains(rule)) { return; }
 		binaryRulesWithP[rule.lhs].add(rule);
 		binaryRulesWithLC[rule.lchild].add(rule);
@@ -94,7 +109,7 @@ public class LVeGGrammar implements Serializable {
 	}
 	
 	
-	public void addUnaryRule(UnaryGrammarRule rule) {
+	protected void addUnaryRule(UnaryGrammarRule rule) {
 		if (unaryRulesWithP[rule.lhs].contains(rule)) { return; }
 		unaryRulesWithP[rule.lhs].add(rule);
 		unaryRulesWithC[rule.rhs].add(rule);
@@ -103,8 +118,18 @@ public class LVeGGrammar implements Serializable {
 	}
 	
 	
-	public void optimize(double randomness) {
-		// TODO
+	public void postInitialize(double randomness) {
+		for (GrammarRule rule : unaryRuleTable.keySet()) {
+			addUnaryRule((UnaryGrammarRule) rule);
+			count0.put(rule, 0.0);
+			count1.put(rule, 0.0);
+		}
+		
+		for (GrammarRule rule : binaryRuleTable.keySet()) {
+			addBinaryRule((BinaryGrammarRule) rule);
+			count0.put(rule, 0.0);
+			count1.put(rule, 0.0);
+		}
 	}
 	
 	
@@ -131,14 +156,14 @@ public class LVeGGrammar implements Serializable {
 			} else { // 0 represents the root node
 				rule = new UnaryGrammarRule(idParent, idChild, GrammarRule.RHSPACE);
 			}
-			unaryRuleTable.increaseCount(rule, 1.0);
+			unaryRuleTable.addCount(rule, 1.0);
 			break;
 		}
 		case 2: {
 			short idLeftChild = children.get(0).getLabel().getId();
 			short idRightChild = children.get(1).getLabel().getId();
 			BinaryGrammarRule rule = new BinaryGrammarRule(idParent, idLeftChild, idRightChild, true);
-			binaryRuleTable.increaseCount(rule, 1.0);
+			binaryRuleTable.addCount(rule, 1.0);
 			break;
 		}
 		default:
@@ -152,70 +177,131 @@ public class LVeGGrammar implements Serializable {
 	}
 	
 	
+	public void addCount(short idParent, short idChild, char type, double increment, boolean withTree) {
+		Map<GrammarRule, Double> count = null;
+		if (withTree) {
+			count = count0;
+		} else {
+			count = count1;
+		}
+		
+		GrammarRule rule = getUnaryRule(idParent, idChild, type);
+		if (rule != null) {
+			count.put(rule, count.get(rule) + increment);
+			return;
+		}
+		System.err.println("Unary Rule NOT Found: [P: " + idParent + ", C: " + idChild + ", TYPE: " + type + "]");
+	}
+	
+	
+	public void addCount(short idParent, short idlChild, short idrChild, double increment, boolean withTree) {
+		Map<GrammarRule, Double> count = null;
+		if (withTree) {
+			count = count0;
+		} else {
+			count = count1;
+		}
+		
+		GrammarRule rule = getBinaryRule(idParent, idlChild, idrChild);
+		if (rule != null) {
+			count.put(rule, count.get(rule) + increment);
+			return;
+		}
+		System.err.println("Binary Rule NOT Found: [P: " + idParent + ", LC: " + idlChild + ", RC: " + idrChild + "]");
+		
+	}
+
+	
 	public GaussianMixture getUnaryRuleScore(short idParent, short idChild, char type) {
-		UnaryGrammarRule rule = getUnaryRule(idParent, idChild, type);
+		GrammarRule rule = getUnaryRule(idParent, idChild, type);
 		if (rule != null) {
 			return rule.getWeight();
 		}
-		System.err.println("Unary Rule NOT Found: [P: " + idParent + ", C: " + idChild + ", TYPE: " + type);
+		System.err.println("Unary Rule NOT Found: [P: " + idParent + ", C: " + idChild + ", TYPE: " + type + "]");
 		return null;
 	}
 	
 	
 	public GaussianMixture getBinaryRuleScore(short idParent, short idlChild, short idrChild) {
-		BinaryGrammarRule rule = getBinaryRule(idParent, idlChild, idrChild);
+		GrammarRule rule = getBinaryRule(idParent, idlChild, idrChild);
 		if (rule != null) {
 			return rule.getWeight();
 		}
-		System.err.println("Binary Rule NOT Found: [P: " + idParent + ", LC: " + idlChild + ", RC: " + idrChild);
+		System.err.println("Binary Rule NOT Found: [P: " + idParent + ", LC: " + idlChild + ", RC: " + idrChild + "]");
 		return null;
 	}
 	
 	
-	public UnaryGrammarRule getUnaryRule(short idParent, short idChild, char type) {
-		UnaryGrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
-		return unaryRuleMap.get(rule);
+	public GrammarRule getUnaryRule(short idParent, short idChild, char type) {
+		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
+		return this.unaryRuleMap.get(rule);
 	}
 	
 	
-	public BinaryGrammarRule getBinaryRule(short idParent, short idlChild, short idrChild) {
-		BinaryGrammarRule rule = new BinaryGrammarRule(idParent, idlChild, idrChild);
-		return binaryRuleMap.get(rule);
+	public GrammarRule getBinaryRule(short idParent, short idlChild, short idrChild) {
+		GrammarRule rule = new BinaryGrammarRule(idParent, idlChild, idrChild);
+		return this.binaryRuleMap.get(rule);
 	}
 	
 	
-	public List<BinaryGrammarRule> getBinaryRuleWithRC(int iTag) {
+	public List<GrammarRule> getBinaryRuleWithRC(int iTag) {
 		return this.binaryRulesWithRC[iTag];
 	}
 	
 	
-	public List<BinaryGrammarRule> getBinaryRuleWithLC(int iTag) {
+	public List<GrammarRule> getBinaryRuleWithLC(int iTag) {
 		return this.binaryRulesWithLC[iTag];
 	}
 	
 	
-	public List<BinaryGrammarRule> getBinaryRuleWithP(int iTag) {
+	public List<GrammarRule> getBinaryRuleWithP(int iTag) {
 		return this.binaryRulesWithP[iTag];
 	}
 	
 	
-	public List<UnaryGrammarRule> getUnaryRuleWithP(int iTag) {
+	public List<GrammarRule> getUnaryRuleWithP(int iTag) {
 		return this.unaryRulesWithP[iTag];
 	}
 	
 	
-	public List<UnaryGrammarRule> getUnaryRuleWithC(int iTag) {
+	public List<GrammarRule> getUnaryRuleWithC(int iTag) {
 		return this.unaryRulesWithC[iTag];
 	}
 	
 	
-	public Map<UnaryGrammarRule, UnaryGrammarRule> getUnaryRuleMap() {
+	public Map<GrammarRule, GrammarRule> getUnaryRuleMap() {
 		return this.unaryRuleMap;
 	}
 	
 	
-	public Map<BinaryGrammarRule, BinaryGrammarRule> getBinaryRuleMap() {
+	public Map<GrammarRule, GrammarRule> getBinaryRuleMap() {
 		return this.binaryRuleMap;
 	}
-	
+
+
+	@Override
+	public String toString() {
+		int count = 0, ncol = 5;
+		StringBuffer sb = new StringBuffer();
+		sb.append("Grammar [nTag=" + nTag + "]\n");
+		
+		sb.append("---Unary Grammar Rules. Total: " + unaryRuleTable.size() + "\n");
+		for (GrammarRule rule : unaryRuleTable.keySet()) {
+			sb.append(rule + "\t");
+			if (++count % ncol == 0) {
+				sb.append("\n");
+			}
+		}
+		
+		sb.append("\n");
+		sb.append("---Binary Grammar Rules. Total: " + binaryRuleTable.size() + "\n");
+		for (GrammarRule rule : binaryRuleTable.keySet()) {
+			sb.append(rule + "\t");
+			if (++count % ncol == 0) {
+				sb.append("\n");
+			}
+		}
+		
+		return sb.toString();
+	}
 }

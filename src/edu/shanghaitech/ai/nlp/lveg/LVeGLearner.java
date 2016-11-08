@@ -158,14 +158,29 @@ public class LVeGLearner extends Recorder {
 		// MethodUtil.isChildrenSizeZero(trainTrees);
 		
 		// MethodUtil.isParentEqualToChild(trainTrees);
-		LVeGGrammar grammar = new LVeGGrammar(null, opts.filterThreshold);
-		LVeGLexicon lexicon = new SimpleLVeGLexicon(trainTrees, numbererTag.size(), opts.filterThreshold);
-		/*	
+		LVeGGrammar grammar = new LVeGGrammar(null, opts.filterThreshold, -1);
+		LVeGLexicon lexicon = new SimpleLVeGLexicon();
+			
 		for (Tree<State> tree : trainTrees) {
 			lexicon.tallyStateTree(tree);
 			grammar.tallyStateTree(tree);
 		}
 		
+		grammar.postInitialize(0.0);
+		lexicon.postInitialize(trainTrees, numbererTag.size());
+		
+//		System.out.println(grammar);
+		System.out.println(lexicon);
+		
+		// check if there is any circle in the unary grammar rules
+		// TODO move this self-checking procedure to the class Grammar
+		if (MethodUtil.checkUnaryRuleCircle(grammar, lexicon)) {
+			logger.error("Circle was found in the unary grammar rules.");
+			System.exit(0);
+		}
+		
+		
+		/*
 		LVeGGrammar maxGrammar = null, preGrammar = null;
 		LVeGLexicon maxLexicon = null, preLexicon = null;
 		

@@ -29,12 +29,43 @@ public class LVeGParser {
 		Inferencer.Chart chart = new Inferencer.Chart(nword);
 		
 		inferencer.insideScore(chart, sentence, nword, false);
-		chart.resetStatus();
+		inferencer.setRootOutsideScore(chart);
 		inferencer.outsideScore(chart, sentence, nword, false);
 		
 		return chart;
 	}
 	
+	
+	/**
+	 * Compute the inside and outside scores for 
+	 * every non-terminal in the given parse tree. 
+	 * 
+	 * @param tree the parse tree
+	 */
+	public void doInsideOutsideWithTree(Tree<State> tree) {
+		inferencer.insideScoreWithTree(tree);
+		inferencer.setRootOutsideScore(tree);
+		inferencer.outsideScoreWithTree(tree);
+	}
+	
+	
+	public void evalRuleCount(Tree<State> tree) {
+		Inferencer.Chart chart = doInsideOutside(tree);
+		
+	}
+	
+	
+	public void evalRuleCountWithTree(Tree<State> tree) {
+		// inside and outside scores are stored in the non-terminals of the tree
+		doInsideOutsideWithTree(tree); 
+		
+		// the parse tree score, which should only contain weights of the components
+		GaussianMixture insideScore = tree.getLabel().getInsideScore();
+		double treeScore = insideScore.eval();
+		
+		// compute the rule counts in the recursive way
+		inferencer.evalRuleCountWithTree(tree, treeScore);
+	}
 	
 
 	/**

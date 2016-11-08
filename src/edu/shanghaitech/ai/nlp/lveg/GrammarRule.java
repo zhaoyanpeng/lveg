@@ -40,6 +40,7 @@ public abstract class GrammarRule implements Serializable {
 	
 	
 	public abstract boolean isUnary();
+	public abstract GrammarRule copy();
 	
 	
 	public short getLhs() {

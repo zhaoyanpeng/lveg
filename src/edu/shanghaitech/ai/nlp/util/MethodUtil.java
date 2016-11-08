@@ -54,33 +54,39 @@ public class MethodUtil {
 	 * 
 	 * @param grammar the grammar
 	 */
-	public static void checkUnaryRuleCircle(LVeGGrammar agrammar, LVeGLexicon alexicon) {
+	public static boolean checkUnaryRuleCircle(LVeGGrammar agrammar, LVeGLexicon alexicon) {
 		grammar = agrammar;
 		lexicon = alexicon;
-		int nword = 0;
-		Queue<Short> children = new LinkedList<Short>();
-		for (int i = 0; i < nword; i++) {
+		for (int i = 0; i < grammar.nTag; i++) {
 			Set<Integer> visited = new LinkedHashSet<Integer>();
 			if (checkUnaryRuleCircle(i, visited)) {
-				System.out.println(visited);
-				break;
+				System.err.println("Circle that begins with " + i + " was found: " + visited);
+				return true;
 			}
 		}
+
+		// System.out.println("No circles were found.");
+		return false;
 	}
 	
 	
 	public static boolean checkUnaryRuleCircle(int index, Set<Integer> visited) {	
 		if (visited.contains(index)) { 
+			System.out.println("Repeated item: " + index);
 			return true; 
 		} else {
 			visited.add(index);
 		}
 		
-		List<UnaryGrammarRule> rules = grammar.getUnaryRuleWithC(index);
-		for (UnaryGrammarRule rule : rules) {
+		List<GrammarRule> rules = grammar.getUnaryRuleWithC(index);
+		for (GrammarRule rule : rules) {
 			if (checkUnaryRuleCircle(rule.getLhs(), visited)) {
 				return true;
 			}
+		}
+		
+		if (rules.isEmpty()) {
+			// System.out.println("Path: " + visited);
 		}
 		visited.remove(index);
 		return false;
