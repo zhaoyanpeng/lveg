@@ -28,6 +28,7 @@ public class MethodUtil {
 	private static Random random = new Random(LVeGLearner.randomseed);
 	private static LVeGGrammar grammar;
 	private static LVeGLexicon lexicon;
+	
 
 	/**
 	 * @param trees
@@ -218,6 +219,7 @@ public class MethodUtil {
 		Double obj = new Double(0);
 		for (int i = 0; i < length; i++) {
 			double tmp = random.nextDouble() * maxint;
+			// while (tmp == 0.0) { tmp = random.nextDouble(); }
 			list.add(type.isInstance(obj) ? type.cast(tmp) : type.cast((int) tmp));
 		}
 	}

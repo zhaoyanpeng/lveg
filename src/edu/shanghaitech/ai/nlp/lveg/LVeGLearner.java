@@ -170,7 +170,7 @@ public class LVeGLearner extends Recorder {
 		lexicon.postInitialize(trainTrees, numbererTag.size());
 		
 //		System.out.println(grammar);
-		System.out.println(lexicon);
+//		System.out.println(lexicon);
 		
 		// check if there is any circle in the unary grammar rules
 		// TODO move this self-checking procedure to the class Grammar
@@ -178,6 +178,10 @@ public class LVeGLearner extends Recorder {
 			logger.error("Circle was found in the unary grammar rules.");
 			System.exit(0);
 		}
+		
+		
+		// we shall clear the inside and outside score in each state 
+		// of the parse tree after the training on a sample 
 		
 		
 		/*

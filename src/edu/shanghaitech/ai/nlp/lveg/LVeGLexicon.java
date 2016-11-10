@@ -1,6 +1,7 @@
 package edu.shanghaitech.ai.nlp.lveg;
 
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 
 import edu.berkeley.nlp.syntax.Tree;
@@ -41,6 +42,9 @@ public abstract class LVeGLexicon {
 	 * @param tree a parse tree
 	 */
 	protected abstract void tallyStateTree(Tree<State> tree);
+	
+	
+	protected abstract void applyGradientDescent(Random random, double learningRate);
 	
 	
 	/**

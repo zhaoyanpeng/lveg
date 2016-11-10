@@ -20,6 +20,7 @@ public class GaussianDistributionTest {
 	public void testInstanceEqual() {
 		GaussianDistribution gd0 = new GaussianDistribution();
 		GaussianDistribution gd1 = new GaussianDistribution();
+		GaussianDistribution gd2 = new GaussianDistribution((short) 5);
 		
 		assertFalse(gd0 == gd1);
 		assertTrue(gd0.equals(gd1));
@@ -36,6 +37,7 @@ public class GaussianDistributionTest {
 		
 		gd1.mus.add(2.0);
 		assertFalse(gd0.equals(gd1));
+		
 	}
 	
 	

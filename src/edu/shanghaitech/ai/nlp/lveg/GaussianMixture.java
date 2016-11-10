@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
@@ -32,8 +33,12 @@ public class GaussianMixture {
 	 */
 	protected double bias;
 	
+	protected short nsample;
 	protected short ncomponent;
 	protected List<Double> weights;
+	
+	protected List<Double> values;
+	protected List<Double> wgrads;
 	
 
 	/**
@@ -46,25 +51,25 @@ public class GaussianMixture {
 	
 	public GaussianMixture() {
 		this.bias = 0;
+		this.nsample = 0;
 		this.ncomponent = 0;
 		this.weights = new ArrayList<Double>();
 		this.mixture = new ArrayList<Map<String, Set<GaussianDistribution>>>();
+		this.values = new ArrayList<Double>();
+		this.wgrads = new ArrayList<Double>();
 	}
 	
 	
 	public GaussianMixture(short ncomponent) {
-		this.bias = 0;
+		this();
 		this.ncomponent = ncomponent;
-		this.weights = new ArrayList<Double>();
-		this.mixture = new ArrayList<Map<String, Set<GaussianDistribution>>>();
 		initialize();
 	}
 	
 	
 	public GaussianMixture(
-			short ncomponent, List<Double> weights, 
-			List<Map<String, Set<GaussianDistribution>>> mixture) {
-		this.bias = 0;
+			short ncomponent, List<Double> weights, List<Map<String, Set<GaussianDistribution>>> mixture) {
+		this();
 		this.ncomponent = ncomponent;
 		this.weights = weights;
 		this.mixture = mixture;
@@ -248,6 +253,29 @@ public class GaussianMixture {
 	
 	
 	/**
+	 * Problem-specific multiplication (calculation of the inside score). Inside score 
+	 * of the current non-terminal relates to the inside scores (mixture of gaussians) 
+	 * of the children only partially, since the gaussians are afterwards marginalized
+	 * and thus only weights matter. The same rules for the outside score.
+	 * 
+	 * @param gm   mixture of gaussians that needs to be marginalized
+	 * @param key  which denotes the portion, to be marginalized, of the component
+	 * @param deep deep (true) or shallow (false) copy of the instance
+	 * @return 
+	 * 
+	 */
+	public GaussianMixture mulForInsideOutside(GaussianMixture gm, String key, boolean deep) {
+		GaussianMixture amixture = this.copy(deep);
+		double sum = MethodUtil.sum(gm.weights);
+		for (int i = 0; i < ncomponent; i++) {
+			amixture.weights.set(i, amixture.weights.get(i) * sum);
+			amixture.mixture.get(i).remove(key);
+		}
+		return amixture;
+	}
+	
+	
+	/**
 	 * Multiply two gaussian mixtures and marginlize the specific portions of the result.
 	 * 
 	 * @param gm0  one mixture of gaussians
@@ -255,7 +283,7 @@ public class GaussianMixture {
 	 * @param keys which denotes the specific portions of the mixture of gaussians
 	 * @return
 	 */
-	public static GaussianMixture mulAndMargin(GaussianMixture gm0, GaussianMixture gm1, List<String> keys) {
+	public static GaussianMixture mulAndmarginalize(GaussianMixture gm0, GaussianMixture gm1, List<String> keys) {
 		if (gm0 == null && gm1 == null) { return null; }
 		if (gm0 == null) { return gm1.copy(true); }
 		if (gm1 == null) { return gm0.copy(true); }
@@ -439,47 +467,97 @@ public class GaussianMixture {
 		return true;
 	}
 	
-
+	
 	/**
-	 * Problem-specific multiplication (calculation of the inside score). Inside score 
-	 * of the current non-terminal relates to the inside scores (mixture of gaussians) 
-	 * of the children only partially, since the gaussians are afterwards marginalized
-	 * and thus only weights matter. The same rules for the outside score.
+	 * Sample from MoG.
 	 * 
-	 * @param gm   mixture of gaussians that needs to be marginalized
-	 * @param key  which denotes the portion, to be marginalized, of the component
-	 * @param deep deep (true) or shallow (false) copy of the instance
-	 * @return 
-	 * 
+	 * @param random random number generator
 	 */
-	public GaussianMixture mulForInsideOutside(GaussianMixture gm, String key, boolean deep) {
-		GaussianMixture amixture = this.copy(deep);
-		double sum = MethodUtil.sum(gm.weights);
-		for (int i = 0; i < ncomponent; i++) {
-			amixture.weights.set(i, amixture.weights.get(i) * sum);
-			amixture.mixture.get(i).remove(key);
+	public void sample(Random random) {
+		for (Map<String, Set<GaussianDistribution>> component : mixture) {
+			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
+				for (GaussianDistribution gd : gaussian.getValue()) {
+					gd.sample(random);
+				}
+			}
 		}
-		return amixture;
 	}
 	
 	
 	/**
-	 * Eval the mixture of gaussians, treat the component as 1 if it is 
-	 * empty, and sample its value otherwise.
+	 * Eval the mixture of gaussians. Meanwhile, take the derivative of MoG w.r.t 
+	 * the weight of the component is computed.
 	 * 
 	 * @return
 	 */
 	public double eval() {
-		double ret = 0.0;
+		values.clear(); // clear
+		double ret = 0.0, value;
 		for (int i = 0; i < ncomponent; i++) {
 			Map<String, Set<GaussianDistribution>> component = mixture.get(i);
-			if (component.size() != 0) {
-				System.err.println("You may not wanna see this message for now.");
-			} else {
-				ret += weights.get(i);
+			value = 1.0;
+			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
+				for (GaussianDistribution gd : gaussian.getValue()) {
+					value *= gd.eval();
+				}
 			}
+			values.add(value);
+			ret += weights.get(i) * value;
 		}
 		return ret;
+	}
+	
+	
+	/**
+	 * Take the derivative of MoG w.r.t parameters (mu & sigma) of the component.
+	 * 
+	 * @param factor     (E[c(r, t) | T_x] - E[c(r, t) | x]) / w(r)
+	 * @param cumulative accumulate gradients or not
+	 */
+	public void derivative(double factor, boolean cumulative) {
+		if (!cumulative) { nsample = 0; }
+		if (nsample == 0) {
+			wgrads.clear();
+			for (int i = 0; i < ncomponent; i++) {
+				wgrads.add(0.0);
+			}
+		}
+		for (int i = 0; i < ncomponent; i++) {
+			double wgrad = values.get(i) * factor, weight = weights.get(i);
+			Map<String, Set<GaussianDistribution>> component = mixture.get(i);
+			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
+				for (GaussianDistribution gd : gaussian.getValue()) {
+					gd.derivative(wgrad, weight, nsample);
+				}
+			}
+			wgrads.set(i, wgrads.get(i) + wgrad);
+		}
+		nsample++; // accumulation counter 
+	}
+	
+	
+	/**
+	 * Update parameters using the gradient.
+	 * 
+	 * @param learningRate learning rate
+	 */
+	public void update(double learningRate) {
+		if (nsample <= 0) { 
+			System.err.println("Nothing to update.");
+			return; 
+		}
+		for (int i = 0; i < ncomponent; i++) {
+			double weight = weights.get(i);
+			Map<String, Set<GaussianDistribution>> component = mixture.get(i);
+			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
+				for (GaussianDistribution gd : gaussian.getValue()) {
+					gd.update(learningRate, nsample);
+				}
+			}
+			weight -= learningRate * wgrads.get(i) / nsample;
+			weights.set(i, weight);
+		}
+		nsample = 0; // reset accumulation counter 
 	}
 	
 	

@@ -2,17 +2,15 @@ package edu.shanghaitech.ai.nlp.lveg;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.Random;
 
 import edu.berkeley.nlp.PCFGLA.Corpus;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.util.Indexer;
 import edu.berkeley.nlp.util.Numberer;
+import edu.shanghaitech.ai.nlp.optimization.SGDMinimizer;
 import edu.shanghaitech.ai.nlp.syntax.State;
 
 /**
@@ -142,6 +140,20 @@ public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
 	}
 	
 	
+	@Override
+	protected void applyGradientDescent(Random random, double learningRate ) {
+		double cnt0, cnt1;
+		for (short i = 0; i < nTag; i++) {
+			for (short j = 0; j < wordIndexMap[i].size(); j++) {
+				cnt0 = count0.get(urules[i][j]);
+				cnt1 = count1.get(urules[i][j]);
+				SGDMinimizer.applyGradientDescent(urules[i][j].getWeight(), random, cnt0, cnt1, learningRate);
+			}
+		}
+		resetCount();
+	}
+	
+	
 	/**
 	 * Initialize word index.
 	 * 
@@ -158,14 +170,18 @@ public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
 	}
 	
 	
-	public void addCount(short idParent, short idChild, char type, double increment, boolean withTree) {
-		Map<GrammarRule, Double> count = null;
-		if (withTree) {
-			count = count0;
-		} else {
-			count = count1;
+	private void resetCount() {
+		for (Map.Entry<GrammarRule, Double> count : count0.entrySet()) {
+			count.setValue(0.0);
 		}
-		
+		for (Map.Entry<GrammarRule, Double> count : count1.entrySet()) {
+			count.setValue(0.0);
+		}
+	}
+	
+	
+	public void addCount(short idParent, short idChild, char type, double increment, boolean withTree) {
+		Map<GrammarRule, Double> count = withTree ? count0 : count1;
 		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
 		Double cnt = count.get(rule);
 		if (cnt != null) {
@@ -280,6 +296,7 @@ public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
 		private int count;
 		private List<Integer> to;
 		private List<Integer> from;
+		
 		
 		public IndexMap(int n) {
 			this.count = 0;

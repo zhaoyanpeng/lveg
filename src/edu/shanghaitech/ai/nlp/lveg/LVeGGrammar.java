@@ -5,9 +5,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.util.Numberer;
+import edu.shanghaitech.ai.nlp.optimization.SGDMinimizer;
 import edu.shanghaitech.ai.nlp.syntax.State;
 
 /**
@@ -99,25 +101,6 @@ public class LVeGGrammar implements Serializable {
 	}
 	
 	
-	protected void addBinaryRule(BinaryGrammarRule rule) {
-		if (binaryRulesWithP[rule.lhs].contains(rule)) { return; }
-		binaryRulesWithP[rule.lhs].add(rule);
-		binaryRulesWithLC[rule.lchild].add(rule);
-		binaryRulesWithRC[rule.rchild].add(rule);
-		
-		binaryRuleMap.put(rule, rule);
-	}
-	
-	
-	protected void addUnaryRule(UnaryGrammarRule rule) {
-		if (unaryRulesWithP[rule.lhs].contains(rule)) { return; }
-		unaryRulesWithP[rule.lhs].add(rule);
-		unaryRulesWithC[rule.rhs].add(rule);
-		
-		unaryRuleMap.put(rule, rule);
-	}
-	
-	
 	public void postInitialize(double randomness) {
 		for (GrammarRule rule : unaryRuleTable.keySet()) {
 			addUnaryRule((UnaryGrammarRule) rule);
@@ -177,14 +160,54 @@ public class LVeGGrammar implements Serializable {
 	}
 	
 	
-	public void addCount(short idParent, short idChild, char type, double increment, boolean withTree) {
-		Map<GrammarRule, Double> count = null;
-		if (withTree) {
-			count = count0;
-		} else {
-			count = count1;
+	protected void applyGradientDescent(Random random, double learningRate) {
+		double cnt0, cnt1;
+		for (GrammarRule rule : unaryRuleTable.keySet()) {
+			cnt0 = count0.get(rule);
+			cnt1 = count1.get(rule);
+			SGDMinimizer.applyGradientDescent(rule.getWeight(), random, cnt0, cnt1, learningRate);
 		}
 		
+		for (GrammarRule rule : binaryRuleTable.keySet()) {
+			cnt0 = count0.get(rule);
+			cnt1 = count1.get(rule);
+			SGDMinimizer.applyGradientDescent(rule.getWeight(), random, cnt0, cnt1, learningRate);
+		}
+		resetCount();
+	}
+	
+	
+	private void resetCount() {
+		for (Map.Entry<GrammarRule, Double> count : count0.entrySet()) {
+			count.setValue(0.0);
+		}
+		for (Map.Entry<GrammarRule, Double> count : count1.entrySet()) {
+			count.setValue(0.0);
+		}
+	}
+	
+	
+	protected void addBinaryRule(BinaryGrammarRule rule) {
+		if (binaryRulesWithP[rule.lhs].contains(rule)) { return; }
+		binaryRulesWithP[rule.lhs].add(rule);
+		binaryRulesWithLC[rule.lchild].add(rule);
+		binaryRulesWithRC[rule.rchild].add(rule);
+		
+		binaryRuleMap.put(rule, rule);
+	}
+	
+	
+	protected void addUnaryRule(UnaryGrammarRule rule) {
+		if (unaryRulesWithP[rule.lhs].contains(rule)) { return; }
+		unaryRulesWithP[rule.lhs].add(rule);
+		unaryRulesWithC[rule.rhs].add(rule);
+		
+		unaryRuleMap.put(rule, rule);
+	}
+	
+	
+	public void addCount(short idParent, short idChild, char type, double increment, boolean withTree) {
+		Map<GrammarRule, Double> count = withTree ? count0 : count1;
 		GrammarRule rule = getUnaryRule(idParent, idChild, type);
 		if (rule != null) {
 			count.put(rule, count.get(rule) + increment);
@@ -195,13 +218,7 @@ public class LVeGGrammar implements Serializable {
 	
 	
 	public void addCount(short idParent, short idlChild, short idrChild, double increment, boolean withTree) {
-		Map<GrammarRule, Double> count = null;
-		if (withTree) {
-			count = count0;
-		} else {
-			count = count1;
-		}
-		
+		Map<GrammarRule, Double> count = withTree ? count0 : count1;
 		GrammarRule rule = getBinaryRule(idParent, idlChild, idrChild);
 		if (rule != null) {
 			count.put(rule, count.get(rule) + increment);

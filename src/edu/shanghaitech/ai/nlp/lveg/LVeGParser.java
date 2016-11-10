@@ -3,6 +3,7 @@ package edu.shanghaitech.ai.nlp.lveg;
 import java.util.List;
 
 import edu.berkeley.nlp.syntax.Tree;
+import edu.shanghaitech.ai.nlp.lveg.Inferencer.Chart;
 import edu.shanghaitech.ai.nlp.syntax.State;
 
 /**
@@ -19,14 +20,44 @@ public class LVeGParser {
 	}
 	
 	
+	public boolean evalRuleCount(Tree<State> tree) {
+		Chart chart = doInsideOutside(tree);
+		GaussianMixture score = chart.getInsideScore((short) 0, Chart.idx(0, 1));
+		double sentenceScore = score.eval();
+		if (sentenceScore <= 0) {
+			System.err.println("Fatal Error: Sentence score is smaller than zero.");
+			return false;
+		}
+		inferencer.evalRuleCount(tree, chart, sentenceScore);
+		return true;
+	}
+	
+	
+	public boolean evalRuleCountWithTree(Tree<State> tree) {
+		// inside and outside scores are stored in the non-terminals of the tree
+		doInsideOutsideWithTree(tree); 
+		
+		// the parse tree score, which should contain only weights of the components
+		GaussianMixture score = tree.getLabel().getInsideScore();
+		double treeScore = score.eval();
+		if (treeScore <= 0) {
+			System.err.println("Fatal Error: Tree score is smaller than zero.");
+			return false;
+		}
+		// compute the rule counts in a recursive way
+		inferencer.evalRuleCountWithTree(tree, treeScore);
+		return true;
+	}
+	
+	
 	/**
 	 * @param tree the parse tree
 	 * @return
 	 */
-	public Inferencer.Chart doInsideOutside(Tree<State> tree) {
+	public Chart doInsideOutside(Tree<State> tree) {
 		List<State> sentence = tree.getYield();
 		int nword = sentence.size();
-		Inferencer.Chart chart = new Inferencer.Chart(nword);
+		Chart chart = new Inferencer.Chart(nword);
 		
 		inferencer.insideScore(chart, sentence, nword, false);
 		inferencer.setRootOutsideScore(chart);
@@ -48,25 +79,6 @@ public class LVeGParser {
 		inferencer.outsideScoreWithTree(tree);
 	}
 	
-	
-	public void evalRuleCount(Tree<State> tree) {
-		Inferencer.Chart chart = doInsideOutside(tree);
-		
-	}
-	
-	
-	public void evalRuleCountWithTree(Tree<State> tree) {
-		// inside and outside scores are stored in the non-terminals of the tree
-		doInsideOutsideWithTree(tree); 
-		
-		// the parse tree score, which should only contain weights of the components
-		GaussianMixture insideScore = tree.getLabel().getInsideScore();
-		double treeScore = insideScore.eval();
-		
-		// compute the rule counts in the recursive way
-		inferencer.evalRuleCountWithTree(tree, treeScore);
-	}
-	
 
 	/**
 	 * Compute \log p(t | s) = \log {p(t, s) / p(s)}, where s denotes the 
@@ -79,7 +91,6 @@ public class LVeGParser {
 		double jointdist = scoreTree(tree);
 		double partition = scoreSentence(tree);
 		double ll = jointdist / partition;
-		
 		return ll;
 	}
 	
@@ -94,7 +105,6 @@ public class LVeGParser {
 		inferencer.insideScoreWithTree(tree);
 		GaussianMixture gm = tree.getLabel().getInsideScore();
 		double score = gm.eval();
-		
 		return score;
 	}
 	
@@ -112,7 +122,7 @@ public class LVeGParser {
 		Inferencer.Chart chart = new Inferencer.Chart(nword);
 		inferencer.insideScore(chart, sentence, nword, false);
 		
-		GaussianMixture gm = chart.getInsideScore((short) 0, 0, 1);
+		GaussianMixture gm = chart.getInsideScore((short) 0, Chart.idx(0, 1));
 		double score = gm.eval();
 		
 		return score;
