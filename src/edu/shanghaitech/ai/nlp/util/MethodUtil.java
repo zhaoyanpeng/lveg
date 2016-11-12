@@ -4,11 +4,15 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 
 import edu.berkeley.nlp.syntax.Tree;
+import edu.shanghaitech.ai.nlp.lveg.Inferencer.Cell;
+import edu.shanghaitech.ai.nlp.lveg.Inferencer.Chart;
+import edu.shanghaitech.ai.nlp.lveg.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.GrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
@@ -29,7 +33,125 @@ public class MethodUtil {
 	private static LVeGGrammar grammar;
 	private static LVeGLexicon lexicon;
 	
-
+	
+	public static void debugCount(LVeGGrammar agrammar, LVeGLexicon alexicon, Tree<State> tree, Chart chart) {
+		grammar = agrammar;
+		lexicon = alexicon;
+		
+		double count0 = 0;
+		Map<GrammarRule, GrammarRule> uRuleMap = grammar.getUnaryRuleMap();
+		// unary grammar rules
+		for (Map.Entry<GrammarRule, GrammarRule> rmap : uRuleMap.entrySet()) {
+			GrammarRule rule = rmap.getValue();
+			double count = grammar.getCount(rule, false);
+			LVeGLearner.logger.trace(rule + " count=" + count);
+			
+			if (rule.getLhs() == 0) {
+				count0 += count;
+			}
+		}
+		LVeGLearner.logger.trace("Count for rules starting with 0 is " + count0);
+	}
+	
+	
+	public static void debugCount(LVeGGrammar agrammar, LVeGLexicon alexicon, Tree<State> tree) {
+		grammar = agrammar;
+		lexicon = alexicon;
+		checkCount(tree);
+	}
+	
+	
+	public static void checkCount(Tree<State> tree) {
+		if (tree.isLeaf()) { return; }
+		
+		List<Tree<State>> children = tree.getChildren();
+		for (Tree<State> child : children) {
+			checkCount(child);
+		}
+		
+		State parent = tree.getLabel();
+		short idParent = parent.getId();
+		
+		if (tree.isPreTerminal()) {
+			State word = children.get(0).getLabel();
+			double count = lexicon.getCount(idParent, (short) word.wordIdx, GrammarRule.LHSPACE, true);
+			LVeGLearner.logger.trace("Word\trule: [" + idParent + "] count=" + count); // DEBUG
+		} else {
+			switch (children.size()) {
+			case 0:
+				// in case there are some errors in the parse tree.
+				break;
+			case 1: {
+				State child = children.get(0).getLabel();
+				short idChild = child.getId();
+				
+				// root, if (idParent == 0) is true
+				char type = idParent == 0 ? GrammarRule.RHSPACE : GrammarRule.GENERAL;
+				
+				double count = grammar.getCount(idParent, idChild, type, true);
+				LVeGLearner.logger.trace("Unary\trule: [" + idParent + ", " + idChild + "] count=" + count); // DEBUG
+				break;
+			}
+			case 2: {
+				State lchild = children.get(0).getLabel();
+				State rchild = children.get(1).getLabel();
+				short idlChild = lchild.getId();
+				short idrChild = rchild.getId();
+				
+				double count = grammar.getCount(idParent, idlChild, idrChild, true);
+				LVeGLearner.logger.trace("Binary\trule: [" + idParent + ", " + idlChild + ", " + idrChild + "] count=" + count); // DEBUG
+				break;
+			}
+			default:
+				System.err.println("Malformed tree: more than two children. Exitting...");
+				System.exit(0);	
+			}
+		}
+	}
+	
+	
+	public static void debugChart(List<Cell> chart, short nfirst) {
+		if (chart != null) {
+			for (int i = 0; i < chart.size(); i++) {
+				LVeGLearner.logger.debug(i + "\t" + chart.get(i).toString(true, nfirst) + "\n");
+			}
+		}
+	}
+	
+	
+	public static void debugTree(Tree<State> tree, boolean simple, short nfirst) {
+		StringBuilder sb = new StringBuilder();
+		toString(tree, simple, nfirst, sb);
+		LVeGLearner.logger.debug(sb);
+	}
+	
+	
+	private static void toString(Tree<State> tree, boolean simple, short nfirst, StringBuilder sb) {
+		if (tree.isLeaf()) { return; }
+		sb.append('(');
+		
+		State state = tree.getLabel();
+		if (state != null) {
+			sb.append(state);
+			if (state.getInsideScore() != null) { 
+				sb.append(" iscore=" + state.getInsideScore().toString(simple, nfirst)); 
+			} else {
+				sb.append(" iscore=null");
+			}
+			if (state.getOutsideScore() != null) {
+				sb.append(" oscore=" + state.getOutsideScore().toString(simple, nfirst));
+			} else {
+				sb.append(" oscore=null");
+			}
+		}
+		for (Tree<State> child : tree.getChildren()) {
+			sb.append(' ');
+			toString(child, simple, nfirst, sb);
+		}
+		sb.append(')');
+	}
+	
+	
 	/**
 	 * @param trees
 	 * 
@@ -55,12 +177,12 @@ public class MethodUtil {
 	 * 
 	 * @param grammar the grammar
 	 */
-	public static boolean checkUnaryRuleCircle(LVeGGrammar agrammar, LVeGLexicon alexicon) {
+	public static boolean checkUnaryRuleCircle(LVeGGrammar agrammar, LVeGLexicon alexicon, boolean startWithC) {
 		grammar = agrammar;
 		lexicon = alexicon;
 		for (int i = 0; i < grammar.nTag; i++) {
 			Set<Integer> visited = new LinkedHashSet<Integer>();
-			if (checkUnaryRuleCircle(i, visited)) {
+			if (checkUnaryRuleCircle(i, visited, startWithC)) {
 				System.err.println("Circle that begins with " + i + " was found: " + visited);
 				return true;
 			}
@@ -71,24 +193,28 @@ public class MethodUtil {
 	}
 	
 	
-	public static boolean checkUnaryRuleCircle(int index, Set<Integer> visited) {	
+	public static boolean checkUnaryRuleCircle(int index, Set<Integer> visited, boolean startWithC) {	
 		if (visited.contains(index)) { 
 			System.out.println("Repeated item: " + index);
 			return true; 
 		} else {
 			visited.add(index);
 		}
+		List<GrammarRule> rules;
+		if (startWithC) {
+			rules = grammar.getUnaryRuleWithC(index);
+		} else {
+			rules = grammar.getUnaryRuleWithP(index);
+		}
 		
-		List<GrammarRule> rules = grammar.getUnaryRuleWithC(index);
 		for (GrammarRule rule : rules) {
-			if (checkUnaryRuleCircle(rule.getLhs(), visited)) {
+			UnaryGrammarRule r = (UnaryGrammarRule) rule;
+			short id = startWithC ? r.getLhs() : r.getRhs();
+			if (checkUnaryRuleCircle(id, visited, startWithC)) {
 				return true;
 			}
 		}
-		
-		if (rules.isEmpty()) {
-			// System.out.println("Path: " + visited);
-		}
+		if (rules.isEmpty()) { /*System.out.println("Path: " + visited);*/ }
 		visited.remove(index);
 		return false;
 	}
@@ -209,17 +335,17 @@ public class MethodUtil {
 	
 	
 	/**
-	 * @param list   item container
-	 * @param type   Doubel.class or Integer.class
-	 * @param length number of items in the list
-	 * @param maxint maximum for integer, and 1 for double
-	 * 
+	 * @param list    item container
+	 * @param type    Doubel.class or Integer.class
+	 * @param length  number of items in the list
+	 * @param maxint  maximum for integer, and 1 for double
+	 * @param nonzero zero inclusive (false) or not exclusive (true)
 	 */
-	public static <T> void randomInitList(List<T> list, Class<T> type, int length, int maxint) {
+	public static <T> void randomInitList(List<T> list, Class<T> type, int length, int maxint, boolean nonzero) {
 		Double obj = new Double(0);
 		for (int i = 0; i < length; i++) {
 			double tmp = random.nextDouble() * maxint;
-			// while (tmp == 0.0) { tmp = random.nextDouble(); }
+			if (nonzero) { while (tmp == 0.0) { tmp = random.nextDouble() * maxint; } }
 			list.add(type.isInstance(obj) ? type.cast(tmp) : type.cast((int) tmp));
 		}
 	}
@@ -241,12 +367,18 @@ public class MethodUtil {
 	}
 	
 	
-	public static List<String> double2str(List<Double> list, int precision) {
+	public static List<String> double2str(List<Double> list, int precision, int nfirst) {
 		List<String> strs = new ArrayList<String>();
 		String format = "%." + precision + "f";
+		if (nfirst < 0 || nfirst > list.size()) { nfirst = list.size(); }
+		for (int i = 0; i < nfirst; i++) {
+			strs.add(String.format(format, list.get(i)));
+		}
+		/*
 		for (Double d : list) {
 			strs.add(String.format(format, d));
 		}
+		*/
 		return strs;
 	}
 	

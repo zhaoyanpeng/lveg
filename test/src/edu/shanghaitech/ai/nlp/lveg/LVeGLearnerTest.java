@@ -15,5 +15,4 @@ public class LVeGLearnerTest {
 		
 		LVeGLearner.main(args);
 	}
-
 }

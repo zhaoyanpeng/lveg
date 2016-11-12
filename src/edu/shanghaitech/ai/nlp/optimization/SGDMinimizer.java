@@ -16,7 +16,7 @@ public class SGDMinimizer {
 				gm.sample(random);
 				factor = gm.eval();
 			}
-			factor = (cnt1 - cnt0) / factor;
+ 			factor = (cnt1 - cnt0) / factor;
 			gm.derivative(factor, cumulative);
 		}
 		gm.update(learningRate);

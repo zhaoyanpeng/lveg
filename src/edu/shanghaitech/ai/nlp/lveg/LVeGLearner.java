@@ -34,7 +34,7 @@ public class LVeGLearner extends Recorder {
 	public static int precision  = 3;
 	
 	private static Random random;
-	private static Logger logger = null;
+	public static Logger logger = null;
 	
 	public final static String KEY_TAG_SET = "tags";
 	public final static String TOKEN_UNKNOWN = "UNK";
@@ -115,7 +115,7 @@ public class LVeGLearner extends Recorder {
 		public short batchsize = 500;
 		
 		@Option(name = "-maxramdom", usage = "Maximum random value (Default: 10)")
-		public short maxrandom = 10;
+		public short maxrandom = 1;
 		
 		@Option(name = "-maxiter", usage = "Maximum iteration time (Default: 1000)")
 		public int maxiter = 1000;
@@ -125,6 +125,9 @@ public class LVeGLearner extends Recorder {
 		
 		@Option(name = "-relativerror", usage = "Desirable maximum relative difference between the neighboring iterations (1e-6)")
 		public double relativerror = 1e-6;
+		
+		@Option(name = "-lr", usage = "Learning rate (Default: 1.0)")
+		public double lr = 1.0;
 		
 		@Option(name = "-dim", usage = "Dimension of the latent vector (Default: 5)")
 		public short dim = 2;
@@ -174,32 +177,70 @@ public class LVeGLearner extends Recorder {
 		
 		// check if there is any circle in the unary grammar rules
 		// TODO move this self-checking procedure to the class Grammar
-		if (MethodUtil.checkUnaryRuleCircle(grammar, lexicon)) {
-			logger.error("Circle was found in the unary grammar rules.");
+		if (MethodUtil.checkUnaryRuleCircle(grammar, lexicon, true)) {
+			logger.error("Circle (WithC) was found in the unary grammar rules.");
 			System.exit(0);
 		}
 		
+		/*// DEBUG Note necessary, the circle is reversible 
+		if (MethodUtil.checkUnaryRuleCircle(grammar, lexicon, false)) {
+			logger.error("Circle (WithP) was found in the unary grammar rules.");
+			System.exit(0);
+		}
+		*/
 		
-		// we shall clear the inside and outside score in each state 
-		// of the parse tree after the training on a sample 
-		
-		
-		/*
 		LVeGGrammar maxGrammar = null, preGrammar = null;
 		LVeGLexicon maxLexicon = null, preLexicon = null;
 		
 		int cnt = 0, droppingiter = 0;
-		double prell = calculateLL(grammar, lexicon, validationTrees);	
+//		double prell = calculateLL(grammar, lexicon, validationTrees);	
+		double prell = 0.0;
 		double relativError = 0, ll, maxll = prell;
 		do {
 			cnt++;
 			
+			LVeGParser parser = new LVeGParser(grammar, lexicon);
+			short isample = 0;
+			long startTime = System.currentTimeMillis();
+			for (Tree<State> tree : trainTrees) {
+//				if (tree.getYield().size() != 5) { continue; }
+				
+				/*// DEBUG
+				System.out.println(tree.getTerminalYield());
+				System.out.println(tree.getYield());
+				*/
+				
+//				parser.doInsideOutside(tree);
+				
+				/*// DEBUG 
+				parser.doInsideOutsideWithTree(tree);
+				MethodUtil.debugTree(tree, false, (short) 2);
+				trainTrees.resetScore(tree);
+				MethodUtil.debugTree(tree, false, (short) 2);
+				*/
+				
+				if (tree.getYield().size() > 10) { continue; }
+				
+				parser.evalRuleCountWithTree(tree);
+				parser.evalRuleCount(tree);
+				
+				isample++;
+				LVeGLearner.logger.trace("Sample " + isample + "...");
+				if (isample >= 1) {
+					break;
+				}
+			}
+			long endTime = System.currentTimeMillis();
 			
+			System.out.println("Average time each sample cost is " + (endTime - startTime) / (1000.0 * isample));
 			
+			MethodUtil.debugCount(grammar, lexicon, null, null); // DEBUG
 			
+			// apply gradient descent
+			grammar.applyGradientDescent(random, opts.lr);
+			lexicon.applyGradientDescent(random, opts.lr);
 			
-			
-			
+			/*
 			ll = calculateLL(grammar, lexicon, validationTrees);
 			relativError = (ll - prell) / prell;
 			
@@ -220,9 +261,20 @@ public class LVeGLearner extends Recorder {
 				System.out.println("Maximum-iteration-time exceeding.");
 				break;
 			}
+			*/
+			
+			// we shall clear the inside and outside score in each state 
+			// of the parse tree after the training on a sample 
+			trainTrees.resetScore();
+			validationTrees.resetScore();
+			
+			LVeGLearner.logger.trace("Epoch " + cnt + "...");
+			if (cnt >= 1) {
+				break;
+			}
 		// relative error could be negative
-		} while (cnt > 1 && Math.abs(relativError) < opts.relativerror && droppingiter < opts.droppintiter);
-		*/
+		} while(cnt > 0) /*while (cnt > 1 && Math.abs(relativError) < opts.relativerror && droppingiter < opts.droppintiter)*/;
+		
 		
 		/*
 		if (relativError < opts.relativerror) {
@@ -255,6 +307,7 @@ public class LVeGLearner extends Recorder {
 		if (opts.outFile == null) {
 			throw new IllegalArgumentException("Output file is required.");
 		} else {
+			//logger = logUtil.getFileLogger("log/unittest");
 			logger = logUtil.getConsoleLogger();
 			System.out.println("Grammar file will be saved to " + opts.outFile + ".");
 		}
@@ -338,7 +391,7 @@ public class LVeGLearner extends Recorder {
 	private static void debugNumbererTag(Numberer numbererTag, Options opts) {
 		if (opts.verbose || true) {
 			for (int i = 0; i < numbererTag.size(); i++) {
-				logger.trace("Tag " + (String) numbererTag.object(i) + " " + i);
+				// logger.debug("Tag " + i + "\t" +  (String) numbererTag.object(i)); // DEBUG
 			}
 		}
 		logger.debug("There are " + numbererTag.size() + " observed tags.");

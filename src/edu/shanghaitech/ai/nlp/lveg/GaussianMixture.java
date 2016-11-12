@@ -80,7 +80,7 @@ public class GaussianMixture {
 	 * Initialize the fields by default.
 	 */
 	private void initialize() {
-		MethodUtil.randomInitList(weights, Double.class, ncomponent, LVeGLearner.maxrandom);
+		MethodUtil.randomInitList(weights, Double.class, ncomponent, LVeGLearner.maxrandom, false);
 		for (int i = 0; i < ncomponent; i++) {
 			Map<String, Set<GaussianDistribution>> component = 
 					new HashMap<String, Set<GaussianDistribution>>();
@@ -551,10 +551,10 @@ public class GaussianMixture {
 			Map<String, Set<GaussianDistribution>> component = mixture.get(i);
 			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
 				for (GaussianDistribution gd : gaussian.getValue()) {
-					gd.update(learningRate, nsample);
+					gd.update(learningRate, (short) 1);
 				}
 			}
-			weight -= learningRate * wgrads.get(i) / nsample;
+			weight -= learningRate * wgrads.get(i) / 1;
 			weights.set(i, weight);
 		}
 		nsample = 0; // reset accumulation counter 
@@ -601,9 +601,22 @@ public class GaussianMixture {
 	}
 	
 	
+	public String toString(boolean simple, int nfirst) {
+		if (simple) {
+			StringBuffer sb = new StringBuffer();
+			sb.append("GM [ncomponent=" + ncomponent + ", weights=" + 
+					MethodUtil.double2str(weights, LVeGLearner.precision, nfirst));
+			sb.append("]");
+			return sb.toString();
+		} else {
+			return toString();
+		}
+	}
+	
+	
 	@Override
 	public String toString() {
 		return "GM [bias=" + bias + ", ncomponent=" + ncomponent + ", weights=" + 
-				MethodUtil.double2str(weights, LVeGLearner.precision) + ", mixture=" + mixture + "]";
+				MethodUtil.double2str(weights, LVeGLearner.precision, -1) + ", mixture=" + mixture + "]";
 	}
 }

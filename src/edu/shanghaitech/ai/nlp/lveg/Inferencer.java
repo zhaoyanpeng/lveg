@@ -9,7 +9,9 @@ import java.util.Map;
 import java.util.Queue;
 
 import edu.berkeley.nlp.syntax.Tree;
+import edu.berkeley.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.syntax.State;
+import edu.shanghaitech.ai.nlp.util.MethodUtil;
 
 /**
  * Compute the inside and outside scores and store them in a chart. 
@@ -28,8 +30,8 @@ import edu.shanghaitech.ai.nlp.syntax.State;
  */
 public class Inferencer {
 	
-	private LVeGLexicon lexicon;
-	private LVeGGrammar grammar;
+	protected LVeGLexicon lexicon;
+	protected LVeGGrammar grammar;
 	
 	
 	public Inferencer(LVeGGrammar grammar, LVeGLexicon lexicon) {
@@ -41,10 +43,11 @@ public class Inferencer {
 	/**
 	 * Compute the inside score given the sentence and grammar rules.
 	 * 
-	 * @param tree in which only the sentence is used.
-	 * @return
+	 * @param chart [in/out]-side score container
+	 * @param tree  in which only the sentence is used.
+	 * @param nword # of words of the sentence
 	 */
-	protected void insideScore(Chart chart, List<State> sentence, int nword, boolean recursive) {
+	protected void insideScore(Chart chart, List<State> sentence, int nword) {
 		int x0, y0, x1, y1, c0, c1, c2;
 		Queue<Short> tagQueue = new LinkedList<Short>(); 
 		GaussianMixture pinScore, linScore, rinScore, ruleScore;
@@ -102,9 +105,11 @@ public class Inferencer {
 	/**
 	 * Compute the outside score given the sentence and grammar rules.
 	 * 
-	 * @param tree in which only the sentence is used.
+	 * @param chart [in/out]-side score container
+	 * @param tree  in which only the sentence is used.
+	 * @param nword # of words of the sentence
 	 */
-	protected void outsideScore(Chart chart, List<State> sentence, int nword, boolean recursive) {
+	protected void outsideScore(Chart chart, List<State> sentence, int nword) {
 		
 		int x0, y0, x1, y1, c0, c1, c2;
 		Queue<Short> tagQueue = new LinkedList<Short>(); 
@@ -168,8 +173,10 @@ public class Inferencer {
 						}
 					}
 				}
+//				LVeGLearner.logger.trace("Can u hear me?\t"); // DEBUG
 				// unary grammar rules
 				outsideScoreForUnaryRule(chart, tagQueue, c2);
+//				LVeGLearner.logger.trace("Cell [" + left + ", " + (left + ilayer) + "]="+ c2 + "\t has been estimated."); // DEBUG
 			}
 		}
 	}
@@ -195,6 +202,7 @@ public class Inferencer {
 		if (tree.isPreTerminal()) {
 			State word = children.get(0).getLabel();
 			GaussianMixture cinScore = lexicon.score(word, idParent);
+			// LVeGLearner.logger.trace("Word\trule: [" + idParent + "] " + cinScore); // DEBUG
 			parent.setInsideScore(cinScore.copy(true));
 		} else {
 			switch (children.size()) {
@@ -214,7 +222,7 @@ public class Inferencer {
 					ruleScore = grammar.getUnaryRuleScore(idParent, idChild, GrammarRule.RHSPACE);
 					pinScore = ruleScore.mulForInsideOutside(cinScore, GrammarRule.Unit.C, true);
 				}
-				
+				// LVeGLearner.logger.trace("Unary\trule: [" + idParent + ", " + idChild + "] " + ruleScore); // DEBUG
 				parent.setInsideScore(pinScore);
 				break;
 			}
@@ -232,6 +240,7 @@ public class Inferencer {
 				pinScore = ruleScore.mulForInsideOutside(linScore, GrammarRule.Unit.LC, true);
 				pinScore = pinScore.mulForInsideOutside(rinScore, GrammarRule.Unit.RC, false);
 				
+				// LVeGLearner.logger.trace("Binary\trule: [" + idParent + ", " + idlChild + ", " + idrChild + "] " + ruleScore); // DEBUG
 				parent.setInsideScore(pinScore);
 				break;
 			}
@@ -277,6 +286,7 @@ public class Inferencer {
 				// the current parent node is the root node
 				coutScore = ruleScore.mulForInsideOutside(poutScore, GrammarRule.Unit.P, true);
 				
+				// LVeGLearner.logger.trace("Unary\trule: [" + idParent + ", " + idChild + "] " + ruleScore); // DEBUG
 				child.setOutsideScore(coutScore);
 				break;
 			}
@@ -284,7 +294,7 @@ public class Inferencer {
 				GaussianMixture ruleScore, loutScore, routScore;
 				GaussianMixture linScore, rinScore;
 				State lchild = children.get(0).getLabel();
-				State rchild = children.get(0).getLabel();
+				State rchild = children.get(1).getLabel();
 				short idlChild = lchild.getId();
 				short idrChild = rchild.getId();
 				
@@ -298,6 +308,7 @@ public class Inferencer {
 				routScore = ruleScore.mulForInsideOutside(poutScore, GrammarRule.Unit.P, true);
 				routScore = routScore.mulForInsideOutside(linScore, GrammarRule.Unit.LC, false);
 				
+				// LVeGLearner.logger.trace("Binary\trule: [" + idParent + ", " + idlChild + ", " + idrChild + "] " + ruleScore); // DEBUG
 				lchild.setOutsideScore(loutScore);
 				rchild.setOutsideScore(routScore);
 				break;
@@ -395,6 +406,7 @@ public class Inferencer {
 			State word = children.get(0).getLabel();
 			GaussianMixture cinScore = parent.getInsideScore();
 			double count = computeUnaryRuleCount(poutScore, cinScore, null) / treeScore;
+			// LVeGLearner.logger.trace("Word\trule: [" + idParent + ", " + word.getName() + "] count=" + count); // DEBUG
 			lexicon.addCount(idParent, (short) word.wordIdx, GrammarRule.LHSPACE, count, true);
 		} else {
 			switch (children.size()) {
@@ -412,6 +424,7 @@ public class Inferencer {
 				ruleScore = grammar.getUnaryRuleScore(idParent, idChild, type);
 				
 				double count = computeUnaryRuleCount(poutScore, cinScore, ruleScore) / treeScore;
+				// LVeGLearner.logger.trace("Unary\trule: [" + idParent + ", " + idChild + "] count=" + count); // DEBUG
 				grammar.addCount(idParent, idChild, type, count, true);
 				break;
 			}
@@ -427,6 +440,7 @@ public class Inferencer {
 				ruleScore = grammar.getBinaryRuleScore(idParent, idlChild, idrChild);
 				
 				double count = computeBinaryRuleCount(poutScore, linScore, rinScore, ruleScore) / treeScore;
+				// LVeGLearner.logger.trace("Binary\trule: [" + idParent + ", " + idlChild + ", " + idrChild + "] count=" + count); // DEBUG
 				grammar.addCount(idParent, idlChild, idrChild, count, true);
 				break;
 			}
@@ -605,10 +619,11 @@ public class Inferencer {
 			GaussianMixture linScore, 
 			GaussianMixture rinScore, 
 			GaussianMixture ruleScore) {
-		double part0 = outScore == null ? 0.0 : outScore.marginalize();
-		double part1 = linScore == null ? 0.0 : linScore.marginalize();
-		double part2 = rinScore == null ? 0.0 : rinScore.marginalize();
-		double part3 = ruleScore == null ? 0.0 : ruleScore.marginalize();
+		double part0 = outScore == null ? 1.0 : outScore.marginalize();
+		double part1 = linScore == null ? 1.0 : linScore.marginalize();
+		double part2 = rinScore == null ? 1.0 : rinScore.marginalize();
+		double part3 = ruleScore == null ? 1.0 : ruleScore.marginalize();
+		// LVeGLearner.logger.trace("+++[" + part0 + ", " + part1 + ", " + part2 + ", " + part3 + "]"); // DEBUG
 		return part0 * part1 * part2 * part3;
 	}
 	
@@ -623,9 +638,10 @@ public class Inferencer {
 			GaussianMixture outScore, 
 			GaussianMixture cinScore, 
 			GaussianMixture ruleScore) {
-		double part0 = outScore == null ? 0.0 : outScore.marginalize();
-		double part1 = cinScore == null ? 0.0 : cinScore.marginalize();
-		double part2 = ruleScore == null ? 0.0 : ruleScore.marginalize();
+		double part0 = outScore == null ? 1.0 : outScore.marginalize();
+		double part1 = cinScore == null ? 1.0 : cinScore.marginalize();
+		double part2 = ruleScore == null ? 1.0 : ruleScore.marginalize();
+		// LVeGLearner.logger.trace("---[" + part0 + ", " + part1 + ", " + part2 + "]"); // DEBUG
 		return part0 * part1 * part2;
 	}
 	
@@ -662,7 +678,7 @@ public class Inferencer {
 	 * @author Yanpeng Zhao
 	 *
 	 */
-	protected static class Chart {
+	public static class Chart {
 		private static List<Cell> ochart = null;
 		private static List<Cell> ichart = null;
 		
@@ -716,6 +732,26 @@ public class Inferencer {
 		}
 		
 		
+		public static List<Cell> iGetChart() {
+			return ichart;
+		}
+		
+		
+		public static List<Cell> oGetChart() {
+			return ochart;
+		}
+		
+		
+		public Cell oGet(int idx) {
+			return ochart.get(idx);
+		}
+		
+		
+		public Cell iGet(int idx) {
+			return ichart.get(idx);
+		}
+
+
 		public boolean iContainsKey(short key, int idx) {
 			return ichart.get(idx).containsKey(key);
 		}
@@ -780,6 +816,12 @@ public class Inferencer {
 				// ochart.clear();
 			}
 		}
+
+
+		@Override
+		public String toString() {
+			return "Chart [ichart=" + ichart + ", ochart=" + ochart + "]";
+		}
 	}
 	
 	
@@ -789,7 +831,7 @@ public class Inferencer {
 	 * @author Yanpeng Zhao
 	 *
 	 */
-	private static class Cell {
+	public static class Cell {
 		// key word "private" does not make any difference, outer class can access all the fields 
 		// of the inner class through the instance of the inner class or in the way of the static 
 		// fields accessing.
@@ -832,11 +874,43 @@ public class Inferencer {
 		
 		
 		protected void clear() {
+			status = false;
 			for (Map.Entry<Short, GaussianMixture> map : scores.entrySet()) {
 				GaussianMixture gm = map.getValue();
 				if (gm != null) { gm.clear(); }
 			}
 			scores.clear();
+		}
+		
+		
+		public String toString(boolean simple, int nfirst) {
+			if (simple) {
+				String name;
+				StringBuffer sb = new StringBuffer();
+				sb.append("Cell [status=" + status + ", size=" + scores.size());
+				for (Map.Entry<Short, GaussianMixture> score : scores.entrySet()) {
+					name = (String) Numberer.getGlobalNumberer(LVeGLearner.KEY_TAG_SET).object(score.getKey());
+					sb.append(", " + name + "=" + score.getValue().toString(simple, nfirst));
+				}
+				sb.append("]");
+				return sb.toString();
+			} else {
+				return toString();
+			}
+		}
+		
+		
+		@Override
+		public String toString() {
+			String name;
+			StringBuffer sb = new StringBuffer();
+			sb.append("Cell [status=" + status + ", size=" + scores.size());
+			for (Map.Entry<Short, GaussianMixture> score : scores.entrySet()) {
+				name = (String) Numberer.getGlobalNumberer(LVeGLearner.KEY_TAG_SET).object(score.getKey());
+				sb.append(", " + name + "=" + score.getValue());
+			}
+			sb.append("]");
+			return sb.toString();
 		}
 	}
 }

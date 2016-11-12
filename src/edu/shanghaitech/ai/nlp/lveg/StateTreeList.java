@@ -192,6 +192,26 @@ public class StateTreeList extends AbstractCollection<Tree<State>> {
 	}
 	
 	
+	protected void resetScore() {
+		for (Tree<State> tree : trees) {
+			resetScore(tree);
+		}
+	}
+	
+	
+	public void resetScore(Tree<State> tree) {
+		if (tree.isLeaf()) { return; }
+		
+		if (tree.getLabel() != null) {
+			tree.getLabel().clear(false);
+		}
+		
+		for (Tree<State> child : tree.getChildren()) {
+			resetScore(child);
+		}
+	}
+	
+	
 	/**
 	 * @param tree        a parse tree
 	 * @param numbererTag record the ids of tags

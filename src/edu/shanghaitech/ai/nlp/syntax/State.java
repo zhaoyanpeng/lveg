@@ -104,6 +104,63 @@ public class State {
 	public void setOutsideScore(GaussianMixture outsideScore) {
 		this.outsideScore = outsideScore;
 	}
+	
+	
+	private void resetScore(boolean deep) {
+		if (deep) {
+			if (insideScore != null) { insideScore.clear(); }
+			if (outsideScore != null) { outsideScore.clear(); }
+		}
+		this.insideScore = null;
+		this.outsideScore = null;
+	}
+	
+	
+	public void clear(boolean deep) {
+		if (deep) {
+			this.name = null;
+			this.from = -1;
+			this.to = -1;
+			this.id = -1;
+			this.wordIdx = -1;
+			this.signIdx = -1;
+			resetScore(deep);
+		} else {
+			resetScore(deep);
+		}
+	}
+	
+	
+	public void clear() {
+		clear(true);
+	}
+	
+	
+	public String toString(boolean simple, short nfirst) {
+		if (simple) {
+			return toString();
+		} else {
+			StringBuffer sb = new StringBuffer();
+			name = name != null ? name
+					: (String) Numberer.getGlobalNumberer(LVeGLearner.KEY_TAG_SET).object(id);
+			sb.append("State [name=" + name + ", id=" + id + ", from=" + from + ", to=" + to + "]");
+			if (insideScore != null) {
+				sb.append("->[iscore=");
+				sb.append(insideScore.toString(!simple, nfirst));
+				sb.append("]");
+			} else {
+				sb.append("->[iscore=null]");
+			}
+			if (outsideScore != null) {
+				sb.append("->[oscore=");
+				sb.append(outsideScore.toString(!simple, nfirst));
+				sb.append("]");
+			} else {
+				sb.append("->[oscore=null]");
+			}
+			return sb.toString();
+		}
+	}
 
 
 	@Override

@@ -45,8 +45,8 @@ public class GaussianDistribution implements Comparable<Object> {
 	 * Memory allocation and initialization.
 	 */
 	private void initialize() {
-		MethodUtil.randomInitList(mus, Double.class, dim, LVeGLearner.maxrandom);
-		MethodUtil.randomInitList(sigmas, Double.class, dim, LVeGLearner.maxrandom);
+		MethodUtil.randomInitList(mus, Double.class, dim, LVeGLearner.maxrandom, false);
+		MethodUtil.randomInitList(sigmas, Double.class, dim, LVeGLearner.maxrandom, true);
 	}
 	
 	
@@ -90,7 +90,7 @@ public class GaussianDistribution implements Comparable<Object> {
 	 * @param weight  weight of the component of MoG
 	 * @param nsample accumulate gradients (>0) or not (0)
 	 */
-	protected void derivative(double wgrad, double weight, double nsample) {
+	protected void derivative(double wgrad, double weight, int nsample) {
 		if (nsample == 0) {
 			mgrads.clear();
 			sgrads.clear();
@@ -189,8 +189,8 @@ public class GaussianDistribution implements Comparable<Object> {
 
 	@Override
 	public String toString() {
-		return "GD [dim=" + dim + ", mus=" + MethodUtil.double2str(mus, LVeGLearner.precision) + 
-				", sigmas=" + MethodUtil.double2str(sigmas, LVeGLearner.precision) + "]";
+		return "GD [dim=" + dim + ", mus=" + MethodUtil.double2str(mus, LVeGLearner.precision, -1) + 
+				", sigmas=" + MethodUtil.double2str(sigmas, LVeGLearner.precision, -1) + "]";
 	}
 
 }

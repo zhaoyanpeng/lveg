@@ -72,6 +72,6 @@ public class LVeGGrammarTest {
 		}
 		*/
 		
-		MethodUtil.checkUnaryRuleCircle(grammar, null);
+		MethodUtil.checkUnaryRuleCircle(grammar, null, true);
 	}
 }

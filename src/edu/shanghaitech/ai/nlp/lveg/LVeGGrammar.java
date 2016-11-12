@@ -62,6 +62,8 @@ public class LVeGGrammar implements Serializable {
 		this.binaryRuleTable = new RuleTable(BinaryGrammarRule.class);
 		this.unaryRuleMap  = new HashMap<GrammarRule, GrammarRule>();
 		this.binaryRuleMap = new HashMap<GrammarRule, GrammarRule>();
+		this.count0 = new HashMap<GrammarRule, Double>();
+		this.count1 = new HashMap<GrammarRule, Double>();
 		this.filterThreshold = filterThreshold;
 		
 		if (nTag < 0) {
@@ -165,12 +167,14 @@ public class LVeGGrammar implements Serializable {
 		for (GrammarRule rule : unaryRuleTable.keySet()) {
 			cnt0 = count0.get(rule);
 			cnt1 = count1.get(rule);
+			if (cnt0 == cnt1) { continue; }
 			SGDMinimizer.applyGradientDescent(rule.getWeight(), random, cnt0, cnt1, learningRate);
 		}
 		
 		for (GrammarRule rule : binaryRuleTable.keySet()) {
 			cnt0 = count0.get(rule);
 			cnt1 = count1.get(rule);
+			if (cnt0 == cnt1) { continue; }
 			SGDMinimizer.applyGradientDescent(rule.getWeight(), random, cnt0, cnt1, learningRate);
 		}
 		resetCount();
@@ -207,25 +211,54 @@ public class LVeGGrammar implements Serializable {
 	
 	
 	public void addCount(short idParent, short idChild, char type, double increment, boolean withTree) {
-		Map<GrammarRule, Double> count = withTree ? count0 : count1;
 		GrammarRule rule = getUnaryRule(idParent, idChild, type);
-		if (rule != null) {
-			count.put(rule, count.get(rule) + increment);
-			return;
-		}
-		System.err.println("Unary Rule NOT Found: [P: " + idParent + ", C: " + idChild + ", TYPE: " + type + "]");
+		addCount(rule, increment, withTree);
+	}
+	
+	
+	public double getCount(short idParent, short idChild, char type, boolean withTree) {
+		GrammarRule rule = getUnaryRule(idParent, idChild, type);
+		return getCount(rule, withTree);
 	}
 	
 	
 	public void addCount(short idParent, short idlChild, short idrChild, double increment, boolean withTree) {
-		Map<GrammarRule, Double> count = withTree ? count0 : count1;
 		GrammarRule rule = getBinaryRule(idParent, idlChild, idrChild);
-		if (rule != null) {
+		addCount(rule, increment, withTree);
+	}
+	
+	
+	public double getCount(short idParent, short idlChild, short idrChild, boolean withTree) {
+		GrammarRule rule = getBinaryRule(idParent, idlChild, idrChild);
+		return getCount(rule, withTree);
+	}
+	
+	
+	public void addCount(GrammarRule rule, double increment, boolean withTree) {
+		Map<GrammarRule, Double> count = withTree ? count0 : count1;
+		if (rule != null && count.get(rule) != null) {
 			count.put(rule, count.get(rule) + increment);
 			return;
 		}
-		System.err.println("Binary Rule NOT Found: [P: " + idParent + ", LC: " + idlChild + ", RC: " + idrChild + "]");
-		
+		if (rule == null) {
+			System.err.println("The Given Rule is NULL.");
+		} else {
+			System.err.println("Grammar Rule NOT Found: " + rule);
+		}
+	}
+	
+	
+	public double getCount(GrammarRule rule, boolean withTree) {
+		Map<GrammarRule, Double> count = withTree ? count0 : count1;
+		if (rule != null && count.get(rule) != null) {
+			return count.get(rule);
+		}
+		if (rule == null) {
+			System.err.println("The Given Rule is NULL.");
+		} else {
+			System.err.println("Grammar Rule NOT Found: " + rule);
+		}
+		return -1.0;
 	}
 
 	

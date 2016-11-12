@@ -2,7 +2,6 @@ package edu.shanghaitech.ai.nlp.lveg;
 
 import java.util.List;
 import java.util.Random;
-import java.util.Set;
 
 import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.syntax.State;
@@ -25,6 +24,7 @@ public abstract class LVeGLexicon {
 	
 	
 	public abstract void addCount(short idParent, short idChild, char type, double increment, boolean withTree);
+	public abstract double getCount(short idParent, short idChild, char type, boolean withTree);
 	
 	
 	/**

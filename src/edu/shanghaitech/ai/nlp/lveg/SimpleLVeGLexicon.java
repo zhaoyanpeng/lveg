@@ -2,6 +2,7 @@ package edu.shanghaitech.ai.nlp.lveg;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -74,14 +75,16 @@ public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
 		this.urules = new UnaryGrammarRule[nTag][];
 		this.wordIndexMap = new IndexMap[nTag];
 		this.wordCounter = new int[nWord];
+		this.count0 = new HashMap<GrammarRule, Double>();
+		this.count1 = new HashMap<GrammarRule, Double>();
 		
 		for (int i = 0; i < nTag; i++) {
 			wordIndexMap[i] = new IndexMap(nWord);
 		}
 		
-		for (Tree<State> tree : trees) {
-			List<State> tags = tree.getPreTerminalYield();
+		for (Tree<State> tree : trees) {	
 			List<State> words = tree.getTerminalYield();
+			List<State> tags = tree.getPreTerminalYield();
 			
 			for (int i = 0; i < words.size(); i++) {
 				int wordIdx = wordIndexer.indexOf(words.get(i).getName());
@@ -141,12 +144,13 @@ public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
 	
 	
 	@Override
-	protected void applyGradientDescent(Random random, double learningRate ) {
+	protected void applyGradientDescent(Random random, double learningRate) {
 		double cnt0, cnt1;
 		for (short i = 0; i < nTag; i++) {
 			for (short j = 0; j < wordIndexMap[i].size(); j++) {
 				cnt0 = count0.get(urules[i][j]);
 				cnt1 = count1.get(urules[i][j]);
+				if (cnt0 == cnt1) { continue; }
 				SGDMinimizer.applyGradientDescent(urules[i][j].getWeight(), random, cnt0, cnt1, learningRate);
 			}
 		}
@@ -181,14 +185,42 @@ public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
 	
 	
 	public void addCount(short idParent, short idChild, char type, double increment, boolean withTree) {
-		Map<GrammarRule, Double> count = withTree ? count0 : count1;
 		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
-		Double cnt = count.get(rule);
-		if (cnt != null) {
-			count.put(rule, cnt + increment);
+		addCount(rule, increment, withTree);
+	}
+	
+	
+	public double getCount(short idParent, short idChild, char type, boolean withTree) {
+		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
+		return getCount(rule, withTree);
+	}
+	
+	
+	public void addCount(GrammarRule rule, double increment, boolean withTree) {
+		Map<GrammarRule, Double> count = withTree ? count0 : count1;
+		if (rule != null && count.get(rule) != null) {
+			count.put(rule, count.get(rule) + increment);
 			return;
 		}
-		System.err.println("Unary Rule NOT Found: [P: " + idParent + ", C: " + idChild + ", TYPE: " + type + "]");
+		if (rule == null) {
+			System.err.println("The Given Rule is NULL.");
+		} else {
+			System.err.println("Grammar Rule NOT Found: " + rule);
+		}
+	}
+	
+	
+	public double getCount(GrammarRule rule, boolean withTree) {
+		Map<GrammarRule, Double> count = withTree ? count0 : count1;
+		if (rule != null && count.get(rule) != null) {
+			return count.get(rule);
+		}
+		if (rule == null) {
+			System.err.println("The Given Rule is NULL.");
+		} else {
+			System.err.println("Grammar Rule NOT Found: " + rule);
+		}
+		return -1.0;
 	}
 	
 	
@@ -197,7 +229,7 @@ public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
 		List<GrammarRule> list = new ArrayList<GrammarRule>();
 		for (short i = 0; i < nTag; i++) {
 			int ruleIdx = wordIndexMap[i].indexOf(wordIdx);
-			if (ruleIdx > 0) {
+			if (ruleIdx >= 0) {
 				list.add(urules[i][ruleIdx]);
 			}
 		}
