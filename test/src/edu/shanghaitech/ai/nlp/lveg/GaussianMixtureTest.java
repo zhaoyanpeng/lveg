@@ -53,7 +53,7 @@ public class GaussianMixtureTest {
 	}
 	
 	
-	// @Test
+	//@Test
 	public void testGaussianMixture() {
 		String key = "hello", value = "world";
 		Map<String, String> map = new HashMap<String, String>();
@@ -73,7 +73,7 @@ public class GaussianMixtureTest {
 	}
 	
 	
-	@Test
+	//@Test
 	public void testHashSet() {
 		Set<GaussianDistribution> set0 = new HashSet<GaussianDistribution>();
 		Set<GaussianDistribution> set1 = new HashSet<GaussianDistribution>();
@@ -94,7 +94,7 @@ public class GaussianMixtureTest {
 	}
 	
 	
-	@Test
+	//@Test
 	public void testMapEqual() {
 		// TODO not done, discarded
 		Map<String, Set<GaussianDistribution>> map0 = new HashMap<String, Set<GaussianDistribution>>();
@@ -103,7 +103,7 @@ public class GaussianMixtureTest {
 	}
 	
 	
-	@Test 
+	//@Test 
 	public void testMultiplyForInsideScore() {
 		GaussianMixture cgm0 = gm0.copy(true);
 		GaussianMixture cgm2 = gm2.copy(true);
@@ -131,7 +131,7 @@ public class GaussianMixtureTest {
 		GaussianMixture gm3 = GaussianMixture.multiply(gm0, gm1);
 		System.out.println("gm0 X gm1---" + gm3);
 		
-		List<String> keys = new ArrayList<String>();
+		Set<String> keys = new HashSet<String>();
 		keys.add("uc");
 		
 		GaussianMixture.marginalize(gm3, keys);
@@ -153,6 +153,14 @@ public class GaussianMixtureTest {
 		
 		GaussianMixture gm6 = GaussianMixture.merge(gm4);
 		System.out.println("Merge  p ---" + gm6);
+		
+
+		Map<String, String> keys0 = new HashMap<String, String>();
+		Map<String, String> keys1 = new HashMap<String, String>();
+		keys0.put("uc", "rm");
+		keys1.put("p", "rm");
+		GaussianMixture gm7 = GaussianMixture.mulAndMarginalize(gm0, gm1, keys0, keys1);
+		System.out.println("MulAndMarginalize gm0 X gm1---" + gm7);
 	}
 	
 }

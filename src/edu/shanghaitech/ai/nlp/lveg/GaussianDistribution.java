@@ -13,6 +13,11 @@ import edu.shanghaitech.ai.nlp.util.MethodUtil;
  *
  */
 public class GaussianDistribution implements Comparable<Object> {
+	/**
+	 * We may need the hash set be able to hold the gaussians that 
+	 * are the same but the ids, which is just the future feature.
+	 */
+	private char id;
 	
 	protected short dim;
 	
@@ -26,6 +31,7 @@ public class GaussianDistribution implements Comparable<Object> {
 	
 	
 	public GaussianDistribution() {
+		this.id = 0;
 		this.dim = 0;
 		this.mus = new ArrayList<Double>();
 		this.sigmas = new ArrayList<Double>();
@@ -162,7 +168,7 @@ public class GaussianDistribution implements Comparable<Object> {
 		
 		if (o instanceof GaussianDistribution) {
 			GaussianDistribution gd = (GaussianDistribution) o;
-			if (dim == gd.dim && mus.equals(gd.mus) && sigmas.equals(gd.sigmas)) {
+			if (id == gd.id && dim == gd.dim && mus.equals(gd.mus) && sigmas.equals(gd.sigmas)) {
 				return true;
 			}
 		}

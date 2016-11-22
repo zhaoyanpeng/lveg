@@ -36,6 +36,7 @@ public abstract class GrammarRule implements Serializable {
 		public final static String LC = "lc";
 		public final static String RC = "rc";
 		public final static String UC = "uc";
+		public final static String RM = "rm";
 	}
 	
 	

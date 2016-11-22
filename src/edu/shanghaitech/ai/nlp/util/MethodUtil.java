@@ -180,23 +180,25 @@ public class MethodUtil {
 	public static boolean checkUnaryRuleCircle(LVeGGrammar agrammar, LVeGLexicon alexicon, boolean startWithC) {
 		grammar = agrammar;
 		lexicon = alexicon;
+		boolean found = false;
 		for (int i = 0; i < grammar.nTag; i++) {
+			int repeated = 0;
 			Set<Integer> visited = new LinkedHashSet<Integer>();
-			if (checkUnaryRuleCircle(i, visited, startWithC)) {
-				System.err.println("Circle that begins with " + i + " was found: " + visited);
-				return true;
+			// System.out.println("Tag " + i + "\t");
+			if ((repeated = checkUnaryRuleCircle(i, visited, startWithC)) > 0) {
+				LVeGLearner.logger.error("Repeated item: " + repeated + "\tin the path that begins with " + i + " was found: " + visited);
+				found = true;
 			}
 		}
-
 		// System.out.println("No circles were found.");
-		return false;
+		return found;
 	}
 	
 	
-	public static boolean checkUnaryRuleCircle(int index, Set<Integer> visited, boolean startWithC) {	
+	public static int checkUnaryRuleCircle(int index, Set<Integer> visited, boolean startWithC) {	
 		if (visited.contains(index)) { 
-			System.out.println("Repeated item: " + index);
-			return true; 
+			// System.out.println("Repeated item: " + index);
+			return index; 
 		} else {
 			visited.add(index);
 		}
@@ -209,14 +211,14 @@ public class MethodUtil {
 		
 		for (GrammarRule rule : rules) {
 			UnaryGrammarRule r = (UnaryGrammarRule) rule;
-			short id = startWithC ? r.getLhs() : r.getRhs();
-			if (checkUnaryRuleCircle(id, visited, startWithC)) {
-				return true;
+			int id = startWithC ? r.getLhs() : r.getRhs(), repeat;
+			if ((repeat = checkUnaryRuleCircle(id, visited, startWithC)) > 0) {
+				return repeat;
 			}
 		}
 		if (rules.isEmpty()) { /*System.out.println("Path: " + visited);*/ }
 		visited.remove(index);
-		return false;
+		return -1;
 	}
 	
 	
@@ -245,6 +247,36 @@ public class MethodUtil {
 			count++;
 		}
 		System.out.println("Oops!");
+	}
+	
+	
+	public static boolean containsRule(Tree<State> tree, short idp, short idc) {
+		if (tree.isLeaf()) { return false; }
+		
+		List<Tree<State>> children = tree.getChildren();
+		short idParent = tree.getLabel().getId();
+		switch (children.size()) {
+		case 0:
+			break;
+		case 1: {
+			short idChild = children.get(0).getLabel().getId();
+			if (idParent == idp && idChild == idc) {
+				return true;
+			}
+			break;
+		}
+		case 2:
+			break;
+		default:
+			System.err.println("Malformed tree: more than two children. Exiting...");
+			System.exit(0);
+		}
+		for (Tree<State> child : children) {
+			if (containsRule(child, idp, idc)) {
+				return true;
+			}
+		}
+		return false;
 	}
 	
 	

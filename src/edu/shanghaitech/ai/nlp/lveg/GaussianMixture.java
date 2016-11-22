@@ -45,6 +45,8 @@ public class GaussianMixture {
 	 * The set of Gaussian components. Each component consists of one or more 
 	 * independent Gaussian distributions mapped by keys. Keys: P (parent); C 
 	 * (child); LC (left child); RC (right child); UC (unary child)
+	 * 
+	 * TODO but why did I use the Set for the portion of Mog? To ease the comparison?
 	 */
 	protected List<Map<String, Set<GaussianDistribution>>> mixture;
 	
@@ -129,7 +131,7 @@ public class GaussianMixture {
 	 * Add gaussian distributions to a component.
 	 * 
 	 * @param iComponent index of the component
-	 * @param gaussians  a set of gaussian distributions.
+	 * @param gaussians  a set of gaussian distributions
 	 */
 	public void add(int iComponent, Map<String, Set<GaussianDistribution>> gaussians) {
 		Map<String, Set<GaussianDistribution>> component = mixture.get(iComponent);
@@ -153,6 +155,20 @@ public class GaussianMixture {
 	
 	
 	/**
+	 * Add gaussian distributions to a component.
+	 * 
+	 * @param component the component of the mixture of gaussians
+	 * @param gaussians a set of gaussian distributions
+	 */
+	public static void add(Map<String, Set<GaussianDistribution>> component, 
+			Map<String, Set<GaussianDistribution>> gaussians) {
+		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : gaussians.entrySet()) {
+			add(component, gaussian.getKey(), gaussian.getValue());
+		}
+	}
+	
+	
+	/**
 	 * Add gaussian distributions to the specific portion of a component.
 	 * 
 	 * @param component the component of the mixture of gaussians
@@ -164,9 +180,12 @@ public class GaussianMixture {
 			String key, Set<GaussianDistribution> value) {
 		Set<GaussianDistribution> gausses = component.get(key);
 		if (!component.containsKey(key)) {
+			/*
 			gausses = new HashSet<GaussianDistribution>();
 			gausses.addAll(value);
 			component.put(key, gausses);
+			*/
+			component.put(key, value);
 		} else {
 			if (gausses == null) {
 				gausses = new HashSet<GaussianDistribution>();
@@ -228,6 +247,34 @@ public class GaussianMixture {
 	
 	
 	/**
+	 * Replace the key of the specific portion of the mixture of gaussians with the new key.  
+	 * 
+	 * @param gm   mixture of gaussians
+	 * @param keys pairs of (old-key, new-key)
+	 * @return
+	 */
+	public static GaussianMixture replaceKeys(GaussianMixture gm, Map<String, String> keys) {
+		GaussianMixture agm = new GaussianMixture();
+		agm.weights.addAll(gm.weights);
+		for (Map<String, Set<GaussianDistribution>> component : gm.mixture) {
+			Map<String, Set<GaussianDistribution>> acomponent = 
+					new HashMap<String, Set<GaussianDistribution>>();
+			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
+				String key = gaussian.getKey();
+				if (keys.containsKey(key)) {
+					add(acomponent, keys.get(key), gaussian.getValue());
+				} else {
+					add(acomponent, key, gaussian.getValue());
+				}
+			}
+			agm.mixture.add(acomponent);
+			agm.ncomponent++;
+		}
+		return agm;
+	}
+	
+	
+	/**
 	 * Replace all the existing keys with a new key (by reference).
 	 * 
 	 * @param gm     mixture of gaussians
@@ -278,20 +325,29 @@ public class GaussianMixture {
 	/**
 	 * Multiply two gaussian mixtures and marginlize the specific portions of the result.
 	 * 
-	 * @param gm0  one mixture of gaussians
-	 * @param gm1  the other mixture of gaussians
-	 * @param keys which denotes the specific portions of the mixture of gaussians
+	 * @param gm0   one mixture of gaussians
+	 * @param gm1   the other mixture of gaussians
+	 * @param keys0 pairs of (key, value), key denotes the specific portions of gm0, value is the new key
+	 * @param keys1 pairs of (key, value), key denotes the specific portions of gm1, value is the new key
 	 * @return
-	 */
-	public static GaussianMixture mulAndmarginalize(GaussianMixture gm0, GaussianMixture gm1, List<String> keys) {
-		if (gm0 == null && gm1 == null) { return null; }
-		if (gm0 == null) { return gm1.copy(true); }
-		if (gm1 == null) { return gm0.copy(true); }
+	 */	
+	public static GaussianMixture mulAndMarginalize(GaussianMixture gm0, GaussianMixture gm1, 
+			Map<String, String> keys0, Map<String, String> keys1) {
+		if (gm0 == null || gm1 == null) { return null; }
 		
+		gm0 = replaceKeys(gm0, keys0);
+		gm1 = replaceKeys(gm1, keys1);
 		GaussianMixture gm = multiply(gm0, gm1);
 		
-		marginalize(gm, keys);
+		Set<String> keys = new HashSet<String>();
+		for (Map.Entry<String, String> map : keys0.entrySet()) {
+			keys.add(map.getValue());
+		}
+		for (Map.Entry<String, String> map : keys1.entrySet()) {
+			keys.add(map.getValue());
+		}
 		
+		marginalize(gm, keys);
 		return gm;
 	}
 	
@@ -334,7 +390,7 @@ public class GaussianMixture {
 		Map<String, Set<GaussianDistribution>> component = copy(component0);
 		
 		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component1.entrySet()) {
-			add(component, gaussian.getKey(), copy(gaussian.getValue()));	
+			add(component, gaussian.getKey(), copy(gaussian.getValue()));
 		}
 		return component;
 	}
@@ -357,7 +413,7 @@ public class GaussianMixture {
 	 * @param gm   mixture of gaussians
 	 * @param keys which map to the portions, to be marginalized, of the mixture of gaussians
 	 */
-	public static void marginalize(GaussianMixture gm, List<String> keys) {
+	public static void marginalize(GaussianMixture gm, Set<String> keys) {
 		if (gm.mixture.size() != gm.weights.size()) { gm = null; }
 		for (Map<String, Set<GaussianDistribution>> gaussian : gm.mixture) {
 			for (String key : keys) {

@@ -164,7 +164,7 @@ public class UnaryGrammarRule extends GrammarRule implements Comparable<Object> 
 	
 	@Override
 	public String toString() {
-		return "U-Rule [P: " + lhs +", UC: " + rhs + "]";
+		return "U-Rule [P: " + lhs +", UC: " + rhs + ", T: " + (short) type + "]";
 	}
 
 }

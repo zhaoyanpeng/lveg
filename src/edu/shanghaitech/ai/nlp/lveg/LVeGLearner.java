@@ -57,8 +57,8 @@ public class LVeGLearner extends Recorder {
 		@Option(name = "-randomSeed", usage = "Seed for random number generator (Default: 111)")
 		public int randomSeed = 111;
 		
-		@Option(name = "-treebank", usage = "Language: WSJ, CHINESE (Default: ENGLISH)")
-		public TreeBankType treebank = TreeBankType.WSJ;
+		@Option(name = "-treebank", usage = "Language: WSJ, CHINESE, SINGLEFILE (Default: SINGLEFILE)")
+		public TreeBankType treebank = TreeBankType.SINGLEFILE;
 		
 		@Option(name = "-skipSection", usage = "Skip a particular section of the WSJ training corpus (Needed for training Mark Johnsons reranker (Default: -1)")
 		public int skipSection = -1;
@@ -132,6 +132,12 @@ public class LVeGLearner extends Recorder {
 		@Option(name = "-dim", usage = "Dimension of the latent vector (Default: 5)")
 		public short dim = 2;
 		
+		@Option(name = "-logType", usage = "Console (false) or file (true) (Default: true)")
+		public boolean logType = false;
+		
+		@Option(name = "-logFile", usage = "Log file name (Default: log/log)")
+		public String logFile = "log/log";
+		
 	}
 	
 
@@ -172,14 +178,31 @@ public class LVeGLearner extends Recorder {
 		grammar.postInitialize(0.0);
 		lexicon.postInitialize(trainTrees, numbererTag.size());
 		
+		short idp = 5, idc = 1;
+//		for (Tree<State> tree : trainTrees) {
+//			if (MethodUtil.containsRule(tree, idp, idc)) {
+//				System.out.println(tree);
+//			}
+//		}
+
+		
+		logger.debug(grammar);
+		logger.debug(lexicon);
+		
 //		System.out.println(grammar);
 //		System.out.println(lexicon);
 		
+//		if (grammar.containsRule(rule, true)) {
+//			System.out.println("oops");
+//		}
+//		System.exit(0);
+		
 		// check if there is any circle in the unary grammar rules
 		// TODO move this self-checking procedure to the class Grammar
+		logger.debug("---Circle Detection.\n");
 		if (MethodUtil.checkUnaryRuleCircle(grammar, lexicon, true)) {
 			logger.error("Circle (WithC) was found in the unary grammar rules.");
-			System.exit(0);
+			return;
 		}
 		
 		/*// DEBUG Note necessary, the circle is reversible 
@@ -269,7 +292,7 @@ public class LVeGLearner extends Recorder {
 			validationTrees.resetScore();
 			
 			LVeGLearner.logger.trace("Epoch " + cnt + "...");
-			if (cnt >= 1) {
+			if (cnt >= 2) {
 				break;
 			}
 		// relative error could be negative
@@ -307,8 +330,11 @@ public class LVeGLearner extends Recorder {
 		if (opts.outFile == null) {
 			throw new IllegalArgumentException("Output file is required.");
 		} else {
-			//logger = logUtil.getFileLogger("log/unittest");
-			logger = logUtil.getConsoleLogger();
+			if (opts.logType) {
+				logger = logUtil.getFileLogger(opts.logFile);
+			} else {
+				logger = logUtil.getConsoleLogger();
+			}
 			System.out.println("Grammar file will be saved to " + opts.outFile + ".");
 		}
 		dim = opts.dim;
@@ -346,7 +372,7 @@ public class LVeGLearner extends Recorder {
 			Corpus.lowercaseWords(trainTrees);
 			Corpus.lowercaseWords(validationTrees);
 		}
-		System.out.println("There are " + trainTrees.size() + " trees in the training set.");
+		logger.debug("There are " + trainTrees.size() + " trees in the training set.");
 		datasets.put(ID_TRAINING, trainTrees);
 		datasets.put(ID_VALIDATION, validationTrees);
 		
@@ -391,7 +417,7 @@ public class LVeGLearner extends Recorder {
 	private static void debugNumbererTag(Numberer numbererTag, Options opts) {
 		if (opts.verbose || true) {
 			for (int i = 0; i < numbererTag.size(); i++) {
-				// logger.debug("Tag " + i + "\t" +  (String) numbererTag.object(i)); // DEBUG
+				logger.trace("Tag " + i + "\t" +  (String) numbererTag.object(i)); // DEBUG
 			}
 		}
 		logger.debug("There are " + numbererTag.size() + " observed tags.");

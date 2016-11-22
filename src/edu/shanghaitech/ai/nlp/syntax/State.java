@@ -106,6 +106,11 @@ public class State {
 	}
 	
 	
+	/**
+	 * TODO Need to find the balance between time-efficiency and memory-cost, stupid method.
+	 * 
+	 * @param deep
+	 */
 	private void resetScore(boolean deep) {
 		if (deep) {
 			if (insideScore != null) { insideScore.clear(); }

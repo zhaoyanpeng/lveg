@@ -103,8 +103,11 @@ public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
 			urules[i] = new UnaryGrammarRule[nmap];
 			for (short j = 0; j < nmap; j++) {
 				int wordIdx = wordIndexMap[i].get(j);
+				int frequency = wordIndexMap[i].frequency(wordIdx);
+				
 				counts[i][j] = new GaussianMixture();
 				urules[i][j] = new UnaryGrammarRule(i, (short) wordIdx, GrammarRule.LHSPACE);
+				urules[i][j].getWeight().setBias(frequency);
 				
 				count0.put(urules[i][j], 0.0);
 				count1.put(urules[i][j], 0.0);
@@ -280,7 +283,7 @@ public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
 	@Override
 	public String toString() {
 		String word = null;
-		int count = 0, ncol = 5;
+		int count = 0, ncol = 1;
 		StringBuffer sb = new StringBuffer();
 		sb.append("Grammar [nWord=" + nWord + "]\n");
 		
@@ -302,7 +305,7 @@ public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
 			int nmap = wordIndexMap[i].size();
 			sb.append("Tag " + i + "\t[" + numberer.object(i) + "] has " + nmap + " rules\n" );
 			for (int j = 0; j < nmap; j++) {
-				sb.append(urules[i][j] + "\t");
+				sb.append(urules[i][j] + "\t" + urules[i][j].getWeight().getBias());
 				if (++count % ncol == 0) {
 					sb.append("\n");
 				}
@@ -328,20 +331,26 @@ public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
 		private int count;
 		private List<Integer> to;
 		private List<Integer> from;
+		private List<Integer> frequency;
 		
 		
 		public IndexMap(int n) {
 			this.count = 0;
 			this.to = new ArrayList<Integer>(n);
 			this.from = new ArrayList<Integer>(n);
+			this.frequency = new ArrayList<Integer>(n);
 			// initialization
 			for (int i = 0; i < n; i++) {
 				to.add(-1);
 				from.add(-1);
+				frequency.add(0);
 			}
 		}
 		
 		
+		/**
+		 * @param i word index
+		 */
 		public void add(int i) {
 			if (i < 0 || i > to.size()) { return; }
 			if (to.get(i) == -1) {
@@ -349,9 +358,24 @@ public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
 				from.set(count, i);
 				count++;
 			}
+			frequency.set(i, frequency.get(i) + 1);
 		}
 		
 		
+		/**
+		 * @param i word index
+		 * @return  frequency of the rule with i as the child
+		 */
+		public int frequency(int i) {
+			if (i < 0 || i > to.size()) { return -1; }
+			return frequency.get(i);
+		}
+		
+		
+		/**
+		 * @param i mapping index
+		 * @return  word index
+		 */
 		public int get(int i) {
 			if (i < 0 || i > to.size()) { return -1; }
 			return from.get(i);

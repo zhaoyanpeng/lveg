@@ -28,7 +28,7 @@
   	</logger>   
     
     <logger name="FILE" additivity="false">       
-        <level value="DEBUG" />
+        <level value="TRACE" />
         <appender-ref ref="FILE" />
     </logger>
     

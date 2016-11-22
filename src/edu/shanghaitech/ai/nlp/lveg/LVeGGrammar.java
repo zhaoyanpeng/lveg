@@ -36,6 +36,23 @@ public class LVeGGrammar implements Serializable {
 	private List<GrammarRule>[] binaryRulesWithLC;
 	private List<GrammarRule>[] binaryRulesWithRC;
 	
+	
+	/**
+	 * For any nonterminals A \neq B \neq C, p(A->B) is computed as 
+	 * p(A->B) + \sum_{C} p(A->C) \times p(C->B), in which p(A->B) 
+	 * is zero if A->B does not exist, and the resulting new rules 
+	 * are added to the unary rule set. Fields containing 'sum' are
+	 * dedicated to the general CYK algorithm, and are dedicated to
+	 * to the Viterbi algorithm if they contain 'Max'.
+	 */
+	private List<GrammarRule> chainSumUnaryRules;
+	private List<GrammarRule>[] chainSumUnaryRulesWithP;
+	private List<GrammarRule>[] chainSumUnaryRulesWithC;
+	
+	private List<GrammarRule> chainMaxUnaryRules;
+	private List<GrammarRule>[] chainMaxUnaryRulesWithP;
+	private List<GrammarRule>[] chainMaxUnaryRulesWithC;
+	
 	/**
 	 * Needed when we want to find a rule and access its statistics.
 	 * we first construct a rule, which is used as the key, and use 
@@ -118,6 +135,41 @@ public class LVeGGrammar implements Serializable {
 	}
 	
 	
+	public boolean containsRule(GrammarRule rule, boolean isUnary) {
+		if (isUnary) {
+			UnaryGrammarRule r = (UnaryGrammarRule) rule;
+			if (unaryRulesWithP[r.lhs].contains(rule)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	
+	public void remove(GrammarRule rule, boolean isUnary) {
+		if (isUnary) {
+			UnaryGrammarRule r = (UnaryGrammarRule) rule;
+			if (unaryRulesWithP[r.lhs].contains(rule)) {
+				System.out.println("found the rule");
+			}
+			boolean signal = unaryRulesWithP[r.lhs].remove(r);
+			if (!signal) {
+				System.out.println("failed to remove");
+			}
+			
+			if (unaryRulesWithP[r.lhs].contains(rule)) {
+				System.out.println("failed to remove again");
+			}
+			signal = unaryRulesWithC[r.rhs].remove(r);
+			if (!signal) {
+				System.out.println("with c error remove");
+			}
+		} else {
+			
+		}
+	}
+	
+	
 	/**
 	 * Tally (go through and record) the rules existing in the parse tree.
 	 * 
@@ -141,6 +193,10 @@ public class LVeGGrammar implements Serializable {
 			} else { // 0 represents the root node
 				rule = new UnaryGrammarRule(idParent, idChild, GrammarRule.RHSPACE);
 			}
+			if (idParent == idChild) { 
+				LVeGLearner.logger.error("Incorrect unary rule: " + rule); 
+				break;
+			}
 			unaryRuleTable.addCount(rule, 1.0);
 			break;
 		}
@@ -152,12 +208,83 @@ public class LVeGGrammar implements Serializable {
 			break;
 		}
 		default:
-			System.err.println("Malformed tree: more than two children. Exitting...");
+			LVeGLearner.logger.error("Malformed tree: more than two children. Exitting...");
 			System.exit(0);
 		}
 		
 		for (Tree<State> child : children) {
 			tallyStateTree(child);
+		}
+	}
+	
+	
+	/**
+	 * Compute the two-order unary chain.
+	 */
+	protected void computeChainUnaryRule() {
+		
+		Map<String, String> keys0 = new HashMap<String, String>();
+		Map<String, String> keys1 = new HashMap<String, String>();
+		keys0.put(GrammarRule.Unit.UC, GrammarRule.Unit.RM);
+		keys1.put(GrammarRule.Unit.P, GrammarRule.Unit.RM);
+		
+		for (short iparent = 0; iparent < nTag; iparent++) {
+			for (short ichild = 0; ichild < nTag; ichild++) {
+				if (iparent == ichild) { continue; }
+				short bestIntermediateState = -1;
+				double maxSumWeight = -1.0, total;
+				
+				GaussianMixture weightSum = new GaussianMixture();
+				GaussianMixture weightMax = new GaussianMixture();
+				UnaryGrammarRule uruleSum = new UnaryGrammarRule(iparent, ichild, weightSum);
+				UnaryGrammarRule uruleMax = new UnaryGrammarRule(iparent, ichild, weightMax);
+				GaussianMixture pruleWeight = null, cruleWeight = null, aruleWeight = null;
+				
+				for (GrammarRule prule : unaryRulesWithP[iparent]) {
+					UnaryGrammarRule uprule = (UnaryGrammarRule) prule;
+					pruleWeight = uprule.getWeight(); // one-order chain rule
+					if (uprule.rhs == ichild) {
+						weightSum.add(pruleWeight.copy(true));
+						total = pruleWeight.marginalize();
+						if (total > maxSumWeight) { 
+							weightMax.clear();
+							maxSumWeight = total;
+							bestIntermediateState = -1;
+							weightMax = pruleWeight.copy(true);
+						}
+					} else { // two-order chain rule
+						for (GrammarRule crule : unaryRulesWithC[ichild]) {
+							UnaryGrammarRule ucrule = (UnaryGrammarRule) crule;
+							if (ucrule.lhs != uprule.rhs) { continue; }
+							cruleWeight = ucrule.getWeight();
+							aruleWeight = GaussianMixture.mulAndMarginalize(pruleWeight, cruleWeight, keys0, keys1);
+							weightSum.add(aruleWeight);
+							total = aruleWeight.marginalize();
+							if (total > maxSumWeight) { 
+								weightMax.clear();
+								maxSumWeight = total;
+								bestIntermediateState = ucrule.lhs;
+								weightMax = aruleWeight.copy(true);
+							}
+						}
+					}
+				} 
+				if (maxSumWeight > 0) {
+					// why shall we add it?
+					addUnaryRule(uruleSum);
+					// the resulting chain rule
+					chainSumUnaryRules.add(uruleSum);
+					chainSumUnaryRulesWithP[iparent].add(uruleSum);
+					chainSumUnaryRulesWithC[ichild].add(uruleSum);
+					// incorrect for Viterbi parser
+					chainMaxUnaryRules.add(uruleMax);
+					chainMaxUnaryRulesWithP[iparent].add(uruleMax);
+					chainMaxUnaryRulesWithC[ichild].add(uruleMax);
+					// how to compare the magnitudes of two MoG
+					
+				}
+				
+			}
 		}
 	}
 	
@@ -331,13 +458,13 @@ public class LVeGGrammar implements Serializable {
 
 	@Override
 	public String toString() {
-		int count = 0, ncol = 5;
+		int count = 0, ncol = 1;
 		StringBuffer sb = new StringBuffer();
 		sb.append("Grammar [nTag=" + nTag + "]\n");
 		
 		sb.append("---Unary Grammar Rules. Total: " + unaryRuleTable.size() + "\n");
 		for (GrammarRule rule : unaryRuleTable.keySet()) {
-			sb.append(rule + "\t");
+			sb.append(rule + "\t" + unaryRuleTable.getCount(rule).getBias());
 			if (++count % ncol == 0) {
 				sb.append("\n");
 			}
@@ -346,7 +473,7 @@ public class LVeGGrammar implements Serializable {
 		sb.append("\n");
 		sb.append("---Binary Grammar Rules. Total: " + binaryRuleTable.size() + "\n");
 		for (GrammarRule rule : binaryRuleTable.keySet()) {
-			sb.append(rule + "\t");
+			sb.append(rule + "\t" + binaryRuleTable.getCount(rule).getBias());
 			if (++count % ncol == 0) {
 				sb.append("\n");
 			}
