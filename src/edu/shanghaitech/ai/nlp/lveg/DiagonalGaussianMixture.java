@@ -25,7 +25,7 @@ import edu.shanghaitech.ai.nlp.util.MethodUtil;
  * @author Yanpeng Zhao
  *
  */
-public class GaussianMixture {
+public class DiagonalGaussianMixture extends GaussianMixture {
 	/**
 	 * Not sure if it is necessary.
 	 * 
@@ -57,7 +57,7 @@ public class GaussianMixture {
 	protected List<Map<String, Set<GaussianDistribution>>> mixture;
 	
 	
-	public GaussianMixture() {
+	public DiagonalGaussianMixture() {
 		this.bias = 0;
 		this.nsample = 0;
 		this.ncomponent = 0;
@@ -68,14 +68,14 @@ public class GaussianMixture {
 	}
 	
 	
-	public GaussianMixture(short ncomponent) {
+	public DiagonalGaussianMixture(short ncomponent) {
 		this();
 		this.ncomponent = ncomponent;
 		initialize();
 	}
 	
 	
-	public GaussianMixture(
+	public DiagonalGaussianMixture(
 			short ncomponent, List<Double> weights, List<Map<String, Set<GaussianDistribution>>> mixture) {
 		this();
 		this.ncomponent = ncomponent;
@@ -112,7 +112,7 @@ public class GaussianMixture {
 	 * 
 	 * @param gm mixture of gaussians
 	 */
-	public void add(GaussianMixture gm) {
+	public void add(DiagonalGaussianMixture gm) {
 		bias += gm.bias;
 		ncomponent += gm.ncomponent;
 		weights.addAll(gm.weights);
@@ -207,8 +207,8 @@ public class GaussianMixture {
 	 * @param deep boolean value, indicating deep (true) or shallow (false) copy
 	 * @return
 	 */
-	public GaussianMixture copy(boolean deep) {
-		GaussianMixture gm = new GaussianMixture();
+	public DiagonalGaussianMixture copy(boolean deep) {
+		DiagonalGaussianMixture gm = new DiagonalGaussianMixture();
 		gm.ncomponent = ncomponent;
 		gm.weights.addAll(weights);
 		for (Map<String, Set<GaussianDistribution>> component : mixture) {
@@ -259,8 +259,8 @@ public class GaussianMixture {
 	 * @param keys pairs of (old-key, new-key)
 	 * @return
 	 */
-	public static GaussianMixture replaceKeys(GaussianMixture gm, Map<String, String> keys) {
-		GaussianMixture agm = new GaussianMixture();
+	public static DiagonalGaussianMixture replaceKeys(DiagonalGaussianMixture gm, Map<String, String> keys) {
+		DiagonalGaussianMixture agm = new DiagonalGaussianMixture();
 		agm.weights.addAll(gm.weights);
 		for (Map<String, Set<GaussianDistribution>> component : gm.mixture) {
 			Map<String, Set<GaussianDistribution>> acomponent = 
@@ -287,8 +287,8 @@ public class GaussianMixture {
 	 * @param newkey the new key
 	 * @return
 	 */
-	public static GaussianMixture replaceAllKeys(GaussianMixture gm, String newkey) {
-		GaussianMixture agm = new GaussianMixture();
+	public static DiagonalGaussianMixture replaceAllKeys(DiagonalGaussianMixture gm, String newkey) {
+		DiagonalGaussianMixture agm = new DiagonalGaussianMixture();
 		agm.weights.addAll(gm.weights);
 		for (Map<String, Set<GaussianDistribution>> component : gm.mixture) {
 			Map<String, Set<GaussianDistribution>> acomponent = 
@@ -317,8 +317,8 @@ public class GaussianMixture {
 	 * @return 
 	 * 
 	 */
-	public GaussianMixture mulForInsideOutside(GaussianMixture gm, String key, boolean deep) {
-		GaussianMixture amixture = this.copy(deep);
+	public DiagonalGaussianMixture mulForInsideOutside(DiagonalGaussianMixture gm, String key, boolean deep) {
+		DiagonalGaussianMixture amixture = this.copy(deep);
 		double sum = MethodUtil.sum(gm.weights, true);
 		for (int i = 0; i < ncomponent; i++) {
 			// CHECK Math.log(Math.exp(a) * b)
@@ -339,13 +339,13 @@ public class GaussianMixture {
 	 * @param keys1 pairs of (key, value), key denotes the specific portions of gm1, value is the new key
 	 * @return
 	 */	
-	public static GaussianMixture mulAndMarginalize(GaussianMixture gm0, GaussianMixture gm1, 
+	public static DiagonalGaussianMixture mulAndMarginalize(DiagonalGaussianMixture gm0, DiagonalGaussianMixture gm1, 
 			Map<String, String> keys0, Map<String, String> keys1) {
 		if (gm0 == null || gm1 == null) { return null; }
 		
 		gm0 = replaceKeys(gm0, keys0);
 		gm1 = replaceKeys(gm1, keys1);
-		GaussianMixture gm = multiply(gm0, gm1);
+		DiagonalGaussianMixture gm = multiply(gm0, gm1);
 		
 		Set<String> keys = new HashSet<String>();
 		for (Map.Entry<String, String> map : keys0.entrySet()) {
@@ -367,8 +367,8 @@ public class GaussianMixture {
 	 * @param gm1 the other mixture of gaussians
 	 * @return    
 	 */
-	public static GaussianMixture multiply(GaussianMixture gm0, GaussianMixture gm1) {
-		GaussianMixture gm = new GaussianMixture();
+	public static DiagonalGaussianMixture multiply(DiagonalGaussianMixture gm0, DiagonalGaussianMixture gm1) {
+		DiagonalGaussianMixture gm = new DiagonalGaussianMixture();
 		for (int i = 0; i < gm0.ncomponent; i++) {
 			for (int j = 0; j < gm1.ncomponent; j++) {
 				Map<String, Set<GaussianDistribution>> component = 
@@ -421,7 +421,7 @@ public class GaussianMixture {
 	 * @param gm   mixture of gaussians
 	 * @param keys which map to the portions, to be marginalized, of the mixture of gaussians
 	 */
-	public static void marginalize(GaussianMixture gm, Set<String> keys) {
+	public static void marginalize(DiagonalGaussianMixture gm, Set<String> keys) {
 		if (gm.mixture.size() != gm.weights.size()) { gm = null; }
 		for (Map<String, Set<GaussianDistribution>> gaussian : gm.mixture) {
 			for (String key : keys) {
@@ -464,8 +464,8 @@ public class GaussianMixture {
 	 * @param gm mixture of gaussians
 	 * @return
 	 */
-	public static GaussianMixture merge(GaussianMixture gm) {
-		GaussianMixture amixture = new GaussianMixture();
+	public static DiagonalGaussianMixture merge(DiagonalGaussianMixture gm) {
+		DiagonalGaussianMixture amixture = new DiagonalGaussianMixture();
 		Map<String, Set<GaussianDistribution>> component;
 		for (int i = 0; i < gm.ncomponent; i++) {
 			component = gm.mixture.get(i);
@@ -493,7 +493,7 @@ public class GaussianMixture {
 	 * @return
 	 */
 	public static int isContained(Map<String, Set<GaussianDistribution>> component, 
-			GaussianMixture gm) {
+			DiagonalGaussianMixture gm) {
 		for (int i = 0; i < gm.ncomponent; i++) {
 			if (isEqual(component, gm.mixture.get(i))) {
 				return i;

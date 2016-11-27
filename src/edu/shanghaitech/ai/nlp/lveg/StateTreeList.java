@@ -213,8 +213,36 @@ public class StateTreeList extends AbstractCollection<Tree<State>> {
 	
 	
 	/**
+	 * Convert a state tree to a string tree.
+	 * 
+	 * @param tree        a state tree
+	 * @param numbererTag which records the ids of tags
+	 * @return
+	 */
+	public static Tree<String> stateTreeToStringTree(Tree<State> tree, Numberer numbererTag) {
+		if (tree.isLeaf()) {
+			String name = tree.getLabel().getName();
+			return new Tree<String>(name);
+		}
+		
+		String name = (String) numbererTag.object(tree.getLabel().getId());
+		Tree<String> newTree = new Tree<String>(name);
+		List<Tree<String>> children = new ArrayList<Tree<String>>();
+		
+		for (Tree<State> child : tree.getChildren()) {
+			Tree<String> newChild = stateTreeToStringTree(child, numbererTag);
+			children.add(newChild);
+		}
+		newTree.setChildren(children);
+		return newTree;
+	}
+	
+	
+	/**
+	 * Convert a string tree to a state tree.
+	 * 
 	 * @param tree        a parse tree
-	 * @param numbererTag record the ids of tags
+	 * @param numbererTag which records the ids of tags
 	 * @param from        starting point of the span
 	 * @param to          ending point of the span
 	 * @return            parse tree represented by the state list

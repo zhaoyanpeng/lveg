@@ -61,20 +61,20 @@ public class UnaryGrammarRule extends GrammarRule implements Comparable<Object> 
 	
 	
 	private void initializeWeight(int type) {
-		weight = new GaussianMixture(LVeGLearner.ncomponent);
+		weight = new DiagonalGaussianMixture(LVeGLearner.ncomponent);
 		
 		switch (type) {
 		case RHSPACE: // rules for the root since it does not have subtypes
 			for (int i = 0; i < LVeGLearner.ncomponent; i++) {
 				Set<GaussianDistribution> set = new HashSet<GaussianDistribution>();
-				set.add(new GaussianDistribution(LVeGLearner.dim));
+				set.add(new DiagonalGaussianDistribution(LVeGLearner.dim));
 				weight.add(i, Unit.C, set);
 			}
 			break;
 		case LHSPACE: // rules in the preterminal layer (discarded)
 			for (int i = 0; i < LVeGLearner.ncomponent; i++) {
 				Set<GaussianDistribution> set = new HashSet<GaussianDistribution>();
-				set.add(new GaussianDistribution(LVeGLearner.dim));
+				set.add(new DiagonalGaussianDistribution(LVeGLearner.dim));
 				weight.add(i, Unit.P, set);
 			}
 			break;
@@ -83,8 +83,8 @@ public class UnaryGrammarRule extends GrammarRule implements Comparable<Object> 
 				Map<String, Set<GaussianDistribution>> map = new HashMap<String, Set<GaussianDistribution>>();
 				Set<GaussianDistribution> set0 = new HashSet<GaussianDistribution>();
 				Set<GaussianDistribution> set1 = new HashSet<GaussianDistribution>();
-				set0.add(new GaussianDistribution(LVeGLearner.dim));
-				set1.add(new GaussianDistribution(LVeGLearner.dim));
+				set0.add(new DiagonalGaussianDistribution(LVeGLearner.dim));
+				set1.add(new DiagonalGaussianDistribution(LVeGLearner.dim));
 				map.put(Unit.P, set0);
 				map.put(Unit.UC, set1);
 				weight.add(i, map);

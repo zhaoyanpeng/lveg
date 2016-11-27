@@ -23,9 +23,7 @@ public class BinaryGrammarRule extends GrammarRule implements Comparable<Object>
 	protected short rchild;
 	
 	
-	public BinaryGrammarRule() {
-		// TODO
-	}
+	public BinaryGrammarRule() {}
 	
 	
 	public BinaryGrammarRule(short lhs, short lchild, short rchild) {
@@ -60,16 +58,16 @@ public class BinaryGrammarRule extends GrammarRule implements Comparable<Object>
 	
 	
 	private void initializeWeight() {
-		weight = new GaussianMixture(LVeGLearner.ncomponent);
+		weight = new DiagonalGaussianMixture(LVeGLearner.ncomponent);
 		
 		for (int i = 0; i < LVeGLearner.ncomponent; i++) {
 			Map<String, Set<GaussianDistribution>> map = new HashMap<String, Set<GaussianDistribution>>();
 			Set<GaussianDistribution> set0 = new HashSet<GaussianDistribution>();
 			Set<GaussianDistribution> set1 = new HashSet<GaussianDistribution>();
 			Set<GaussianDistribution> set2 = new HashSet<GaussianDistribution>();
-			set0.add(new GaussianDistribution(LVeGLearner.dim));
-			set1.add(new GaussianDistribution(LVeGLearner.dim));
-			set2.add(new GaussianDistribution(LVeGLearner.dim));
+			set0.add(new DiagonalGaussianDistribution(LVeGLearner.dim));
+			set1.add(new DiagonalGaussianDistribution(LVeGLearner.dim));
+			set2.add(new DiagonalGaussianDistribution(LVeGLearner.dim));
 			map.put(Unit.P, set0);
 			map.put(Unit.LC, set1);
 			map.put(Unit.RC, set2);

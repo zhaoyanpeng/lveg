@@ -7,7 +7,8 @@ import java.util.Random;
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
 
 /**
- * Gaussian distribution is defined as the diagonal one.
+ * Gaussian distribution. We may define diagonal or general Gaussian distribution. Different 
+ * Gaussian distributions only differ when we eval their values or take directives.
  * 
  * @author Yanpeng Zhao
  *
@@ -17,15 +18,19 @@ public class GaussianDistribution implements Comparable<Object> {
 	 * We may need the hash set be able to hold the gaussians that 
 	 * are the same but the ids, which is just the future feature.
 	 */
-	private char id;
-	
+	protected char id;
 	protected short dim;
 	
+	/**
+	 * Covariances must be positive. We represent them in exponential 
+	 * form, and the real variances (for the diagonal) should be read 
+	 * as Math.exp(variances).
+	 */
+	protected List<Double> vars;
 	protected List<Double> mus;
-	protected List<Double> sigmas;
 	
 	protected List<Double> mgrads;
-	protected List<Double> sgrads;
+	protected List<Double> vgrads;
 	// points ~ N(0, 1)
 	protected List<Double> sample;
 	
@@ -34,26 +39,36 @@ public class GaussianDistribution implements Comparable<Object> {
 		this.id = 0;
 		this.dim = 0;
 		this.mus = new ArrayList<Double>();
-		this.sigmas = new ArrayList<Double>();
-		this.mgrads = new ArrayList<Double>();
-		this.sgrads = new ArrayList<Double>();
-	}
-	
-	
-	public GaussianDistribution(short dim) {
-		this();
-		this.dim = dim;
-		initialize();
+		this.vars = new ArrayList<Double>();
+		this.mgrads = new ArrayList<Double>(0);
+		this.vgrads = new ArrayList<Double>(0);
 	}
 	
 	
 	/**
 	 * Memory allocation and initialization.
 	 */
-	private void initialize() {
+	protected void initialize() {
 		MethodUtil.randomInitList(mus, Double.class, dim, LVeGLearner.maxrandom, false);
-		MethodUtil.randomInitList(sigmas, Double.class, dim, LVeGLearner.maxrandom, true);
+		MethodUtil.randomInitList(vars, Double.class, dim, LVeGLearner.maxrandom, true);
 	}
+	
+	
+	/**
+	 * Eval according to the sample and parameters (mu & sigma).
+	 * 
+	 * @return
+	 */
+	protected double eval() { return -0.0; }
+	
+	
+	/**
+	 * Take the derivative of MoG with respect to the parameters (mu & sigma) of the component.
+	 * 
+	 * @param factor  
+	 * @param nsample accumulate gradients (>0) or not (0)
+	 */
+	protected void derivative(double factor, int nsample) {}
 	
 	
 	/**
@@ -74,47 +89,6 @@ public class GaussianDistribution implements Comparable<Object> {
 	
 	
 	/**
-	 * Eval according to the sample and parameters.
-	 * 
-	 * @return
-	 */
-	protected double eval() {
-		double exps = 0.0, sinv = 1.0;
-		for (int i = 0; i < dim; i++) {
-			exps -= Math.pow(sample.get(i), 2) / 2;
-			sinv /= sigmas.get(i);
-		}
-		double value = Math.pow(2 * Math.PI, -dim / 2) * sinv * Math.exp(exps);
-		return value;
-	}
-	
-	
-	/**
-	 * Take the derivative of MoG with respect to the parameters (mu & sigma) of the component.
-	 * 
-	 * @param wgrad   derivative of MoG with respect to the weight of the component 
-	 * @param weight  weight of the component of MoG
-	 * @param nsample accumulate gradients (>0) or not (0)
-	 */
-	protected void derivative(double wgrad, double weight, int nsample) {
-		if (nsample == 0) {
-			mgrads.clear();
-			sgrads.clear();
-			for (int i = 0; i < dim; i++) {
-				mgrads.add(0.0);
-				sgrads.add(0.0);
-			}
-		}
-		for (int i = 0; i < dim; i++) {
-			double mgrad = weight * wgrad * sample.get(i) / sigmas.get(i);
-			double sgrad = weight * wgrad * (Math.pow(sample.get(i), 2) - 1) / sigmas.get(i);
-			mgrads.set(i, mgrads.get(i) + mgrad);
-			sgrads.set(i, sgrads.get(i) + sgrad);
-		}
-	}
-	
-	
-	/**
 	 * Update parameters using the gradient.
 	 * 
 	 * @param learningRate learning rate
@@ -123,9 +97,9 @@ public class GaussianDistribution implements Comparable<Object> {
 		double mu, sigma;
 		for (int i = 0; i < dim; i++) {
 			mu = mus.get(i) - learningRate * mgrads.get(i) / nsample;
-			sigma = sigmas.get(i) - learningRate * sgrads.get(i) / nsample;
+			sigma = vars.get(i) - learningRate * vgrads.get(i) / nsample;
 			mus.set(i, mu);
-			sigmas.set(i, sigma);
+			vars.set(i, sigma);
 		}
 	}
 	
@@ -137,10 +111,11 @@ public class GaussianDistribution implements Comparable<Object> {
 	 */
 	public GaussianDistribution copy() {
 		GaussianDistribution gd = new GaussianDistribution();
+		gd.id = id;
 		gd.dim = dim;
 		for (int i = 0; i < dim; i++) {
 			gd.mus.add(mus.get(i));
-			gd.sigmas.add(sigmas.get(i));
+			gd.vars.add(vars.get(i));
 		}
 		return gd;
 	}
@@ -152,13 +127,13 @@ public class GaussianDistribution implements Comparable<Object> {
 	public void clear() {
 		this.dim = 0;
 		this.mus.clear();
-		this.sigmas.clear();
+		this.vars.clear();
 	}
 	
 	
 	@Override
 	public int hashCode() {
-		return dim ^ mus.hashCode() ^ sigmas.hashCode();
+		return dim ^ mus.hashCode() ^ vars.hashCode();
 	}
 	
 	
@@ -168,7 +143,7 @@ public class GaussianDistribution implements Comparable<Object> {
 		
 		if (o instanceof GaussianDistribution) {
 			GaussianDistribution gd = (GaussianDistribution) o;
-			if (id == gd.id && dim == gd.dim && mus.equals(gd.mus) && sigmas.equals(gd.sigmas)) {
+			if (id == gd.id && dim == gd.dim && mus.equals(gd.mus) && vars.equals(gd.vars)) {
 				return true;
 			}
 		}
@@ -185,18 +160,18 @@ public class GaussianDistribution implements Comparable<Object> {
 		/*
 		if (dim > 0 && mus.get(0) < gd.mus.get(0)) { return -1; }
 		if (dim > 0 && mus.get(0) > gd.mus.get(0)) { return  1; }
-		if (dim > 0 && sigmas.get(0) < gd.sigmas.get(0)) { return -1; }
-		if (dim > 0 && sigmas.get(0) > gd.sigmas.get(0)) { return  1; }
+		if (dim > 0 && vars.get(0) < gd.vars.get(0)) { return -1; }
+		if (dim > 0 && vars.get(0) > gd.vars.get(0)) { return  1; }
 		*/
-		if (mus.equals(gd.mus) && sigmas.equals(gd.sigmas)) { return 0; }
+		if (mus.equals(gd.mus) && vars.equals(gd.vars)) { return 0; }
 		return -1;
 	}
 
 
 	@Override
 	public String toString() {
-		return "GD [dim=" + dim + ", mus=" + MethodUtil.double2str(mus, LVeGLearner.precision, -1) + 
-				", sigmas=" + MethodUtil.double2str(sigmas, LVeGLearner.precision, -1) + "]";
+		return "GD [dim=" + dim + ", mus=" + MethodUtil.double2str(mus, LVeGLearner.precision, -1, false) + 
+				", vars=" + MethodUtil.double2str(vars, LVeGLearner.precision, -1, true) + "]";
 	}
 
 }

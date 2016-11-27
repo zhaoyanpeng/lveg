@@ -82,7 +82,7 @@ public class RuleTableGeneric<T> implements Serializable {
 	public void increaseCount(T key, double increment) {
 		GaussianMixture count = getCount(key);
 		if (count == null) {
-			GaussianMixture mog = new GaussianMixture((short) 0);
+			GaussianMixture mog = new DiagonalGaussianMixture((short) 0);
 			mog.add(increment);
 			setCount(key, mog);
 			return;
@@ -94,7 +94,7 @@ public class RuleTableGeneric<T> implements Serializable {
 	public void increaseCount(T key, GaussianMixture increment) {
 		GaussianMixture count = getCount(key);
 		if (count == null) {
-			GaussianMixture mog = new GaussianMixture((short) 0);
+			GaussianMixture mog = new DiagonalGaussianMixture((short) 0);
 			mog.add(increment);
 			setCount(key, mog);
 			return;

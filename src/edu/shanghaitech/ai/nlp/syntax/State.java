@@ -29,8 +29,8 @@ public class State {
 	
 	
 	/**
-	 * @param id   id of the tag
 	 * @param name name of the tag, null for non-terminals, and word itself for terminals
+	 * @param id   id of the tag
 	 * @param from starting point of the span of the current state
 	 * @param to   ending point of the span of the current state
 	 * 

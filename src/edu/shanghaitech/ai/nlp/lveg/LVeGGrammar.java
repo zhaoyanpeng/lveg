@@ -43,7 +43,8 @@ public class LVeGGrammar implements Serializable {
 	 * is zero if A->B does not exist, and the resulting new rules 
 	 * are added to the unary rule set. Fields containing 'sum' are
 	 * dedicated to the general CYK algorithm, and are dedicated to
-	 * to the Viterbi algorithm if they contain 'Max'.
+	 * to the Viterbi algorithm if they contain 'Max'. But shall we
+	 * define the maximum between two MoGs.
 	 */
 	private List<GrammarRule> chainSumUnaryRules;
 	private List<GrammarRule>[] chainSumUnaryRulesWithP;
@@ -234,8 +235,8 @@ public class LVeGGrammar implements Serializable {
 				short bestIntermediateState = -1;
 				double maxSumWeight = -1.0, total;
 				
-				GaussianMixture weightSum = new GaussianMixture();
-				GaussianMixture weightMax = new GaussianMixture();
+				GaussianMixture weightSum = new DiagonalGaussianMixture();
+				GaussianMixture weightMax = new DiagonalGaussianMixture();
 				UnaryGrammarRule uruleSum = new UnaryGrammarRule(iparent, ichild, weightSum);
 				UnaryGrammarRule uruleMax = new UnaryGrammarRule(iparent, ichild, weightMax);
 				GaussianMixture pruleWeight = null, cruleWeight = null, aruleWeight = null;
@@ -271,7 +272,7 @@ public class LVeGGrammar implements Serializable {
 				} 
 				if (maxSumWeight > 0) {
 					// why shall we add it?
-					addUnaryRule(uruleSum);
+					// addUnaryRule(uruleSum);
 					// the resulting chain rule
 					chainSumUnaryRules.add(uruleSum);
 					chainSumUnaryRulesWithP[iparent].add(uruleSum);

@@ -12,15 +12,15 @@ import edu.shanghaitech.ai.nlp.lveg.GrammarRule.Unit;
 public class BinaryGrammarTest {
 	@Test
 	public void testBinaryGrammarTest() {
-		GaussianMixture gm = new GaussianMixture(LVeGLearner.ncomponent);
+		GaussianMixture gm = new DiagonalGaussianMixture(LVeGLearner.ncomponent);
 		for (int i = 0; i < LVeGLearner.ncomponent; i++) {
 			Map<String, Set<GaussianDistribution>> map = new HashMap<String, Set<GaussianDistribution>>();
 			Set<GaussianDistribution> list0 = new HashSet<GaussianDistribution>();
 			Set<GaussianDistribution> list1 = new HashSet<GaussianDistribution>();
 			Set<GaussianDistribution> list2 = new HashSet<GaussianDistribution>();
-			list0.add(new GaussianDistribution(LVeGLearner.dim));
-			list1.add(new GaussianDistribution(LVeGLearner.dim));
-			list2.add(new GaussianDistribution(LVeGLearner.dim));
+			list0.add(new DiagonalGaussianDistribution(LVeGLearner.dim));
+			list1.add(new DiagonalGaussianDistribution(LVeGLearner.dim));
+			list2.add(new DiagonalGaussianDistribution(LVeGLearner.dim));
 			map.put(Unit.P, list0);
 			map.put(Unit.LC, list1);
 			map.put(Unit.RC, list2);

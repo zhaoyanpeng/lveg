@@ -11,27 +11,27 @@ public class GaussianDistributionTest {
 	
 	@Test
 	public void testGaussianDistribution() {
-		GaussianDistribution gd = new GaussianDistribution();
+		GaussianDistribution gd = new DiagonalGaussianDistribution();
 		System.out.println(gd);
 	}
 	
 	
 	@Test
 	public void testInstanceEqual() {
-		GaussianDistribution gd0 = new GaussianDistribution();
-		GaussianDistribution gd1 = new GaussianDistribution();
-		GaussianDistribution gd2 = new GaussianDistribution((short) 5);
+		GaussianDistribution gd0 = new DiagonalGaussianDistribution();
+		GaussianDistribution gd1 = new DiagonalGaussianDistribution();
+		GaussianDistribution gd2 = new DiagonalGaussianDistribution((short) 5);
 		
 		assertFalse(gd0 == gd1);
 		assertTrue(gd0.equals(gd1));
 		
 		gd0.mus.add(2.0);
 		gd0.mus.add(3.0);
-		gd0.sigmas.add(4.0);
+		gd0.vars.add(4.0);
 		
 		gd1.mus.add(2.0);
 		gd1.mus.add(3.0);
-		gd1.sigmas.add(4.0);
+		gd1.vars.add(4.0);
 		
 		assertTrue(gd0.equals(gd1));
 		

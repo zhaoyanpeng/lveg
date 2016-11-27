@@ -59,6 +59,8 @@ public class LVeGLearner extends Recorder {
 		
 		@Option(name = "-treebank", usage = "Language: WSJ, CHINESE, SINGLEFILE (Default: SINGLEFILE)")
 		public TreeBankType treebank = TreeBankType.SINGLEFILE;
+//		public TreeBankType treebank = TreeBankType.WSJ;
+		
 		
 		@Option(name = "-skipSection", usage = "Skip a particular section of the WSJ training corpus (Needed for training Mark Johnsons reranker (Default: -1)")
 		public int skipSection = -1;
@@ -164,6 +166,13 @@ public class LVeGLearner extends Recorder {
 		StateTreeList trainTrees = new StateTreeList(stateTrees.get(ID_TRAINING));
 		StateTreeList validationTrees = new StateTreeList(stateTrees.get(ID_VALIDATION));
 		
+		
+		String imageName = "log/atree_unary_rule_chain_";
+		MethodUtil.lenUnaryRuleChain(trainTrees, (short) 2, imageName);
+		
+		System.exit(0);
+		
+		
 		// MethodUtil.isChildrenSizeZero(trainTrees);
 		
 		// MethodUtil.isParentEqualToChild(trainTrees);
@@ -184,10 +193,12 @@ public class LVeGLearner extends Recorder {
 //				System.out.println(tree);
 //			}
 //		}
-
 		
-		logger.debug(grammar);
-		logger.debug(lexicon);
+//		logger.debug(grammar);
+//		logger.debug(lexicon);
+		
+		
+		
 		
 //		System.out.println(grammar);
 //		System.out.println(lexicon);
@@ -199,11 +210,11 @@ public class LVeGLearner extends Recorder {
 		
 		// check if there is any circle in the unary grammar rules
 		// TODO move this self-checking procedure to the class Grammar
-		logger.debug("---Circle Detection.\n");
-		if (MethodUtil.checkUnaryRuleCircle(grammar, lexicon, true)) {
-			logger.error("Circle (WithC) was found in the unary grammar rules.");
-			return;
-		}
+//		logger.debug("---Circle Detection.\n");
+//		if (MethodUtil.checkUnaryRuleCircle(grammar, lexicon, true)) {
+//			logger.error("Circle (WithC) was found in the unary grammar rules.");
+//			return;
+//		}
 		
 		/*// DEBUG Note necessary, the circle is reversible 
 		if (MethodUtil.checkUnaryRuleCircle(grammar, lexicon, false)) {

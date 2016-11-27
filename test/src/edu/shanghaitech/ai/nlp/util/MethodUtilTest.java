@@ -36,5 +36,11 @@ public class MethodUtilTest {
 		
 		Double[] xarray = new Double[0];
 		MethodUtil.printArray(xarray);
+		
+		double x = -30;
+		double y = -6;
+		double z = MethodUtil.logAdd(x, y);
+		double m = Math.log((Math.exp(x) + Math.exp(y)));
+		System.out.println("Precision of the logAdd method is: " + (m - z) + ", [m = " + m + ", z =" + z + "]");
 	}
 }

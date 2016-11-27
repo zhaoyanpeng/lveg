@@ -1,5 +1,11 @@
 package edu.shanghaitech.ai.nlp.util;
 
+import java.awt.AlphaComposite;
+import java.awt.Graphics2D;
+import java.awt.geom.Rectangle2D;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
@@ -9,7 +15,11 @@ import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 
+import javax.imageio.ImageIO;
+
 import edu.berkeley.nlp.syntax.Tree;
+import edu.berkeley.nlp.ui.TreeJPanel;
+import edu.berkeley.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.lveg.Inferencer.Cell;
 import edu.shanghaitech.ai.nlp.lveg.Inferencer.Chart;
 import edu.shanghaitech.ai.nlp.lveg.GaussianMixture;
@@ -29,9 +39,38 @@ import edu.shanghaitech.ai.nlp.syntax.State;
  */
 public class MethodUtil {
 	
+	public final static double LOG_ZERO = -1.0e10;
+	public final static double LOG_TINY = -0.5e10;
+	public final static double EXP_ZERO = -Math.log(-LOG_ZERO);
+	
+	
 	private static Random random = new Random(LVeGLearner.randomseed);
 	private static LVeGGrammar grammar;
 	private static LVeGLexicon lexicon;
+	
+	
+	/**
+	 * Return log(a + b) given log(a) and log(b).
+	 * 
+	 * @param x in logarithm
+	 * @param y in logarithm
+	 * @return
+	 */
+	public static double logAdd(double x, double y) {
+		double tmp, diff;
+		if (x < y) {
+			tmp = x;
+			x = y;
+			y = tmp;
+		}
+		diff = y - x; // <= 0
+		if (diff < EXP_ZERO) { 
+			// if y is far smaller than x
+			return x < LOG_TINY ? LOG_ZERO : x;
+		} else {
+			return x + Math.log(1.0 + Math.exp(diff));
+		}
+	}
 	
 	
 	public static void debugCount(LVeGGrammar agrammar, LVeGLexicon alexicon, Tree<State> tree, Chart chart) {
@@ -170,6 +209,81 @@ public class MethodUtil {
 		}
 		System.out.println("Oops!");
 	}
+	
+	
+	public static void saveTree2image(Tree<State> tree, String filename) throws Exception {
+		TreeJPanel tjp = new TreeJPanel();
+		Tree<String> stringTree = StateTreeList.stateTreeToStringTree(tree, Numberer.getGlobalNumberer(LVeGLearner.KEY_TAG_SET));
+		System.out.println(stringTree);
+		
+		tjp.setTree(stringTree);
+		BufferedImage bi = new BufferedImage(tjp.width(), tjp.height(), BufferedImage.TYPE_INT_ARGB);
+		
+		Graphics2D g2 = bi.createGraphics();
+		g2.setComposite(AlphaComposite.getInstance(AlphaComposite.CLEAR, 1.0f));
+		Rectangle2D.Double rect = new Rectangle2D.Double(0, 0, tjp.width(), tjp.height());
+		g2.fill(rect);
+		g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
+		tjp.paintComponent(g2);
+		g2.dispose();
+		
+		ImageIO.write(bi, "png", new File(filename + ".png"));
+	}
+	
+	
+	public static void lenUnaryRuleChain(StateTreeList stateTreeList, short maxLength, String treeFileName) {
+		int count = 0;
+		for (Tree<State> tree : stateTreeList) {
+			if (lenUnaryRuleChain(tree, (short) 0, maxLength)) {
+				if (count == 0) {
+					System.out.println("The tree contains the unary rule chain of length >= " + maxLength + ":");
+					System.out.println(tree);
+					try {
+						saveTree2image(tree, treeFileName + maxLength + "_" + count);
+						System.out.println("The tree has been saved to " + treeFileName + maxLength);
+					} catch (Exception e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+				count++;
+			}
+		}
+		System.out.println("# of trees containing the unary rule chain of length >= " + maxLength + ": " + count);
+	}
+	
+	
+	public static boolean lenUnaryRuleChain(Tree<State> tree, short length, short maxLength) {
+		if (length >= maxLength) { return true; }
+		if (tree.isPreTerminal()) { return false; }
+		
+		List<Tree<State>> children = tree.getChildren();
+		short idParent = tree.getLabel().getId();
+		switch (children.size()) {
+		case 0:
+			break;
+		case 1: {
+			if (idParent != 0) {
+				length += 1;
+			}
+			break;
+		}
+		case 2: {
+			length = 0;
+			break;
+		}
+		default:
+			System.err.println("Malformed tree: more than two children. Exiting...");
+			System.exit(0);
+		}
+		for (Tree<State> child : children) {
+			if (lenUnaryRuleChain(child, length, maxLength)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
 	
 	
 	/**
@@ -399,12 +513,13 @@ public class MethodUtil {
 	}
 	
 	
-	public static List<String> double2str(List<Double> list, int precision, int nfirst) {
+	public static List<String> double2str(List<Double> list, int precision, int nfirst, boolean exponential) {
 		List<String> strs = new ArrayList<String>();
 		String format = "%." + precision + "f";
 		if (nfirst < 0 || nfirst > list.size()) { nfirst = list.size(); }
 		for (int i = 0; i < nfirst; i++) {
-			strs.add(String.format(format, list.get(i)));
+			double value = exponential ? Math.exp(list.get(i)) : list.get(i);
+			strs.add(String.format(format, value));
 		}
 		/*
 		for (Double d : list) {
@@ -415,10 +530,10 @@ public class MethodUtil {
 	}
 	
 	
-	public static double sum(List<Double> list) {
+	public static double sum(List<Double> list, boolean exponential) {
 		double sum = 0.0;
 		for (Double d : list) {
-			sum += d;
+			sum += exponential ? Math.exp(d) : d;
 		}
 		return sum;
 	}

@@ -652,7 +652,7 @@ public class Inferencer {
 	 * @param tree the parse tree
 	 */
 	protected void setRootOutsideScore(Tree<State> tree) {
-		GaussianMixture gm = new GaussianMixture((short) 1);
+		GaussianMixture gm = new DiagonalGaussianMixture((short) 1);
 		gm.marginalizeToOne();
 		tree.getLabel().setOutsideScore(gm);
 	}
@@ -662,7 +662,7 @@ public class Inferencer {
 	 * @param chart 
 	 */
 	protected void setRootOutsideScore(Chart chart) {
-		GaussianMixture gm = new GaussianMixture((short) 1);
+		GaussianMixture gm = new DiagonalGaussianMixture((short) 1);
 		gm.marginalizeToOne();
 		chart.addOutsideScore((short) 0, Chart.idx(0, 1), gm);
 	}

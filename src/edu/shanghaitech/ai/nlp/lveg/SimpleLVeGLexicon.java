@@ -105,7 +105,7 @@ public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
 				int wordIdx = wordIndexMap[i].get(j);
 				int frequency = wordIndexMap[i].frequency(wordIdx);
 				
-				counts[i][j] = new GaussianMixture();
+				counts[i][j] = new DiagonalGaussianMixture();
 				urules[i][j] = new UnaryGrammarRule(i, (short) wordIdx, GrammarRule.LHSPACE);
 				urules[i][j].getWeight().setBias(frequency);
 				
