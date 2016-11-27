@@ -55,6 +55,29 @@ public class GaussianDistribution implements Comparable<Object> {
 	
 	
 	/**
+	 * Make a copy of the instance.
+	 * 
+	 * @return
+	 */
+	public GaussianDistribution copy() { return null; }
+	
+	
+	/**
+	 * Make a copy of the instance.
+	 * 
+	 * @param des a placeholder of GaussianDistribution
+	 */
+	public void copy(GaussianDistribution des) {
+		des.id = id;
+		des.dim = dim;
+		for (int i = 0; i < dim; i++) {
+			des.mus.add(mus.get(i));
+			des.vars.add(vars.get(i));
+		}
+	}
+	
+	
+	/**
 	 * Eval according to the sample and parameters (mu & sigma).
 	 * 
 	 * @return
@@ -101,23 +124,6 @@ public class GaussianDistribution implements Comparable<Object> {
 			mus.set(i, mu);
 			vars.set(i, sigma);
 		}
-	}
-	
-	
-	/**
-	 * Make a copy of the instance.
-	 * 
-	 * @return
-	 */
-	public GaussianDistribution copy() {
-		GaussianDistribution gd = new GaussianDistribution();
-		gd.id = id;
-		gd.dim = dim;
-		for (int i = 0; i < dim; i++) {
-			gd.mus.add(mus.get(i));
-			gd.vars.add(vars.get(i));
-		}
-		return gd;
 	}
 	
 	

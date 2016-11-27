@@ -22,6 +22,14 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 	
 	
 	@Override
+	public DiagonalGaussianDistribution copy() {
+		DiagonalGaussianDistribution gd = new DiagonalGaussianDistribution();
+		copy(gd);
+		return gd;
+	}
+	
+	
+	@Override
 	protected double eval() {
 		double exps = 0.0, sinv = 1.0;
 		for (int i = 0; i < dim; i++) {

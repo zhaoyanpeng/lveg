@@ -63,7 +63,7 @@ public class Inferencer {
 				chart.addInsideScore(rule.lhs, iCell, rule.getWeight().copy(true));
 			}
 			// unary grammar rules
-			insideScoreForUnaryRule(chart, tagQueue, iCell);
+			insideScoreForUnaryRule(chart, tagQueue, iCell, false);
 		}		
 		
 		// inside score
@@ -95,7 +95,7 @@ public class Inferencer {
 						}
 					}
 					// unary grammar rules
-					insideScoreForUnaryRule(chart, tagQueue, c2);
+					insideScoreForUnaryRule(chart, tagQueue, c2, false);
 				}
 			}
 		}
@@ -117,7 +117,7 @@ public class Inferencer {
 		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBinaryRuleMap();
 		
 		tagQueue.offer((short) 0);
-		outsideScoreForUnaryRule(chart, tagQueue, Chart.idx(0, 1));
+		outsideScoreForUnaryRule(chart, tagQueue, Chart.idx(0, 1), false);
 		
 		for (int ilayer = nword - 1; ilayer >= 0; ilayer--) {
 			for (int left = 0; left < nword - ilayer; left++) {
@@ -175,7 +175,7 @@ public class Inferencer {
 				}
 //				LVeGLearner.logger.trace("Can u hear me?\t"); // DEBUG
 				// unary grammar rules
-				outsideScoreForUnaryRule(chart, tagQueue, c2);
+				outsideScoreForUnaryRule(chart, tagQueue, c2, false);
 //				LVeGLearner.logger.trace("Cell [" + left + ", " + (left + ilayer) + "]="+ c2 + "\t has been estimated."); // DEBUG
 			}
 		}
@@ -473,7 +473,7 @@ public class Inferencer {
 				chart.addInsideScore(rule.lhs, iCell, rule.getWeight().copy(true));
 			}
 			// unary grammar rules
-			insideScoreForUnaryRule(chart, tagQueue, iCell);
+			insideScoreForUnaryRule(chart, tagQueue, iCell, false);
 		}
 		
 		int c2 = Chart.idx(begin, nword- (end - begin));
@@ -524,7 +524,6 @@ public class Inferencer {
 	}
 	
 	
-	
 	private void evalUnaryRuleCount(Chart chart, int idx, int nword, double sentenceScore, List<State> sentence) {
 		for (int i = 0; i < nword; i++) {
 			int wordIdx = sentence.get(i).wordIdx;
@@ -536,6 +535,61 @@ public class Inferencer {
 				GaussianMixture outScore = chart.getOutsideScore(rule.lhs, iCell);
 				double count = computeUnaryRuleCount(outScore, cinScore, null) / sentenceScore;
 				lexicon.addCount(rule.lhs, (short) wordIdx, GrammarRule.LHSPACE, count, false);
+			}
+		}
+	}
+	
+	
+	private void insideScoreForUnaryRule(Chart chart, Queue<Short> tagQueue, int idx, boolean identifier) {
+		if (identifier) {
+			insideScoreForUnaryRule(chart, tagQueue, idx);
+		} else {
+			if (tagQueue != null) {
+				short idTag;
+				String ruleType;
+				List<GrammarRule> rules;
+				GaussianMixture pinScore, cinScore, ruleScore;
+				while (!tagQueue.isEmpty()) {
+					idTag = tagQueue.poll();
+					rules = grammar.getChainSumUnaryRulesWithC(idTag);
+					cinScore = chart.getInsideScore(idTag, idx);
+					Iterator<GrammarRule> iterator = rules.iterator();
+					while (iterator.hasNext()) {
+						UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
+						ruleScore = rule.getWeight();
+						// in case when the rule.lhs is the root node
+						ruleType = rule.type == GrammarRule.RHSPACE ? GrammarRule.Unit.C : GrammarRule.Unit.UC;
+						pinScore = ruleScore.mulForInsideOutside(cinScore, ruleType, true);
+						chart.addInsideScore(rule.lhs, idx, pinScore);
+					}
+				}
+			}
+		}
+	}
+	
+	
+	private void outsideScoreForUnaryRule(Chart chart, Queue<Short> tagQueue, int idx, boolean identifier) {
+		if (identifier) {
+			outsideScoreForUnaryRule(chart, tagQueue, idx);
+		} else {
+			if (tagQueue != null) {
+				short idTag;
+				String ruleType;
+				List<GrammarRule> rules;
+				GaussianMixture poutScore, coutScore, ruleScore;
+				while (!tagQueue.isEmpty()) {
+					idTag = tagQueue.poll();
+					rules = grammar.getChainSumUnaryRulesWithP(idTag);
+					poutScore = chart.getOutsideScore(idTag, idx);
+					Iterator<GrammarRule> iterator = rules.iterator();
+					while (iterator.hasNext()) {
+						UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
+						ruleScore = rule.getWeight();
+						ruleType = rule.type == GrammarRule.RHSPACE ? GrammarRule.Unit.C : GrammarRule.Unit.UC;
+						coutScore = ruleScore.mulForInsideOutside(poutScore, ruleType, true);
+						chart.addOutsideScore(rule.rhs, idx, coutScore);
+					}
+				}
 			}
 		}
 	}

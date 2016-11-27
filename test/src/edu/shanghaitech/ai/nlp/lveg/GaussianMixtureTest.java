@@ -126,7 +126,7 @@ public class GaussianMixtureTest {
 	@Test
 	public void testMultiply() {
 		
-		GaussianMixture gm3 = GaussianMixture.multiply(gm0, gm1);
+		GaussianMixture gm3 = gm0.multiply(gm1);
 		System.out.println("gm0 X gm1---" + gm3);
 		
 		Set<String> keys = new HashSet<String>();
@@ -140,10 +140,10 @@ public class GaussianMixtureTest {
 		
 //		assertTrue(gm3.equals(gm4));
 		
-		GaussianMixture gm4 = GaussianMixture.multiply(gm0, gm2);
+		GaussianMixture gm4 = gm0.multiply(gm2);
 		System.out.println("gm0 X gm2---" + gm4);
 		
-		GaussianMixture gm8 = GaussianMixture.replaceAllKeys(gm4, "uc");
+		GaussianMixture gm8 = gm4.replaceAllKeys("uc");
 		System.out.println("Repwith uc--" + gm8);
 
 		GaussianMixture.marginalize(gm4, keys);

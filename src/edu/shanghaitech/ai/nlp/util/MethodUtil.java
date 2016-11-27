@@ -22,7 +22,6 @@ import edu.berkeley.nlp.ui.TreeJPanel;
 import edu.berkeley.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.lveg.Inferencer.Cell;
 import edu.shanghaitech.ai.nlp.lveg.Inferencer.Chart;
-import edu.shanghaitech.ai.nlp.lveg.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.GrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
@@ -32,7 +31,7 @@ import edu.shanghaitech.ai.nlp.lveg.UnaryGrammarRule;
 import edu.shanghaitech.ai.nlp.syntax.State;
 
 /**
- * Useful methods.
+ * Useful methods for debugging or ...
  * 
  * @author Yanpeng Zhao
  *
@@ -47,30 +46,6 @@ public class MethodUtil {
 	private static Random random = new Random(LVeGLearner.randomseed);
 	private static LVeGGrammar grammar;
 	private static LVeGLexicon lexicon;
-	
-	
-	/**
-	 * Return log(a + b) given log(a) and log(b).
-	 * 
-	 * @param x in logarithm
-	 * @param y in logarithm
-	 * @return
-	 */
-	public static double logAdd(double x, double y) {
-		double tmp, diff;
-		if (x < y) {
-			tmp = x;
-			x = y;
-			y = tmp;
-		}
-		diff = y - x; // <= 0
-		if (diff < EXP_ZERO) { 
-			// if y is far smaller than x
-			return x < LOG_TINY ? LOG_ZERO : x;
-		} else {
-			return x + Math.log(1.0 + Math.exp(diff));
-		}
-	}
 	
 	
 	public static void debugCount(LVeGGrammar agrammar, LVeGLexicon alexicon, Tree<State> tree, Chart chart) {
@@ -192,45 +167,10 @@ public class MethodUtil {
 	
 	
 	/**
-	 * @param trees
-	 * 
-	 * @deprecated
-	 * 
+	 * @param stateTreeList a set of parse trees
+	 * @param maxLength     find the unary chain rule with the specific length
+	 * @param treeFileName  file name that is used to save the tree to the image
 	 */
-	public static void isParentEqualToChild(List<Tree<State>> trees) {
-		int count = 0;
-		for (Tree<State> tree : trees) {
-			if (isParentEqualToChild(tree)) {
-				System.out.println("The parent and children are the same in the tree " + count + ":");
-				System.out.println(tree);
-				return;
-			}
-			count++;
-		}
-		System.out.println("Oops!");
-	}
-	
-	
-	public static void saveTree2image(Tree<State> tree, String filename) throws Exception {
-		TreeJPanel tjp = new TreeJPanel();
-		Tree<String> stringTree = StateTreeList.stateTreeToStringTree(tree, Numberer.getGlobalNumberer(LVeGLearner.KEY_TAG_SET));
-		System.out.println(stringTree);
-		
-		tjp.setTree(stringTree);
-		BufferedImage bi = new BufferedImage(tjp.width(), tjp.height(), BufferedImage.TYPE_INT_ARGB);
-		
-		Graphics2D g2 = bi.createGraphics();
-		g2.setComposite(AlphaComposite.getInstance(AlphaComposite.CLEAR, 1.0f));
-		Rectangle2D.Double rect = new Rectangle2D.Double(0, 0, tjp.width(), tjp.height());
-		g2.fill(rect);
-		g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
-		tjp.paintComponent(g2);
-		g2.dispose();
-		
-		ImageIO.write(bi, "png", new File(filename + ".png"));
-	}
-	
-	
 	public static void lenUnaryRuleChain(StateTreeList stateTreeList, short maxLength, String treeFileName) {
 		int count = 0;
 		for (Tree<State> tree : stateTreeList) {
@@ -253,6 +193,12 @@ public class MethodUtil {
 	}
 	
 	
+	/**
+	 * @param tree      the parse tree
+	 * @param length    stack variable
+	 * @param maxLength find the unary chain rule with the specific length
+	 * @return
+	 */
 	public static boolean lenUnaryRuleChain(Tree<State> tree, short length, short maxLength) {
 		if (length >= maxLength) { return true; }
 		if (tree.isPreTerminal()) { return false; }
@@ -283,7 +229,6 @@ public class MethodUtil {
 		}
 		return false;
 	}
-	
 	
 	
 	/**
@@ -424,6 +369,12 @@ public class MethodUtil {
 	}
 	
 	
+	/**
+	 * Check if the parent node and the child node of the given rule are the same.
+	 * 
+	 * @param tree the parse tree
+	 * @return
+	 */
 	public static boolean isParentEqualToChild(Tree<State> tree) {
 		if (tree.isLeaf() || tree.isPreTerminal()) { return false; }
 		
@@ -466,17 +417,52 @@ public class MethodUtil {
 	}
 	
 	
-	public static void randomInitArrayInt(int[] array, int maxint) {
-		for (int i = 0; i < array.length; i++) {
-			array[i] = (int) (random.nextDouble() * maxint);
+	/**
+	 * Return log(a + b) given log(a) and log(b).
+	 * 
+	 * @param x in logarithm
+	 * @param y in logarithm
+	 * @return
+	 */
+	public static double logAdd(double x, double y) {
+		double tmp, diff;
+		if (x < y) {
+			tmp = x;
+			x = y;
+			y = tmp;
+		}
+		diff = y - x; // <= 0
+		if (diff < EXP_ZERO) { 
+			// if y is far smaller than x
+			return x < LOG_TINY ? LOG_ZERO : x;
+		} else {
+			return x + Math.log(1.0 + Math.exp(diff));
 		}
 	}
 	
 	
-	public static void randomInitArrayDouble(double[] array) {
-		for (int i = 0; i < array.length; i++) {
-			array[i] = random.nextDouble();
-		}
+	/**
+	 * @param tree       the parse tree
+	 * @param filename   image name
+	 * @throws Exception oops
+	 */
+	public static void saveTree2image(Tree<State> tree, String filename) throws Exception {
+		TreeJPanel tjp = new TreeJPanel();
+		Tree<String> stringTree = StateTreeList.stateTreeToStringTree(tree, Numberer.getGlobalNumberer(LVeGLearner.KEY_TAG_SET));
+		System.out.println(stringTree);
+		
+		tjp.setTree(stringTree);
+		BufferedImage bi = new BufferedImage(tjp.width(), tjp.height(), BufferedImage.TYPE_INT_ARGB);
+		
+		Graphics2D g2 = bi.createGraphics();
+		g2.setComposite(AlphaComposite.getInstance(AlphaComposite.CLEAR, 1.0f));
+		Rectangle2D.Double rect = new Rectangle2D.Double(0, 0, tjp.width(), tjp.height());
+		g2.fill(rect);
+		g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
+		tjp.paintComponent(g2);
+		g2.dispose();
+		
+		ImageIO.write(bi, "png", new File(filename + ".png"));
 	}
 	
 	
@@ -513,6 +499,27 @@ public class MethodUtil {
 	}
 	
 	
+	public static void randomInitArrayInt(int[] array, int maxint) {
+		for (int i = 0; i < array.length; i++) {
+			array[i] = (int) (random.nextDouble() * maxint);
+		}
+	}
+	
+	
+	public static void randomInitArrayDouble(double[] array) {
+		for (int i = 0; i < array.length; i++) {
+			array[i] = random.nextDouble();
+		}
+	}
+	
+	
+	/**
+	 * @param list        a list of doubles
+	 * @param precision   double precision
+	 * @param nfirst      print first # of items
+	 * @param exponential whether the list is in the exponential form or not.
+	 * @return
+	 */
 	public static List<String> double2str(List<Double> list, int precision, int nfirst, boolean exponential) {
 		List<String> strs = new ArrayList<String>();
 		String format = "%." + precision + "f";
@@ -530,6 +537,11 @@ public class MethodUtil {
 	}
 	
 	
+	/**
+	 * @param list        a list of doubles
+	 * @param exponential whether the list is in the exponential form or not
+	 * @return
+	 */
 	public static double sum(List<Double> list, boolean exponential) {
 		double sum = 0.0;
 		for (Double d : list) {

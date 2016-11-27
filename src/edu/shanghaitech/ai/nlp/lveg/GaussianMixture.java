@@ -13,15 +13,10 @@ import edu.shanghaitech.ai.nlp.util.MethodUtil;
 /**
  * Variable declaration rules: mixture (mixture of gaussians), component (component of the GM), 
  * gaussians (details of the component), gaussian (portion of the component), gausses (list of  
- * GD of the portion), gauss (GD). 
- * </p>
- * TODO Method {@code mulAndMarginlize()} can be implemented efficiently by hacks. But when we 
- * take consideration into the further parallel optimization, explicitly implementing each step 
- * in order may be a better choice, which is exactly what I am doing now (DONE I have implement
- * -ed specifically for the multiplication in the inside score). 
- * </p>
- * TODO Implement the comparison between GMs.
- * </p>
+ * GD of the portion), gauss (GD).</p>
+ * 
+ * TODO Implement the comparison operation between GMs.
+ * 
  * @author Yanpeng Zhao
  *
  */
@@ -68,26 +63,10 @@ public class GaussianMixture {
 	}
 	
 	
-	public GaussianMixture(short ncomponent) {
-		this();
-		this.ncomponent = ncomponent;
-		initialize();
-	}
-	
-	
-	public GaussianMixture(
-			short ncomponent, List<Double> weights, List<Map<String, Set<GaussianDistribution>>> mixture) {
-		this();
-		this.ncomponent = ncomponent;
-		this.weights = weights;
-		this.mixture = mixture;
-	}
-	
-	
 	/**
 	 * Initialize the fields by default.
 	 */
-	private void initialize() {
+	protected void initialize() {
 		MethodUtil.randomInitList(weights, Double.class, ncomponent, LVeGLearner.maxrandom, false);
 		for (int i = 0; i < ncomponent; i++) {
 			Map<String, Set<GaussianDistribution>> component = 
@@ -202,23 +181,30 @@ public class GaussianMixture {
 
 	
 	/**
-	 * Make a copy of the instance.
+	 * Make a copy of this MoG. This will create a new instance of MoG.
 	 * 
 	 * @param deep boolean value, indicating deep (true) or shallow (false) copy
 	 * @return
 	 */
-	public GaussianMixture copy(boolean deep) {
-		GaussianMixture gm = new GaussianMixture();
-		gm.ncomponent = ncomponent;
-		gm.weights.addAll(weights);
+	public GaussianMixture copy(boolean deep) { return null; }
+	
+	
+	/**
+	 * Make a copy of this MoG.
+	 * 
+	 * @param des  a placeholder of MoG
+	 * @param deep boolean value, indicating deep (true) or shallow (false) copy
+	 */
+	protected void copy(GaussianMixture des, boolean deep) {
+		des.ncomponent = ncomponent;
+		des.weights.addAll(weights);
 		for (Map<String, Set<GaussianDistribution>> component : mixture) {
 			if (deep) {
-				gm.mixture.add(copy(component));
+				des.mixture.add(copy(component));
 			} else {
-				gm.mixture.add(component);
+				des.mixture.add(component);
 			}
 		}
-		return gm;
 	}
 	
 	
@@ -253,16 +239,24 @@ public class GaussianMixture {
 	
 	
 	/**
-	 * Replace the key of the specific portion of the mixture of gaussians with the new key.  
+	 * Replace the key of the specific portion of the mixture of gaussians with the new key (by reference).
+	 * This will create a new copy of this MoG, but with the new keys.
 	 * 
-	 * @param gm   mixture of gaussians
 	 * @param keys pairs of (old-key, new-key)
 	 * @return
 	 */
-	public static GaussianMixture replaceKeys(GaussianMixture gm, Map<String, String> keys) {
-		GaussianMixture agm = new GaussianMixture();
-		agm.weights.addAll(gm.weights);
-		for (Map<String, Set<GaussianDistribution>> component : gm.mixture) {
+	public GaussianMixture replaceKeys(Map<String, String> keys) { return null; }
+	
+	
+	/**
+	 * Replace the key of the specific portion of the mixture of gaussians with the new key (by reference).
+	 * 
+	 * @param des  a placeholder of MoG
+	 * @param keys pairs of (old-key, new-key)
+	 */
+	protected void replaceKeys(GaussianMixture des, Map<String, String> keys) {
+		des.weights.addAll(weights);
+		for (Map<String, Set<GaussianDistribution>> component : mixture) {
 			Map<String, Set<GaussianDistribution>> acomponent = 
 					new HashMap<String, Set<GaussianDistribution>>();
 			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
@@ -273,24 +267,32 @@ public class GaussianMixture {
 					add(acomponent, key, gaussian.getValue());
 				}
 			}
-			agm.mixture.add(acomponent);
-			agm.ncomponent++;
+			des.mixture.add(acomponent);
+			des.ncomponent++;
 		}
-		return agm;
 	}
 	
 	
 	/**
-	 * Replace all the existing keys with a new key (by reference).
+	 * Replace all of the existing keys with a new key (by reference).
+	 * This will create a new copy of this MoG, but with the new keys.
 	 * 
 	 * @param gm     mixture of gaussians
 	 * @param newkey the new key
 	 * @return
 	 */
-	public static GaussianMixture replaceAllKeys(GaussianMixture gm, String newkey) {
-		GaussianMixture agm = new GaussianMixture();
-		agm.weights.addAll(gm.weights);
-		for (Map<String, Set<GaussianDistribution>> component : gm.mixture) {
+	public GaussianMixture replaceAllKeys(String newkey) { return null; }
+	
+	
+	/**
+	 * Replace all of the existing keys with a new key (by reference).
+	 * 
+	 * @param des    a placeholder of MoG
+	 * @param newkey the new key
+	 */
+	protected void replaceAllKeys(GaussianMixture des, String newkey) {
+		des.weights.addAll(weights);
+		for (Map<String, Set<GaussianDistribution>> component : mixture) {
 			Map<String, Set<GaussianDistribution>> acomponent = 
 					new HashMap<String, Set<GaussianDistribution>>();
 			Set<GaussianDistribution> gausses = new HashSet<GaussianDistribution>();
@@ -298,10 +300,9 @@ public class GaussianMixture {
 				gausses.addAll(gaussian.getValue());
 			}
 			acomponent.put(newkey, gausses);
-			agm.mixture.add(acomponent);
-			agm.ncomponent++;
+			des.mixture.add(acomponent);
+			des.ncomponent++;
 		}
-		return agm;
 	}
 	
 	
@@ -343,9 +344,9 @@ public class GaussianMixture {
 			Map<String, String> keys0, Map<String, String> keys1) {
 		if (gm0 == null || gm1 == null) { return null; }
 		
-		gm0 = replaceKeys(gm0, keys0);
-		gm1 = replaceKeys(gm1, keys1);
-		GaussianMixture gm = multiply(gm0, gm1);
+		gm0 = gm0.replaceKeys(keys0);
+		gm1 = gm1.replaceKeys(keys1);
+		GaussianMixture gm = gm0.multiply(gm1);
 		
 		Set<String> keys = new HashSet<String>();
 		for (Map.Entry<String, String> map : keys0.entrySet()) {
@@ -361,27 +362,33 @@ public class GaussianMixture {
 	
 	
 	/**
-	 * Multiply two mixtures of gaussians.
+	 * Multiply this MoG by the given mixtures of gaussians.
+	 * This will create a new instance of MoG.
 	 * 
-	 * @param gm0 one mixture of gaussians
-	 * @param gm1 the other mixture of gaussians
+	 * @param multiplier the other mixture of gaussians
 	 * @return    
 	 */
-	public static GaussianMixture multiply(GaussianMixture gm0, GaussianMixture gm1) {
-		GaussianMixture gm = new GaussianMixture();
-		for (int i = 0; i < gm0.ncomponent; i++) {
-			for (int j = 0; j < gm1.ncomponent; j++) {
+	public GaussianMixture multiply(GaussianMixture multiplier) { return null; }
+	
+	/**
+	 * Multiply this MoG by the given mixtures of gaussians.
+	 * 
+	 * @param des        a placeholder of MoG
+	 * @param multiplier the other mixture of gaussians
+	 */
+	protected void multiply(GaussianMixture des, GaussianMixture multiplier) {
+		for (int i = 0; i < ncomponent; i++) {
+			for (int j = 0; j < multiplier.ncomponent; j++) {
 				Map<String, Set<GaussianDistribution>> component = 
-						multiply(gm0.mixture.get(i), gm1.mixture.get(j));
-				gm.mixture.add(component);
+						multiply(mixture.get(i), multiplier.mixture.get(j));
+				des.mixture.add(component);
 				// CHECK Math.log(Math.exp(a) * Math.exp(b))
-				double weight = gm0.weights.get(i) + gm1.weights.get(j);
-				gm.weights.add(weight);
+				double weight = weights.get(i) + multiplier.weights.get(j);
+				des.weights.add(weight);
 				
-				gm.ncomponent++;
+				des.ncomponent++;
 			}
 		}
-		return gm;
 	}
 	
 	
@@ -392,7 +399,7 @@ public class GaussianMixture {
 	 * @param component1 the other component of the mixture of the gaussians
 	 * @return
 	 */
-	private static Map<String, Set<GaussianDistribution>> multiply(
+	protected Map<String, Set<GaussianDistribution>> multiply(
 			Map<String, Set<GaussianDistribution>> component0, 
 			Map<String, Set<GaussianDistribution>> component1) {
 		Map<String, Set<GaussianDistribution>> component = copy(component0);

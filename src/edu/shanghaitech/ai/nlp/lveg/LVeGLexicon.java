@@ -1,9 +1,10 @@
 package edu.shanghaitech.ai.nlp.lveg;
 
 import java.util.List;
-import java.util.Random;
 
 import edu.berkeley.nlp.syntax.Tree;
+import edu.berkeley.nlp.util.Indexer;
+import edu.shanghaitech.ai.nlp.optimization.Optimizer;
 import edu.shanghaitech.ai.nlp.syntax.State;
 
 /**
@@ -15,6 +16,7 @@ public abstract class LVeGLexicon {
 	protected transient String lastWord;
 	protected transient String lastSignature;
 	protected transient int lastPosition;
+	protected Optimizer optimizer;
 	
 	
 	/**
@@ -23,7 +25,23 @@ public abstract class LVeGLexicon {
 	protected int unknownLevel;
 	
 	
+	/**
+	 * @param idParent  parent of the unary rule
+	 * @param idChild   child of the unary rule
+	 * @param type      type of the unary rule
+	 * @param increment which is added to the pseudo count
+	 * @param withTree  type of the pseudo count
+	 */
 	public abstract void addCount(short idParent, short idChild, char type, double increment, boolean withTree);
+	
+	
+	/**
+	 * @param idParent parent of the unary rule
+	 * @param idChild  child of the unary rule
+	 * @param type     type of the unary rule
+	 * @param withTree type of the pseudo count
+	 * @return
+	 */
 	public abstract double getCount(short idParent, short idChild, char type, boolean withTree);
 	
 	
@@ -42,9 +60,6 @@ public abstract class LVeGLexicon {
 	 * @param tree a parse tree
 	 */
 	protected abstract void tallyStateTree(Tree<State> tree);
-	
-	
-	protected abstract void applyGradientDescent(Random random, double learningRate);
 	
 	
 	/**
@@ -81,6 +96,30 @@ public abstract class LVeGLexicon {
 	 * @return
 	 */
 	protected abstract boolean isKnown(String word);
+	
+	
+	/**
+	 * Apply stochastic gradient descent.
+	 */
+	public void applyGradientDescent() {
+		optimizer.applyGradientDescent();
+	}
+	
+	
+	/**
+	 * Initialize word index.
+	 * 
+	 * @param trees
+	 */
+	public void labelTrees(Indexer<String> wordIndexer, StateTreeList trees) {
+		for (Tree<State> tree : trees) {
+			List<State> words = tree.getYield();
+			for (State word : words) {
+				word.wordIdx = wordIndexer.indexOf(word.getName());
+				word.signIdx = -1;
+			}
+		}
+	}
 	
 	
 	/**

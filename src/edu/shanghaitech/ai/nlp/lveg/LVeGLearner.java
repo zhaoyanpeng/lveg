@@ -33,7 +33,7 @@ public class LVeGLearner extends Recorder {
 	public static int randomseed = 0;
 	public static int precision  = 3;
 	
-	private static Random random;
+	public static Random random;
 	public static Logger logger = null;
 	
 	public final static String KEY_TAG_SET = "tags";
@@ -58,8 +58,8 @@ public class LVeGLearner extends Recorder {
 		public int randomSeed = 111;
 		
 		@Option(name = "-treebank", usage = "Language: WSJ, CHINESE, SINGLEFILE (Default: SINGLEFILE)")
-		public TreeBankType treebank = TreeBankType.SINGLEFILE;
-//		public TreeBankType treebank = TreeBankType.WSJ;
+//		public TreeBankType treebank = TreeBankType.SINGLEFILE;
+		public TreeBankType treebank = TreeBankType.WSJ;
 		
 		
 		@Option(name = "-skipSection", usage = "Skip a particular section of the WSJ training corpus (Needed for training Mark Johnsons reranker (Default: -1)")
@@ -166,12 +166,11 @@ public class LVeGLearner extends Recorder {
 		StateTreeList trainTrees = new StateTreeList(stateTrees.get(ID_TRAINING));
 		StateTreeList validationTrees = new StateTreeList(stateTrees.get(ID_VALIDATION));
 		
-		
+/*		// DEBUG
 		String imageName = "log/atree_unary_rule_chain_";
 		MethodUtil.lenUnaryRuleChain(trainTrees, (short) 2, imageName);
-		
 		System.exit(0);
-		
+*/		
 		
 		// MethodUtil.isChildrenSizeZero(trainTrees);
 		
@@ -187,7 +186,7 @@ public class LVeGLearner extends Recorder {
 		grammar.postInitialize(0.0);
 		lexicon.postInitialize(trainTrees, numbererTag.size());
 		
-		short idp = 5, idc = 1;
+//		short idp = 5, idc = 1;
 //		for (Tree<State> tree : trainTrees) {
 //			if (MethodUtil.containsRule(tree, idp, idc)) {
 //				System.out.println(tree);
@@ -196,9 +195,6 @@ public class LVeGLearner extends Recorder {
 		
 //		logger.debug(grammar);
 //		logger.debug(lexicon);
-		
-		
-		
 		
 //		System.out.println(grammar);
 //		System.out.println(lexicon);
@@ -233,6 +229,9 @@ public class LVeGLearner extends Recorder {
 		do {
 			cnt++;
 			
+			System.out.println("Epoch " + cnt + " begins...");
+			
+			
 			LVeGParser parser = new LVeGParser(grammar, lexicon);
 			short isample = 0;
 			long startTime = System.currentTimeMillis();
@@ -253,7 +252,7 @@ public class LVeGLearner extends Recorder {
 				MethodUtil.debugTree(tree, false, (short) 2);
 				*/
 				
-				if (tree.getYield().size() > 10) { continue; }
+				if (tree.getYield().size() > 5) { continue; }
 				
 				parser.evalRuleCountWithTree(tree);
 				parser.evalRuleCount(tree);
@@ -263,6 +262,7 @@ public class LVeGLearner extends Recorder {
 				if (isample >= 1) {
 					break;
 				}
+				
 			}
 			long endTime = System.currentTimeMillis();
 			
@@ -271,8 +271,8 @@ public class LVeGLearner extends Recorder {
 			MethodUtil.debugCount(grammar, lexicon, null, null); // DEBUG
 			
 			// apply gradient descent
-			grammar.applyGradientDescent(random, opts.lr);
-			lexicon.applyGradientDescent(random, opts.lr);
+			grammar.applyGradientDescent();
+			lexicon.applyGradientDescent();
 			
 			/*
 			ll = calculateLL(grammar, lexicon, validationTrees);
