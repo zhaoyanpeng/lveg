@@ -8,6 +8,7 @@ import java.util.Set;
 
 import edu.shanghaitech.ai.nlp.lveg.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.UnaryGrammarRule;
 
 /**
  * @author Yanpeng Zhao
@@ -25,7 +26,7 @@ public class Optimizer {
 	 * ruleset contains all the rules that are need to be optimized, it is 
 	 * used to quickly index the rules.
 	 */
-	private Set<GrammarRule> ruleset;
+	private Set<GrammarRule> ruleSet;
 	
 	/**
 	 * All the objects share the same instance of Random, here the random 
@@ -37,13 +38,13 @@ public class Optimizer {
 	private boolean cumulative = true;
 	
 	// global learning rate
-	protected double globalLR;
+	protected double globalLR = 0.002;
 	
 	
 	private Optimizer() {
 		this.count0 = new HashMap<GrammarRule, Double>();
 		this.count1 = new HashMap<GrammarRule, Double>();
-		this.ruleset = new HashSet<GrammarRule>();
+		this.ruleSet = new HashSet<GrammarRule>();
 	}
 	
 	
@@ -66,13 +67,21 @@ public class Optimizer {
 	 */
 	public void applyGradientDescent() {
 		double cnt0, cnt1;
-		for (GrammarRule rule : ruleset) {
+		for (GrammarRule rule : ruleSet) {
 			cnt0 = count0.get(rule);
 			cnt1 = count1.get(rule);
 			if (cnt0 == cnt1) { continue; }
+			
+			UnaryGrammarRule urule;
+			if (rule instanceof  UnaryGrammarRule) {
+				urule = (UnaryGrammarRule) rule;
+			} else {
+				urule = new UnaryGrammarRule((short) -1, (short) -1, (char) 0, null);
+			}
+			
 			applyGradientDescent(rule.getWeight(), cnt0, cnt1);
 		}
-		resetCount();
+		resetRuleCount();
 	}
 	
 	
@@ -101,7 +110,7 @@ public class Optimizer {
 	 * @param rule the rule need to be optimized.
 	 */
 	public void addRule(GrammarRule rule) {
-		ruleset.add(rule);
+		ruleSet.add(rule);
 		count0.put(rule, 0.0);
 		count1.put(rule, 0.0);
 	}
@@ -150,11 +159,21 @@ public class Optimizer {
 	/**
 	 * Counts are only used once for a batch.
 	 */
-	public void resetCount() {
-		for (GrammarRule rule : ruleset) {
+	public void resetRuleCount() {
+		for (GrammarRule rule : ruleSet) {
 			count0.put(rule, 0.0);
 			count1.put(rule, 0.0);
 		}
+	}
+	
+	
+	/**
+	 * Get set of the rules.
+	 * 
+	 * @return 
+	 */
+	public Set<GrammarRule> getRuleSet() {
+		return ruleSet;
 	}
 	
 }

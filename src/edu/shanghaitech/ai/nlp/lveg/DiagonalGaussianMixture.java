@@ -1,14 +1,8 @@
 package edu.shanghaitech.ai.nlp.lveg;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
-
-import edu.shanghaitech.ai.nlp.util.MethodUtil;
 
 /**
  * This one only differs from the GaussianMixture when in the need of creating the new specific instance.

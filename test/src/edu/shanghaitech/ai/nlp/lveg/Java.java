@@ -22,11 +22,9 @@ public class Java {
 	
 	protected static class Ghost {
 		static short id;
-//		static Soul soul = new Soul();
-		static Soul soul;
+		static Soul soul = new Soul();
 		
 		public Ghost(short id) {
-			soul = new Soul();
 			this.id = id;
 		}
 		

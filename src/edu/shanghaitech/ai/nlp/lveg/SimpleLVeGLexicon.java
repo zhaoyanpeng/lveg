@@ -17,9 +17,6 @@ import edu.shanghaitech.ai.nlp.syntax.State;
  */
 public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
 
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 1L;
 	
 	public IndexMap[] wordIndexMap;
@@ -172,28 +169,6 @@ public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
 			}
 		}
 		return;
-	}
-	
-	
-	public void addCount(short idParent, short idChild, char type, double increment, boolean withTree) {
-		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
-		addCount(rule, increment, withTree);
-	}
-	
-	
-	public double getCount(short idParent, short idChild, char type, boolean withTree) {
-		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
-		return getCount(rule, withTree);
-	}
-	
-	
-	public void addCount(GrammarRule rule, double increment, boolean withTree) {
-		optimizer.addCount(rule, increment, withTree);
-	}
-	
-	
-	public double getCount(GrammarRule rule, boolean withTree) {
-		return optimizer.getCount(rule, withTree);
 	}
 	
 	

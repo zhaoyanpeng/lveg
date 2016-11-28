@@ -655,6 +655,11 @@ public class GaussianMixture {
 	}
 	
 	
+	public short getNcomponent() {
+		return ncomponent;
+	}
+	
+	
 	/**
 	 * Get the bias term of the mixture of gaussians.
 	 * 
@@ -691,6 +696,6 @@ public class GaussianMixture {
 	@Override
 	public String toString() {
 		return "GM [bias=" + bias + ", ncomponent=" + ncomponent + ", weights=" + 
-				MethodUtil.double2str(weights, LVeGLearner.precision, -1, true) + ", mixture=" + mixture + "]";
+				MethodUtil.double2str(weights, LVeGLearner.precision, -1, false) + ", mixture=" + mixture + "]";
 	}
 }

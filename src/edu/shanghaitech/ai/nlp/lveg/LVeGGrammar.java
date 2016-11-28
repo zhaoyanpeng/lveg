@@ -10,12 +10,13 @@ import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.optimization.Optimizer;
 import edu.shanghaitech.ai.nlp.syntax.State;
+import edu.shanghaitech.ai.nlp.util.Recorder;
 
 /**
  * @author Yanpeng Zhao
  *
  */
-public class LVeGGrammar implements Serializable {
+public class LVeGGrammar extends Recorder implements Serializable {
 	
 	private static final long serialVersionUID = 1L;
 	
@@ -64,6 +65,7 @@ public class LVeGGrammar implements Serializable {
 	
 	/**
 	 * Rules with probabilities below this value will be filtered.
+	 * @deprecated
 	 */
 	private double filterThreshold;
 	
@@ -201,7 +203,7 @@ public class LVeGGrammar implements Serializable {
 			break;
 		}
 		default:
-			LVeGLearner.logger.error("Malformed tree: more than two children. Exitting...");
+			logger.error("Malformed tree: more than two children. Exitting...");
 			System.exit(0);
 		}
 		
@@ -218,19 +220,30 @@ public class LVeGGrammar implements Serializable {
 		
 		Map<String, String> keys0 = new HashMap<String, String>();
 		Map<String, String> keys1 = new HashMap<String, String>();
-		keys0.put(GrammarRule.Unit.UC, GrammarRule.Unit.RM);
 		keys1.put(GrammarRule.Unit.P, GrammarRule.Unit.RM);
 		
+		// rules of the from X->ROOT(0) are not allowed
 		for (short iparent = 0; iparent < nTag; iparent++) {
-			for (short ichild = 0; ichild < nTag; ichild++) {
+			for (short ichild = 1; ichild < nTag; ichild++) {
 				if (iparent == ichild) { continue; }
 				short bestIntermediateState = -1;
 				double maxSumWeight = -1.0, total;
 				
+				char type;
+				keys0.clear();
+				if (iparent == 0) {
+					type = GrammarRule.RHSPACE;
+					keys0.put(GrammarRule.Unit.C, GrammarRule.Unit.RM);
+				} else {
+					type = GrammarRule.GENERAL;
+					keys0.put(GrammarRule.Unit.UC, GrammarRule.Unit.RM);
+				}
+				
 				GaussianMixture weightSum = new DiagonalGaussianMixture();
 				GaussianMixture weightMax = new DiagonalGaussianMixture();
-				UnaryGrammarRule uruleSum = new UnaryGrammarRule(iparent, ichild, weightSum);
-				UnaryGrammarRule uruleMax = new UnaryGrammarRule(iparent, ichild, weightMax);
+				
+				UnaryGrammarRule uruleSum = new UnaryGrammarRule(iparent, ichild, type, weightSum);
+				UnaryGrammarRule uruleMax = new UnaryGrammarRule(iparent, ichild, type, weightMax);
 				GaussianMixture pruleWeight = null, cruleWeight = null, aruleWeight = null;
 				
 				for (GrammarRule prule : unaryRulesWithP[iparent]) {
@@ -251,6 +264,9 @@ public class LVeGGrammar implements Serializable {
 							if (ucrule.lhs != uprule.rhs) { continue; }
 							cruleWeight = ucrule.getWeight();
 							aruleWeight = GaussianMixture.mulAndMarginalize(pruleWeight, cruleWeight, keys0, keys1);
+							if (iparent == 0) {
+								aruleWeight = aruleWeight.replaceAllKeys(GrammarRule.Unit.C);
+							}
 							weightSum.add(aruleWeight);
 							total = aruleWeight.marginalize();
 							if (total > maxSumWeight) { 

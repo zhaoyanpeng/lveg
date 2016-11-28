@@ -557,7 +557,9 @@ public class Inferencer {
 					while (iterator.hasNext()) {
 						UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
 						ruleScore = rule.getWeight();
-						// in case when the rule.lhs is the root node
+						// Root->X is valid if idx == 0, otherwise we may skip such kind of rules
+						if (idx != 0 && rule.type == GrammarRule.RHSPACE) { continue; }
+						// double check, in case the rule.lhs is the root node
 						ruleType = rule.type == GrammarRule.RHSPACE ? GrammarRule.Unit.C : GrammarRule.Unit.UC;
 						pinScore = ruleScore.mulForInsideOutside(cinScore, ruleType, true);
 						chart.addInsideScore(rule.lhs, idx, pinScore);
@@ -585,6 +587,7 @@ public class Inferencer {
 					while (iterator.hasNext()) {
 						UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
 						ruleScore = rule.getWeight();
+						// ROOT->X is valid if and only if idx == 0
 						ruleType = rule.type == GrammarRule.RHSPACE ? GrammarRule.Unit.C : GrammarRule.Unit.UC;
 						coutScore = ruleScore.mulForInsideOutside(poutScore, ruleType, true);
 						chart.addOutsideScore(rule.rhs, idx, coutScore);

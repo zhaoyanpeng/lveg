@@ -1,6 +1,7 @@
 package edu.shanghaitech.ai.nlp.lveg;
 
 import java.util.List;
+import java.util.Set;
 
 import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.util.Indexer;
@@ -25,24 +26,26 @@ public abstract class LVeGLexicon {
 	protected int unknownLevel;
 	
 	
-	/**
-	 * @param idParent  parent of the unary rule
-	 * @param idChild   child of the unary rule
-	 * @param type      type of the unary rule
-	 * @param increment which is added to the pseudo count
-	 * @param withTree  type of the pseudo count
-	 */
-	public abstract void addCount(short idParent, short idChild, char type, double increment, boolean withTree);
+	public void addCount(short idParent, short idChild, char type, double increment, boolean withTree) {
+		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
+		addCount(rule, increment, withTree);
+	}
 	
 	
-	/**
-	 * @param idParent parent of the unary rule
-	 * @param idChild  child of the unary rule
-	 * @param type     type of the unary rule
-	 * @param withTree type of the pseudo count
-	 * @return
-	 */
-	public abstract double getCount(short idParent, short idChild, char type, boolean withTree);
+	public double getCount(short idParent, short idChild, char type, boolean withTree) {
+		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
+		return getCount(rule, withTree);
+	}
+	
+	
+	public void addCount(GrammarRule rule, double increment, boolean withTree) {
+		optimizer.addCount(rule, increment, withTree);
+	}
+	
+	
+	public double getCount(GrammarRule rule, boolean withTree) {
+		return optimizer.getCount(rule, withTree);
+	}
 	
 	
 	/**
@@ -103,6 +106,16 @@ public abstract class LVeGLexicon {
 	 */
 	public void applyGradientDescent() {
 		optimizer.applyGradientDescent();
+	}
+	
+	
+	/**
+	 * Get set of the rules.
+	 * 
+	 * @return
+	 */
+	public Set<GrammarRule> getRuleSet() {
+		return optimizer.getRuleSet();
 	}
 	
 	

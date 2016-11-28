@@ -6,12 +6,13 @@ import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.lveg.Inferencer.Chart;
 import edu.shanghaitech.ai.nlp.syntax.State;
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
+import edu.shanghaitech.ai.nlp.util.Recorder;
 
 /**
  * @author Yanpeng Zhao
  *
  */
-public class LVeGParser {
+public class LVeGParser extends Recorder {
 	
 	private Inferencer inferencer;
 	
@@ -26,16 +27,16 @@ public class LVeGParser {
 		GaussianMixture score = chart.getInsideScore((short) 0, Chart.idx(0, 1));
 		double sentenceScore = score.eval();
 		
-		LVeGLearner.logger.trace("Sentence score: " + sentenceScore); // DEBUG
-		LVeGLearner.logger.trace("\nEval count..."); // DEBUG
+		logger.trace("Sentence score: " + sentenceScore + ", Margin: " + score.marginalize()); // DEBUG
+//		LVeGLearner.logger.trace("\nEval count..."); // DEBUG
 		
 		if (sentenceScore <= 0) {
 			System.err.println("Fatal Error: Sentence score is smaller than zero: " + sentenceScore);
 			return false;
 		}
 		inferencer.evalRuleCount(tree, chart, sentenceScore);
-		LVeGLearner.logger.trace("\nCheck count..."); // DEBUG
-		MethodUtil.debugCount(inferencer.grammar, inferencer.lexicon, tree, chart); // DEBUG
+//		LVeGLearner.logger.trace("\nCheck count..."); // DEBUG
+//		MethodUtil.debugCount(inferencer.grammar, inferencer.lexicon, tree, chart); // DEBUG
 		return true;
 	}
 	
@@ -48,8 +49,8 @@ public class LVeGParser {
 		GaussianMixture score = tree.getLabel().getInsideScore();
 		double treeScore = score.eval();
 		
-		LVeGLearner.logger.trace("\nTree score: " + treeScore); // DEBUG
-		LVeGLearner.logger.trace("\nEval count with the tree..."); // DEBUG
+		logger.trace("\nTree score: " + treeScore); // DEBUG
+//		LVeGLearner.logger.trace("\nEval count with the tree..."); // DEBUG
 		
 		if (treeScore <= 0) {
 			System.err.println("Fatal Error: Tree score is smaller than zero: " + treeScore);
@@ -57,10 +58,10 @@ public class LVeGParser {
 		}
 		// compute the rule counts
 		inferencer.evalRuleCountWithTree(tree, treeScore);
-		LVeGLearner.logger.trace("\nCheck count with the tree..."); // DEBUG
-		MethodUtil.debugCount(inferencer.grammar, inferencer.lexicon, tree); // DEBUG
+//		LVeGLearner.logger.trace("\nCheck count with the tree..."); // DEBUG
+//		MethodUtil.debugCount(inferencer.grammar, inferencer.lexicon, tree); // DEBUG
 		
-		LVeGLearner.logger.trace("\nEval count with the tree over."); // DEBUG
+//		LVeGLearner.logger.trace("\nEval count with the tree over."); // DEBUG
 		return true;
 	}
 	
@@ -74,19 +75,19 @@ public class LVeGParser {
 		int nword = sentence.size();
 		Chart chart = new Chart(nword);
 		
-		LVeGLearner.logger.trace("\nInside score..."); // DEBUG
+//		LVeGLearner.logger.trace("\nInside score..."); // DEBUG
 		
 		inferencer.insideScore(chart, sentence, nword);
-		MethodUtil.debugChart(Chart.iGetChart(), (short) 2); // DEBUG
+//		MethodUtil.debugChart(Chart.iGetChart(), (short) 2); // DEBUG
 
 		inferencer.setRootOutsideScore(chart);
 		
-		LVeGLearner.logger.trace("\nOutside score..."); // DEBUG
+//		LVeGLearner.logger.trace("\nOutside score..."); // DEBUG
 		
 		inferencer.outsideScore(chart, sentence, nword);
-		MethodUtil.debugChart(Chart.oGetChart(), (short) 2); // DEBUG
+//		MethodUtil.debugChart(Chart.oGetChart(), (short) 2); // DEBUG
 		
-		LVeGLearner.logger.trace("\nInside and outside over"); // DEBUG
+//		LVeGLearner.logger.trace("\nInside and outside over"); // DEBUG
 		return chart;
 	}
 	

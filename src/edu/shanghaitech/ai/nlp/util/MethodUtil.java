@@ -7,6 +7,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -36,7 +37,7 @@ import edu.shanghaitech.ai.nlp.syntax.State;
  * @author Yanpeng Zhao
  *
  */
-public class MethodUtil {
+public class MethodUtil extends Recorder {
 	
 	public final static double LOG_ZERO = -1.0e10;
 	public final static double LOG_TINY = -0.5e10;
@@ -48,29 +49,70 @@ public class MethodUtil {
 	private static LVeGLexicon lexicon;
 	
 	
+	public static void debugChainRule(LVeGGrammar agrammar) {
+		logger.trace("I'm coming...");
+		grammar = agrammar;
+		int count = 0, ncol = 1;
+		StringBuffer sb = new StringBuffer();
+		sb.append("\n---Chain Unary Rules---\n");
+		for (int i = 0; i < grammar.nTag; i++ ) {
+			System.out.println("Tag: " + i);
+			List<GrammarRule> rules = grammar.getChainSumUnaryRulesWithP(i);
+			for (GrammarRule rule : rules) {
+				sb.append(rule + "\t" + rule.getWeight().getNcomponent());
+				if (++count % ncol == 0) {
+					sb.append("\n");
+				}
+			}
+		}
+		logger.trace(sb.toString());
+	}
+	
+	
 	public static void debugCount(LVeGGrammar agrammar, LVeGLexicon alexicon, Tree<State> tree, Chart chart) {
 		grammar = agrammar;
 		lexicon = alexicon;
 		
 		double count0 = 0;
+		int niter = 20, iiter = 0;
 		Map<GrammarRule, GrammarRule> uRuleMap = grammar.getUnaryRuleMap();
+		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBinaryRuleMap();
 		// unary grammar rules
+		LVeGLearner.logger.trace("\n---Unary Grammar Rules---\n");
 		for (Map.Entry<GrammarRule, GrammarRule> rmap : uRuleMap.entrySet()) {
 			GrammarRule rule = rmap.getValue();
 			double count = grammar.getCount(rule, false);
-			LVeGLearner.logger.trace(rule + " count=" + count);
-			
-			if (rule.getLhs() == 0) {
-				count0 += count;
-			}
+			LVeGLearner.logger.trace(rule + "\tcount=" + String.format("%.8f", count));
+			if (++iiter >= niter) { break; }
 		}
-		LVeGLearner.logger.trace("Count for rules starting with 0 is " + count0);
+		
+		iiter = 0;
+		// binary grammar rules
+		LVeGLearner.logger.trace("\n---Binary Grammar Rules---\n");
+		for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
+			GrammarRule rule = rmap.getValue();
+			double count = grammar.getCount(rule, false);
+			LVeGLearner.logger.trace(rule + "\tcount=" + String.format("%.8f", count));
+			if (++iiter > niter) { break; }
+		}
+		/*
+		iiter = 0;
+		// unary rules in lexicon
+		Set<GrammarRule> ruleSet = lexicon.getRuleSet();
+		LVeGLearner.logger.trace("\n---Unary Grammar Rules in Lexicon---\n");
+		for (GrammarRule rule : ruleSet) {
+			double count = lexicon.getCount(rule, false);
+			LVeGLearner.logger.trace(rule + "\tcount=" + String.format("%.8f", count));
+			if (++iiter >= niter) { break; }
+		}
+		*/
 	}
 	
 	
 	public static void debugCount(LVeGGrammar agrammar, LVeGLexicon alexicon, Tree<State> tree) {
 		grammar = agrammar;
 		lexicon = alexicon;
+		logger.trace("\n---Rule Counts in The Tree---\n");
 		checkCount(tree);
 	}
 	
@@ -136,12 +178,12 @@ public class MethodUtil {
 	public static void debugTree(Tree<State> tree, boolean simple, short nfirst) {
 		StringBuilder sb = new StringBuilder();
 		toString(tree, simple, nfirst, sb);
-		LVeGLearner.logger.debug(sb);
+		logger.debug(sb);
 	}
 	
 	
 	private static void toString(Tree<State> tree, boolean simple, short nfirst, StringBuilder sb) {
-		if (tree.isLeaf()) { return; }
+		if (tree.isLeaf()) { sb.append("[" + tree.getLabel().wordIdx + "]"); return; }
 		sb.append('(');
 		
 		State state = tree.getLabel();

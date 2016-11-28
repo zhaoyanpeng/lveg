@@ -52,10 +52,10 @@ public class UnaryGrammarRule extends GrammarRule implements Comparable<Object> 
 	}
 	
 	
-	public UnaryGrammarRule(short lhs, short rhs, GaussianMixture weight) {
+	public UnaryGrammarRule(short lhs, short rhs, char type, GaussianMixture weight) {
 		this.lhs = lhs;
 		this.rhs = rhs;
-		this.type = GENERAL;
+		this.type = type;
 		this.weight = weight;
 	}
 	

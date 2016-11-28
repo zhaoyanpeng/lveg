@@ -5,8 +5,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-import org.apache.log4j.Logger;
-
 import edu.berkeley.nlp.PCFGLA.Corpus.TreeBankType;
 import edu.berkeley.nlp.PCFGLA.Binarization;
 import edu.berkeley.nlp.PCFGLA.Corpus;
@@ -34,7 +32,6 @@ public class LVeGLearner extends Recorder {
 	public static int precision  = 3;
 	
 	public static Random random;
-	public static Logger logger = null;
 	
 	public final static String KEY_TAG_SET = "tags";
 	public final static String TOKEN_UNKNOWN = "UNK";
@@ -58,8 +55,8 @@ public class LVeGLearner extends Recorder {
 		public int randomSeed = 111;
 		
 		@Option(name = "-treebank", usage = "Language: WSJ, CHINESE, SINGLEFILE (Default: SINGLEFILE)")
-//		public TreeBankType treebank = TreeBankType.SINGLEFILE;
-		public TreeBankType treebank = TreeBankType.WSJ;
+		public TreeBankType treebank = TreeBankType.SINGLEFILE;
+//		public TreeBankType treebank = TreeBankType.WSJ;
 		
 		
 		@Option(name = "-skipSection", usage = "Skip a particular section of the WSJ training corpus (Needed for training Mark Johnsons reranker (Default: -1)")
@@ -183,8 +180,16 @@ public class LVeGLearner extends Recorder {
 			grammar.tallyStateTree(tree);
 		}
 		
+		System.err.println("Looking through the training set is over.");
+		
 		grammar.postInitialize(0.0);
+		System.err.println("Grammar is over");
 		lexicon.postInitialize(trainTrees, numbererTag.size());
+		
+		System.err.println("Post-initializing is over.");
+		MethodUtil.debugChainRule(grammar);
+		System.err.println("Debugging chain rules is over.");
+		System.exit(1);
 		
 //		short idp = 5, idc = 1;
 //		for (Tree<State> tree : trainTrees) {
@@ -252,10 +257,22 @@ public class LVeGLearner extends Recorder {
 				MethodUtil.debugTree(tree, false, (short) 2);
 				*/
 				
-				if (tree.getYield().size() > 5) { continue; }
+				if (tree.getYield().size() != 8) { continue; }
+				
+				if (cnt == 2) {
+					logger.trace("Debugging the tree...");
+					parser.doInsideOutsideWithTree(tree);
+					MethodUtil.debugTree(tree, false, (short) 2);
+					logger.trace(tree);
+					logger.trace("What the fuck.");
+					break;
+				}
 				
 				parser.evalRuleCountWithTree(tree);
 				parser.evalRuleCount(tree);
+				
+				logger.trace(tree.getYield());
+				MethodUtil.debugCount(grammar, lexicon, tree); // DEBUG
 				
 				isample++;
 				LVeGLearner.logger.trace("Sample " + isample + "...");
@@ -273,6 +290,8 @@ public class LVeGLearner extends Recorder {
 			// apply gradient descent
 			grammar.applyGradientDescent();
 			lexicon.applyGradientDescent();
+			
+//			MethodUtil.debugCount(grammar, lexicon, null, null); // DEBUG
 			
 			/*
 			ll = calculateLL(grammar, lexicon, validationTrees);

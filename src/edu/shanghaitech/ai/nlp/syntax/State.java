@@ -106,16 +106,9 @@ public class State {
 	}
 	
 	
-	/**
-	 * TODO Need to find the balance between time-efficiency and memory-cost, stupid method.
-	 * 
-	 * @param deep
-	 */
-	private void resetScore(boolean deep) {
-		if (deep) {
-			if (insideScore != null) { insideScore.clear(); }
-			if (outsideScore != null) { outsideScore.clear(); }
-		}
+	private void resetScore() {
+		if (insideScore != null) { insideScore.clear(); }
+		if (outsideScore != null) { outsideScore.clear(); }
 		this.insideScore = null;
 		this.outsideScore = null;
 	}
@@ -129,9 +122,9 @@ public class State {
 			this.id = -1;
 			this.wordIdx = -1;
 			this.signIdx = -1;
-			resetScore(deep);
+			resetScore();
 		} else {
-			resetScore(deep);
+			resetScore();
 		}
 	}
 	
