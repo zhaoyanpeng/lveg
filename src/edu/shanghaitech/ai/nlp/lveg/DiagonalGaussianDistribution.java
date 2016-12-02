@@ -1,5 +1,7 @@
 package edu.shanghaitech.ai.nlp.lveg;
 
+import java.util.List;
+
 /**
  * Diagonal Gaussian distribution.
  * 
@@ -44,6 +46,43 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 	
 	
 	@Override
+	protected double eval(List<Double> sample) {
+		if (sample != null && sample.size() == dim) {
+			double exps = 0.0, sinv = 1.0;
+			for (int i = 0; i < dim; i++) {
+				exps -= Math.pow(sample.get(i), 2) / 2;
+				sinv /= Math.exp(vars.get(i) / 2);
+			}
+			double value = Math.pow(2 * Math.PI, -dim / 2) * sinv * Math.exp(exps);
+			return value;
+		}
+		logger.error("The sample is not valid.");
+		return -1.0;
+	}
+	
+	
+	@Override
+	protected void derivative(double factor, List<Double> sample, List<Double> grads, short isample) {
+		if (sample != null && sample.size() == dim) {
+			if (isample == 0) {
+				grads.clear();
+				for (int i = 0; i < dim * 2; i++) {
+					grads.add(0.0);
+				}
+			}
+			double sigma, mgrad, vgrad;
+			for (int i = 0; i < dim; i++) {
+				sigma = Math.exp(vars.get(i) / 2);
+				mgrad = factor * sample.get(i) / sigma;
+				vgrad = factor * (Math.pow(sample.get(i), 2) - 1) / 2;
+				grads.set(i * 2, mgrad);
+				grads.set(i * 2 + 1, vgrad);
+			}
+		}
+	}
+	
+	
+	@Override
 	protected void derivative(double factor, int nsample) {
 		if (nsample == 0) {
 			mgrads.clear();
@@ -62,5 +101,18 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 			vgrads.set(i, vgrads.get(i) + vgrad);
 		}
 	}
-
+	
+	
+	@Override
+	protected void update(double lr, List<Double> grads) {
+		assert(grads.size() == 2 * dim);
+		double mu, sigma;
+		for (int i = 0; i < dim; i++) {
+			mu = mus.get(i * 2) - lr * mgrads.get(i);
+			sigma = vars.get(i * 2 + 1) - lr * vgrads.get(i);
+			mus.set(i, mu);
+			vars.set(i, sigma);
+		}
+	}
+	
 }

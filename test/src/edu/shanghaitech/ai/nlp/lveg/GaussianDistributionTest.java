@@ -37,7 +37,6 @@ public class GaussianDistributionTest {
 		
 		gd1.mus.add(2.0);
 		assertFalse(gd0.equals(gd1));
-		
 	}
 	
 	

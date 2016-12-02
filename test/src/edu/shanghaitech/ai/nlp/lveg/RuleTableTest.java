@@ -38,6 +38,11 @@ public class RuleTableTest {
 		GrammarRule rule2 = new UnaryGrammarRule((short) 7, (short) 2);
 		
 		
+		assertFalse(rule0 instanceof BinaryGrammarRule);
+		assertTrue(rule0 instanceof UnaryGrammarRule);
+		assertTrue(rule0 instanceof GrammarRule);
+		
+		
 		rules.put(rule0, -1.0);
 		rules.put(rule3, 20.0);
 		assertFalse(rules.containsKey(rule5));

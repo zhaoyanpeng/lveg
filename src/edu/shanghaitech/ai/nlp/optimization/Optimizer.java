@@ -1,26 +1,29 @@
 package edu.shanghaitech.ai.nlp.optimization;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
+import edu.shanghaitech.ai.nlp.lveg.BinaryGrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.GrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.UnaryGrammarRule;
+import edu.shanghaitech.ai.nlp.util.Recorder;
 
 /**
  * @author Yanpeng Zhao
  *
  */
-public class Optimizer {
+public class Optimizer extends Recorder {
 	/**
-	 * count0 stores rule counts that are evaluated given the parse tree
-	 * count1 stores rule counts that are evaluated without the parse tree 
+	 * Pseudo counts of grammar rules given the parse tree (countWithT) or the sentence (countWithS).
 	 */
-	private Map<GrammarRule, Double> count0;
-	private Map<GrammarRule, Double> count1;
+	private Map<GrammarRule, List<Map<String, GaussianMixture>>> countsWithT;
+	private Map<GrammarRule, List<Map<String, GaussianMixture>>> countsWithS;
 	
 	/**
 	 * ruleset contains all the rules that are need to be optimized, it is 
@@ -40,10 +43,12 @@ public class Optimizer {
 	// global learning rate
 	protected double globalLR = 0.002;
 	
+	private SGDForMoG minimizer;
+	
 	
 	private Optimizer() {
-		this.count0 = new HashMap<GrammarRule, Double>();
-		this.count1 = new HashMap<GrammarRule, Double>();
+		this.countsWithT = new HashMap<GrammarRule, List<Map<String, GaussianMixture>>>();
+		this.countsWithS = new HashMap<GrammarRule, List<Map<String, GaussianMixture>>>();
 		this.ruleSet = new HashSet<GrammarRule>();
 	}
 	
@@ -51,6 +56,7 @@ public class Optimizer {
 	public Optimizer(Random random) {
 		this();
 		this.random = random;
+		this.minimizer = new SGDForMoG(random);
 	}
 	
 	
@@ -59,6 +65,21 @@ public class Optimizer {
 		this.random = random;
 		this.nsample = nsample;
 		this.globalLR = lr;
+		this.minimizer = new SGDForMoG(random, nsample, lr);
+	}
+	
+	
+	/**
+	 * @param scoresOfST the parse tree score (odd index) and the sentence score (even index).
+	 */
+	public void applyGradientDescent(List<Double> scoresOfST) {
+		List<Map<String, GaussianMixture>> countWithT, countWithS;
+		for (GrammarRule rule : ruleSet) {
+			countWithT = countsWithT.get(rule);
+			countWithS = countsWithS.get(rule);
+			minimizer.optimize(rule, countWithT, countWithS, scoresOfST);
+		}
+		reset();
 	}
 	
 	
@@ -66,22 +87,6 @@ public class Optimizer {
 	 * Stochastic gradient descent.
 	 */
 	public void applyGradientDescent() {
-		double cnt0, cnt1;
-		for (GrammarRule rule : ruleSet) {
-			cnt0 = count0.get(rule);
-			cnt1 = count1.get(rule);
-			if (cnt0 == cnt1) { continue; }
-			
-			UnaryGrammarRule urule;
-			if (rule instanceof  UnaryGrammarRule) {
-				urule = (UnaryGrammarRule) rule;
-			} else {
-				urule = new UnaryGrammarRule((short) -1, (short) -1, (char) 0, null);
-			}
-			
-			applyGradientDescent(rule.getWeight(), cnt0, cnt1);
-		}
-		resetRuleCount();
 	}
 	
 	
@@ -107,52 +112,54 @@ public class Optimizer {
 	
 	
 	/**
-	 * @param rule the rule need to be optimized.
+	 * @param rule the rule that needs optimizing.
 	 */
 	public void addRule(GrammarRule rule) {
 		ruleSet.add(rule);
-		count0.put(rule, 0.0);
-		count1.put(rule, 0.0);
+		List<Map<String, GaussianMixture>> batchWithT = new ArrayList<Map<String, GaussianMixture>>();
+		List<Map<String, GaussianMixture>> batchWithS = new ArrayList<Map<String, GaussianMixture>>();
+		countsWithT.put(rule, batchWithT);
+		countsWithS.put(rule, batchWithS);
 	}
 	
 	
 	/**
-	 * @param rule      the grammar rule
-	 * @param increment which is added to the pseudo count
-	 * @param withTree  type of the expected count
+	 * @param rule     the grammar rule
+	 * @param scores   which contains 1) key GrammarRule.Unit.P maps to the outside score of the parent node
+	 * 					2) key GrammarRule.Unit.UC/C (LC) maps to the inside score (of the left node) if the rule is unary (binary)
+	 * 					3) key GrammarRule.Unit.RC maps to the inside score of the right node if the rule is binary, otherwise null
+	 * @param withTree type of the expected pseudo count
 	 */
-	public void addCount(GrammarRule rule, double increment, boolean withTree) {
-		Map<GrammarRule, Double> count = withTree ? count0 : count1;
-		if (rule != null && count.get(rule) != null) {
-			count.put(rule, count.get(rule) + increment);
+	public void addCount(GrammarRule rule, Map<String, GaussianMixture> scores, boolean withTree) {
+		List<Map<String, GaussianMixture>> batch = null;
+		Map<GrammarRule, List<Map<String, GaussianMixture>>> count = withTree ? countsWithT : countsWithS;
+		if (rule != null && (batch = count.get(rule)) != null) {
+			batch.add(scores);
 			return;
 		}
-		if (rule == null) {
-			System.err.println("The Given Rule is NULL.");
-		} else {
-			System.err.println("Grammar Rule NOT Found: " + rule);
-		}
+		logger.error("Not a valid grammar rule.");
 	}
 	
 	
 	/**
-	 * A method for debugging.
+	 * The method for debugging.
 	 * 
 	 * @param rule     the grammar rule
 	 * @param withTree type of the expected count
 	 * @return
 	 */
-	public double getCount(GrammarRule rule, boolean withTree) {
-		Map<GrammarRule, Double> count = withTree ? count0 : count1;
-		if (rule != null && count.get(rule) != null) {
-			return count.get(rule);
+	public List<Map<String, GaussianMixture>> getCount(GrammarRule rule, boolean withTree) {
+		List<Map<String, GaussianMixture>> batch = null;
+		Map<GrammarRule, List<Map<String, GaussianMixture>>> count = withTree ? countsWithT : countsWithS;
+		if (rule != null && (batch = count.get(rule)) != null) {
+			return batch;
 		}
-		if (rule == null) {
-			System.err.println("The Given Rule is NULL.");
-		} else {
-			System.err.println("Grammar Rule NOT Found: " + rule);
-		}
-		return -1.0;
+		logger.error("Not a valid grammar rule or the rule was not found.");
+		return null;
+	}
+	
+	
+	public void reset() {
 	}
 	
 	
@@ -160,10 +167,6 @@ public class Optimizer {
 	 * Counts are only used once for a batch.
 	 */
 	public void resetRuleCount() {
-		for (GrammarRule rule : ruleSet) {
-			count0.put(rule, 0.0);
-			count1.put(rule, 0.0);
-		}
 	}
 	
 	

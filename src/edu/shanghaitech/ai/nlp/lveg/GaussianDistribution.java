@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Random;
 
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
+import edu.shanghaitech.ai.nlp.util.Recorder;
 
 /**
  * Gaussian distribution. We may define diagonal or general Gaussian distribution. Different 
@@ -13,7 +14,7 @@ import edu.shanghaitech.ai.nlp.util.MethodUtil;
  * @author Yanpeng Zhao
  *
  */
-public class GaussianDistribution implements Comparable<Object> {
+public class GaussianDistribution extends Recorder implements Comparable<Object> {
 	/**
 	 * We may need the hash set be able to hold the gaussians that 
 	 * are the same but the ids, which is just the future feature.
@@ -40,8 +41,8 @@ public class GaussianDistribution implements Comparable<Object> {
 		this.dim = 0;
 		this.mus = new ArrayList<Double>();
 		this.vars = new ArrayList<Double>();
-		this.mgrads = new ArrayList<Double>(0);
-		this.vgrads = new ArrayList<Double>(0);
+//		this.mgrads = new ArrayList<Double>(0);
+//		this.vgrads = new ArrayList<Double>(0);
 	}
 	
 	
@@ -86,6 +87,25 @@ public class GaussianDistribution implements Comparable<Object> {
 	
 	
 	/**
+	 * Eval the gaussian distribution given the sample.
+	 * 
+	 * @param sample the sample from this gaussian distribution
+	 * @return
+	 */
+	protected double eval(List<Double> sample) { return -0.0; }
+	
+	
+	/**
+	 * Take the derivative of gaussian distribution with respect to the parameters (mu & sigma).
+	 * 
+	 * @param factor dRuleWeight * weight * dMixingWeight
+	 * @param sample the sample from this gaussian distribution
+	 * @param grads  gradients container
+	 */
+	protected void derivative(double factor, List<Double> sample, List<Double> grads, short nsample) {}
+	
+	
+	/**
 	 * Take the derivative of MoG with respect to the parameters (mu & sigma) of the component.
 	 * 
 	 * @param factor  
@@ -109,6 +129,15 @@ public class GaussianDistribution implements Comparable<Object> {
 			sample.add(random.nextGaussian());
 		}
 	}
+	
+	
+	/**
+	 * Update parameters using the gradients.
+	 * 
+	 * @param lr    the learning rate
+	 * @param grads gradients
+	 */
+	protected void update(double lr, List<Double> grads) {}
 	
 	
 	/**

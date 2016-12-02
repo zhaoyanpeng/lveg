@@ -14,7 +14,7 @@ public class LVeGLearnerTest {
 		String outputFile = ROOT + "treebank/grammar.gr";
 		String logFile = "log/chain_unary_rules";
 		
-		String[] args = {"-pathToCorpus", corpusPath, "-out", outputFile, "-logType", "-logFile", logFile};
+		String[] args = {"-pathToCorpus", corpusPath, "-out", outputFile, /*"-logType",*/ "-logFile", logFile};
 		
 		LVeGLearner.main(args);
 	}

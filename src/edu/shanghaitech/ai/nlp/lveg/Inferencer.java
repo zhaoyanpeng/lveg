@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 
+import org.apache.log4j.Logger;
+
 import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.syntax.State;
@@ -45,7 +47,7 @@ public class Inferencer {
 	 * 
 	 * @param chart [in/out]-side score container
 	 * @param tree  in which only the sentence is used.
-	 * @param nword # of words of the sentence
+	 * @param nword # of words in the sentence
 	 */
 	protected void insideScore(Chart chart, List<State> sentence, int nword) {
 		int x0, y0, x1, y1, c0, c1, c2;
@@ -107,7 +109,7 @@ public class Inferencer {
 	 * 
 	 * @param chart [in/out]-side score container
 	 * @param tree  in which only the sentence is used.
-	 * @param nword # of words of the sentence
+	 * @param nword # of words in the sentence
 	 */
 	protected void outsideScore(Chart chart, List<State> sentence, int nword) {
 		
@@ -325,7 +327,7 @@ public class Inferencer {
 	}
 	
 	
-	protected void evalRuleCount(Tree<State> tree, Chart chart, double sentenceScore) {
+	protected void evalRuleCount(Tree<State> tree, Chart chart, short isample, double sentenceScore) {
 		double count = 0.0;
 		List<State> sentence = tree.getYield();
 		int x0, x1, y0, y1, c0, c1, c2, nword = sentence.size();
@@ -347,15 +349,20 @@ public class Inferencer {
 						ruleScore = rule.getWeight();
 						cinScore = chart.getInsideScore(rule.rhs, c2);
 						outScore = chart.getOutsideScore(rule.lhs, c2);
-						count = computeUnaryRuleCount(outScore, cinScore, ruleScore) / sentenceScore;
+						
+						String key = rule.lhs == 0 ? GrammarRule.Unit.C : GrammarRule.Unit.UC;
 						char ruleType = rule.lhs == 0 ? GrammarRule.RHSPACE : GrammarRule.GENERAL;
-						grammar.addCount(rule.lhs, rule.rhs, ruleType, count, false);
+						Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>();
+						scores.put(String.valueOf(isample), null);
+						scores.put(GrammarRule.Unit.P, outScore);
+						scores.put(key, cinScore);
+						grammar.addCount(rule.lhs, rule.rhs, ruleType, scores, false);
 					}
 				}
 				
 				// lexicons
 				if (x0 == y1) {
-					evalUnaryRuleCount(chart, c2, nword, sentenceScore, sentence);
+					evalUnaryRuleCount(chart, c2, nword, isample, sentenceScore, sentence);
 					continue; // not necessary
 				}
 				
@@ -373,9 +380,13 @@ public class Inferencer {
 							outScore = chart.getOutsideScore(rule.lhs, c2);
 							linScore = chart.getInsideScore(rule.lchild, c0);
 							rinScore = chart.getInsideScore(rule.rchild, c1);
-							ruleScore = rule.getWeight();
-							count = computeBinaryRuleCount(outScore, linScore, rinScore, ruleScore) / sentenceScore;
-							grammar.addCount(rule.lhs, rule.lchild, rule.rchild, count, false);
+							
+							Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>();
+							scores.put(String.valueOf(isample), null);
+							scores.put(GrammarRule.Unit.P, outScore);
+							scores.put(GrammarRule.Unit.LC, linScore);
+							scores.put(GrammarRule.Unit.RC, rinScore);
+							grammar.addCount(rule.lhs, rule.lchild, rule.rchild, scores, false);
 						}
 					}
 				}
@@ -390,46 +401,43 @@ public class Inferencer {
 	 * @param tree      the parse tree
 	 * @param treeScore the score of the tree
 	 */
-	protected void evalRuleCountWithTree(Tree<State> tree, double treeScore) {
+	protected void evalRuleCountWithTree(Tree<State> tree, short isample, double treeScore) {
 		if (tree.isLeaf()) { return; }
 		
 		List<Tree<State>> children = tree.getChildren();
 		for (Tree<State> child : children) {
-			evalRuleCountWithTree(child, treeScore);
+			evalRuleCountWithTree(child, isample, treeScore);
 		}
 		
 		State parent = tree.getLabel();
 		short idParent = parent.getId();
-		GaussianMixture poutScore = parent.getOutsideScore();
+		GaussianMixture outScore = parent.getOutsideScore();
+		Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>();
+		scores.put(GrammarRule.Unit.P, outScore);
 		
 		if (tree.isPreTerminal()) {
 			State word = children.get(0).getLabel();
 			GaussianMixture cinScore = parent.getInsideScore();
-			double count = computeUnaryRuleCount(poutScore, cinScore, null) / treeScore;
-			// LVeGLearner.logger.trace("Word\trule: [" + idParent + ", " + word.getName() + "] count=" + count); // DEBUG
-			lexicon.addCount(idParent, (short) word.wordIdx, GrammarRule.LHSPACE, count, true);
+			scores.put(GrammarRule.Unit.C, cinScore);
+			lexicon.addCount(idParent, (short) word.wordIdx, GrammarRule.LHSPACE, scores, true);
 		} else {
 			switch (children.size()) {
 			case 0:
 				// in case there are some errors in the parse tree.
 				break;
 			case 1: {
-				GaussianMixture ruleScore, cinScore;
 				State child = children.get(0).getLabel();
-				cinScore = child.getInsideScore();
 				short idChild = child.getId();
-				
+				GaussianMixture cinScore = child.getInsideScore();
 				// root, if (idParent == 0) is true
 				char type = idParent == 0 ? GrammarRule.RHSPACE : GrammarRule.GENERAL;
-				ruleScore = grammar.getUnaryRuleScore(idParent, idChild, type);
-				
-				double count = computeUnaryRuleCount(poutScore, cinScore, ruleScore) / treeScore;
-				// LVeGLearner.logger.trace("Unary\trule: [" + idParent + ", " + idChild + "] count=" + count); // DEBUG
-				grammar.addCount(idParent, idChild, type, count, true);
+				String key = idParent == 0 ? GrammarRule.Unit.C : GrammarRule.Unit.UC;
+				scores.put(key, cinScore);
+				grammar.addCount(idParent, idChild, type, scores, true);
 				break;
 			}
 			case 2: {
-				GaussianMixture ruleScore, linScore, rinScore;
+				GaussianMixture linScore, rinScore;
 				State lchild = children.get(0).getLabel();
 				State rchild = children.get(1).getLabel();
 				short idlChild = lchild.getId();
@@ -437,11 +445,9 @@ public class Inferencer {
 				
 				linScore = lchild.getInsideScore();
 				rinScore = rchild.getInsideScore();
-				ruleScore = grammar.getBinaryRuleScore(idParent, idlChild, idrChild);
-				
-				double count = computeBinaryRuleCount(poutScore, linScore, rinScore, ruleScore) / treeScore;
-				// LVeGLearner.logger.trace("Binary\trule: [" + idParent + ", " + idlChild + ", " + idrChild + "] count=" + count); // DEBUG
-				grammar.addCount(idParent, idlChild, idrChild, count, true);
+				scores.put(GrammarRule.Unit.LC, linScore);
+				scores.put(GrammarRule.Unit.RC, rinScore);
+				grammar.addCount(idParent, idlChild, idrChild, scores, true);
 				break;
 			}
 			default:
@@ -524,7 +530,7 @@ public class Inferencer {
 	}
 	
 	
-	private void evalUnaryRuleCount(Chart chart, int idx, int nword, double sentenceScore, List<State> sentence) {
+	private void evalUnaryRuleCount(Chart chart, int idx, int nword, short isample, double sentenceScore, List<State> sentence) {  		
 		for (int i = 0; i < nword; i++) {
 			int wordIdx = sentence.get(i).wordIdx;
 			int iCell = Chart.idx(i, nword);
@@ -533,8 +539,11 @@ public class Inferencer {
 			for (GrammarRule rule : rules) {
 				GaussianMixture cinScore = chart.getInsideScore(rule.lhs, iCell);
 				GaussianMixture outScore = chart.getOutsideScore(rule.lhs, iCell);
-				double count = computeUnaryRuleCount(outScore, cinScore, null) / sentenceScore;
-				lexicon.addCount(rule.lhs, (short) wordIdx, GrammarRule.LHSPACE, count, false);
+				Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>();
+				scores.put(String.valueOf(isample), null);
+				scores.put(GrammarRule.Unit.P, outScore);
+				scores.put(GrammarRule.Unit.C, cinScore);
+				lexicon.addCount(rule.lhs, (short) wordIdx, GrammarRule.LHSPACE, scores, false);				
 			}
 		}
 	}

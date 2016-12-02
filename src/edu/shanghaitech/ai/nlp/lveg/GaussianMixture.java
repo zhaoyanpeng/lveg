@@ -29,7 +29,7 @@ public class GaussianMixture {
 	protected double bias;
 	
 	protected short nsample;
-	protected short ncomponent;
+	protected int ncomponent;
 	
 	
 	/**
@@ -58,8 +58,8 @@ public class GaussianMixture {
 		this.ncomponent = 0;
 		this.weights = new ArrayList<Double>();
 		this.mixture = new ArrayList<Map<String, Set<GaussianDistribution>>>();
-		this.values = new ArrayList<Double>();
-		this.wgrads = new ArrayList<Double>();
+//		this.values = new ArrayList<Double>();
+//		this.wgrads = new ArrayList<Double>();
 	}
 	
 	
@@ -338,12 +338,12 @@ public class GaussianMixture {
 	 * @param gm1   the other mixture of gaussians
 	 * @param keys0 pairs of (key, value), key denotes the specific portions of gm0, value is the new key
 	 * @param keys1 pairs of (key, value), key denotes the specific portions of gm1, value is the new key
+	 * @param copy  using copy or reference
 	 * @return
 	 */	
 	public static GaussianMixture mulAndMarginalize(GaussianMixture gm0, GaussianMixture gm1, 
 			Map<String, String> keys0, Map<String, String> keys1) {
 		if (gm0 == null || gm1 == null) { return null; }
-		
 		gm0 = gm0.replaceKeys(keys0);
 		gm1 = gm1.replaceKeys(keys1);
 		GaussianMixture gm = gm0.multiply(gm1);
@@ -355,8 +355,7 @@ public class GaussianMixture {
 		for (Map.Entry<String, String> map : keys1.entrySet()) {
 			keys.add(map.getValue());
 		}
-		
-		marginalize(gm, keys);
+		gm.marginalize(keys);
 		return gm;
 	}
 	
@@ -369,6 +368,7 @@ public class GaussianMixture {
 	 * @return    
 	 */
 	public GaussianMixture multiply(GaussianMixture multiplier) { return null; }
+	
 	
 	/**
 	 * Multiply this MoG by the given mixtures of gaussians.
@@ -397,13 +397,13 @@ public class GaussianMixture {
 	 * 
 	 * @param component0 one component of the mixture of the gaussians
 	 * @param component1 the other component of the mixture of the gaussians
+	 * @param copy 		  using copy or reference
 	 * @return
 	 */
 	protected Map<String, Set<GaussianDistribution>> multiply(
 			Map<String, Set<GaussianDistribution>> component0, 
 			Map<String, Set<GaussianDistribution>> component1) {
 		Map<String, Set<GaussianDistribution>> component = copy(component0);
-		
 		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component1.entrySet()) {
 			add(component, gaussian.getKey(), copy(gaussian.getValue()));
 		}
@@ -425,12 +425,10 @@ public class GaussianMixture {
 	/**
 	 * Marginalize the specific portions of the mixture of gaussians.
 	 * 
-	 * @param gm   mixture of gaussians
 	 * @param keys which map to the portions, to be marginalized, of the mixture of gaussians
 	 */
-	public static void marginalize(GaussianMixture gm, Set<String> keys) {
-		if (gm.mixture.size() != gm.weights.size()) { gm = null; }
-		for (Map<String, Set<GaussianDistribution>> gaussian : gm.mixture) {
+	public void marginalize(Set<String> keys) {
+		for (Map<String, Set<GaussianDistribution>> gaussian : mixture) {
 			for (String key : keys) {
 				gaussian.remove(key);
 			}
@@ -476,7 +474,7 @@ public class GaussianMixture {
 		Map<String, Set<GaussianDistribution>> component;
 		for (int i = 0; i < gm.ncomponent; i++) {
 			component = gm.mixture.get(i);
-			int idx = isContained(component, amixture);
+			int idx = amixture.contains(component);
 			if (idx < 0) {
 				amixture.weights.add(gm.weights.get(i));
 				amixture.mixture.add(gm.mixture.get(i));
@@ -496,13 +494,11 @@ public class GaussianMixture {
 	 * mixture of gaussians.
 	 * 
 	 * @param component the component of the mixture of gaussians
-	 * @param gm        mixture of gaussians
 	 * @return
 	 */
-	public static int isContained(Map<String, Set<GaussianDistribution>> component, 
-			GaussianMixture gm) {
-		for (int i = 0; i < gm.ncomponent; i++) {
-			if (isEqual(component, gm.mixture.get(i))) {
+	public int contains(Map<String, Set<GaussianDistribution>> component) {
+		for (int i = 0; i < ncomponent; i++) {
+			if (isEqual(component, mixture.get(i))) {
 				return i;
 			}
 		}
@@ -511,31 +507,63 @@ public class GaussianMixture {
 	
 	
 	/**
-	 * Compare whether two components of the mixture of gaussians are equal.
+	 * Compare whether two components of the mixture of gaussians are the same.
 	 * </p>
-	 * TODO to double check.
+	 * CHECK to double check. It should be symmetrically the same.
 	 * </p>
 	 * @param component0 one component of the mixture of gaussians
 	 * @param component1 the other component of the mixture of gaussians
 	 * @return
 	 */
-	public static boolean isEqual(
+	private boolean isEqual(
 			Map<String, Set<GaussianDistribution>> component0,
 			Map<String, Set<GaussianDistribution>> component1) {
 		if (component0.size() != component1.size()) { return false; }
+		// the uniqueness of the keys ensures that one for loop is enough
 		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component0.entrySet()) {
 			if (!component1.containsKey(gaussian.getKey())) { return false; }
-			
 			Set<GaussianDistribution> gausses0 = gaussian.getValue();
 			Set<GaussianDistribution> gausses1 = component1.get(gaussian.getKey());
-			if (gausses0 == null || gausses1 == null) {
-				if (gausses0 != gausses1) {
-					return false;
-				} else {
-					continue;
-				}
+			if (!isEqual(gausses0, gausses1)) { return false; }
+		}
+		return true;
+	}
+	
+	
+	/**
+	 * Compare whether two set of gaussians are identical. We only cares about the value not the hash code for the
+	 * item, thus A.containsAll(B) && B.containsAll(A) or A.equals(B) is not appropriate for our application since
+	 * Both of which will invoke hashCode().
+	 * 
+	 * @param gausses0 a set of gaussians
+	 * @param gausses1 a set of gaussians
+	 * @return
+	 */
+	private boolean isEqual(Set<GaussianDistribution> gausses0, Set<GaussianDistribution> gausses1) {
+		if (gausses0 == null || gausses1 == null) {
+			if (gausses0 != gausses1) {
+				return false;
+			} else {
+				return true;
 			}
-			if (!gausses0.equals(gausses1)) { return false; }
+		}
+		if (gausses0.size() != gausses1.size()) { return false; }
+		/**
+		 * CHECK The following code has a hidden bug. If the item in the gaussian set is modified somewhere else 
+		 * and effects the return value of hashcode(), equals() will fail since Set.add() evals the hash-code of 
+		 * the item when it is added and won't automatically change depending on the newest status of the item.
+		 * 
+		 * if (!gausses0.equals(gausses1)) { return false; }
+		 * 
+		 * http://stackoverflow.com/questions/32963070/hashset-containsobject-returns-false-for-instance-modified-after-insertion
+		 */
+		// the uniqueness of the gaussians ensures that one for loop is enough
+		for (GaussianDistribution g0 : gausses0) {
+			boolean found1 = false;
+			for (GaussianDistribution g1 : gausses1) {
+				if (g1.equals(g0)) { found1 = true; break; }
+			}
+			if (!found1) { return false; } 
 		}
 		return true;
 	}
@@ -554,6 +582,36 @@ public class GaussianMixture {
 				}
 			}
 		}
+	}
+	
+	
+	public double eval(Map<String, List<Double>> sample, int icomponent) {
+		double value = 1.0;
+		Map<String, Set<GaussianDistribution>> component = mixture.get(icomponent);
+		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
+			List<Double> slice = sample.get(gaussian.getKey());
+			for (GaussianDistribution gd : gaussian.getValue()) {
+				value *= gd.eval(slice);
+			}
+		}
+		return value;
+	}
+	
+	
+	public double eval(Map<String, List<Double>> sample) {
+		double ret = 0.0, value;
+		for (int i = 0; i < ncomponent; i++) {
+			Map<String, Set<GaussianDistribution>> component = mixture.get(i);
+			value = 1.0;
+			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
+				List<Double> slice = sample.get(gaussian.getKey());
+				for (GaussianDistribution gd : gaussian.getValue()) {
+					value *= gd.eval(slice);
+				}
+			}
+			ret += Math.exp(weights.get(i)) * value;
+		}
+		return ret;
 	}
 	
 	
@@ -579,6 +637,40 @@ public class GaussianMixture {
 		}
 		return ret;
 	}
+	
+	
+	/**
+	 * Take the derivative of MoG w.r.t parameters (mu & sigma) of the component.
+	 * 
+	 * @param isample    # of sampling times
+	 * @param icomponent index of the component of MoG
+	 * @param factor     dRuleWeight
+	 * @param sample     the sample from the current component
+	 * @param ggrads     gradients of the parameters of gaussian distributions
+	 * @param wgrads     gradients of the mixing weights of MoG
+	 */
+	public void derivative(
+			short isample, int icomponent, double factor, 
+			Map<String, List<Double>> sample, Map<String, List<Double>> ggrads, List<Double> wgrads) {
+		if (isample == 0) {
+			wgrads.clear();
+			for (int i = 0; i < ncomponent; i++) {
+				wgrads.add(0.0);
+			}
+		}
+		double dMixingW = eval(sample, icomponent);
+		factor = factor * Math.exp(weights.get(icomponent)) * dMixingW;
+		Map<String, Set<GaussianDistribution>> component = mixture.get(icomponent);
+		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
+			List<Double> slice = sample.get(gaussian.getKey());
+			List<Double> grads = ggrads.get(gaussian.getKey());
+			for (GaussianDistribution gd : gaussian.getValue()) {
+				gd.derivative(factor, slice, grads, isample);
+			}
+		}
+		wgrads.set(icomponent, wgrads.get(icomponent) + dMixingW);
+	}
+	
 	
 	
 	/**
@@ -613,6 +705,27 @@ public class GaussianMixture {
 	/**
 	 * Update parameters using the gradient.
 	 * 
+	 * @param icomponent index of the component of MoG
+	 * @param lr         learning rate
+	 * @param ggrads     gradients of the parameters of gaussian distributions
+	 * @param wgrads     gradients of the mixing weights of MoG
+	 */
+	public void update(int icomponent, double lr, Map<String, List<Double>> ggrads, List<Double> wgrads) {
+		Map<String, Set<GaussianDistribution>> component = mixture.get(icomponent);
+		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
+			List<Double> grads = ggrads.get(gaussian.getKey());
+			for (GaussianDistribution gd : gaussian.getValue()) {
+				gd.update(lr, grads);
+			}
+		}
+		double weight = weights.get(icomponent) - lr * wgrads.get(icomponent);
+		weights.set(icomponent, weight);
+	}
+	
+	
+	/**
+	 * Update parameters using the gradient.
+	 * 
 	 * @param learningRate learning rate
 	 */
 	public void update(double learningRate) {
@@ -635,27 +748,21 @@ public class GaussianMixture {
 	}
 	
 	
-	/**
-	 * Memory clean.
-	 */
-	public void clear() {
-		this.bias = 0.0;
-		this.ncomponent = 0;
-		this.weights.clear();
-		for (Map<String, Set<GaussianDistribution>> component : mixture) {
-			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
-				for (GaussianDistribution gd : gaussian.getValue()) {
-					gd.clear();
-				}
-				gaussian.getValue().clear();
-			}
-			component.clear();
+	public int getDim(int icomponent, String key) {
+		Set<GaussianDistribution> gausses = mixture.get(icomponent).get(key);
+		for (GaussianDistribution gd : gausses) {
+			return gd.dim;
 		}
-		this.mixture.clear();
+		return -1;
 	}
 	
 	
-	public short getNcomponent() {
+	public double getWeight(int icomponent) {
+		return Math.exp(weights.get(icomponent));
+	}
+	
+	
+	public int getNcomponent() {
 		return ncomponent;
 	}
 	
@@ -680,6 +787,26 @@ public class GaussianMixture {
 	}
 	
 	
+	/**
+	 * Memory clean.
+	 */
+	public void clear() {
+		this.bias = 0.0;
+		this.ncomponent = 0;
+		this.weights.clear();
+		for (Map<String, Set<GaussianDistribution>> component : mixture) {
+			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
+				for (GaussianDistribution gd : gaussian.getValue()) {
+					gd.clear();
+				}
+				gaussian.getValue().clear();
+			}
+			component.clear();
+		}
+		this.mixture.clear();
+	}
+	
+	
 	public String toString(boolean simple, int nfirst) {
 		if (simple) {
 			StringBuffer sb = new StringBuffer();
@@ -696,6 +823,6 @@ public class GaussianMixture {
 	@Override
 	public String toString() {
 		return "GM [bias=" + bias + ", ncomponent=" + ncomponent + ", weights=" + 
-				MethodUtil.double2str(weights, LVeGLearner.precision, -1, false) + ", mixture=" + mixture + "]";
+				MethodUtil.double2str(weights, LVeGLearner.precision, -1, true) + ", mixture=" + mixture + "]";
 	}
 }

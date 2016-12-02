@@ -1,6 +1,7 @@
 package edu.shanghaitech.ai.nlp.lveg;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import edu.berkeley.nlp.syntax.Tree;
@@ -26,24 +27,24 @@ public abstract class LVeGLexicon {
 	protected int unknownLevel;
 	
 	
-	public void addCount(short idParent, short idChild, char type, double increment, boolean withTree) {
+	public void addCount(short idParent, short idChild, char type, Map<String, GaussianMixture> count, boolean withTree) {
 		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
-		addCount(rule, increment, withTree);
+		addCount(rule, count, withTree);
 	}
 	
 	
-	public double getCount(short idParent, short idChild, char type, boolean withTree) {
+	public List<Map<String, GaussianMixture>> getCount(short idParent, short idChild, char type, boolean withTree) {
 		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
 		return getCount(rule, withTree);
 	}
 	
 	
-	public void addCount(GrammarRule rule, double increment, boolean withTree) {
-		optimizer.addCount(rule, increment, withTree);
+	public void addCount(GrammarRule rule, Map<String, GaussianMixture> count, boolean withTree) {
+		optimizer.addCount(rule, count, withTree);
 	}
 	
 	
-	public double getCount(GrammarRule rule, boolean withTree) {
+	public List<Map<String, GaussianMixture>> getCount(GrammarRule rule, boolean withTree) {
 		return optimizer.getCount(rule, withTree);
 	}
 	

@@ -131,7 +131,6 @@ public class BinaryGrammarRule extends GrammarRule implements Comparable<Object>
 
 	@Override
 	public int compareTo(Object o) {
-		// TODO Auto-generated method stub
 		BinaryGrammarRule rule = (BinaryGrammarRule) o;
 		if (lhs < rule.lhs) { return -1; }
 		if (lhs > rule.lhs) { return 1; }

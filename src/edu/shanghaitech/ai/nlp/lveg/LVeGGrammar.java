@@ -3,8 +3,10 @@ package edu.shanghaitech.ai.nlp.lveg;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.util.Numberer;
@@ -43,15 +45,9 @@ public class LVeGGrammar extends Recorder implements Serializable {
 	 * to the Viterbi algorithm if they contain 'Max'. However, the
 	 * point is how to define the maximum between two MoGs.
 	 */
-	private List<GrammarRule> chainSumUnaryRules;
+	private Set<GrammarRule> chainSumUnaryRules;
 	private List<GrammarRule>[] chainSumUnaryRulesWithP;
 	private List<GrammarRule>[] chainSumUnaryRulesWithC;
-	
-	private List<GrammarRule> chainMaxUnaryRules;
-	private List<GrammarRule>[] chainMaxUnaryRulesWithP;
-	private List<GrammarRule>[] chainMaxUnaryRulesWithC;
-	
-	private short[][] chainMaxUnaryPath;
 	
 	/**
 	 * Needed when we want to find a rule and access its statistics.
@@ -63,21 +59,13 @@ public class LVeGGrammar extends Recorder implements Serializable {
 	
 	private Optimizer optimizer;
 	
-	/**
-	 * Rules with probabilities below this value will be filtered.
-	 * @deprecated
-	 */
-	private double filterThreshold;
 	
-	
-	public LVeGGrammar(LVeGGrammar oldGrammar, double filterThreshold, int nTag) {
+	public LVeGGrammar(LVeGGrammar oldGrammar, int nTag) {
 		this.unaryRuleTable  = new RuleTable<UnaryGrammarRule>(UnaryGrammarRule.class);
 		this.binaryRuleTable = new RuleTable<BinaryGrammarRule>(BinaryGrammarRule.class);
 		this.unaryRuleMap  = new HashMap<GrammarRule, GrammarRule>();
 		this.binaryRuleMap = new HashMap<GrammarRule, GrammarRule>();
 		this.optimizer = new Optimizer(LVeGLearner.random);
-		
-		this.filterThreshold = filterThreshold;
 		
 		if (nTag < 0) {
 			this.numbererTag = Numberer.getGlobalNumberer(LVeGLearner.KEY_TAG_SET);
@@ -100,33 +88,21 @@ public class LVeGGrammar extends Recorder implements Serializable {
 	private void initialize() {
 		this.unaryRulesWithP = new List[nTag];
 		this.unaryRulesWithC = new List[nTag];
-		
 		this.binaryRulesWithP  = new List[nTag];
 		this.binaryRulesWithLC = new List[nTag];
 		this.binaryRulesWithRC = new List[nTag];
-		
-		this.chainSumUnaryRules = new ArrayList<GrammarRule>();
+		this.chainSumUnaryRules = new HashSet<GrammarRule>();
 		this.chainSumUnaryRulesWithP = new List[nTag];
 		this.chainSumUnaryRulesWithC = new List[nTag];
-		
-		this.chainMaxUnaryRules = new ArrayList<GrammarRule>();
-		this.chainMaxUnaryRulesWithP = new List[nTag];
-		this.chainMaxUnaryRulesWithC = new List[nTag];
-		
-		this.chainMaxUnaryPath = new short[nTag][nTag];
 		
 		for (int i = 0; i < nTag; i++) {
 			unaryRulesWithP[i] = new ArrayList<GrammarRule>();
 			unaryRulesWithC[i] = new ArrayList<GrammarRule>();
-			
 			binaryRulesWithP[i]  = new ArrayList<GrammarRule>();
 			binaryRulesWithLC[i] = new ArrayList<GrammarRule>();
 			binaryRulesWithRC[i] = new ArrayList<GrammarRule>();
-			
 			chainSumUnaryRulesWithP[i] = new ArrayList<GrammarRule>();
 			chainSumUnaryRulesWithC[i] = new ArrayList<GrammarRule>();
-			chainMaxUnaryRulesWithP[i] = new ArrayList<GrammarRule>();
-			chainMaxUnaryRulesWithC[i] = new ArrayList<GrammarRule>();
 		}
 	}
 	
@@ -177,10 +153,8 @@ public class LVeGGrammar extends Recorder implements Serializable {
 	public void tallyStateTree(Tree<State> tree) {
 		/* LVeGLexicon will handle pre-terminal nodes */
 		if (tree.isLeaf() || tree.isPreTerminal()) { return; }
-		
 		short idParent = tree.getLabel().getId();
 		List<Tree<State>> children = tree.getChildren();
-		
 		switch (children.size()) {
 		case 0:
 			break;
@@ -189,7 +163,7 @@ public class LVeGGrammar extends Recorder implements Serializable {
 			short idChild = children.get(0).getLabel().getId();
 			if (idParent != 0) {
 				rule = new UnaryGrammarRule(idParent, idChild, GrammarRule.GENERAL);
-			} else { // 0 represents the root node
+			} else { // the root node
 				rule = new UnaryGrammarRule(idParent, idChild, GrammarRule.RHSPACE);
 			}
 			unaryRuleTable.addCount(rule, 1.0);
@@ -206,7 +180,6 @@ public class LVeGGrammar extends Recorder implements Serializable {
 			logger.error("Malformed tree: more than two children. Exitting...");
 			System.exit(0);
 		}
-		
 		for (Tree<State> child : children) {
 			tallyStateTree(child);
 		}
@@ -216,19 +189,18 @@ public class LVeGGrammar extends Recorder implements Serializable {
 	/**
 	 * Compute the two-order unary chain.
 	 */
-	protected void computeChainUnaryRule() {
-		
+	private void computeChainUnaryRule() {
 		Map<String, String> keys0 = new HashMap<String, String>();
 		Map<String, String> keys1 = new HashMap<String, String>();
 		keys1.put(GrammarRule.Unit.P, GrammarRule.Unit.RM);
+		short count = 0, total = 0;
 		
 		// rules of the from X->ROOT(0) are not allowed
 		for (short iparent = 0; iparent < nTag; iparent++) {
 			for (short ichild = 1; ichild < nTag; ichild++) {
 				if (iparent == ichild) { continue; }
-				short bestIntermediateState = -1;
-				double maxSumWeight = -1.0, total;
-				
+				boolean found = false;
+				int cnt = 0;
 				char type;
 				keys0.clear();
 				if (iparent == 0) {
@@ -240,10 +212,7 @@ public class LVeGGrammar extends Recorder implements Serializable {
 				}
 				
 				GaussianMixture weightSum = new DiagonalGaussianMixture();
-				GaussianMixture weightMax = new DiagonalGaussianMixture();
-				
 				UnaryGrammarRule uruleSum = new UnaryGrammarRule(iparent, ichild, type, weightSum);
-				UnaryGrammarRule uruleMax = new UnaryGrammarRule(iparent, ichild, type, weightMax);
 				GaussianMixture pruleWeight = null, cruleWeight = null, aruleWeight = null;
 				
 				for (GrammarRule prule : unaryRulesWithP[iparent]) {
@@ -251,49 +220,40 @@ public class LVeGGrammar extends Recorder implements Serializable {
 					pruleWeight = uprule.getWeight(); // one-order chain rule
 					if (uprule.rhs == ichild) {
 						weightSum.add(pruleWeight.copy(true));
-						total = pruleWeight.marginalize();
-						if (total > maxSumWeight) { 
-							weightMax.clear();
-							maxSumWeight = total;
-							bestIntermediateState = -1;
-							weightMax = pruleWeight.copy(true);
-						}
+						found = true;
+						cnt++;
 					} else { // two-order chain rule
 						for (GrammarRule crule : unaryRulesWithC[ichild]) {
 							UnaryGrammarRule ucrule = (UnaryGrammarRule) crule;
 							if (ucrule.lhs != uprule.rhs) { continue; }
 							cruleWeight = ucrule.getWeight();
 							aruleWeight = GaussianMixture.mulAndMarginalize(pruleWeight, cruleWeight, keys0, keys1);
-							if (iparent == 0) {
-								aruleWeight = aruleWeight.replaceAllKeys(GrammarRule.Unit.C);
-							}
+							if (iparent == 0) { aruleWeight = aruleWeight.replaceAllKeys(GrammarRule.Unit.C); }
 							weightSum.add(aruleWeight);
-							total = aruleWeight.marginalize();
-							if (total > maxSumWeight) { 
-								weightMax.clear();
-								maxSumWeight = total;
-								bestIntermediateState = ucrule.lhs;
-								weightMax = aruleWeight.copy(true);
-							}
+							found = true;
+							cnt++;
 						}
 					}
 				} 
-				if (maxSumWeight > 0) {
-					// why shall we add it?
-					addUnaryRule(uruleSum);
+				if (found) {
+					total++;
+					// why shall we add it? Adding could result in the exponential increase of the # of components.
+					// addUnaryRule(uruleSum);
 					// the resulting chain rule
 					chainSumUnaryRules.add(uruleSum);
 					chainSumUnaryRulesWithP[iparent].add(uruleSum);
 					chainSumUnaryRulesWithC[ichild].add(uruleSum);
-					// incorrect for Viterbi parser
-					chainMaxUnaryRules.add(uruleMax);
-					chainMaxUnaryRulesWithP[iparent].add(uruleMax);
-					chainMaxUnaryRulesWithC[ichild].add(uruleMax);
-					// how to compare the magnitudes of two MoG
-					chainMaxUnaryPath[iparent][ichild] = bestIntermediateState;
-				}
+					logger.trace("Rule: [" + iparent + ", " + ichild + "]\t# of rules combined: " + cnt + 
+							"\t# of components: " + uruleSum.getWeight().getNcomponent());
+				} 
 			}
 		}
+		// TODO a temporary implementation, this may weaken the unary rules of length 1.
+		for (GrammarRule rule : chainSumUnaryRules) {
+			if (!unaryRuleMap.containsKey(rule)) { count++; continue; }
+			addUnaryRule((UnaryGrammarRule) rule);
+		}
+		logger.trace("# of new rules: " + count + " \t# of all rules: " + total);
 	}
 	
 	
@@ -317,36 +277,36 @@ public class LVeGGrammar extends Recorder implements Serializable {
 	}
 	
 	
-	public void addCount(short idParent, short idlChild, short idrChild, double increment, boolean withTree) {
+	public void addCount(short idParent, short idlChild, short idrChild, Map<String, GaussianMixture> count, boolean withTree) {
 		GrammarRule rule = getBinaryRule(idParent, idlChild, idrChild);
-		addCount(rule, increment, withTree);
+		addCount(rule, count, withTree);
 	}
 	
 	
-	public double getCount(short idParent, short idlChild, short idrChild, boolean withTree) {
+	public List<Map<String, GaussianMixture>> getCount(short idParent, short idlChild, short idrChild, boolean withTree) {
 		GrammarRule rule = getBinaryRule(idParent, idlChild, idrChild);
 		return getCount(rule, withTree);
 	}
 	
 	
-	public void addCount(short idParent, short idChild, char type, double increment, boolean withTree) {
+	public void addCount(short idParent, short idChild, char type, Map<String, GaussianMixture> count, boolean withTree) {
 		GrammarRule rule = getUnaryRule(idParent, idChild, type);
-		addCount(rule, increment, withTree);
+		addCount(rule, count, withTree);
 	}
 	
 	
-	public double getCount(short idParent, short idChild, char type, boolean withTree) {
+	public List<Map<String, GaussianMixture>> getCount(short idParent, short idChild, char type, boolean withTree) {
 		GrammarRule rule = getUnaryRule(idParent, idChild, type);
 		return getCount(rule, withTree);
 	}
 	
 	
-	public void addCount(GrammarRule rule, double increment, boolean withTree) {
-		optimizer.addCount(rule, increment, withTree);
+	public void addCount(GrammarRule rule, Map<String, GaussianMixture> count, boolean withTree) {
+		optimizer.addCount(rule, count, withTree);
 	}
 	
 	
-	public double getCount(GrammarRule rule, boolean withTree) {
+	public List<Map<String, GaussianMixture>> getCount(GrammarRule rule, boolean withTree) {
 		return optimizer.getCount(rule, withTree);
 	}
 	

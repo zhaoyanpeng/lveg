@@ -40,7 +40,7 @@ public class LVeGGrammarTest {
 //	}
 	
 	int nTag = 10;
-	LVeGGrammar grammar = new LVeGGrammar(null, 0.0, nTag);
+	LVeGGrammar grammar = new LVeGGrammar(null,nTag);
 	
 	@Test
 	public void testLVeGGrammar() {

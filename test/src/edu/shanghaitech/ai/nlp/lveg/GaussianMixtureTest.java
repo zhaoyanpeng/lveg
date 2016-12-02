@@ -73,31 +73,85 @@ public class GaussianMixtureTest {
 	
 	//@Test
 	public void testHashSet() {
+		
+		System.out.println("\n---hash set equality test---\n");
+		
 		Set<GaussianDistribution> set0 = new HashSet<GaussianDistribution>();
 		Set<GaussianDistribution> set1 = new HashSet<GaussianDistribution>();
-
+		short n = 3;
 		GaussianDistribution gd0 = new DiagonalGaussianDistribution(LVeGLearner.dim);
 		GaussianDistribution gd1 = new DiagonalGaussianDistribution(LVeGLearner.dim);
+		GaussianDistribution gd2 = gd0.copy();
+		
 		set0.add(gd0);
 		set0.add(gd1);
-
+		
 		set1.add(gd1.copy());
-		set1.add(gd0.copy());
+		set1.add(gd0);
+		/*
+		assertFalse(set0 == set1);
+		assertTrue(set0.equals(set1));
+		assertTrue(set1.contains(gd0));
+		assertTrue(set1.contains(gd1));
+		assertTrue(set0.containsAll(set1));
+		assertTrue(set1.containsAll(set0));
+		
 		
 		System.out.println("set0---" + set0);
 		System.out.println("set1---" + set1);
 		
-		assertFalse(set0 == set1);
+		System.out.println("set0: " + set0.hashCode());
+		for (GaussianDistribution gd : set0) {
+			System.out.println(gd.hashCode() + "\t" + set1.contains(gd));
+		}
+		
+		System.out.println("set1: " + set1.hashCode());
+		for (GaussianDistribution gd : set1) {
+			System.out.println(gd.hashCode() + "\t" + set0.contains(gd));
+		}
+		*/
+		
+		System.out.println("----------------------------");
+		System.out.println("gd0: " + gd0.hashCode() + "\ngd1: " + gd1.hashCode() + "\ngd2: " + gd2.hashCode());
+		System.out.println("----------------------------");
+		
+		gd0.dim = n;
+		System.out.println("set0---" + set0);
+		System.out.println("set1---" + set1);
+		
+		for (GaussianDistribution gdd0 : set0) {
+			for (GaussianDistribution gdd1 : set1) {
+				System.out.println("--\n0->" + gdd0 + "\n1->" + gdd1);
+				System.out.println("hash: " + (gdd0.hashCode() == gdd1.hashCode()) + "\tequals: " + gdd0.equals(gdd1));
+				System.out.println("gdd1 in set0: " + set0.contains(gdd1));
+			}
+			System.out.println("gdd0 in set1: " + set1.contains(gdd0));
+		}
+		
+		System.out.println("\n---the same value with different hash code---\ngd0 in set0: " + set0.contains(gd0) + "\tgd0 in set1: " + set1.contains(gd0));
+		System.out.println("\n---the same hash code with different value---\ngd2 in set0: " + set0.contains(gd2) + "\tgd2 in set1: " + set1.contains(gd2));
+		
+		set0.add(gd2);
+		set1.add(gd2);
+
+		System.out.println("set0---" + set0);
+		System.out.println("set1---" + set1);
+		
+		/*
+		assertTrue(set0.containsAll(set1));
+		assertTrue(set1.containsAll(set0));
 		assertTrue(set0.equals(set1));
+		*/
 	}
 	
 	
 	//@Test
 	public void testMapEqual() {
 		// TODO not done, discarded
-		Map<String, Set<GaussianDistribution>> map0 = new HashMap<String, Set<GaussianDistribution>>();
-		Map<String, Set<GaussianDistribution>> map1 = new HashMap<String, Set<GaussianDistribution>>();
-		Map<String, Set<GaussianDistribution>> map2 = new HashMap<String, Set<GaussianDistribution>>();
+		String s1 = new String("123");
+		String s2 = "123";
+		assertTrue(s1.equals(s2));
+		assertTrue(s1.hashCode() == s2.hashCode());
 	}
 	
 	
@@ -123,7 +177,7 @@ public class GaussianMixtureTest {
 	}
 	
 	
-	@Test
+	//@Test
 	public void testMultiply() {
 		
 		GaussianMixture gm3 = gm0.multiply(gm1);
@@ -132,7 +186,7 @@ public class GaussianMixtureTest {
 		Set<String> keys = new HashSet<String>();
 		keys.add("uc");
 		
-		GaussianMixture.marginalize(gm3, keys);
+		gm3.marginalize(keys);
 		System.out.println("Remove uc---" + gm3);
 		
 		GaussianMixture gm5 = GaussianMixture.merge(gm3);
@@ -146,7 +200,7 @@ public class GaussianMixtureTest {
 		GaussianMixture gm8 = gm4.replaceAllKeys("uc");
 		System.out.println("Repwith uc--" + gm8);
 
-		GaussianMixture.marginalize(gm4, keys);
+		gm4.marginalize(keys);
 		System.out.println("Remove uc---" + gm4);
 		
 		GaussianMixture gm6 = GaussianMixture.merge(gm4);
@@ -159,6 +213,15 @@ public class GaussianMixtureTest {
 		keys1.put("p", "rm");
 		GaussianMixture gm7 = GaussianMixture.mulAndMarginalize(gm0, gm1, keys0, keys1);
 		System.out.println("MulAndMarginalize gm0 X gm1---" + gm7);
+		
+	}
+	
+	
+	@Test
+	public void testCast() {
+		Short x = 3;
+		Object xo = (Object) x;
+		System.out.println(xo);
 	}
 	
 }

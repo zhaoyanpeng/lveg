@@ -23,6 +23,7 @@ import edu.berkeley.nlp.ui.TreeJPanel;
 import edu.berkeley.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.lveg.Inferencer.Cell;
 import edu.shanghaitech.ai.nlp.lveg.Inferencer.Chart;
+import edu.shanghaitech.ai.nlp.lveg.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.GrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
@@ -81,7 +82,7 @@ public class MethodUtil extends Recorder {
 		LVeGLearner.logger.trace("\n---Unary Grammar Rules---\n");
 		for (Map.Entry<GrammarRule, GrammarRule> rmap : uRuleMap.entrySet()) {
 			GrammarRule rule = rmap.getValue();
-			double count = grammar.getCount(rule, false);
+			List<Map<String, GaussianMixture>> count = grammar.getCount(rule, false);
 			LVeGLearner.logger.trace(rule + "\tcount=" + String.format("%.8f", count));
 			if (++iiter >= niter) { break; }
 		}
@@ -91,7 +92,7 @@ public class MethodUtil extends Recorder {
 		LVeGLearner.logger.trace("\n---Binary Grammar Rules---\n");
 		for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
 			GrammarRule rule = rmap.getValue();
-			double count = grammar.getCount(rule, false);
+			List<Map<String, GaussianMixture>> count = grammar.getCount(rule, false);
 			LVeGLearner.logger.trace(rule + "\tcount=" + String.format("%.8f", count));
 			if (++iiter > niter) { break; }
 		}
@@ -130,7 +131,7 @@ public class MethodUtil extends Recorder {
 		
 		if (tree.isPreTerminal()) {
 			State word = children.get(0).getLabel();
-			double count = lexicon.getCount(idParent, (short) word.wordIdx, GrammarRule.LHSPACE, true);
+			List<Map<String, GaussianMixture>> count = lexicon.getCount(idParent, (short) word.wordIdx, GrammarRule.LHSPACE, true);
 			LVeGLearner.logger.trace("Word\trule: [" + idParent + "] count=" + count); // DEBUG
 		} else {
 			switch (children.size()) {
@@ -144,7 +145,7 @@ public class MethodUtil extends Recorder {
 				// root, if (idParent == 0) is true
 				char type = idParent == 0 ? GrammarRule.RHSPACE : GrammarRule.GENERAL;
 				
-				double count = grammar.getCount(idParent, idChild, type, true);
+				List<Map<String, GaussianMixture>> count = grammar.getCount(idParent, idChild, type, true);
 				LVeGLearner.logger.trace("Unary\trule: [" + idParent + ", " + idChild + "] count=" + count); // DEBUG
 				break;
 			}
@@ -154,7 +155,7 @@ public class MethodUtil extends Recorder {
 				short idlChild = lchild.getId();
 				short idrChild = rchild.getId();
 				
-				double count = grammar.getCount(idParent, idlChild, idrChild, true);
+				List<Map<String, GaussianMixture>> count = grammar.getCount(idParent, idlChild, idrChild, true);
 				LVeGLearner.logger.trace("Binary\trule: [" + idParent + ", " + idlChild + ", " + idrChild + "] count=" + count); // DEBUG
 				break;
 			}

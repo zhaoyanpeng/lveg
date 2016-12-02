@@ -1,5 +1,6 @@
 package edu.shanghaitech.ai.nlp.lveg;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,10 +23,10 @@ import edu.shanghaitech.ai.nlp.syntax.State;
  */
 public class LVeGLearner extends Recorder {
 	
-	public static short dim        =  2;
+	public static short dim        =  5;
 	public static short maxrandom  =  1;
 	public static short batchsize  = 50;
-	public static short ncomponent =  2;
+	public static short ncomponent =  5;
 	public static short maxlength  = 30;
 	
 	public static int randomseed = 0;
@@ -172,7 +173,7 @@ public class LVeGLearner extends Recorder {
 		// MethodUtil.isChildrenSizeZero(trainTrees);
 		
 		// MethodUtil.isParentEqualToChild(trainTrees);
-		LVeGGrammar grammar = new LVeGGrammar(null, opts.filterThreshold, -1);
+		LVeGGrammar grammar = new LVeGGrammar(null, -1);
 		LVeGLexicon lexicon = new SimpleLVeGLexicon();
 			
 		for (Tree<State> tree : trainTrees) {
@@ -184,12 +185,15 @@ public class LVeGLearner extends Recorder {
 		
 		grammar.postInitialize(0.0);
 		System.err.println("Grammar is over");
+		System.exit(1);
+		
 		lexicon.postInitialize(trainTrees, numbererTag.size());
+		
 		
 		System.err.println("Post-initializing is over.");
 		MethodUtil.debugChainRule(grammar);
 		System.err.println("Debugging chain rules is over.");
-		System.exit(1);
+		
 		
 //		short idp = 5, idc = 1;
 //		for (Tree<State> tree : trainTrees) {
@@ -231,6 +235,7 @@ public class LVeGLearner extends Recorder {
 //		double prell = calculateLL(grammar, lexicon, validationTrees);	
 		double prell = 0.0;
 		double relativError = 0, ll, maxll = prell;
+		List<Double> scoresOfST = new ArrayList<Double>();
 		do {
 			cnt++;
 			
@@ -268,8 +273,10 @@ public class LVeGLearner extends Recorder {
 					break;
 				}
 				
-				parser.evalRuleCountWithTree(tree);
-				parser.evalRuleCount(tree);
+				double scoreT = parser.evalRuleCountWithTree(tree, (short) 0);
+				double scoreS = parser.evalRuleCount(tree, (short) 0);
+				scoresOfST.add(scoreT);
+				scoresOfST.add(scoreS);
 				
 				logger.trace(tree.getYield());
 				MethodUtil.debugCount(grammar, lexicon, tree); // DEBUG
