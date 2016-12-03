@@ -2,7 +2,6 @@ package edu.shanghaitech.ai.nlp.lveg;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
 import edu.shanghaitech.ai.nlp.util.Recorder;
@@ -29,11 +28,6 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	 */
 	protected List<Double> vars;
 	protected List<Double> mus;
-	
-	protected List<Double> mgrads;
-	protected List<Double> vgrads;
-	// points ~ N(0, 1)
-	protected List<Double> sample;
 	
 	
 	public GaussianDistribution() {
@@ -79,54 +73,60 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	
 	
 	/**
-	 * Eval according to the sample and parameters (mu & sigma).
+	 * Eval the gaussian distribution using the given sample.
 	 * 
-	 * @return
-	 */
-	protected double eval() { return -0.0; }
-	
-	
-	/**
-	 * Eval the gaussian distribution given the sample.
-	 * 
-	 * @param sample the sample from this gaussian distribution
+	 * @param sample the sample from N(0, 1)
 	 * @return
 	 */
 	protected double eval(List<Double> sample) { return -0.0; }
 	
 	
 	/**
+	 * Eval the gaussian distribution using the given sample
+	 * 
+	 * @param sample the sample 
+	 * @param normal whether the sample is from N(0, 1) (true) or from this gaussian (false).
+	 * @return
+	 */
+	protected double eval(List<Double> sample, boolean normal) { return -0.0; } 
+	
+	
+	/**
+	 * @param sample normalize the non-normal sample 
+	 * @return
+	 */
+	protected List<Double> normalize(List<Double> sample) {
+		List<Double> list = new ArrayList<Double>();
+		for (int i = 0; i < dim; i++) {
+			list.add((sample.get(i) - mus.get(i)) / Math.exp(vars.get(i) / 2));
+		}
+		return list;
+	}
+	
+	
+	/**
 	 * Take the derivative of gaussian distribution with respect to the parameters (mu & sigma).
 	 * 
-	 * @param factor dRuleWeight * weight * dMixingWeight
-	 * @param sample the sample from this gaussian distribution
-	 * @param grads  gradients container
+	 * @param factor  dRuleWeight * weight * dMixingWeight
+	 * @param sample  the sample from this gaussian distribution
+	 * @param grads   gradients container
+	 * @param isample index of the sample
 	 */
-	protected void derivative(double factor, List<Double> sample, List<Double> grads, short nsample) {}
+	protected void derivative(double factor, List<Double> sample, List<Double> grads, short isample) {}
 	
 	
 	/**
-	 * Take the derivative of MoG with respect to the parameters (mu & sigma) of the component.
+	 * Restore the real sample from the sample that is sampled from the standard normal distribution.
 	 * 
-	 * @param factor  
-	 * @param nsample accumulate gradients (>0) or not (0)
+	 * @param sample the sample sampled from N(0, 1)
+	 * @param truth  the sample from this gaussian distribution
 	 */
-	protected void derivative(double factor, int nsample) {}
-	
-	
-	/**
-	 * Sample from the Gaussian distribution.
-	 * 
-	 * @param random random number generator
-	 */
-	protected void sample(Random random) {
-		if (sample == null) {
-			sample = new ArrayList<Double>(); 
-		} else {
-			sample.clear();
-		}
+	protected void restoreSample(List<Double> sample, List<Double> truth) {
+		assert(sample.size() == dim);
+		double real;
 		for (int i = 0; i < dim; i++) {
-			sample.add(random.nextGaussian());
+			real = sample.get(i) * Math.exp(vars.get(i) / 2) + mus.get(i);
+			truth.add(real);
 		}
 	}
 	
@@ -138,22 +138,6 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	 * @param grads gradients
 	 */
 	protected void update(double lr, List<Double> grads) {}
-	
-	
-	/**
-	 * Update parameters using the gradient.
-	 * 
-	 * @param learningRate learning rate
-	 */
-	protected void update(double learningRate, short nsample) {
-		double mu, sigma;
-		for (int i = 0; i < dim; i++) {
-			mu = mus.get(i) - learningRate * mgrads.get(i) / nsample;
-			sigma = vars.get(i) - learningRate * vgrads.get(i) / nsample;
-			mus.set(i, mu);
-			vars.set(i, sigma);
-		}
-	}
 	
 	
 	/**

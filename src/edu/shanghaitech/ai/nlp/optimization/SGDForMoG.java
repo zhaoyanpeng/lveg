@@ -2,12 +2,12 @@ package edu.shanghaitech.ai.nlp.optimization;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
-import edu.shanghaitech.ai.nlp.lveg.BinaryGrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.GrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.UnaryGrammarRule;
@@ -22,14 +22,16 @@ import edu.shanghaitech.ai.nlp.util.Recorder;
 public class SGDForMoG extends Recorder {
 	
 	protected Random random;
-	protected double lr;
 	protected short nsample;
 	
+	protected Map<String, List<Double>> truths;
 	protected Map<String, List<Double>> sample;
 	protected Map<String, List<Double>> ggrads;
 	protected List<Double> wgrads;
 	protected double wgrad;
 	
+	protected Set<String> verifier;
+	protected static double lr;
 	
 	/**
 	 * To avoid the excessive 'new' operations.
@@ -41,6 +43,12 @@ public class SGDForMoG extends Recorder {
 		sample.put(GrammarRule.Unit.UC, new ArrayList<Double>());
 		sample.put(GrammarRule.Unit.LC, new ArrayList<Double>());
 		sample.put(GrammarRule.Unit.RC, new ArrayList<Double>());
+		this.truths = new HashMap<String, List<Double>>();
+		truths.put(GrammarRule.Unit.P, new ArrayList<Double>());
+		truths.put(GrammarRule.Unit.C, new ArrayList<Double>());
+		truths.put(GrammarRule.Unit.UC, new ArrayList<Double>());
+		truths.put(GrammarRule.Unit.LC, new ArrayList<Double>());
+		truths.put(GrammarRule.Unit.RC, new ArrayList<Double>());
 		this.wgrads = new ArrayList<Double>();
 		this.ggrads = new HashMap<String, List<Double>>();
 		ggrads.put(GrammarRule.Unit.P, new ArrayList<Double>());
@@ -48,6 +56,7 @@ public class SGDForMoG extends Recorder {
 		ggrads.put(GrammarRule.Unit.UC, new ArrayList<Double>());
 		ggrads.put(GrammarRule.Unit.LC, new ArrayList<Double>());
 		sample.put(GrammarRule.Unit.RC, new ArrayList<Double>());
+		this.verifier = new HashSet<String>();
 	}
 	
 	
@@ -55,7 +64,7 @@ public class SGDForMoG extends Recorder {
 		this();
 		this.random = random;
 		this.nsample = 3;
-		this.lr = 0.02;
+		SGDForMoG.lr = 0.02;
 	}
 	
 	
@@ -63,28 +72,130 @@ public class SGDForMoG extends Recorder {
 		this();
 		this.random = random;
 		this.nsample = nsample;
-		this.lr = lr;
+		SGDForMoG.lr = lr;
 	}
 	
 	
-	private void allocate(int ncomponent) {
-		for (int i = 0; i < ncomponent; i++) {
-			wgrads.add(0.0);
+	/**
+	 * @param rule
+	 * @param ioScoreWithT
+	 * @param ioScoreWithS
+	 * @param scoresOfSAndT
+	 */
+	public void optimize(
+			GrammarRule rule, 
+			List<Map<String, GaussianMixture>> ioScoreWithT,
+			List<Map<String, GaussianMixture>> ioScoreWithS,
+			List<Double> scoresOfSAndT) {
+		int size = ioScoreWithT.size();
+		if (size != ioScoreWithS.size()) {
+			logger.error("Rule count with the tree is not equal to that with the sentence.");
+			return;
+		}
+		GaussianMixture ruleW = rule.getWeight();
+		int ncomponent = ruleW.getNcomponent(), idx = -1;
+		Map<String, GaussianMixture> iosWithT, iosWithS;
+		double scoreT, scoreS, dRuleW;
+		
+		for (int i = 0; i < size; i++) {
+			iosWithT = ioScoreWithT.get(i);
+			iosWithS = ioScoreWithS.get(i);
+			idx = getIdx(iosWithT.keySet(), iosWithS.keySet());
+			scoreT = scoresOfSAndT.get(idx * 2);
+			scoreS = scoresOfSAndT.get(idx * 2 + 1);
+			for (int icomponent = 0; icomponent < ncomponent; icomponent++) {
+				for (short isample = 0; isample < nsample; isample++) {
+					clearSample(); // to ensure the correct sample is in use
+					if (rule.isUnary()) {
+						UnaryGrammarRule urule = (UnaryGrammarRule) rule;
+						switch (urule.getType()) {
+						case GrammarRule.GENERAL: {
+							sample(sample.get(GrammarRule.Unit.P), ruleW.getDim(icomponent, GrammarRule.Unit.P));
+							sample(sample.get(GrammarRule.Unit.UC), ruleW.getDim(icomponent, GrammarRule.Unit.UC));
+							break;
+						}
+						case GrammarRule.LHSPACE: {
+							sample(sample.get(GrammarRule.Unit.P), ruleW.getDim(icomponent, GrammarRule.Unit.P));
+							/**
+							 * For the rule A->w, count(A->w) = o(A->w) * i(A->w) = o(A->w) * w(A->w).
+							 * For the sub-type rule r of A->w, count(a->w) = o(a->w) * w(a->w). The derivative
+							 * of the objective function w.r.t w(r) is (count(r | T_S) - count(r | S)) / w(r), 
+							 * which contains the term 1 / w(r), thus we could eliminate w(r) when computing it.
+							 */
+							if (icomponent == 0 && isample == 0) {
+								iosWithT.remove(GrammarRule.Unit.C);
+								iosWithS.remove(GrammarRule.Unit.C);
+							}
+							break;
+						}
+						case GrammarRule.RHSPACE: {
+							sample(sample.get(GrammarRule.Unit.C), ruleW.getDim(icomponent, GrammarRule.Unit.C));
+							break;
+						}
+						default: {
+							logger.error("Not a valid unary grammar rule.");
+						}
+						}
+					} else {
+						sample(sample.get(GrammarRule.Unit.P), ruleW.getDim(icomponent, GrammarRule.Unit.P));
+						sample(sample.get(GrammarRule.Unit.LC), ruleW.getDim(icomponent, GrammarRule.Unit.LC));
+						sample(sample.get(GrammarRule.Unit.RC), ruleW.getDim(icomponent, GrammarRule.Unit.UC));
+					}
+					ruleW.restoreSample(icomponent, sample, truths);
+					dRuleW = derivateRuleWeight(scoreT, scoreS, iosWithT, iosWithS);
+					ruleW.derivative(isample, icomponent, dRuleW, sample, ggrads, wgrads);
+				}
+				ruleW.update(icomponent, lr, ggrads, wgrads);
+			}
 		}
 	}
 	
 	
-	private void deallocate() {
-		for (int i = 0; i < wgrads.size(); i++) {
-			wgrads.set(i, 0.0);
+	private double derivateRuleWeight(
+			double scoreT, 
+			double scoreS, 
+			Map<String, GaussianMixture> ioScoreWithT,
+			Map<String, GaussianMixture> ioScoreWithS) {
+		double cntWithT = 1.0, cntWithS = 1.0, dRuleW, part;
+		for (Map.Entry<String, GaussianMixture> iosWithT : ioScoreWithT.entrySet()) {
+			verifier.clear();
+			part = iosWithT.getValue().evalInsideOutside(truths.get(iosWithT.getKey()), verifier);
+			if (verifier.size() > 1) { 
+				logger.error("Invalid inside or outside scores with the tree."); 
+			}
+			cntWithT *= part;
 		}
+		for (Map.Entry<String, GaussianMixture> iosWithS : ioScoreWithS.entrySet()) {
+			verifier.clear();
+			part = iosWithS.getValue().evalInsideOutside(truths.get(iosWithS.getKey()), verifier);
+			if (verifier.size() > 1) { 
+				logger.error("Invalid inside or outside scores with the sentence."); 
+			}
+			cntWithS *= part;
+		}
+		if (scoreT <= 0 || scoreS <= 0) {
+			logger.error("Invalid tree score or sentence score.");
+			return -0.0;
+		}
+		dRuleW = cntWithS / scoreS - cntWithT / scoreT;
+		return dRuleW;
 	}
 	
 	
-	private void sample(List<Double> slice, int dim) {
+	protected void sample(List<Double> slice, int dim) {
 		slice.clear();
 		for (int i = 0; i < dim; i++) {
 			slice.add(random.nextGaussian());
+		}
+	}
+	
+	
+	protected void clearSample() {
+		for (Map.Entry<String, List<Double>> slice : sample.entrySet()) {
+			slice.getValue().clear();
+		}
+		for (Map.Entry<String, List<Double>> truth : truths.entrySet()) {
+			truth.getValue().clear();
 		}
 	}
 	
@@ -99,82 +210,6 @@ public class SGDForMoG extends Recorder {
 		}
 		if (idx < 0) { logger.error("Not found the score of the tree or the score of the sentence."); }
 		return idx;
-	}
-	
-	
-	private double derivateOfRuleWeight(
-			double scoreT, 
-			double scoreS, 
-			Map<String, GaussianMixture> iosWithT,
-			Map<String, GaussianMixture> iosWithS) {
-		
-		
-		return -0.0;
-	}
-	
-	
-	public void optimize(
-			GrammarRule rule, 
-			List<Map<String, GaussianMixture>> ioScoreWithT,
-			List<Map<String, GaussianMixture>> ioScoreWithS,
-			List<Double> scoresOfSAndT) {
-		int batchsize = ioScoreWithT.size();
-		if (batchsize != ioScoreWithT.size()) {
-			logger.error("Rule count with the tree is not equal to that with the sentence.");
-			return;
-		}
-		
-		GaussianMixture ruleW = rule.getWeight();
-		int ncomponent = ruleW.getNcomponent(), idx = -1;
-		
-		allocate(ncomponent); // TODO not necessary, one double is in fact enough
-		
-		double scoreT, scoreS;
-		double dRuleW, iMixingW, dMixingW, factor;
-		Map<String, GaussianMixture> iosWithT, iosWithS;
-		UnaryGrammarRule urule = (UnaryGrammarRule) rule;
-		
-		for (int i = 0; i < batchsize; i++) {
-			iosWithT = ioScoreWithT.get(i);
-			iosWithS = ioScoreWithS.get(i);
-			idx = getIdx(iosWithT.keySet(), iosWithS.keySet());
-			scoreT = scoresOfSAndT.get(idx * 2);
-			scoreS = scoresOfSAndT.get(idx * 2 + 1);
-			for (int icomponent = 0; icomponent < ncomponent; icomponent++) {
-				for (short isample = 0; isample < nsample; isample++) {
-					if (rule instanceof UnaryGrammarRule) {
-						switch (urule.getType()) {
-						case GrammarRule.LHSPACE: {
-							sample(sample.get(GrammarRule.Unit.P), ruleW.getDim(icomponent, GrammarRule.Unit.P));
-							break;
-						}
-						case GrammarRule.RHSPACE: {
-							sample(sample.get(GrammarRule.Unit.C), ruleW.getDim(icomponent, GrammarRule.Unit.C));
-							break;
-						}
-						case GrammarRule.GENERAL: {
-							sample(sample.get(GrammarRule.Unit.P), ruleW.getDim(icomponent, GrammarRule.Unit.P));
-							sample(sample.get(GrammarRule.Unit.UC), ruleW.getDim(icomponent, GrammarRule.Unit.UC));
-							break;
-						}
-						default: {
-							logger.error("Not a valid unary grammar rule.");
-						}
-						}
-					} else if (rule instanceof BinaryGrammarRule) {
-						sample(sample.get(GrammarRule.Unit.P), ruleW.getDim(icomponent, GrammarRule.Unit.P));
-						sample(sample.get(GrammarRule.Unit.LC), ruleW.getDim(icomponent, GrammarRule.Unit.LC));
-						sample(sample.get(GrammarRule.Unit.RC), ruleW.getDim(icomponent, GrammarRule.Unit.UC));
-					} else {
-						logger.error("Not a valid grammar rule.");
-					}
-					dRuleW = derivateOfRuleWeight(scoreT, scoreS, iosWithT, iosWithS);
-					ruleW.derivative(isample, icomponent, dRuleW, sample, ggrads, wgrads);
-					wgrads.set(icomponent, wgrads.get(icomponent) + 1);
-				}
-				ruleW.update(icomponent, lr, ggrads, wgrads);
-			}
-		}
 	}
 	
 	

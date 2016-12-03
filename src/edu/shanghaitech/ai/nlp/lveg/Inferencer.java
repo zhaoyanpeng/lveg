@@ -8,12 +8,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 
-import org.apache.log4j.Logger;
-
 import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.syntax.State;
-import edu.shanghaitech.ai.nlp.util.MethodUtil;
 
 /**
  * Compute the inside and outside scores and store them in a chart. 
@@ -328,10 +325,9 @@ public class Inferencer {
 	
 	
 	protected void evalRuleCount(Tree<State> tree, Chart chart, short isample, double sentenceScore) {
-		double count = 0.0;
 		List<State> sentence = tree.getYield();
 		int x0, x1, y0, y1, c0, c1, c2, nword = sentence.size();
-		GaussianMixture outScore, cinScore, linScore, rinScore, ruleScore;
+		GaussianMixture outScore, cinScore, linScore, rinScore;
 		
 		Map<GrammarRule, GrammarRule> uRuleMap = grammar.getUnaryRuleMap();
 		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBinaryRuleMap();
@@ -346,7 +342,6 @@ public class Inferencer {
 				for (Map.Entry<GrammarRule, GrammarRule> rmap : uRuleMap.entrySet()) {
 					UnaryGrammarRule rule = (UnaryGrammarRule) rmap.getValue();
 					if (chart.oContainsKey(rule.lhs, c2) && chart.iContainsKey(rule.rhs, c2)) {
-						ruleScore = rule.getWeight();
 						cinScore = chart.getInsideScore(rule.rhs, c2);
 						outScore = chart.getOutsideScore(rule.lhs, c2);
 						
@@ -680,7 +675,7 @@ public class Inferencer {
 	 * @param ruleScore binary rule score
 	 * @return
 	 */
-	private double computeBinaryRuleCount(
+	protected double computeBinaryRuleCount(
 			GaussianMixture outScore, 
 			GaussianMixture linScore, 
 			GaussianMixture rinScore, 
@@ -700,7 +695,7 @@ public class Inferencer {
 	 * @param ruleScore unary rule score
 	 * @return
 	 */
-	private double computeUnaryRuleCount(
+	protected double computeUnaryRuleCount(
 			GaussianMixture outScore, 
 			GaussianMixture cinScore, 
 			GaussianMixture ruleScore) {

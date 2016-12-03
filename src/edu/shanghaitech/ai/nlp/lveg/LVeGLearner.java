@@ -295,8 +295,8 @@ public class LVeGLearner extends Recorder {
 			MethodUtil.debugCount(grammar, lexicon, null, null); // DEBUG
 			
 			// apply gradient descent
-			grammar.applyGradientDescent();
-			lexicon.applyGradientDescent();
+			grammar.applyGradientDescent(scoresOfST);
+			lexicon.applyGradientDescent(scoresOfST);
 			
 //			MethodUtil.debugCount(grammar, lexicon, null, null); // DEBUG
 			

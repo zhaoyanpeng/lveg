@@ -25,7 +25,7 @@ public class LVeGParser extends Recorder {
 	public double evalRuleCount(Tree<State> tree, short isample) {
 		Chart chart = doInsideOutside(tree);
 		GaussianMixture score = chart.getInsideScore((short) 0, Chart.idx(0, 1));
-		double sentenceScore = score.eval();
+		double sentenceScore = score.eval(null);
 		
 		logger.trace("Sentence score: " + sentenceScore + ", Margin: " + score.marginalize()); // DEBUG
 //		LVeGLearner.logger.trace("\nEval count..."); // DEBUG
@@ -47,7 +47,7 @@ public class LVeGParser extends Recorder {
 		
 		// the parse tree score, which should contain only weights of the components
 		GaussianMixture score = tree.getLabel().getInsideScore();
-		double treeScore = score.eval();
+		double treeScore = score.eval(null);
 		
 		logger.trace("\nTree score: " + treeScore); // DEBUG
 //		LVeGLearner.logger.trace("\nEval count with the tree..."); // DEBUG
@@ -135,7 +135,7 @@ public class LVeGParser extends Recorder {
 	public double scoreTree(Tree<State> tree) {
 		inferencer.insideScoreWithTree(tree);
 		GaussianMixture gm = tree.getLabel().getInsideScore();
-		double score = gm.eval();
+		double score = gm.eval(null);
 		return score;
 	}
 	
@@ -154,7 +154,7 @@ public class LVeGParser extends Recorder {
 		inferencer.insideScore(chart, sentence, nword);
 		
 		GaussianMixture gm = chart.getInsideScore((short) 0, Chart.idx(0, 1));
-		double score = gm.eval();
+		double score = gm.eval(null);
 		
 		return score;
 	}

@@ -105,8 +105,8 @@ public abstract class LVeGLexicon {
 	/**
 	 * Apply stochastic gradient descent.
 	 */
-	public void applyGradientDescent() {
-		optimizer.applyGradientDescent();
+	public void applyGradientDescent(List<Double> scoresOfST) {
+		optimizer.applyGradientDescent(scoresOfST);
 	}
 	
 	

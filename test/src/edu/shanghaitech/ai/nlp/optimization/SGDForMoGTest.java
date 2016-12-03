@@ -14,7 +14,7 @@ public class SGDForMoGTest {
 //		int x = Integer.valueOf(key0);
 		int a = 24;
 		int b = 24;
-		assert(a == b);
+		assert(a != b);
 	}
 
 }

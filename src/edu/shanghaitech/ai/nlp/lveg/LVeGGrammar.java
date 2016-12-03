@@ -140,8 +140,8 @@ public class LVeGGrammar extends Recorder implements Serializable {
 	/**
 	 * Apply stochastic gradient descent.
 	 */
-	public void applyGradientDescent() {
-		optimizer.applyGradientDescent();
+	public void applyGradientDescent(List<Double> scoresOfST) {
+		optimizer.applyGradientDescent(scoresOfST);
 	}
 	
 	

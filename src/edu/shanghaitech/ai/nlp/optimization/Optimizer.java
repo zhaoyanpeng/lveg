@@ -8,10 +8,8 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
-import edu.shanghaitech.ai.nlp.lveg.BinaryGrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.GrammarRule;
-import edu.shanghaitech.ai.nlp.lveg.UnaryGrammarRule;
 import edu.shanghaitech.ai.nlp.util.Recorder;
 
 /**
@@ -31,19 +29,8 @@ public class Optimizer extends Recorder {
 	 */
 	private Set<GrammarRule> ruleSet;
 	
-	/**
-	 * All the objects share the same instance of Random, here the random 
-	 * is used to sample the gradients, we provide the optional sampling  
-	 * times and the choice that whether accumulating the gradients or not.
-	 */
-	protected Random random;
-	private short nsample = 3;
-	private boolean cumulative = true;
-	
-	// global learning rate
-	protected double globalLR = 0.002;
-	
 	private SGDForMoG minimizer;
+	private double lr;
 	
 	
 	private Optimizer() {
@@ -55,21 +42,21 @@ public class Optimizer extends Recorder {
 	
 	public Optimizer(Random random) {
 		this();
-		this.random = random;
+		lr = 0.02;
 		this.minimizer = new SGDForMoG(random);
 	}
 	
 	
 	public Optimizer(Random random, short nsample, double lr) {
 		this();
-		this.random = random;
-		this.nsample = nsample;
-		this.globalLR = lr;
+		this.lr = lr;
 		this.minimizer = new SGDForMoG(random, nsample, lr);
 	}
 	
 	
 	/**
+	 * Stochastic gradient descent.
+	 * 
 	 * @param scoresOfST the parse tree score (odd index) and the sentence score (even index).
 	 */
 	public void applyGradientDescent(List<Double> scoresOfST) {
@@ -79,35 +66,6 @@ public class Optimizer extends Recorder {
 			countWithS = countsWithS.get(rule);
 			minimizer.optimize(rule, countWithT, countWithS, scoresOfST);
 		}
-		reset();
-	}
-	
-	
-	/**
-	 * Stochastic gradient descent.
-	 */
-	public void applyGradientDescent() {
-	}
-	
-	
-	/**
-	 * Stochastic gradient descent.
-	 * 
-	 * @param gm   the rule weight
-	 * @param cnt0 conditional pseudo count
-	 * @param cnt1 pseudo count
-	 */
-	private void applyGradientDescent(GaussianMixture gm, double cnt0, double cnt1) {
-		for (short i = 0; i < nsample; i++) {
-			double factor = 0.0;
-			while (factor == 0.0) {
-				gm.sample(random);
-				factor = gm.eval();
-			}
- 			factor = (cnt1 - cnt0) / factor;
-			gm.derivative(factor, cumulative);
-		}
-		gm.update(globalLR);
 	}
 	
 	
@@ -160,13 +118,6 @@ public class Optimizer extends Recorder {
 	
 	
 	public void reset() {
-	}
-	
-	
-	/**
-	 * Counts are only used once for a batch.
-	 */
-	public void resetRuleCount() {
 	}
 	
 	

@@ -32,32 +32,38 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 	
 	
 	@Override
-	protected double eval() {
-		double exps = 0.0, sinv = 1.0;
-		for (int i = 0; i < dim; i++) {
-			exps -= Math.pow(sample.get(i), 2) / 2;
-			// CHECK Math.sqrt(Math.exp(x))
-			sinv /= Math.exp(vars.get(i) / 2);
-		}
-		// TODO shall we truncate it to zero if it is very small?
-		double value = Math.pow(2 * Math.PI, -dim / 2) * sinv * Math.exp(exps);
-		return value;
-	}
-	
-	
-	@Override
 	protected double eval(List<Double> sample) {
 		if (sample != null && sample.size() == dim) {
 			double exps = 0.0, sinv = 1.0;
 			for (int i = 0; i < dim; i++) {
 				exps -= Math.pow(sample.get(i), 2) / 2;
+				// CHECK Math.sqrt(Math.exp(x))
 				sinv /= Math.exp(vars.get(i) / 2);
 			}
+			// TODO shall we truncate it to zero if it is very small?
 			double value = Math.pow(2 * Math.PI, -dim / 2) * sinv * Math.exp(exps);
 			return value;
 		}
 		logger.error("The sample is not valid.");
 		return -1.0;
+	}
+	
+	
+	@Override
+	protected double eval(List<Double> sample, boolean normal) { 
+		if (!normal) {
+			// sample = normalize(sample);
+			double astd, norm, exps = 0.0, sinv = 1.0;
+			for (int i = 0; i < dim; i++) {
+				astd = Math.exp(vars.get(i) / 2);
+				norm = (sample.get(i) - mus.get(i)) / astd;
+				exps -= Math.pow(norm, 2) / 2;
+				sinv /= astd;
+			}
+			double value = Math.pow(2 * Math.PI, -dim / 2) * sinv * Math.exp(exps);
+			return value;
+		}
+		return eval(sample);
 	}
 	
 	
@@ -74,6 +80,8 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 			for (int i = 0; i < dim; i++) {
 				sigma = Math.exp(vars.get(i) / 2);
 				mgrad = factor * sample.get(i) / sigma;
+				// CHECK dw / dx = (dw / ds) * (ds / dx) = (factor * (point^2 - 1) / s) * ((1 / 2) * s), 
+				// where s = sigma = std = exp(x / 2)
 				vgrad = factor * (Math.pow(sample.get(i), 2) - 1) / 2;
 				grads.set(i * 2, mgrad);
 				grads.set(i * 2 + 1, vgrad);
@@ -83,33 +91,12 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 	
 	
 	@Override
-	protected void derivative(double factor, int nsample) {
-		if (nsample == 0) {
-			mgrads.clear();
-			vgrads.clear();
-			for (int i = 0; i < dim; i++) {
-				mgrads.add(0.0);
-				vgrads.add(0.0);
-			}
-		}
-		for (int i = 0; i < dim; i++) {
-			double sigma = Math.exp(vars.get(i) / 2);
-			double mgrad = factor * sample.get(i) / sigma;
-			// CHECK dw / dx = (dw / ds) * (ds / dx) = (factor * (point^2 - 1) / s) * ((1 / 2) * s) 
-			double vgrad = factor * (Math.pow(sample.get(i), 2) - 1) / 2;
-			mgrads.set(i, mgrads.get(i) + mgrad);
-			vgrads.set(i, vgrads.get(i) + vgrad);
-		}
-	}
-	
-	
-	@Override
 	protected void update(double lr, List<Double> grads) {
 		assert(grads.size() == 2 * dim);
 		double mu, sigma;
 		for (int i = 0; i < dim; i++) {
-			mu = mus.get(i * 2) - lr * mgrads.get(i);
-			sigma = vars.get(i * 2 + 1) - lr * vgrads.get(i);
+			mu = grads.get(i * 2) - lr * mus.get(i);
+			sigma = grads.get(i * 2 + 1) - lr * vars.get(i);
 			mus.set(i, mu);
 			vars.set(i, sigma);
 		}

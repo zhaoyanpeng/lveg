@@ -5,10 +5,10 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
+import edu.shanghaitech.ai.nlp.util.Recorder;
 
 /**
  * Variable declaration rules: mixture (mixture of gaussians), component (component of the GM), 
@@ -20,17 +20,14 @@ import edu.shanghaitech.ai.nlp.util.MethodUtil;
  * @author Yanpeng Zhao
  *
  */
-public class GaussianMixture {
+public class GaussianMixture extends Recorder {
 	/**
 	 * Not sure if it is necessary.
 	 * 
 	 * @deprecated 
 	 */
 	protected double bias;
-	
-	protected short nsample;
 	protected int ncomponent;
-	
 	
 	/**
 	 * The weights need to be positive. We use the exponential function to ensure 
@@ -38,10 +35,6 @@ public class GaussianMixture {
 	 */
 	protected List<Double> weights;
 	
-	protected List<Double> values;
-	protected List<Double> wgrads;
-	
-
 	/**
 	 * The set of Gaussian components. Each component consists of one or more 
 	 * independent Gaussian distributions mapped by keys. Keys: P (parent); C 
@@ -54,12 +47,9 @@ public class GaussianMixture {
 	
 	public GaussianMixture() {
 		this.bias = 0;
-		this.nsample = 0;
 		this.ncomponent = 0;
 		this.weights = new ArrayList<Double>();
 		this.mixture = new ArrayList<Map<String, Set<GaussianDistribution>>>();
-//		this.values = new ArrayList<Double>();
-//		this.wgrads = new ArrayList<Double>();
 	}
 	
 	
@@ -569,36 +559,32 @@ public class GaussianMixture {
 	}
 	
 	
-	/**
-	 * Sample from MoG.
-	 * 
-	 * @param random random number generator
-	 */
-	public void sample(Random random) {
-		for (Map<String, Set<GaussianDistribution>> component : mixture) {
+	public double evalInsideOutside(List<Double> sample, Set<String> verifier) {
+		double ret = 0.0, value;
+		for (int i = 0; i < ncomponent; i++) {
+			Map<String, Set<GaussianDistribution>> component = mixture.get(i);
+			value = 1.0;
 			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
+				verifier.add(gaussian.getKey());
 				for (GaussianDistribution gd : gaussian.getValue()) {
-					gd.sample(random);
+					value *= gd.eval(sample, false);
 				}
 			}
+			ret += Math.exp(weights.get(i)) * value;
 		}
+		return ret;
 	}
 	
 	
-	public double eval(Map<String, List<Double>> sample, int icomponent) {
-		double value = 1.0;
-		Map<String, Set<GaussianDistribution>> component = mixture.get(icomponent);
-		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
-			List<Double> slice = sample.get(gaussian.getKey());
-			for (GaussianDistribution gd : gaussian.getValue()) {
-				value *= gd.eval(slice);
-			}
-		}
-		return value;
-	}
-	
-	
+	/**
+	 * Eval the MoG using the given sample.
+	 * 
+	 * @param sample the sample
+	 * @return
+	 */
 	public double eval(Map<String, List<Double>> sample) {
+		if (sample == null) { return eval(); }
+		
 		double ret = 0.0, value;
 		for (int i = 0; i < ncomponent; i++) {
 			Map<String, Set<GaussianDistribution>> component = mixture.get(i);
@@ -616,26 +602,61 @@ public class GaussianMixture {
 	
 	
 	/**
-	 * Eval the mixture of gaussians. Meanwhile, take the derivative of MoG w.r.t 
-	 * the weight of the component is computed.
+	 * This method assumes the MoG is equivalent to a constant.
 	 * 
 	 * @return
 	 */
-	public double eval() {
-		values.clear(); // clear
-		double ret = 0.0, value;
+	private double eval() {
+		double ret = 0.0;
 		for (int i = 0; i < ncomponent; i++) {
-			Map<String, Set<GaussianDistribution>> component = mixture.get(i);
-			value = 1.0;
-			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
-				for (GaussianDistribution gd : gaussian.getValue()) {
-					value *= gd.eval();
-				}
+			if (mixture.get(i).size() > 0) {
+				logger.error("You are not supposed to call this method if the MoGul contains variables.");
 			}
-			values.add(value);
-			ret += Math.exp(weights.get(i)) * value;
+			ret += Math.exp(weights.get(i));
 		}
 		return ret;
+	}
+	
+	
+	/**
+	 * Restore the real sample from the sample that is sampled from the standard normal distribution.
+	 * 
+	 * @param icomponent index of the component
+	 * @param sample     the sample from N(0, 1)
+	 * @param truths     the placeholder
+	 */
+	public void restoreSample(int icomponent, 
+			Map<String, List<Double>> sample, 
+			Map<String, List<Double>> truths) {
+		Map<String, Set<GaussianDistribution>> component = mixture.get(icomponent);
+		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
+			List<Double> slice = sample.get(gaussian.getKey());
+			List<Double> truth = truths.get(gaussian.getKey());
+			for (GaussianDistribution gd : gaussian.getValue()) {
+				gd.restoreSample(slice, truth);
+				break;
+			}
+		}
+	}
+	
+	
+	/**
+	 * Take the derivative of the MoG w.r.t the mixing weight.
+	 * 
+	 * @param sample     the sample from N(0, 1)
+	 * @param icomponent index of the component
+	 * @return
+	 */
+	public double derivateMixingWeight(Map<String, List<Double>> sample, int icomponent) {
+		double value = 1.0;
+		Map<String, Set<GaussianDistribution>> component = mixture.get(icomponent);
+		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
+			List<Double> slice = sample.get(gaussian.getKey());
+			for (GaussianDistribution gd : gaussian.getValue()) {
+				value *= gd.eval(slice, true);
+			}
+		}
+		return value;
 	}
 	
 	
@@ -644,7 +665,7 @@ public class GaussianMixture {
 	 * 
 	 * @param isample    # of sampling times
 	 * @param icomponent index of the component of MoG
-	 * @param factor     dRuleWeight
+	 * @param factor     derivative with respect to rule weight: (E[c(r, t) | T_x] - E[c(r, t) | x]) / w(r)
 	 * @param sample     the sample from the current component
 	 * @param ggrads     gradients of the parameters of gaussian distributions
 	 * @param wgrads     gradients of the mixing weights of MoG
@@ -658,7 +679,7 @@ public class GaussianMixture {
 				wgrads.add(0.0);
 			}
 		}
-		double dMixingW = eval(sample, icomponent);
+		double dMixingW = derivateMixingWeight(sample, icomponent);
 		factor = factor * Math.exp(weights.get(icomponent)) * dMixingW;
 		Map<String, Set<GaussianDistribution>> component = mixture.get(icomponent);
 		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
@@ -672,42 +693,12 @@ public class GaussianMixture {
 	}
 	
 	
-	
-	/**
-	 * Take the derivative of MoG w.r.t parameters (mu & sigma) of the component.
-	 * 
-	 * @param factor     (E[c(r, t) | T_x] - E[c(r, t) | x]) / w(r)
-	 * @param cumulative accumulate gradients or not
-	 */
-	public void derivative(double factor, boolean cumulative) {
-		if (!cumulative) { nsample = 0; }
-		if (nsample == 0) {
-			wgrads.clear();
-			for (int i = 0; i < ncomponent; i++) {
-				wgrads.add(0.0);
-			}
-		}
-		for (int i = 0; i < ncomponent; i++) {
-			double weight = Math.exp(weights.get(i));
-			double wgrad = values.get(i) * factor * weight;
-			Map<String, Set<GaussianDistribution>> component = mixture.get(i);
-			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
-				for (GaussianDistribution gd : gaussian.getValue()) {
-					gd.derivative(weight * wgrad, nsample);
-				}
-			}
-			wgrads.set(i, wgrads.get(i) + wgrad);
-		}
-		nsample++; // accumulation counter 
-	}
-	
-	
 	/**
 	 * Update parameters using the gradient.
 	 * 
 	 * @param icomponent index of the component of MoG
 	 * @param lr         learning rate
-	 * @param ggrads     gradients of the parameters of gaussian distributions
+	 * @param ggrads     gradients of the parameters of gaussians
 	 * @param wgrads     gradients of the mixing weights of MoG
 	 */
 	public void update(int icomponent, double lr, Map<String, List<Double>> ggrads, List<Double> wgrads) {
@@ -720,31 +711,6 @@ public class GaussianMixture {
 		}
 		double weight = weights.get(icomponent) - lr * wgrads.get(icomponent);
 		weights.set(icomponent, weight);
-	}
-	
-	
-	/**
-	 * Update parameters using the gradient.
-	 * 
-	 * @param learningRate learning rate
-	 */
-	public void update(double learningRate) {
-		if (nsample <= 0) { 
-			System.err.println("Nothing to update.");
-			return; 
-		}
-		for (int i = 0; i < ncomponent; i++) {
-			double weight = weights.get(i);
-			Map<String, Set<GaussianDistribution>> component = mixture.get(i);
-			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
-				for (GaussianDistribution gd : gaussian.getValue()) {
-					gd.update(learningRate, (short) 1);
-				}
-			}
-			weight -= learningRate * wgrads.get(i) / 1;
-			weights.set(i, weight);
-		}
-		nsample = 0; // reset accumulation counter 
 	}
 	
 	
