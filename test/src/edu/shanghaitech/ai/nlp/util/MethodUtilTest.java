@@ -19,11 +19,11 @@ public class MethodUtilTest {
 		MethodUtil.printArray(arrayDouble);
 		
 		List<Integer> listInt = new ArrayList<Integer>();
-		MethodUtil.randomInitList(listInt, Integer.class, 5, maxint, false);
+		MethodUtil.randomInitList(listInt, Integer.class, 5, maxint, false, true);
 		MethodUtil.printList(listInt);
 		
 		List<Double> listDouble = new ArrayList<Double>();
-		MethodUtil.randomInitList(listDouble, Double.class, 5, 1, false);
+		MethodUtil.randomInitList(listDouble, Double.class, 5, 1, false, true);
 		MethodUtil.printList(listDouble);
 		
 		int[] arrayint = new int[5];

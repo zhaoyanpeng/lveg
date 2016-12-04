@@ -2,7 +2,6 @@ package edu.shanghaitech.ai.nlp.optimization;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -30,7 +29,6 @@ public class SGDForMoG extends Recorder {
 	protected List<Double> wgrads;
 	protected double wgrad;
 	
-	protected Set<String> verifier;
 	protected static double lr;
 	
 	/**
@@ -56,7 +54,6 @@ public class SGDForMoG extends Recorder {
 		ggrads.put(GrammarRule.Unit.UC, new ArrayList<Double>());
 		ggrads.put(GrammarRule.Unit.LC, new ArrayList<Double>());
 		sample.put(GrammarRule.Unit.RC, new ArrayList<Double>());
-		this.verifier = new HashSet<String>();
 	}
 	
 	
@@ -89,7 +86,7 @@ public class SGDForMoG extends Recorder {
 			List<Double> scoresOfSAndT) {
 		int size = ioScoreWithT.size();
 		if (size != ioScoreWithS.size()) {
-			logger.error("Rule count with the tree is not equal to that with the sentence.");
+			logger.error("Rule count with the tree is not equal to that with the sentence.\n");
 			return;
 		}
 		GaussianMixture ruleW = rule.getWeight();
@@ -133,7 +130,7 @@ public class SGDForMoG extends Recorder {
 							break;
 						}
 						default: {
-							logger.error("Not a valid unary grammar rule.");
+							logger.error("Not a valid unary grammar rule.\n");
 						}
 						}
 					} else {
@@ -158,23 +155,15 @@ public class SGDForMoG extends Recorder {
 			Map<String, GaussianMixture> ioScoreWithS) {
 		double cntWithT = 1.0, cntWithS = 1.0, dRuleW, part;
 		for (Map.Entry<String, GaussianMixture> iosWithT : ioScoreWithT.entrySet()) {
-			verifier.clear();
-			part = iosWithT.getValue().evalInsideOutside(truths.get(iosWithT.getKey()), verifier);
-			if (verifier.size() > 1) { 
-				logger.error("Invalid inside or outside scores with the tree."); 
-			}
+			part = iosWithT.getValue().evalInsideOutside(truths.get(iosWithT.getKey()));
 			cntWithT *= part;
 		}
 		for (Map.Entry<String, GaussianMixture> iosWithS : ioScoreWithS.entrySet()) {
-			verifier.clear();
-			part = iosWithS.getValue().evalInsideOutside(truths.get(iosWithS.getKey()), verifier);
-			if (verifier.size() > 1) { 
-				logger.error("Invalid inside or outside scores with the sentence."); 
-			}
+			part = iosWithS.getValue().evalInsideOutside(truths.get(iosWithS.getKey()));
 			cntWithS *= part;
 		}
 		if (scoreT <= 0 || scoreS <= 0) {
-			logger.error("Invalid tree score or sentence score.");
+			logger.error("Invalid tree score or sentence score.\n");
 			return -0.0;
 		}
 		dRuleW = cntWithS / scoreS - cntWithT / scoreT;
@@ -208,7 +197,7 @@ public class SGDForMoG extends Recorder {
 				break;
 			}
 		}
-		if (idx < 0) { logger.error("Not found the score of the tree or the score of the sentence."); }
+		if (idx < 0) { logger.error("Not found the score of the tree or the score of the sentence.\n"); }
 		return idx;
 	}
 	

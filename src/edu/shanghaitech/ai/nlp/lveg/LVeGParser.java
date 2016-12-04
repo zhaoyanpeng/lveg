@@ -24,45 +24,53 @@ public class LVeGParser extends Recorder {
 	
 	public double evalRuleCount(Tree<State> tree, short isample) {
 		Chart chart = doInsideOutside(tree);
+		logger.trace("\nInside scores with the sentence...\n\n"); // DEBUG
+		MethodUtil.debugChart(Chart.getChart(true), (short) 2); // DEBUG
+		logger.trace("\nOutside scores with the sentence...\n\n"); // DEBUG
+		MethodUtil.debugChart(Chart.getChart(false), (short) 2); // DEBUG
+		
 		GaussianMixture score = chart.getInsideScore((short) 0, Chart.idx(0, 1));
-		double sentenceScore = score.eval(null);
+		double scoreS = score.eval(null);
 		
-		logger.trace("Sentence score: " + sentenceScore + ", Margin: " + score.marginalize()); // DEBUG
-//		LVeGLearner.logger.trace("\nEval count..."); // DEBUG
+		logger.trace("Sentence score: " + scoreS + ", Margin: " + score.marginalize() + "\n"); // DEBUG
+		logger.trace("\nEval rule count with the sentence...\n"); // DEBUG
 		
-		if (sentenceScore <= 0) {
-			System.err.println("Fatal Error: Sentence score is smaller than zero: " + sentenceScore);
+		if (scoreS <= 0) {
+			System.err.println("Fatal Error: Sentence score is smaller than zero: " + scoreS);
 			return -0.0;
 		}
-		inferencer.evalRuleCount(tree, chart, isample, sentenceScore);
-//		LVeGLearner.logger.trace("\nCheck count..."); // DEBUG
+		inferencer.evalRuleCount(tree, chart, isample);
+		
+//		logger.trace("\nCheck rule count with the sentence...\n"); // DEBUG
 //		MethodUtil.debugCount(inferencer.grammar, inferencer.lexicon, tree, chart); // DEBUG
-		return sentenceScore;
+//		logger.trace("\nEval count with the sentence over.\n"); // DEBUG
+		return scoreS;
 	}
 	
 	
 	public double evalRuleCountWithTree(Tree<State> tree, short isample) {
-		// inside and outside scores are stored in the non-terminals of the tree
+//		logger.trace("\nInside/outside scores with the tree...\n\n"); // DEBUG
 		doInsideOutsideWithTree(tree); 
+//		MethodUtil.debugTree(tree, false, (short) 2); // DEBUG
 		
 		// the parse tree score, which should contain only weights of the components
 		GaussianMixture score = tree.getLabel().getInsideScore();
-		double treeScore = score.eval(null);
+		double scoreT = score.eval(null);
 		
-		logger.trace("\nTree score: " + treeScore); // DEBUG
-//		LVeGLearner.logger.trace("\nEval count with the tree..."); // DEBUG
+//		logger.trace("\nTree score: " + scoreT + "\n"); // DEBUG
+//		logger.trace("\nEval rule count with the tree...\n"); // DEBUG
 		
-		if (treeScore <= 0) {
-			System.err.println("Fatal Error: Tree score is smaller than zero: " + treeScore);
+		if (scoreT <= 0) {
+			System.err.println("Fatal Error: Tree score is smaller than zero: " + scoreT + "\n");
 			return -0.0;
 		}
 		// compute the rule counts
-		inferencer.evalRuleCountWithTree(tree, isample, treeScore);
-//		LVeGLearner.logger.trace("\nCheck count with the tree..."); // DEBUG
-//		MethodUtil.debugCount(inferencer.grammar, inferencer.lexicon, tree); // DEBUG
+		inferencer.evalRuleCountWithTree(tree, isample);
 		
-//		LVeGLearner.logger.trace("\nEval count with the tree over."); // DEBUG
-		return treeScore;
+//		logger.trace("\nCheck rule count with the tree...\n"); // DEBUG
+//		MethodUtil.debugCount(inferencer.grammar, inferencer.lexicon, tree); // DEBUG
+//		logger.trace("\nEval count with the tree over.\n"); // DEBUG
+		return scoreT;
 	}
 	
 	
@@ -75,19 +83,15 @@ public class LVeGParser extends Recorder {
 		int nword = sentence.size();
 		Chart chart = new Chart(nword);
 		
-//		LVeGLearner.logger.trace("\nInside score..."); // DEBUG
-		
+//		logger.trace("\nInside score...\n"); // DEBUG
 		inferencer.insideScore(chart, sentence, nword);
 //		MethodUtil.debugChart(Chart.iGetChart(), (short) 2); // DEBUG
 
+//		logger.trace("\nOutside score...\n"); // DEBUG
 		inferencer.setRootOutsideScore(chart);
-		
-//		LVeGLearner.logger.trace("\nOutside score..."); // DEBUG
-		
 		inferencer.outsideScore(chart, sentence, nword);
 //		MethodUtil.debugChart(Chart.oGetChart(), (short) 2); // DEBUG
 		
-//		LVeGLearner.logger.trace("\nInside and outside over"); // DEBUG
 		return chart;
 	}
 	
@@ -99,14 +103,13 @@ public class LVeGParser extends Recorder {
 	 * @param tree the parse tree
 	 */
 	public void doInsideOutsideWithTree(Tree<State> tree) {
+//		logger.trace("\nInside score with the tree...\n"); // DEBUG	
 		inferencer.insideScoreWithTree(tree);
-//		LVeGLearner.logger.trace("\nInside score with the tree...\n"); // DEBUG		
 //		MethodUtil.debugTree(tree, false, (short) 2); // DEBUG
 		
-
+//		logger.trace("\nOutside score with the tree...\n"); // DEBUG
 		inferencer.setRootOutsideScore(tree);
 		inferencer.outsideScoreWithTree(tree);
-//		LVeGLearner.logger.trace("\nOutside score with the tree...\n"); // DEBUG		
 //		MethodUtil.debugTree(tree, false, (short) 2); // DEBUG
 	}
 	

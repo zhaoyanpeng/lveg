@@ -20,6 +20,9 @@ public class Optimizer extends Recorder {
 	/**
 	 * Pseudo counts of grammar rules given the parse tree (countWithT) or the sentence (countWithS).
 	 */
+	private Map<GrammarRule, Batch> cntsWithT;
+	private Map<GrammarRule, Batch> cntsWithS;
+	
 	private Map<GrammarRule, List<Map<String, GaussianMixture>>> countsWithT;
 	private Map<GrammarRule, List<Map<String, GaussianMixture>>> countsWithS;
 	
@@ -34,8 +37,10 @@ public class Optimizer extends Recorder {
 	
 	
 	private Optimizer() {
-		this.countsWithT = new HashMap<GrammarRule, List<Map<String, GaussianMixture>>>();
-		this.countsWithS = new HashMap<GrammarRule, List<Map<String, GaussianMixture>>>();
+		this.cntsWithS = new HashMap<GrammarRule, Batch>();
+		this.cntsWithT = new HashMap<GrammarRule, Batch>();
+//		this.countsWithT = new HashMap<GrammarRule, List<Map<String, GaussianMixture>>>();
+//		this.countsWithS = new HashMap<GrammarRule, List<Map<String, GaussianMixture>>>();
 		this.ruleSet = new HashSet<GrammarRule>();
 	}
 	
@@ -74,10 +79,15 @@ public class Optimizer extends Recorder {
 	 */
 	public void addRule(GrammarRule rule) {
 		ruleSet.add(rule);
-		List<Map<String, GaussianMixture>> batchWithT = new ArrayList<Map<String, GaussianMixture>>();
-		List<Map<String, GaussianMixture>> batchWithS = new ArrayList<Map<String, GaussianMixture>>();
-		countsWithT.put(rule, batchWithT);
-		countsWithS.put(rule, batchWithS);
+		Batch batchWithT = new Batch();
+		Batch batchWithS = new Batch();
+		cntsWithT.put(rule, batchWithT);
+		cntsWithS.put(rule, batchWithS);
+		
+//		List<Map<String, GaussianMixture>> batchWithT = new ArrayList<Map<String, GaussianMixture>>();
+//		List<Map<String, GaussianMixture>> batchWithS = new ArrayList<Map<String, GaussianMixture>>();
+//		countsWithT.put(rule, batchWithT);
+//		countsWithS.put(rule, batchWithS);
 	}
 	
 	
@@ -95,8 +105,38 @@ public class Optimizer extends Recorder {
 			batch.add(scores);
 			return;
 		}
-		logger.error("Not a valid grammar rule.");
+		logger.error("Not a valid grammar rule.\n");
 	}
+	
+	
+	/**
+	 * @param rule     the grammar rule
+	 * @param cnt      which contains 1) key GrammarRule.Unit.P maps to the outside score of the parent node
+	 * 					2) key GrammarRule.Unit.UC/C (LC) maps to the inside score (of the left node) if the rule is unary (binary)
+	 * 					3) key GrammarRule.Unit.RC maps to the inside score of the right node if the rule is binary, otherwise null
+	 * @param idx      index of the sample in this batch
+	 * @param withTree type of the expected pseudo count
+	 */
+	public void addCount(GrammarRule rule, Map<String, GaussianMixture> cnt, short idx, boolean withTree) {
+		Batch batch = null;
+		Map<GrammarRule, Batch> cnts = withTree ? cntsWithT : cntsWithS;
+		if (rule != null && (batch = cnts.get(rule)) != null) {
+			batch.add(idx, cnt);
+			return;
+		}
+		logger.error("Not a valid grammar rule.\n");
+	}
+	
+	
+//	public Batch getCount(GrammarRule rule, boolean withT) {
+//		Batch batch = null;
+//		Map<GrammarRule, Batch> cnts = withT ? countsWithT : countsWithS;
+//		if (rule != null && (batch = cnts.get(rule)) != null) {
+//			return batch;
+//		}
+//		logger.error("Not a valid grammar rule or the rule was not found.\n");
+//		return null;
+//	}
 	
 	
 	/**
@@ -112,7 +152,7 @@ public class Optimizer extends Recorder {
 		if (rule != null && (batch = count.get(rule)) != null) {
 			return batch;
 		}
-		logger.error("Not a valid grammar rule or the rule was not found.");
+		logger.error("Not a valid grammar rule or the rule was not found.\n");
 		return null;
 	}
 	
@@ -130,4 +170,26 @@ public class Optimizer extends Recorder {
 		return ruleSet;
 	}
 	
+	
+	/**
+	 * @author Yanpeng Zhao
+	 *
+	 */
+	protected class Batch {
+		protected Map<Short, List<Map<String, GaussianMixture>>> batch;
+		
+		public Batch() {
+			batch = new HashMap<Short, List<Map<String, GaussianMixture>>>();
+		}
+		
+		protected void add(short idx, Map<String, GaussianMixture> cnt) {
+			List<Map<String, GaussianMixture>> cnts = null;
+			if ((cnts = batch.get(idx)) != null) {
+				cnts.add(cnt);
+			} else {
+				cnts = new ArrayList<Map<String, GaussianMixture>>();
+				batch.put(idx, cnts);
+			}
+		}
+	}
 }

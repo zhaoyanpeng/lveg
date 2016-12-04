@@ -44,7 +44,7 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 			double value = Math.pow(2 * Math.PI, -dim / 2) * sinv * Math.exp(exps);
 			return value;
 		}
-		logger.error("The sample is not valid.");
+		logger.error("The sample is not valid.\n");
 		return -1.0;
 	}
 	
@@ -93,12 +93,12 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 	@Override
 	protected void update(double lr, List<Double> grads) {
 		assert(grads.size() == 2 * dim);
-		double mu, sigma;
+		double mu, var;
 		for (int i = 0; i < dim; i++) {
-			mu = grads.get(i * 2) - lr * mus.get(i);
-			sigma = grads.get(i * 2 + 1) - lr * vars.get(i);
+			mu = mus.get(i) - lr * grads.get(i * 2);
+			var = vars.get(i) - lr * grads.get(i * 2 + 1);
 			mus.set(i, mu);
-			vars.set(i, sigma);
+			vars.set(i, var);
 		}
 	}
 	

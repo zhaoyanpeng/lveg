@@ -2,15 +2,18 @@ package edu.shanghaitech.ai.nlp.lveg;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
 
 import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.syntax.State;
+import edu.shanghaitech.ai.nlp.util.Recorder;
 
 /**
  * Compute the inside and outside scores and store them in a chart. 
@@ -27,15 +30,18 @@ import edu.shanghaitech.ai.nlp.syntax.State;
  * @author Yanpeng Zhao
  *
  */
-public class Inferencer {
+public class Inferencer extends Recorder {
 	
 	protected LVeGLexicon lexicon;
 	protected LVeGGrammar grammar;
+	
+	protected Set<Short> set; // preallocate
 	
 	
 	public Inferencer(LVeGGrammar grammar, LVeGLexicon lexicon) {
 		this.grammar = grammar;
 		this.lexicon = lexicon;
+		this.set = new HashSet<Short>();
 	}
 	
 	
@@ -68,22 +74,23 @@ public class Inferencer {
 		// inside score
 		for (int ilayer = 1; ilayer < nword; ilayer++) {
 			for (int left = 0; left < nword - ilayer; left++) {
+				// to ensure...
+				tagQueue.clear();
+				
 				x0 = left;
 				y1 = left + ilayer;
 				c2 = Chart.idx(left, nword - ilayer);
-				for (int right = left; right < left + ilayer; right++) {				
+				for (int right = left; right < left + ilayer; right++) {
 					y0 = right;
 					x1 = right + 1;
 					c0 = Chart.idx(x0, nword - (y0 - x0));
 					c1 = Chart.idx(x1, nword - (y1 - x1));
-					// to ensure...
-					tagQueue.clear();
 					
 					// binary grammar rules
 					for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
 						BinaryGrammarRule rule = (BinaryGrammarRule) rmap.getValue();
-						if (chart.iContainsKey(rule.lchild, c0) && chart.iContainsKey(rule.rchild, c1)) {
-							tagQueue.offer(rule.lhs);
+						if (chart.containsKey(rule.lchild, c0, true) && chart.containsKey(rule.rchild, c1, true)) {
+							if (!tagQueue.contains(rule.lhs)) {tagQueue.offer(rule.lhs);}
 							ruleScore = rule.getWeight();
 							linScore = chart.getInsideScore(rule.lchild, c0);
 							rinScore = chart.getInsideScore(rule.rchild, c1);
@@ -93,9 +100,13 @@ public class Inferencer {
 							chart.addInsideScore(rule.lhs, c2, pinScore);
 						}
 					}
-					// unary grammar rules
-					insideScoreForUnaryRule(chart, tagQueue, c2, false);
 				}
+				// unary grammar rules
+				logger.trace("Cell [" + left + ", " + (left + ilayer) + "]="+ c2 + "\t is being estimated. # " + tagQueue.size());
+				long start = System.currentTimeMillis();
+				insideScoreForUnaryRule(chart, tagQueue, c2, false);
+				long ttime = System.currentTimeMillis() - start;
+				logger.trace("\t" + ttime / 1000 + "\n"); // DEBUG
 			}
 		}
 	}
@@ -135,8 +146,8 @@ public class Inferencer {
 					// binary grammar rules
 					for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
 						BinaryGrammarRule rule = (BinaryGrammarRule) rmap.getValue();
-						if (chart.oContainsKey(rule.lhs, c0) && chart.iContainsKey(rule.rchild, c1)) {
-							tagQueue.offer(rule.lchild);
+						if (chart.containsKey(rule.lhs, c0, false) && chart.containsKey(rule.rchild, c1, true)) {
+							if (!tagQueue.contains(rule.lchild)) { tagQueue.offer(rule.lchild); }
 							ruleScore = rule.getWeight();
 							poutScore = chart.getOutsideScore(rule.lhs, c0);
 							rinScore = chart.getInsideScore(rule.rchild, c1);
@@ -160,8 +171,8 @@ public class Inferencer {
 					// binary grammar rules
 					for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
 						BinaryGrammarRule rule = (BinaryGrammarRule) rmap.getValue();
-						if (chart.oContainsKey(rule.lhs, c0) && chart.iContainsKey(rule.lchild, c1)) {
-							tagQueue.offer(rule.rchild);
+						if (chart.containsKey(rule.lhs, c0, false) && chart.containsKey(rule.lchild, c1, true)) {
+							if (!tagQueue.contains(rule.rchild)) { tagQueue.offer(rule.rchild); }
 							ruleScore = rule.getWeight();
 							poutScore = chart.getOutsideScore(rule.lhs, c0);
 							linScore = chart.getInsideScore(rule.lchild, c1);
@@ -172,10 +183,12 @@ public class Inferencer {
 						}
 					}
 				}
-//				LVeGLearner.logger.trace("Can u hear me?\t"); // DEBUG
 				// unary grammar rules
+				logger.trace("Cell [" + left + ", " + (left + ilayer) + "]="+ c2 + "\t is being estimated. # " + tagQueue.size());
+				long start = System.currentTimeMillis();
 				outsideScoreForUnaryRule(chart, tagQueue, c2, false);
-//				LVeGLearner.logger.trace("Cell [" + left + ", " + (left + ilayer) + "]="+ c2 + "\t has been estimated."); // DEBUG
+				long ttime = System.currentTimeMillis() - start;
+				logger.trace("\t" + ttime / 1000 + "\n"); // DEBUG
 			}
 		}
 	}
@@ -189,7 +202,6 @@ public class Inferencer {
 	 */
 	protected void insideScoreWithTree(Tree<State> tree) {
 		if (tree.isLeaf()) { return; }
-		
 		List<Tree<State>> children = tree.getChildren();
 		for (Tree<State> child : children) {
 			insideScoreWithTree(child);
@@ -197,11 +209,9 @@ public class Inferencer {
 		
 		State parent = tree.getLabel();
 		short idParent = parent.getId();
-		
 		if (tree.isPreTerminal()) {
 			State word = children.get(0).getLabel();
 			GaussianMixture cinScore = lexicon.score(word, idParent);
-			// LVeGLearner.logger.trace("Word\trule: [" + idParent + "] " + cinScore); // DEBUG
 			parent.setInsideScore(cinScore.copy(true));
 		} else {
 			switch (children.size()) {
@@ -221,7 +231,6 @@ public class Inferencer {
 					ruleScore = grammar.getUnaryRuleScore(idParent, idChild, GrammarRule.RHSPACE);
 					pinScore = ruleScore.mulForInsideOutside(cinScore, GrammarRule.Unit.C, true);
 				}
-				// LVeGLearner.logger.trace("Unary\trule: [" + idParent + ", " + idChild + "] " + ruleScore); // DEBUG
 				parent.setInsideScore(pinScore);
 				break;
 			}
@@ -238,8 +247,6 @@ public class Inferencer {
 				
 				pinScore = ruleScore.mulForInsideOutside(linScore, GrammarRule.Unit.LC, true);
 				pinScore = pinScore.mulForInsideOutside(rinScore, GrammarRule.Unit.RC, false);
-				
-				// LVeGLearner.logger.trace("Binary\trule: [" + idParent + ", " + idlChild + ", " + idrChild + "] " + ruleScore); // DEBUG
 				parent.setInsideScore(pinScore);
 				break;
 			}
@@ -258,7 +265,6 @@ public class Inferencer {
 	 */
 	protected void outsideScoreWithTree(Tree<State> tree) {
 		if (tree.isLeaf()) { return; }
-		
 		List<Tree<State>> children = tree.getChildren();
 		State parent = tree.getLabel();
 		short idParent = parent.getId();
@@ -284,8 +290,6 @@ public class Inferencer {
 				// rule: p(root->nonterminal) does not contain "P" part, so no removing occurs when
 				// the current parent node is the root node
 				coutScore = ruleScore.mulForInsideOutside(poutScore, GrammarRule.Unit.P, true);
-				
-				// LVeGLearner.logger.trace("Unary\trule: [" + idParent + ", " + idChild + "] " + ruleScore); // DEBUG
 				child.setOutsideScore(coutScore);
 				break;
 			}
@@ -306,8 +310,6 @@ public class Inferencer {
 				
 				routScore = ruleScore.mulForInsideOutside(poutScore, GrammarRule.Unit.P, true);
 				routScore = routScore.mulForInsideOutside(linScore, GrammarRule.Unit.LC, false);
-				
-				// LVeGLearner.logger.trace("Binary\trule: [" + idParent + ", " + idlChild + ", " + idrChild + "] " + ruleScore); // DEBUG
 				lchild.setOutsideScore(loutScore);
 				rchild.setOutsideScore(routScore);
 				break;
@@ -324,7 +326,7 @@ public class Inferencer {
 	}
 	
 	
-	protected void evalRuleCount(Tree<State> tree, Chart chart, short isample, double sentenceScore) {
+	protected void evalRuleCount(Tree<State> tree, Chart chart, short isample) {
 		List<State> sentence = tree.getYield();
 		int x0, x1, y0, y1, c0, c1, c2, nword = sentence.size();
 		GaussianMixture outScore, cinScore, linScore, rinScore;
@@ -341,7 +343,7 @@ public class Inferencer {
 				// unary grammar rules
 				for (Map.Entry<GrammarRule, GrammarRule> rmap : uRuleMap.entrySet()) {
 					UnaryGrammarRule rule = (UnaryGrammarRule) rmap.getValue();
-					if (chart.oContainsKey(rule.lhs, c2) && chart.iContainsKey(rule.rhs, c2)) {
+					if (chart.containsKey(rule.lhs, c2, false) && chart.containsKey(rule.rhs, c2, true)) {
 						cinScore = chart.getInsideScore(rule.rhs, c2);
 						outScore = chart.getOutsideScore(rule.lhs, c2);
 						
@@ -357,7 +359,7 @@ public class Inferencer {
 				
 				// lexicons
 				if (x0 == y1) {
-					evalUnaryRuleCount(chart, c2, nword, isample, sentenceScore, sentence);
+					evalUnaryRuleCount(chart, c2, nword, isample, sentence);
 					continue; // not necessary
 				}
 				
@@ -369,9 +371,9 @@ public class Inferencer {
 					// binary grammar rules
 					for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
 						BinaryGrammarRule rule = (BinaryGrammarRule) rmap.getValue();
-						if (chart.oContainsKey(rule.lhs, c2) && 
-							chart.iContainsKey(rule.lchild, c0) && 
-							chart.iContainsKey(rule.rchild, c1)) {
+						if (chart.containsKey(rule.lhs, c2, false) && 
+							chart.containsKey(rule.lchild, c0, true) && 
+							chart.containsKey(rule.rchild, c1, true)) {
 							outScore = chart.getOutsideScore(rule.lhs, c2);
 							linScore = chart.getInsideScore(rule.lchild, c0);
 							rinScore = chart.getInsideScore(rule.rchild, c1);
@@ -396,12 +398,12 @@ public class Inferencer {
 	 * @param tree      the parse tree
 	 * @param treeScore the score of the tree
 	 */
-	protected void evalRuleCountWithTree(Tree<State> tree, short isample, double treeScore) {
+	protected void evalRuleCountWithTree(Tree<State> tree, short isample) {
 		if (tree.isLeaf()) { return; }
 		
 		List<Tree<State>> children = tree.getChildren();
 		for (Tree<State> child : children) {
-			evalRuleCountWithTree(child, isample, treeScore);
+			evalRuleCountWithTree(child, isample);
 		}
 		
 		State parent = tree.getLabel();
@@ -487,18 +489,18 @@ public class Inferencer {
 			int c0 = Chart.idx(x0, nword - (y0 - x0));
 			int c1 = Chart.idx(x1, nword - (y1 - x1));
 			
-			if (!chart.iGetStatus(c0)) {
+			if (!chart.getStatus(c0, true)) {
 				insideScore(chart, sentence, begin, split);
 			}
 			
-			if (!chart.iGetStatus(c1)) {
+			if (!chart.getStatus(c1, true)) {
 				insideScore(chart, sentence, split + 1, end);
 			}
 			
 			GaussianMixture ruleScore, linScore, rinScore, pinScore;
 			for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
 				BinaryGrammarRule rule = (BinaryGrammarRule) rmap.getValue();
-				if (chart.iContainsKey(rule.lchild, c0) && chart.iContainsKey(rule.rchild, c1)) {
+				if (chart.containsKey(rule.lchild, c0, true) && chart.containsKey(rule.rchild, c1, true)) {
 					ruleScore = rule.getWeight();
 					linScore = chart.getInsideScore(rule.lchild, c0);
 					rinScore = chart.getInsideScore(rule.rchild, c1);
@@ -508,7 +510,7 @@ public class Inferencer {
 				}
 			}
 		}
-		chart.iSetStatus(c2, true);
+		chart.setStatus(c2, true, true);
 	}
 	
 	
@@ -525,7 +527,7 @@ public class Inferencer {
 	}
 	
 	
-	private void evalUnaryRuleCount(Chart chart, int idx, int nword, short isample, double sentenceScore, List<State> sentence) {  		
+	private void evalUnaryRuleCount(Chart chart, int idx, int nword, short isample, List<State> sentence) {  		
 		for (int i = 0; i < nword; i++) {
 			int wordIdx = sentence.get(i).wordIdx;
 			int iCell = Chart.idx(i, nword);
@@ -538,19 +540,66 @@ public class Inferencer {
 				scores.put(String.valueOf(isample), null);
 				scores.put(GrammarRule.Unit.P, outScore);
 				scores.put(GrammarRule.Unit.C, cinScore);
-				lexicon.addCount(rule.lhs, (short) wordIdx, GrammarRule.LHSPACE, scores, false);				
+				lexicon.addCount(rule.lhs, (short) wordIdx, GrammarRule.LHSPACE, scores, false); 
 			}
 		}
 	}
 	
+	boolean oops = false; // DEBUG switch
 	
 	private void insideScoreForUnaryRule(Chart chart, Queue<Short> tagQueue, int idx, boolean identifier) {
 		if (identifier) {
 			insideScoreForUnaryRule(chart, tagQueue, idx);
 		} else {
+			if (oops) {
+			
 			if (tagQueue != null) {
 				short idTag;
-				String ruleType;
+				String rmKey;
+				List<GrammarRule> rules;
+				GaussianMixture pinScore, cinScore, ruleScore;
+				while (!tagQueue.isEmpty()) {
+					set.clear();
+					// chain unary rule of length 1
+					idTag = tagQueue.poll();
+					rules = grammar.getUnaryRuleWithC(idTag);
+					cinScore = chart.getInsideScore(idTag, idx);
+					Iterator<GrammarRule> iterator = rules.iterator();
+					while (iterator.hasNext()) {
+						UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
+						ruleScore = rule.getWeight();
+						// Root->X is valid if idx == 0, we may skip such kind of rules otherwise
+						if (idx != 0 && rule.type == GrammarRule.RHSPACE) { continue; }
+						set.add(rule.lhs);
+						// double check, in case the rule.lhs is the root node
+						rmKey = rule.type == GrammarRule.RHSPACE ? GrammarRule.Unit.C : GrammarRule.Unit.UC;
+						pinScore = ruleScore.mulForInsideOutside(cinScore, rmKey, true);
+						chart.addInsideScore(rule.lhs, idx, pinScore);
+						chart.addUnaryRule(idx, rule, true);
+					}
+					// chain unary rule of length 2
+					for (Short id : set) {
+						rules = grammar.getUnaryRuleWithC(id);
+						cinScore = chart.getInsideScore(id, idx);
+						iterator = rules.iterator();
+						while (iterator.hasNext()) {
+							UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
+							ruleScore = rule.getWeight();
+							if (idx != 0 && rule.type == GrammarRule.RHSPACE) { continue; }
+							rmKey = rule.type == GrammarRule.RHSPACE ? GrammarRule.Unit.C : GrammarRule.Unit.UC;
+							pinScore = ruleScore.mulForInsideOutside(cinScore, rmKey, true);
+							chart.addInsideScore(rule.lhs, idx, pinScore);
+							chart.addUnaryRule(idx, rule, true);
+						}
+					}
+				}
+			}
+			
+			} else {
+			
+			if (tagQueue != null) {
+				short idTag;
+				String rmKey;
 				List<GrammarRule> rules;
 				GaussianMixture pinScore, cinScore, ruleScore;
 				while (!tagQueue.isEmpty()) {
@@ -564,12 +613,15 @@ public class Inferencer {
 						// Root->X is valid if idx == 0, otherwise we may skip such kind of rules
 						if (idx != 0 && rule.type == GrammarRule.RHSPACE) { continue; }
 						// double check, in case the rule.lhs is the root node
-						ruleType = rule.type == GrammarRule.RHSPACE ? GrammarRule.Unit.C : GrammarRule.Unit.UC;
-						pinScore = ruleScore.mulForInsideOutside(cinScore, ruleType, true);
+						rmKey = rule.type == GrammarRule.RHSPACE ? GrammarRule.Unit.C : GrammarRule.Unit.UC;
+						pinScore = ruleScore.mulForInsideOutside(cinScore, rmKey, true);
 						chart.addInsideScore(rule.lhs, idx, pinScore);
 					}
 				}
 			}
+			
+			}
+			
 		}
 	}
 	
@@ -578,10 +630,51 @@ public class Inferencer {
 		if (identifier) {
 			outsideScoreForUnaryRule(chart, tagQueue, idx);
 		} else {
+			if (oops) {
+			
 			if (tagQueue != null) {
 				short idTag;
-				String ruleType;
 				List<GrammarRule> rules;
+				String rmKey = GrammarRule.Unit.P;
+				GaussianMixture poutScore, coutScore, ruleScore;
+				while (!tagQueue.isEmpty()) {
+					set.clear();
+					// chain unary rule of length 1
+					idTag = tagQueue.poll();
+					rules = grammar.getUnaryRuleWithP(idTag);
+					poutScore = chart.getOutsideScore(idTag, idx);
+					Iterator<GrammarRule> iterator = rules.iterator();
+					while (iterator.hasNext()) {
+						UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
+						ruleScore = rule.getWeight();
+						// ROOT->X is valid if and only if idx == 0, which can be guaranteed naturally since rules X->ROOT do not exist
+						set.add(rule.rhs);
+						coutScore = ruleScore.mulForInsideOutside(poutScore, rmKey, true);
+						chart.addOutsideScore(rule.rhs, idx, coutScore);
+						chart.addUnaryRule(idx, rule, false);
+					}
+					// chain unary rule of length 2
+					for (Short id : set) {
+						rules = grammar.getUnaryRuleWithP(id);
+						poutScore = chart.getOutsideScore(id, idx);
+						iterator = rules.iterator();
+						while (iterator.hasNext()) {
+							UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
+							ruleScore = rule.getWeight();
+							coutScore = ruleScore.mulForInsideOutside(poutScore, rmKey, true);
+							chart.addOutsideScore(rule.rhs, idx, coutScore);
+							chart.addUnaryRule(idx, rule, false);
+						}	
+					}
+				}
+			}
+			
+			} else {
+			
+			if (tagQueue != null) {
+				short idTag;
+				List<GrammarRule> rules;
+				String rmKey = GrammarRule.Unit.P;
 				GaussianMixture poutScore, coutScore, ruleScore;
 				while (!tagQueue.isEmpty()) {
 					idTag = tagQueue.poll();
@@ -592,12 +685,14 @@ public class Inferencer {
 						UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
 						ruleScore = rule.getWeight();
 						// ROOT->X is valid if and only if idx == 0
-						ruleType = rule.type == GrammarRule.RHSPACE ? GrammarRule.Unit.C : GrammarRule.Unit.UC;
-						coutScore = ruleScore.mulForInsideOutside(poutScore, ruleType, true);
+						coutScore = ruleScore.mulForInsideOutside(poutScore, rmKey, true);
 						chart.addOutsideScore(rule.rhs, idx, coutScore);
 					}
 				}
 			}
+			
+			}
+			
 		}
 	}
 	
@@ -612,8 +707,8 @@ public class Inferencer {
 	private void outsideScoreForUnaryRule(Chart chart, Queue<Short> tagQueue, int idx) {
 		if (tagQueue != null) {
 			short idTag;
-			String ruleType;
 			List<GrammarRule> rules;
+			String rmKey = GrammarRule.Unit.P;
 			GaussianMixture poutScore, coutScore, ruleScore;
 			while (!tagQueue.isEmpty()) {
 				idTag = tagQueue.poll();
@@ -624,8 +719,7 @@ public class Inferencer {
 					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
 					tagQueue.offer(rule.rhs);
 					ruleScore = rule.getWeight();
-					ruleType = rule.type == GrammarRule.RHSPACE ? GrammarRule.Unit.C : GrammarRule.Unit.UC;
-					coutScore = ruleScore.mulForInsideOutside(poutScore, ruleType, true);
+					coutScore = ruleScore.mulForInsideOutside(poutScore, rmKey, true);
 					chart.addOutsideScore(rule.rhs, idx, coutScore);
 				}
 			}
@@ -643,7 +737,7 @@ public class Inferencer {
 	private void insideScoreForUnaryRule(Chart chart, Queue<Short> tagQueue, int idx) {
 		if (tagQueue != null) {
 			short idTag;
-			String ruleType;
+			String rmKey;
 			List<GrammarRule> rules;
 			GaussianMixture pinScore, cinScore, ruleScore;
 			// consider rules A->B->w and B->C->w. So p(w | B) = p(B->w) + p(B->C) * p(C->w).
@@ -659,8 +753,8 @@ public class Inferencer {
 					tagQueue.offer(rule.lhs);
 					ruleScore = rule.getWeight();
 					// in case when the rule.lhs is the root node
-					ruleType = rule.type == GrammarRule.RHSPACE ? GrammarRule.Unit.C : GrammarRule.Unit.UC;
-					pinScore = ruleScore.mulForInsideOutside(cinScore, ruleType, true);
+					rmKey = rule.type == GrammarRule.RHSPACE ? GrammarRule.Unit.C : GrammarRule.Unit.UC;
+					pinScore = ruleScore.mulForInsideOutside(cinScore, rmKey, true);
 					chart.addInsideScore(rule.lhs, idx, pinScore);
 				}
 			}
@@ -793,53 +887,46 @@ public class Inferencer {
 		}
 		
 		
-		public static List<Cell> iGetChart() {
-			return ichart;
+		public static List<Cell> getChart(boolean inside) {
+			return inside ? ichart : ochart;
 		}
 		
 		
-		public static List<Cell> oGetChart() {
-			return ochart;
+		public Cell get(int idx, boolean inside) {
+			return inside ? ichart.get(idx) : ochart.get(idx);
 		}
 		
 		
-		public Cell oGet(int idx) {
-			return ochart.get(idx);
+		public boolean containsKey(short key, int idx, boolean inside) {
+			return inside ? ichart.get(idx).containsKey(key) : ochart.get(idx).containsKey(key);
 		}
 		
 		
-		public Cell iGet(int idx) {
-			return ichart.get(idx);
-		}
-
-
-		public boolean iContainsKey(short key, int idx) {
-			return ichart.get(idx).containsKey(key);
-		}
-		
-		
-		public boolean oContainsKey(short key, int idx) {
-			return ochart.get(idx).containsKey(key);
+		public void setStatus(int idx, boolean status, boolean inside) {
+			if (inside) {
+				ichart.get(idx).setStatus(status);
+			} else {
+				ochart.get(idx).setStatus(status);
+			}
 		}
 		
 		
-		public void iSetStatus(int idx, boolean status) {
-			ichart.get(idx).setStatus(status);
+		public boolean getStatus(int idx, boolean inside) {
+			return inside ? ichart.get(idx).getStatus() : ochart.get(idx).getStatus();
 		}
 		
 		
-		public boolean iGetStatus(int idx) {
-			return ichart.get(idx).getStatus();
+		public void addUnaryRule(int idx, UnaryGrammarRule rule, boolean inside) {
+			if (inside) {
+				ichart.get(idx).addUnaryRule(rule);
+			} else {
+				ochart.get(idx).addUnaryRule(rule);
+			}
 		}
 		
 		
-		public void oSetStatus(int idx, boolean status) {
-			ochart.get(idx).setStatus(status);
-		}
-		
-		
-		public boolean oGetStatus(int idx) {
-			return ochart.get(idx).getStatus();
+		public Set<UnaryGrammarRule> getUnaryRuleSet(int idx, boolean inside) {
+			return inside ? ichart.get(idx).getUnaryRuleSet() : ochart.get(idx).getUnaryRuleSet();
 		}
 		
 		
@@ -897,10 +984,13 @@ public class Inferencer {
 		// of the inner class through the instance of the inner class or in the way of the static 
 		// fields accessing.
 		private boolean status;
+		private Set<UnaryGrammarRule> urules;
 		private Map<Short, GaussianMixture> scores;
+		
 		
 		public Cell() {
 			this.status = false;
+			this.urules = new HashSet<UnaryGrammarRule>();
 			this.scores = new HashMap<Short, GaussianMixture>();
 		}
 		
@@ -917,6 +1007,16 @@ public class Inferencer {
 		
 		protected boolean containsKey(short key) {
 			return scores.containsKey(key);
+		}
+		
+		
+		protected void addUnaryRule(UnaryGrammarRule rule) {
+			urules.add(rule);
+		}
+		
+		
+		protected Set<UnaryGrammarRule> getUnaryRuleSet() {
+			return urules;
 		}
 		
 		
@@ -949,10 +1049,13 @@ public class Inferencer {
 				String name;
 				StringBuffer sb = new StringBuffer();
 				sb.append("Cell [status=" + status + ", size=" + scores.size());
+				
 				for (Map.Entry<Short, GaussianMixture> score : scores.entrySet()) {
 					name = (String) Numberer.getGlobalNumberer(LVeGLearner.KEY_TAG_SET).object(score.getKey());
-					sb.append(", " + name + "=" + score.getValue().toString(simple, nfirst));
+					// sb.append(", " + name + "=" + score.getValue().toString(simple, nfirst));
+					sb.append(", " + name + "=NC " + score.getValue().ncomponent);
 				}
+				
 				sb.append("]");
 				return sb.toString();
 			} else {

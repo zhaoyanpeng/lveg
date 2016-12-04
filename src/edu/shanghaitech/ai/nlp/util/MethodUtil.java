@@ -51,7 +51,6 @@ public class MethodUtil extends Recorder {
 	
 	
 	public static void debugChainRule(LVeGGrammar agrammar) {
-		logger.trace("I'm coming...");
 		grammar = agrammar;
 		int count = 0, ncol = 1;
 		StringBuffer sb = new StringBuffer();
@@ -66,7 +65,7 @@ public class MethodUtil extends Recorder {
 				}
 			}
 		}
-		logger.trace(sb.toString());
+		logger.trace(sb.toString() + "\n");
 	}
 	
 	
@@ -79,41 +78,97 @@ public class MethodUtil extends Recorder {
 		Map<GrammarRule, GrammarRule> uRuleMap = grammar.getUnaryRuleMap();
 		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBinaryRuleMap();
 		// unary grammar rules
-		LVeGLearner.logger.trace("\n---Unary Grammar Rules---\n");
+		LVeGLearner.logger.trace("\n---Unary Grammar Rules---\n\n");
 		for (Map.Entry<GrammarRule, GrammarRule> rmap : uRuleMap.entrySet()) {
 			GrammarRule rule = rmap.getValue();
 			List<Map<String, GaussianMixture>> count = grammar.getCount(rule, false);
-			LVeGLearner.logger.trace(rule + "\tcount=" + String.format("%.8f", count));
+			LVeGLearner.logger.trace(rule + "\tcount=" + count + "\n");
 			if (++iiter >= niter) { break; }
 		}
 		
 		iiter = 0;
 		// binary grammar rules
-		LVeGLearner.logger.trace("\n---Binary Grammar Rules---\n");
+		LVeGLearner.logger.trace("\n---Binary Grammar Rules---\n\n");
 		for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
 			GrammarRule rule = rmap.getValue();
 			List<Map<String, GaussianMixture>> count = grammar.getCount(rule, false);
-			LVeGLearner.logger.trace(rule + "\tcount=" + String.format("%.8f", count));
+			LVeGLearner.logger.trace(rule + "\tcount=" + count + "\n");
 			if (++iiter > niter) { break; }
 		}
-		/*
+		
 		iiter = 0;
 		// unary rules in lexicon
 		Set<GrammarRule> ruleSet = lexicon.getRuleSet();
 		LVeGLearner.logger.trace("\n---Unary Grammar Rules in Lexicon---\n");
 		for (GrammarRule rule : ruleSet) {
-			double count = lexicon.getCount(rule, false);
-			LVeGLearner.logger.trace(rule + "\tcount=" + String.format("%.8f", count));
+			List<Map<String, GaussianMixture>> count = lexicon.getCount(rule, false);
+			LVeGLearner.logger.trace(rule + "\tcount=" + count);
 			if (++iiter >= niter) { break; }
 		}
-		*/
+		
+	}
+	
+	
+	public static void debugRuleWeightInTheTree(LVeGGrammar agrammar, LVeGLexicon alexicon, Tree<State> tree) {
+		grammar = agrammar;
+		lexicon = alexicon;
+		logger.trace("\n---Rules's Weights Used in The Tree---\n\n");
+		checkRuleWeightInTheTree(tree);
+	}
+	
+	
+	public static void checkRuleWeightInTheTree(Tree<State> tree) {
+		if (tree.isLeaf()) { return; }
+		List<Tree<State>> children = tree.getChildren();
+		for (Tree<State> child : children) {
+			checkRuleWeightInTheTree(child);
+		}
+		
+		State parent = tree.getLabel();
+		short idParent = parent.getId();
+		if (tree.isPreTerminal()) {
+			State word = children.get(0).getLabel();
+			GaussianMixture cinScore = lexicon.score(word, idParent);
+			logger.trace("Word\trule: [" + idParent + ", " + word.wordIdx + "/" + word.getName() + "] " + cinScore + "\n"); // DEBUG
+			parent.setInsideScore(cinScore.copy(true));
+		} else {
+			switch (children.size()) {
+			case 0:
+				// in case there are some errors in the parse tree.
+				break;
+			case 1: {
+				GaussianMixture ruleScore;
+				State child = children.get(0).getLabel();
+				short idChild = child.getId();
+				
+				char type = idParent == 0 ? GrammarRule.RHSPACE : GrammarRule.GENERAL;
+				ruleScore = grammar.getUnaryRuleScore(idParent, idChild, type);
+				logger.trace("Unary\trule: [" + idParent + ", " + idChild + "] " + ruleScore + "\n"); // DEBUG
+				break;
+			}
+			case 2: {
+				GaussianMixture ruleScore;
+				State lchild = children.get(0).getLabel();
+				State rchild = children.get(1).getLabel();
+				short idlChild = lchild.getId();
+				short idrChild = rchild.getId();
+
+				ruleScore = grammar.getBinaryRuleScore(idParent, idlChild, idrChild);
+				logger.trace("Binary\trule: [" + idParent + ", " + idlChild + ", " + idrChild + "] " + ruleScore + "\n"); // DEBUG
+				break;
+			}
+			default:
+				System.err.println("Malformed tree: more than two children. Exitting...");
+				System.exit(0);	
+			}
+		}
 	}
 	
 	
 	public static void debugCount(LVeGGrammar agrammar, LVeGLexicon alexicon, Tree<State> tree) {
 		grammar = agrammar;
 		lexicon = alexicon;
-		logger.trace("\n---Rule Counts in The Tree---\n");
+		logger.trace("\n---Rule Counts in The Tree---\n\n");
 		checkCount(tree);
 	}
 	
@@ -132,7 +187,7 @@ public class MethodUtil extends Recorder {
 		if (tree.isPreTerminal()) {
 			State word = children.get(0).getLabel();
 			List<Map<String, GaussianMixture>> count = lexicon.getCount(idParent, (short) word.wordIdx, GrammarRule.LHSPACE, true);
-			LVeGLearner.logger.trace("Word\trule: [" + idParent + "] count=" + count); // DEBUG
+			logger.trace("Word\trule: [" + idParent + ", " + word.wordIdx + "/" + word.getName() + "] count=" + count + "\n"); // DEBUG
 		} else {
 			switch (children.size()) {
 			case 0:
@@ -146,7 +201,7 @@ public class MethodUtil extends Recorder {
 				char type = idParent == 0 ? GrammarRule.RHSPACE : GrammarRule.GENERAL;
 				
 				List<Map<String, GaussianMixture>> count = grammar.getCount(idParent, idChild, type, true);
-				LVeGLearner.logger.trace("Unary\trule: [" + idParent + ", " + idChild + "] count=" + count); // DEBUG
+				logger.trace("Unary\trule: [" + idParent + ", " + idChild + "] count=" + count + "\n"); // DEBUG
 				break;
 			}
 			case 2: {
@@ -156,7 +211,7 @@ public class MethodUtil extends Recorder {
 				short idrChild = rchild.getId();
 				
 				List<Map<String, GaussianMixture>> count = grammar.getCount(idParent, idlChild, idrChild, true);
-				LVeGLearner.logger.trace("Binary\trule: [" + idParent + ", " + idlChild + ", " + idrChild + "] count=" + count); // DEBUG
+				logger.trace("Binary\trule: [" + idParent + ", " + idlChild + ", " + idrChild + "] count=" + count + "\n"); // DEBUG
 				break;
 			}
 			default:
@@ -170,7 +225,7 @@ public class MethodUtil extends Recorder {
 	public static void debugChart(List<Cell> chart, short nfirst) {
 		if (chart != null) {
 			for (int i = 0; i < chart.size(); i++) {
-				LVeGLearner.logger.debug(i + "\t" + chart.get(i).toString(true, nfirst) + "\n");
+				logger.debug(i + "\t" + chart.get(i).toString(true, nfirst) + "\n\n");
 			}
 		}
 	}
@@ -179,7 +234,7 @@ public class MethodUtil extends Recorder {
 	public static void debugTree(Tree<State> tree, boolean simple, short nfirst) {
 		StringBuilder sb = new StringBuilder();
 		toString(tree, simple, nfirst, sb);
-		logger.debug(sb);
+		logger.debug(sb + "\n");
 	}
 	
 	
@@ -288,7 +343,7 @@ public class MethodUtil extends Recorder {
 			Set<Integer> visited = new LinkedHashSet<Integer>();
 			// System.out.println("Tag " + i + "\t");
 			if ((repeated = checkUnaryRuleCircle(i, visited, startWithC)) > 0) {
-				LVeGLearner.logger.error("Repeated item: " + repeated + "\tin the path that begins with " + i + " was found: " + visited);
+				LVeGLearner.logger.error("Repeated item: " + repeated + "\tin the path that begins with " + i + " was found: " + visited + "\n");
 				found = true;
 			}
 		}
@@ -510,17 +565,19 @@ public class MethodUtil extends Recorder {
 	
 	
 	/**
-	 * @param list    item container
-	 * @param type    Doubel.class or Integer.class
-	 * @param length  number of items in the list
-	 * @param maxint  maximum for integer, and 1 for double
-	 * @param nonzero zero inclusive (false) or not exclusive (true)
+	 * @param list     item container
+	 * @param type     Doubel.class or Integer.class
+	 * @param length   number of items in the list
+	 * @param maxint   maximum for integer, and 1 for double
+	 * @param nonzero  zero inclusive (false) or exclusive (true)
+	 * @param negative allow the negative (true) or not allow (false)
 	 */
-	public static <T> void randomInitList(List<T> list, Class<T> type, int length, int maxint, boolean nonzero) {
+	public static <T> void randomInitList(List<T> list, Class<T> type, int length, int maxint, boolean nonzero, boolean negative) {
 		Double obj = new Double(0);
 		for (int i = 0; i < length; i++) {
 			double tmp = random.nextDouble() * maxint;
 			if (nonzero) { while (tmp == 0.0) { tmp = random.nextDouble() * maxint; } }
+			if (negative && tmp < 0.5) { tmp = 0 - tmp; }
 			list.add(type.isInstance(obj) ? type.cast(tmp) : type.cast((int) tmp));
 		}
 	}

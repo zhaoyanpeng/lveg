@@ -169,10 +169,6 @@ public class LVeGLearner extends Recorder {
 		MethodUtil.lenUnaryRuleChain(trainTrees, (short) 2, imageName);
 		System.exit(0);
 */		
-		
-		// MethodUtil.isChildrenSizeZero(trainTrees);
-		
-		// MethodUtil.isParentEqualToChild(trainTrees);
 		LVeGGrammar grammar = new LVeGGrammar(null, -1);
 		LVeGLexicon lexicon = new SimpleLVeGLexicon();
 			
@@ -184,15 +180,8 @@ public class LVeGLearner extends Recorder {
 		System.err.println("Looking through the training set is over.");
 		
 		grammar.postInitialize(0.0);
-		System.err.println("Grammar is over");
-		System.exit(1);
-		
 		lexicon.postInitialize(trainTrees, numbererTag.size());
-		
-		
 		System.err.println("Post-initializing is over.");
-		MethodUtil.debugChainRule(grammar);
-		System.err.println("Debugging chain rules is over.");
 		
 		
 //		short idp = 5, idc = 1;
@@ -204,15 +193,7 @@ public class LVeGLearner extends Recorder {
 		
 //		logger.debug(grammar);
 //		logger.debug(lexicon);
-		
-//		System.out.println(grammar);
-//		System.out.println(lexicon);
-		
-//		if (grammar.containsRule(rule, true)) {
-//			System.out.println("oops");
-//		}
-//		System.exit(0);
-		
+
 		// check if there is any circle in the unary grammar rules
 		// TODO move this self-checking procedure to the class Grammar
 //		logger.debug("---Circle Detection.\n");
@@ -220,13 +201,6 @@ public class LVeGLearner extends Recorder {
 //			logger.error("Circle (WithC) was found in the unary grammar rules.");
 //			return;
 //		}
-		
-		/*// DEBUG Note necessary, the circle is reversible 
-		if (MethodUtil.checkUnaryRuleCircle(grammar, lexicon, false)) {
-			logger.error("Circle (WithP) was found in the unary grammar rules.");
-			System.exit(0);
-		}
-		*/
 		
 		LVeGGrammar maxGrammar = null, preGrammar = null;
 		LVeGLexicon maxLexicon = null, preLexicon = null;
@@ -246,14 +220,10 @@ public class LVeGLearner extends Recorder {
 			short isample = 0;
 			long startTime = System.currentTimeMillis();
 			for (Tree<State> tree : trainTrees) {
-//				if (tree.getYield().size() != 5) { continue; }
-				
 				/*// DEBUG
 				System.out.println(tree.getTerminalYield());
 				System.out.println(tree.getYield());
 				*/
-				
-//				parser.doInsideOutside(tree);
 				
 				/*// DEBUG 
 				parser.doInsideOutsideWithTree(tree);
@@ -263,26 +233,20 @@ public class LVeGLearner extends Recorder {
 				*/
 				
 				if (tree.getYield().size() != 8) { continue; }
-				
-				if (cnt == 2) {
-					logger.trace("Debugging the tree...");
-					parser.doInsideOutsideWithTree(tree);
-					MethodUtil.debugTree(tree, false, (short) 2);
-					logger.trace(tree);
-					logger.trace("What the fuck.");
-					break;
-				}
-				
+				/*
+				logger.trace(tree + "\n");
+				MethodUtil.debugRuleWeightInTheTree(grammar, lexicon, tree);
+				*/
 				double scoreT = parser.evalRuleCountWithTree(tree, (short) 0);
 				double scoreS = parser.evalRuleCount(tree, (short) 0);
+				
+				System.exit(1);
+				
 				scoresOfST.add(scoreT);
 				scoresOfST.add(scoreS);
 				
-				logger.trace(tree.getYield());
-				MethodUtil.debugCount(grammar, lexicon, tree); // DEBUG
-				
 				isample++;
-				LVeGLearner.logger.trace("Sample " + isample + "...");
+				LVeGLearner.logger.trace("Sample " + isample + "...\n");
 				if (isample >= 1) {
 					break;
 				}
@@ -291,8 +255,7 @@ public class LVeGLearner extends Recorder {
 			long endTime = System.currentTimeMillis();
 			
 			System.out.println("Average time each sample cost is " + (endTime - startTime) / (1000.0 * isample));
-			
-			MethodUtil.debugCount(grammar, lexicon, null, null); // DEBUG
+			System.exit(1);
 			
 			// apply gradient descent
 			grammar.applyGradientDescent(scoresOfST);
@@ -358,7 +321,7 @@ public class LVeGLearner extends Recorder {
 				sumll += ll;
 			}
 		}
-		logger.trace("There is (are) " + nUnparsable + " unparsable sample(s)");
+		logger.trace("There is (are) " + nUnparsable + " unparsable sample(s)\n");
 		return sumll;
 	}
 	
@@ -409,7 +372,7 @@ public class LVeGLearner extends Recorder {
 			Corpus.lowercaseWords(trainTrees);
 			Corpus.lowercaseWords(validationTrees);
 		}
-		logger.debug("There are " + trainTrees.size() + " trees in the training set.");
+		logger.trace("There are " + trainTrees.size() + " trees in the training set.\n");
 		datasets.put(ID_TRAINING, trainTrees);
 		datasets.put(ID_VALIDATION, validationTrees);
 		
@@ -454,10 +417,10 @@ public class LVeGLearner extends Recorder {
 	private static void debugNumbererTag(Numberer numbererTag, Options opts) {
 		if (opts.verbose || true) {
 			for (int i = 0; i < numbererTag.size(); i++) {
-				logger.trace("Tag " + i + "\t" +  (String) numbererTag.object(i)); // DEBUG
+//				logger.trace("Tag " + i + "\t" +  (String) numbererTag.object(i) + "\n"); // DEBUG
 			}
 		}
-		logger.debug("There are " + numbererTag.size() + " observed tags.");
+		logger.debug("There are " + numbererTag.size() + " observed tags.\n");
 	}
 
 }

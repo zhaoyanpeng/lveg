@@ -40,7 +40,7 @@ public class GaussianMixture extends Recorder {
 	 * independent Gaussian distributions mapped by keys. Keys: P (parent); C 
 	 * (child); LC (left child); RC (right child); UC (unary child)
 	 * 
-	 * TODO but why did I use the Set for the portion of Mog? To ease the comparison?
+	 * TODO but why did I use the Set for the portion of MoG? To ease the comparison?
 	 */
 	protected List<Map<String, Set<GaussianDistribution>>> mixture;
 	
@@ -57,7 +57,7 @@ public class GaussianMixture extends Recorder {
 	 * Initialize the fields by default.
 	 */
 	protected void initialize() {
-		MethodUtil.randomInitList(weights, Double.class, ncomponent, LVeGLearner.maxrandom, false);
+		MethodUtil.randomInitList(weights, Double.class, ncomponent, LVeGLearner.maxrandom, false, true);
 		for (int i = 0; i < ncomponent; i++) {
 			Map<String, Set<GaussianDistribution>> component = 
 					new HashMap<String, Set<GaussianDistribution>>();
@@ -559,13 +559,12 @@ public class GaussianMixture extends Recorder {
 	}
 	
 	
-	public double evalInsideOutside(List<Double> sample, Set<String> verifier) {
+	public double evalInsideOutside(List<Double> sample) {
 		double ret = 0.0, value;
 		for (int i = 0; i < ncomponent; i++) {
 			Map<String, Set<GaussianDistribution>> component = mixture.get(i);
 			value = 1.0;
 			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
-				verifier.add(gaussian.getKey());
 				for (GaussianDistribution gd : gaussian.getValue()) {
 					value *= gd.eval(sample, false);
 				}
@@ -610,7 +609,7 @@ public class GaussianMixture extends Recorder {
 		double ret = 0.0;
 		for (int i = 0; i < ncomponent; i++) {
 			if (mixture.get(i).size() > 0) {
-				logger.error("You are not supposed to call this method if the MoGul contains variables.");
+				logger.error("You are not supposed to call this method if the MoGul contains variables.\n");
 			}
 			ret += Math.exp(weights.get(i));
 		}

@@ -57,10 +57,10 @@ public class InferencerTest {
 			int x1 = split + 1, y1 = end;
 			int l0 = nword - (y0 - x0), l1 = nword - (y1 - x1);
 			
-			if (!chart.iGetStatus(Chart.idx(x0,  l0))) {
+			if (!chart.getStatus(Chart.idx(x0,  l0), true)) {
 				insideScore(chart, nword, begin, split);
 			}
-			if (!chart.iGetStatus(Chart.idx(x1, l1))) {
+			if (!chart.getStatus(Chart.idx(x1, l1), true)) {
 				insideScore(chart, nword, split + 1, end);
 			}
 			
@@ -68,7 +68,7 @@ public class InferencerTest {
 					"-(" + x0 + ", " + y0 + ")" + "-(" + x1 + ", " + y1 + ")");
 		}
 		
-		chart.iSetStatus(Chart.idx(begin, nword - (end - begin)), true);
+		chart.setStatus(Chart.idx(begin, nword - (end - begin)), true, true);
 		System.out.println();
 	}
 	
@@ -77,9 +77,9 @@ public class InferencerTest {
 	public void outsideScore(Chart chart, int nword, int begin, int end) {
 		
 		if (begin == 0 && end == nword - 1) {
-			if (!chart.iGetStatus(Chart.idx(begin, nword - (end - begin)))) {
+			if (!chart.getStatus(Chart.idx(begin, nword - (end - begin)), true)) {
 				System.out.println("(" + begin + ", " + end + ")");
-				chart.iSetStatus(Chart.idx(begin, nword - (end - begin)), true);
+				chart.setStatus(Chart.idx(begin, nword - (end - begin)), true, true);
 			}
 		}
 		
@@ -92,7 +92,7 @@ public class InferencerTest {
 			y1 = right;
 			l0 = y0 - x0;
 			l1 = y1 - x1;
-			if (!chart.iGetStatus(Chart.idx(x0, l0))) {
+			if (!chart.getStatus(Chart.idx(x0, l0), true)) {
 				outsideScore(chart, nword, x0, y0);
 			}
 			
@@ -107,7 +107,7 @@ public class InferencerTest {
 			y1 = begin - 1;
 			l0 = y0 - x0;
 			l1 = y1 - x1;
-			if (!chart.iGetStatus(Chart.idx(x0, l0))) {
+			if (!chart.getStatus(Chart.idx(x0, l0), true)) {
 				outsideScore(chart, nword, x0, y0);
 			}
 			
@@ -115,7 +115,7 @@ public class InferencerTest {
 					"-(" + x0 + ", " + y0 + ")" + "-(" + x1 + ", " + y1 + ")");
 		}
 		
-		chart.iSetStatus(Chart.idx(begin, nword - (end - begin)), true);
+		chart.setStatus(Chart.idx(begin, nword - (end - begin)), true, true);
 		System.out.println();
 	}
 

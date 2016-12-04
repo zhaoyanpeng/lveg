@@ -177,7 +177,7 @@ public class LVeGGrammar extends Recorder implements Serializable {
 			break;
 		}
 		default:
-			logger.error("Malformed tree: more than two children. Exitting...");
+			logger.error("Malformed tree: more than two children. Exitting...\n");
 			System.exit(0);
 		}
 		for (Tree<State> child : children) {
@@ -243,17 +243,17 @@ public class LVeGGrammar extends Recorder implements Serializable {
 					chainSumUnaryRules.add(uruleSum);
 					chainSumUnaryRulesWithP[iparent].add(uruleSum);
 					chainSumUnaryRulesWithC[ichild].add(uruleSum);
-					logger.trace("Rule: [" + iparent + ", " + ichild + "]\t# of rules combined: " + cnt + 
-							"\t# of components: " + uruleSum.getWeight().getNcomponent());
+//					logger.trace("Rule: [" + iparent + ", " + ichild + "]\t# of rules combined: " + cnt + 
+//							"\t# of components: " + uruleSum.getWeight().getNcomponent());
 				} 
 			}
 		}
-		// TODO a temporary implementation, this may weaken the unary rules of length 1.
+		// TODO a temporary implementation, it may weaken the unary rules of length 1.
 		for (GrammarRule rule : chainSumUnaryRules) {
 			if (!unaryRuleMap.containsKey(rule)) { count++; continue; }
 			addUnaryRule((UnaryGrammarRule) rule);
 		}
-		logger.trace("# of new rules: " + count + " \t# of all rules: " + total);
+		logger.trace("# of new rules: " + count + " \t# of all rules: " + total + "\n");
 	}
 	
 	
