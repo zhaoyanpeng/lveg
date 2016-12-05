@@ -541,6 +541,17 @@ public class MethodUtil extends Recorder {
 	
 	
 	/**
+	 * Match a number with optional '-' and decimal.
+	 * 
+	 * @param str the string
+	 * @return
+	 */
+	public static boolean isNumeric(String str){
+		return str.matches("[-+]?\\d*\\.?\\d+");  
+	}
+	
+	
+	/**
 	 * @param tree       the parse tree
 	 * @param filename   image name
 	 * @throws Exception oops
