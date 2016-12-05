@@ -559,14 +559,14 @@ public class GaussianMixture extends Recorder {
 	}
 	
 	
-	public double evalInsideOutside(List<Double> sample) {
+	public double evalInsideOutside(List<Double> sample, boolean normal) {
 		double ret = 0.0, value;
 		for (int i = 0; i < ncomponent; i++) {
 			Map<String, Set<GaussianDistribution>> component = mixture.get(i);
 			value = 1.0;
 			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
 				for (GaussianDistribution gd : gaussian.getValue()) {
-					value *= gd.eval(sample, false);
+					value *= gd.eval(sample, normal);
 				}
 			}
 			ret += Math.exp(weights.get(i)) * value;
@@ -646,13 +646,13 @@ public class GaussianMixture extends Recorder {
 	 * @param icomponent index of the component
 	 * @return
 	 */
-	public double derivateMixingWeight(Map<String, List<Double>> sample, int icomponent) {
+	public double derivateMixingWeight(Map<String, List<Double>> sample, int icomponent, boolean normal) {
 		double value = 1.0;
 		Map<String, Set<GaussianDistribution>> component = mixture.get(icomponent);
 		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
 			List<Double> slice = sample.get(gaussian.getKey());
 			for (GaussianDistribution gd : gaussian.getValue()) {
-				value *= gd.eval(slice, true);
+				value *= gd.eval(slice, normal);
 			}
 		}
 		return value;
@@ -668,24 +668,25 @@ public class GaussianMixture extends Recorder {
 	 * @param sample     the sample from the current component
 	 * @param ggrads     gradients of the parameters of gaussian distributions
 	 * @param wgrads     gradients of the mixing weights of MoG
+	 * @param normal     whether the sample is from N(0, 1) (true) or not (false)
 	 */
 	public void derivative(
 			short isample, int icomponent, double factor, 
-			Map<String, List<Double>> sample, Map<String, List<Double>> ggrads, List<Double> wgrads) {
+			Map<String, List<Double>> sample, Map<String, List<Double>> ggrads, List<Double> wgrads, boolean normal) {
 		if (isample == 0) {
 			wgrads.clear();
 			for (int i = 0; i < ncomponent; i++) {
 				wgrads.add(0.0);
 			}
 		}
-		double dMixingW = derivateMixingWeight(sample, icomponent);
+		double dMixingW = derivateMixingWeight(sample, icomponent, normal);
 		factor = factor * Math.exp(weights.get(icomponent)) * dMixingW;
 		Map<String, Set<GaussianDistribution>> component = mixture.get(icomponent);
 		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
 			List<Double> slice = sample.get(gaussian.getKey());
 			List<Double> grads = ggrads.get(gaussian.getKey());
 			for (GaussianDistribution gd : gaussian.getValue()) {
-				gd.derivative(factor, slice, grads, isample);
+				gd.derivative(factor, slice, grads, isample, normal);
 			}
 		}
 		wgrads.set(icomponent, wgrads.get(icomponent) + dMixingW);

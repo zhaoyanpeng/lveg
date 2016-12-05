@@ -10,6 +10,7 @@ import java.util.Set;
 import edu.shanghaitech.ai.nlp.lveg.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.GrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.UnaryGrammarRule;
+import edu.shanghaitech.ai.nlp.optimization.Optimizer.Batch;
 import edu.shanghaitech.ai.nlp.util.Recorder;
 
 /**
@@ -73,6 +74,41 @@ public class SGDForMoG extends Recorder {
 	}
 	
 	
+	private double derivateRuleWeight(
+			double scoreT, 
+			double scoreS, 
+			List<Map<String, GaussianMixture>> ioScoreWithT,
+			List<Map<String, GaussianMixture>> ioScoreWithS) {
+		double countWithT = 0.0, countWithS = 0.0, cnt, part, dRuleW;
+		for (Map<String, GaussianMixture> iosWithT : ioScoreWithT) {
+			cnt = 1.0;
+			boolean found = false;
+			for (Map.Entry<String, GaussianMixture> ios : iosWithT.entrySet()) {
+				part = ios.getValue().evalInsideOutside(truths.get(ios.getKey()), false);
+				cnt *= part;
+				found = true;
+			}
+			if (found) { countWithT += cnt; }
+		}
+		for (Map<String, GaussianMixture> iosWithS : ioScoreWithS) {
+			cnt = 1.0;
+			boolean found = false;
+			for (Map.Entry<String, GaussianMixture> ios : iosWithS.entrySet()) {
+				part = ios.getValue().evalInsideOutside(truths.get(ios.getKey()), false);
+				cnt *= part;
+				found = true;
+			}
+			if (found) { countWithS += cnt; }
+		}
+		if (scoreT <= 0 || scoreS <= 0) {
+			logger.error("Invalid tree score or sentence score.\n");
+			return -0.0;
+		}
+		dRuleW = countWithS / scoreS - countWithT / scoreT;
+		return dRuleW;
+	}
+	
+	
 	/**
 	 * @param rule
 	 * @param ioScoreWithT
@@ -81,25 +117,24 @@ public class SGDForMoG extends Recorder {
 	 */
 	public void optimize(
 			GrammarRule rule, 
-			List<Map<String, GaussianMixture>> ioScoreWithT,
-			List<Map<String, GaussianMixture>> ioScoreWithS,
-			List<Double> scoresOfSAndT) {
-		int size = ioScoreWithT.size();
-		if (size != ioScoreWithS.size()) {
+			Batch ioScoreWithT,
+			Batch ioScoreWithS,
+			List<Double> scoresSandT) {
+		int batchsize = ioScoreWithT.size();
+		if (batchsize != ioScoreWithS.size()) {
 			logger.error("Rule count with the tree is not equal to that with the sentence.\n");
 			return;
 		}
 		GaussianMixture ruleW = rule.getWeight();
-		int ncomponent = ruleW.getNcomponent(), idx = -1;
-		Map<String, GaussianMixture> iosWithT, iosWithS;
+		int ncomponent = ruleW.getNcomponent();
+		List<Map<String, GaussianMixture>> iosWithT, iosWithS;
 		double scoreT, scoreS, dRuleW;
 		
-		for (int i = 0; i < size; i++) {
+		for (int i = 0; i < batchsize; i++) {
 			iosWithT = ioScoreWithT.get(i);
 			iosWithS = ioScoreWithS.get(i);
-			idx = getIdx(iosWithT.keySet(), iosWithS.keySet());
-			scoreT = scoresOfSAndT.get(idx * 2);
-			scoreS = scoresOfSAndT.get(idx * 2 + 1);
+			scoreT = scoresSandT.get(i * 2);
+			scoreS = scoresSandT.get(i * 2 + 1);
 			for (int icomponent = 0; icomponent < ncomponent; icomponent++) {
 				for (short isample = 0; isample < nsample; isample++) {
 					clearSample(); // to ensure the correct sample is in use
@@ -120,8 +155,8 @@ public class SGDForMoG extends Recorder {
 							 * which contains the term 1 / w(r), thus we could eliminate w(r) when computing it.
 							 */
 							if (icomponent == 0 && isample == 0) {
-								iosWithT.remove(GrammarRule.Unit.C);
-								iosWithS.remove(GrammarRule.Unit.C);
+								for (Map<String, GaussianMixture> ios : iosWithT) { ios.remove(GrammarRule.Unit.C); }
+								for (Map<String, GaussianMixture> ios : iosWithS) { ios.remove(GrammarRule.Unit.C); }
 							}
 							break;
 						}
@@ -140,34 +175,11 @@ public class SGDForMoG extends Recorder {
 					}
 					ruleW.restoreSample(icomponent, sample, truths);
 					dRuleW = derivateRuleWeight(scoreT, scoreS, iosWithT, iosWithS);
-					ruleW.derivative(isample, icomponent, dRuleW, sample, ggrads, wgrads);
+					ruleW.derivative(isample, icomponent, dRuleW, sample, ggrads, wgrads, true);
 				}
 				ruleW.update(icomponent, lr, ggrads, wgrads);
 			}
 		}
-	}
-	
-	
-	private double derivateRuleWeight(
-			double scoreT, 
-			double scoreS, 
-			Map<String, GaussianMixture> ioScoreWithT,
-			Map<String, GaussianMixture> ioScoreWithS) {
-		double cntWithT = 1.0, cntWithS = 1.0, dRuleW, part;
-		for (Map.Entry<String, GaussianMixture> iosWithT : ioScoreWithT.entrySet()) {
-			part = iosWithT.getValue().evalInsideOutside(truths.get(iosWithT.getKey()));
-			cntWithT *= part;
-		}
-		for (Map.Entry<String, GaussianMixture> iosWithS : ioScoreWithS.entrySet()) {
-			part = iosWithS.getValue().evalInsideOutside(truths.get(iosWithS.getKey()));
-			cntWithS *= part;
-		}
-		if (scoreT <= 0 || scoreS <= 0) {
-			logger.error("Invalid tree score or sentence score.\n");
-			return -0.0;
-		}
-		dRuleW = cntWithS / scoreS - cntWithT / scoreT;
-		return dRuleW;
 	}
 	
 	
@@ -189,7 +201,7 @@ public class SGDForMoG extends Recorder {
 	}
 	
 	
-	private int getIdx(Set<String> strsWithT, Set<String> strsWithS) {
+	protected int getIdx(Set<String> strsWithT, Set<String> strsWithS) {
 		int idx = -1;
 		for (String str : strsWithT) {
 			if (isNumeric(str) && strsWithS.contains(str)) {

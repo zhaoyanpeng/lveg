@@ -112,7 +112,18 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	 * @param grads   gradients container
 	 * @param isample index of the sample
 	 */
-	protected void derivative(double factor, List<Double> sample, List<Double> grads, short isample) {}
+	protected void derivative(double factor, List<Double> sample, List<Double> grads) {}
+	
+	
+	/**
+	 * Take the derivative of gaussian distribution with respect to the parameters (mu & sigma).
+	 * 
+	 * @param factor  dRuleWeight * weight * dMixingWeight
+	 * @param sample  the sample from this gaussian distribution
+	 * @param grads   gradients container
+	 * @param isample index of the sample
+	 */
+	protected void derivative(double factor, List<Double> sample, List<Double> grads, short isample, boolean normal) {}
 	
 	
 	/**

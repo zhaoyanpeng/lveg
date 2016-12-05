@@ -27,24 +27,24 @@ public abstract class LVeGLexicon {
 	protected int unknownLevel;
 	
 	
-	public void addCount(short idParent, short idChild, char type, Map<String, GaussianMixture> count, boolean withTree) {
+	public void addCount(short idParent, short idChild, char type, Map<String, GaussianMixture> count, short isample, boolean withTree) {
 		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
-		addCount(rule, count, withTree);
+		addCount(rule, count, isample, withTree);
 	}
 	
 	
-	public List<Map<String, GaussianMixture>> getCount(short idParent, short idChild, char type, boolean withTree) {
+	public Map<Short, List<Map<String, GaussianMixture>>> getCount(short idParent, short idChild, char type, boolean withTree) {
 		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
 		return getCount(rule, withTree);
 	}
 	
 	
-	public void addCount(GrammarRule rule, Map<String, GaussianMixture> count, boolean withTree) {
-		optimizer.addCount(rule, count, withTree);
+	public void addCount(GrammarRule rule, Map<String, GaussianMixture> count, short isample, boolean withTree) {
+		optimizer.addCount(rule, count, isample, withTree);
 	}
 	
 	
-	public List<Map<String, GaussianMixture>> getCount(GrammarRule rule, boolean withTree) {
+	public Map<Short, List<Map<String, GaussianMixture>>> getCount(GrammarRule rule, boolean withTree) {
 		return optimizer.getCount(rule, withTree);
 	}
 	

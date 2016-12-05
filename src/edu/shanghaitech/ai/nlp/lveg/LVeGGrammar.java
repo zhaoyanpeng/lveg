@@ -114,7 +114,7 @@ public class LVeGGrammar extends Recorder implements Serializable {
 		for (GrammarRule rule : binaryRuleTable.keySet()) {
 			addBinaryRule((BinaryGrammarRule) rule);
 		}
-		computeChainUnaryRule();
+//		computeChainUnaryRule();
 	}
 	
 	
@@ -277,36 +277,36 @@ public class LVeGGrammar extends Recorder implements Serializable {
 	}
 	
 	
-	public void addCount(short idParent, short idlChild, short idrChild, Map<String, GaussianMixture> count, boolean withTree) {
+	public void addCount(short idParent, short idlChild, short idrChild, Map<String, GaussianMixture> count, short isample, boolean withTree) {
 		GrammarRule rule = getBinaryRule(idParent, idlChild, idrChild);
-		addCount(rule, count, withTree);
+		addCount(rule, count, isample, withTree);
 	}
 	
 	
-	public List<Map<String, GaussianMixture>> getCount(short idParent, short idlChild, short idrChild, boolean withTree) {
+	public Map<Short, List<Map<String, GaussianMixture>>> getCount(short idParent, short idlChild, short idrChild, boolean withTree) {
 		GrammarRule rule = getBinaryRule(idParent, idlChild, idrChild);
 		return getCount(rule, withTree);
 	}
 	
 	
-	public void addCount(short idParent, short idChild, char type, Map<String, GaussianMixture> count, boolean withTree) {
+	public void addCount(short idParent, short idChild, char type, Map<String, GaussianMixture> count, short isample, boolean withTree) {
 		GrammarRule rule = getUnaryRule(idParent, idChild, type);
-		addCount(rule, count, withTree);
+		addCount(rule, count, isample, withTree);
 	}
 	
 	
-	public List<Map<String, GaussianMixture>> getCount(short idParent, short idChild, char type, boolean withTree) {
+	public Map<Short, List<Map<String, GaussianMixture>>> getCount(short idParent, short idChild, char type, boolean withTree) {
 		GrammarRule rule = getUnaryRule(idParent, idChild, type);
 		return getCount(rule, withTree);
 	}
 	
 	
-	public void addCount(GrammarRule rule, Map<String, GaussianMixture> count, boolean withTree) {
-		optimizer.addCount(rule, count, withTree);
+	public void addCount(GrammarRule rule, Map<String, GaussianMixture> count, short isample, boolean withTree) {
+		optimizer.addCount(rule, count, isample, withTree);
 	}
 	
 	
-	public List<Map<String, GaussianMixture>> getCount(GrammarRule rule, boolean withTree) {
+	public Map<Short, List<Map<String, GaussianMixture>>> getCount(GrammarRule rule, boolean withTree) {
 		return optimizer.getCount(rule, withTree);
 	}
 	

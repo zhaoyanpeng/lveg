@@ -77,34 +77,34 @@ public class MethodUtil extends Recorder {
 		int niter = 20, iiter = 0;
 		Map<GrammarRule, GrammarRule> uRuleMap = grammar.getUnaryRuleMap();
 		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBinaryRuleMap();
-		// unary grammar rules
-		LVeGLearner.logger.trace("\n---Unary Grammar Rules---\n\n");
-		for (Map.Entry<GrammarRule, GrammarRule> rmap : uRuleMap.entrySet()) {
-			GrammarRule rule = rmap.getValue();
-			List<Map<String, GaussianMixture>> count = grammar.getCount(rule, false);
-			LVeGLearner.logger.trace(rule + "\tcount=" + count + "\n");
-			if (++iiter >= niter) { break; }
-		}
-		
-		iiter = 0;
-		// binary grammar rules
-		LVeGLearner.logger.trace("\n---Binary Grammar Rules---\n\n");
-		for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
-			GrammarRule rule = rmap.getValue();
-			List<Map<String, GaussianMixture>> count = grammar.getCount(rule, false);
-			LVeGLearner.logger.trace(rule + "\tcount=" + count + "\n");
-			if (++iiter > niter) { break; }
-		}
-		
-		iiter = 0;
-		// unary rules in lexicon
-		Set<GrammarRule> ruleSet = lexicon.getRuleSet();
-		LVeGLearner.logger.trace("\n---Unary Grammar Rules in Lexicon---\n");
-		for (GrammarRule rule : ruleSet) {
-			List<Map<String, GaussianMixture>> count = lexicon.getCount(rule, false);
-			LVeGLearner.logger.trace(rule + "\tcount=" + count);
-			if (++iiter >= niter) { break; }
-		}
+//		// unary grammar rules
+//		LVeGLearner.logger.trace("\n---Unary Grammar Rules---\n\n");
+//		for (Map.Entry<GrammarRule, GrammarRule> rmap : uRuleMap.entrySet()) {
+//			GrammarRule rule = rmap.getValue();
+//			List<Map<String, GaussianMixture>> count = grammar.getCount(rule, false);
+//			LVeGLearner.logger.trace(rule + "\tcount=" + count + "\n");
+//			if (++iiter >= niter) { break; }
+//		}
+//		
+//		iiter = 0;
+//		// binary grammar rules
+//		LVeGLearner.logger.trace("\n---Binary Grammar Rules---\n\n");
+//		for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
+//			GrammarRule rule = rmap.getValue();
+//			List<Map<String, GaussianMixture>> count = grammar.getCount(rule, false);
+//			LVeGLearner.logger.trace(rule + "\tcount=" + count + "\n");
+//			if (++iiter > niter) { break; }
+//		}
+//		
+//		iiter = 0;
+//		// unary rules in lexicon
+//		Set<GrammarRule> ruleSet = lexicon.getRuleSet();
+//		LVeGLearner.logger.trace("\n---Unary Grammar Rules in Lexicon---\n");
+//		for (GrammarRule rule : ruleSet) {
+//			List<Map<String, GaussianMixture>> count = lexicon.getCount(rule, false);
+//			LVeGLearner.logger.trace(rule + "\tcount=" + count);
+//			if (++iiter >= niter) { break; }
+//		}
 		
 	}
 	
@@ -183,7 +183,7 @@ public class MethodUtil extends Recorder {
 		
 		State parent = tree.getLabel();
 		short idParent = parent.getId();
-		
+		/*
 		if (tree.isPreTerminal()) {
 			State word = children.get(0).getLabel();
 			List<Map<String, GaussianMixture>> count = lexicon.getCount(idParent, (short) word.wordIdx, GrammarRule.LHSPACE, true);
@@ -219,6 +219,7 @@ public class MethodUtil extends Recorder {
 				System.exit(0);	
 			}
 		}
+		*/
 	}
 	
 	

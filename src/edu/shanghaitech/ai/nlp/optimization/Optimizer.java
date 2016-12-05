@@ -23,9 +23,6 @@ public class Optimizer extends Recorder {
 	private Map<GrammarRule, Batch> cntsWithT;
 	private Map<GrammarRule, Batch> cntsWithS;
 	
-	private Map<GrammarRule, List<Map<String, GaussianMixture>>> countsWithT;
-	private Map<GrammarRule, List<Map<String, GaussianMixture>>> countsWithS;
-	
 	/**
 	 * ruleset contains all the rules that are need to be optimized, it is 
 	 * used to quickly index the rules.
@@ -39,8 +36,6 @@ public class Optimizer extends Recorder {
 	private Optimizer() {
 		this.cntsWithS = new HashMap<GrammarRule, Batch>();
 		this.cntsWithT = new HashMap<GrammarRule, Batch>();
-//		this.countsWithT = new HashMap<GrammarRule, List<Map<String, GaussianMixture>>>();
-//		this.countsWithS = new HashMap<GrammarRule, List<Map<String, GaussianMixture>>>();
 		this.ruleSet = new HashSet<GrammarRule>();
 	}
 	
@@ -64,12 +59,12 @@ public class Optimizer extends Recorder {
 	 * 
 	 * @param scoresOfST the parse tree score (odd index) and the sentence score (even index).
 	 */
-	public void applyGradientDescent(List<Double> scoresOfST) {
-		List<Map<String, GaussianMixture>> countWithT, countWithS;
+	public void applyGradientDescent(List<Double> scoresST) {
+		Batch cntWithT, cntWithS;
 		for (GrammarRule rule : ruleSet) {
-			countWithT = countsWithT.get(rule);
-			countWithS = countsWithS.get(rule);
-			minimizer.optimize(rule, countWithT, countWithS, scoresOfST);
+			cntWithT = cntsWithT.get(rule);
+			cntWithS = cntsWithS.get(rule);
+			minimizer.optimize(rule, cntWithT, cntWithS, scoresST);
 		}
 	}
 	
@@ -83,29 +78,6 @@ public class Optimizer extends Recorder {
 		Batch batchWithS = new Batch();
 		cntsWithT.put(rule, batchWithT);
 		cntsWithS.put(rule, batchWithS);
-		
-//		List<Map<String, GaussianMixture>> batchWithT = new ArrayList<Map<String, GaussianMixture>>();
-//		List<Map<String, GaussianMixture>> batchWithS = new ArrayList<Map<String, GaussianMixture>>();
-//		countsWithT.put(rule, batchWithT);
-//		countsWithS.put(rule, batchWithS);
-	}
-	
-	
-	/**
-	 * @param rule     the grammar rule
-	 * @param scores   which contains 1) key GrammarRule.Unit.P maps to the outside score of the parent node
-	 * 					2) key GrammarRule.Unit.UC/C (LC) maps to the inside score (of the left node) if the rule is unary (binary)
-	 * 					3) key GrammarRule.Unit.RC maps to the inside score of the right node if the rule is binary, otherwise null
-	 * @param withTree type of the expected pseudo count
-	 */
-	public void addCount(GrammarRule rule, Map<String, GaussianMixture> scores, boolean withTree) {
-		List<Map<String, GaussianMixture>> batch = null;
-		Map<GrammarRule, List<Map<String, GaussianMixture>>> count = withTree ? countsWithT : countsWithS;
-		if (rule != null && (batch = count.get(rule)) != null) {
-			batch.add(scores);
-			return;
-		}
-		logger.error("Not a valid grammar rule.\n");
 	}
 	
 	
@@ -115,11 +87,11 @@ public class Optimizer extends Recorder {
 	 * 					2) key GrammarRule.Unit.UC/C (LC) maps to the inside score (of the left node) if the rule is unary (binary)
 	 * 					3) key GrammarRule.Unit.RC maps to the inside score of the right node if the rule is binary, otherwise null
 	 * @param idx      index of the sample in this batch
-	 * @param withTree type of the expected pseudo count
+	 * @param withT type of the expected pseudo count
 	 */
-	public void addCount(GrammarRule rule, Map<String, GaussianMixture> cnt, short idx, boolean withTree) {
+	public void addCount(GrammarRule rule, Map<String, GaussianMixture> cnt, short idx, boolean withT) {
 		Batch batch = null;
-		Map<GrammarRule, Batch> cnts = withTree ? cntsWithT : cntsWithS;
+		Map<GrammarRule, Batch> cnts = withT ? cntsWithT : cntsWithS;
 		if (rule != null && (batch = cnts.get(rule)) != null) {
 			batch.add(idx, cnt);
 			return;
@@ -128,37 +100,25 @@ public class Optimizer extends Recorder {
 	}
 	
 	
-//	public Batch getCount(GrammarRule rule, boolean withT) {
-//		Batch batch = null;
-//		Map<GrammarRule, Batch> cnts = withT ? countsWithT : countsWithS;
-//		if (rule != null && (batch = cnts.get(rule)) != null) {
-//			return batch;
-//		}
-//		logger.error("Not a valid grammar rule or the rule was not found.\n");
-//		return null;
-//	}
-	
-	
 	/**
 	 * The method for debugging.
 	 * 
 	 * @param rule     the grammar rule
-	 * @param withTree type of the expected count
+	 * @param withT type of the expected count
 	 * @return
 	 */
-	public List<Map<String, GaussianMixture>> getCount(GrammarRule rule, boolean withTree) {
-		List<Map<String, GaussianMixture>> batch = null;
-		Map<GrammarRule, List<Map<String, GaussianMixture>>> count = withTree ? countsWithT : countsWithS;
-		if (rule != null && (batch = count.get(rule)) != null) {
-			return batch;
+	public Map<Short, List<Map<String, GaussianMixture>>> getCount(GrammarRule rule, boolean withT) {
+		Batch batch = null;
+		Map<GrammarRule, Batch> cnts = withT ? cntsWithT : cntsWithS;
+		if (rule != null && (batch = cnts.get(rule)) != null) {
+			return batch.batch;
 		}
 		logger.error("Not a valid grammar rule or the rule was not found.\n");
 		return null;
 	}
 	
 	
-	public void reset() {
-	}
+	public void reset() { }
 	
 	
 	/**
@@ -188,8 +148,17 @@ public class Optimizer extends Recorder {
 				cnts.add(cnt);
 			} else {
 				cnts = new ArrayList<Map<String, GaussianMixture>>();
+				cnts.add(cnt);
 				batch.put(idx, cnts);
 			}
+		}
+		
+		protected List<Map<String, GaussianMixture>> get(int i) {
+			return batch.get(i);
+		}
+		
+		protected int size() {
+			return batch.size();
 		}
 	}
 }

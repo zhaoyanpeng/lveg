@@ -68,7 +68,23 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 	
 	
 	@Override
-	protected void derivative(double factor, List<Double> sample, List<Double> grads, short isample) {
+	protected void derivative(double factor, List<Double> sample, List<Double> grads) {
+		double sigma, mgrad, vgrad, point;
+		for (int i = 0; i < dim; i++) {
+			point = sample.get(i);
+			sigma = Math.exp(vars.get(i) / 2);
+			mgrad = factor * point / sigma;
+			// CHECK dw / dx = (dw / ds) * (ds / dx) = (factor * (point^2 - 1) / s) * ((1 / 2) * s), 
+			// where s = sigma = std = exp(x / 2)
+			vgrad = factor * (Math.pow(point, 2) - 1) / 2;
+			grads.set(i * 2, mgrad);
+			grads.set(i * 2 + 1, vgrad);
+		}
+	}
+	
+	
+	@Override
+	protected void derivative(double factor, List<Double> sample, List<Double> grads, short isample, boolean normal) {
 		if (sample != null && sample.size() == dim) {
 			if (isample == 0) {
 				grads.clear();
@@ -76,16 +92,21 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 					grads.add(0.0);
 				}
 			}
-			double sigma, mgrad, vgrad;
-			for (int i = 0; i < dim; i++) {
-				sigma = Math.exp(vars.get(i) / 2);
-				mgrad = factor * sample.get(i) / sigma;
-				// CHECK dw / dx = (dw / ds) * (ds / dx) = (factor * (point^2 - 1) / s) * ((1 / 2) * s), 
-				// where s = sigma = std = exp(x / 2)
-				vgrad = factor * (Math.pow(sample.get(i), 2) - 1) / 2;
-				grads.set(i * 2, mgrad);
-				grads.set(i * 2 + 1, vgrad);
+			if (!normal) {
+				double sigma, point, mgrad, vgrad;
+				for (int i = 0; i < dim; i++) {
+					sigma = Math.exp(vars.get(i) / 2);
+					point = (sample.get(i) - mus.get(i)) / sigma;
+					mgrad = factor * point / sigma;
+					// CHECK dw / dx = (dw / ds) * (ds / dx) = (factor * (point^2 - 1) / s) * ((1 / 2) * s), 
+					// where s = sigma = std = exp(x / 2)
+					vgrad = factor * (Math.pow(point, 2) - 1) / 2;
+					grads.set(i * 2, mgrad);
+					grads.set(i * 2 + 1, vgrad);
+				}
+				return;
 			}
+			derivative(factor, sample, grads);
 		}
 	}
 	
