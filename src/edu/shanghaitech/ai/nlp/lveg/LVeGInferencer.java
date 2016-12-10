@@ -59,12 +59,11 @@ public class LVeGInferencer extends Inferencer {
 			int iCell = Chart.idx(i, nword);
 			int wordIdx = sentence.get(i).wordIdx; 
 			List<GrammarRule> rules = lexicon.getRulesWithWord(wordIdx);
-			// pre-terminals
+			// preterminals
 			for (GrammarRule rule : rules) {
 				tagQueue.offer(rule.lhs);
 				chart.addInsideScore(rule.lhs, iCell, rule.getWeight().copy(true), (short) 0);
 			}
-			// unary grammar rules
 			// unary grammar rules
 			logger.trace("Cell [" + i + ", " + (i + 0) + "]="+ iCell + "\t is being estimated. # " + tagQueue.size());
 			long start = System.currentTimeMillis();
@@ -331,9 +330,7 @@ public class LVeGInferencer extends Inferencer {
 	protected void evalRuleCount(Tree<State> tree, Chart chart, short isample) {
 		List<State> sentence = tree.getYield();
 		int x0, x1, y0, y1, c0, c1, c2, nword = sentence.size();
-		GaussianMixture outScore, cinScore, linScore, rinScore;
-		
-		Map<GrammarRule, GrammarRule> uRuleMap = grammar.getUnaryRuleMap();
+		GaussianMixture outScore, linScore, rinScore;
 		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBinaryRuleMap();
 		
 		for (int ilayer = nword - 1; ilayer >= 0; ilayer--) {
@@ -342,26 +339,13 @@ public class LVeGInferencer extends Inferencer {
 				y1 = left + ilayer;
 				c2 = Chart.idx(left, nword - ilayer);
 				
-				// unary grammar rules
-				for (Map.Entry<GrammarRule, GrammarRule> rmap : uRuleMap.entrySet()) {
-					UnaryGrammarRule rule = (UnaryGrammarRule) rmap.getValue();
-					if (chart.containsKey(rule.lhs, c2, false) && chart.containsKey(rule.rhs, c2, true)) {
-						cinScore = chart.getInsideScore(rule.rhs, c2);
-						outScore = chart.getOutsideScore(rule.lhs, c2);
-						
-						String key = rule.lhs == 0 ? GrammarRule.Unit.C : GrammarRule.Unit.UC;
-						byte ruleType = rule.lhs == 0 ? GrammarRule.RHSPACE : GrammarRule.GENERAL;
-						Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>();
-						scores.put(GrammarRule.Unit.P, outScore);
-						scores.put(key, cinScore);
-						grammar.addCount(rule.lhs, rule.rhs, ruleType, scores, isample, false);
-					}
-				}
+				// general unary grammar rules
+				evalUnaryRuleCount(chart, c2, isample, null);
 				
-				// lexicons
+				// unary grammar rules containing lexicons
 				if (x0 == y1) {
-					evalUnaryRuleCount(chart, c2, nword, isample, sentence);
-					continue; // not necessary
+					evalUnaryRuleCount(chart, c2, isample, sentence.get(x0));
+					continue; // not necessary, think about it...
 				}
 				
 				for (int split = left; split < left + ilayer; split++) {
@@ -522,29 +506,71 @@ public class LVeGInferencer extends Inferencer {
 	 * @param begin    left bound of the spanning range
 	 * @param end      right bound of the spanning range
 	 */
-	protected void outsideScore(Chart chart, List<State> sentence, int begin, int end) {
-		
-	}
+	protected void outsideScore(Chart chart, List<State> sentence, int begin, int end) {}
 	
-	
-	private void evalUnaryRuleCount(Chart chart, int idx, int nword, short isample, List<State> sentence) {  		
-		for (int i = 0; i < nword; i++) {
-			int wordIdx = sentence.get(i).wordIdx;
-			int iCell = Chart.idx(i, nword);
-			List<GrammarRule> rules = lexicon.getRulesWithWord(wordIdx);
-			// pre-terminals
+	private void evalUnaryRuleCount(Chart chart, int idx, short isample, State word) {
+		Set<Short> set;
+		List<GrammarRule> rules;
+		GaussianMixture outScore, cinScore;
+		// have to process ROOT node specifically
+		if (idx == 0 && (set = chart.keySet(idx, false, (short) (LENGTH_UCHAIN + 1))) != null) {
+			for (Short idTag : set) { // can only contain ROOT
+				rules = grammar.getUnaryRuleWithP(idTag);
+				Iterator<GrammarRule> iterator = rules.iterator();
+				outScore = chart.getOutsideScore(idTag, idx, (short) (LENGTH_UCHAIN + 1));
+				while (iterator.hasNext()) {
+					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
+					if (!chart.containsKey(rule.rhs, idx, true)) { continue; }
+					cinScore = chart.getInsideScore(rule.rhs, idx);
+					Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>();
+					scores.put(GrammarRule.Unit.P, outScore);
+					scores.put(GrammarRule.Unit.C, cinScore);
+					grammar.addCount(rule.lhs, rule.rhs, GrammarRule.RHSPACE, scores, isample, false);
+				}
+			}
+		}
+		// general unary grammar rules
+		Map<GrammarRule, GrammarRule> uRuleMap = grammar.getUnaryRuleMap();
+		for (Map.Entry<GrammarRule, GrammarRule> rmap : uRuleMap.entrySet()) {
+			UnaryGrammarRule rule = (UnaryGrammarRule) rmap.getValue();
+			if (rule.type == GrammarRule.RHSPACE) { continue; }
+			if (!chart.containsKey(rule.lhs, idx, false) || !chart.containsKey(rule.rhs, idx, true)) { continue; }
+			Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>();
+			mergeUnaryRuleCount(chart, idx, rule, scores, (short) 0, (short) (0)); // O_{0}(X) I_{0}(Y)
+			mergeUnaryRuleCount(chart, idx, rule, scores, (short) 0, (short) (1)); // O_{0}(X) I_{1}(Y)
+			mergeUnaryRuleCount(chart, idx, rule, scores, (short) 1, (short) (0)); // O_{1}(X) I_{0}(Y)
+			if (!scores.isEmpty()) { grammar.addCount(rule.lhs, rule.rhs, GrammarRule.GENERAL, scores, isample, false); }
+		}
+		// have to process unary rules containing LEXICONS specifically
+		if (word != null) {
+			rules = lexicon.getRulesWithWord(word.wordIdx);
 			for (GrammarRule rule : rules) {
-				GaussianMixture cinScore = chart.getInsideScore(rule.lhs, iCell);
-				GaussianMixture outScore = chart.getOutsideScore(rule.lhs, iCell);
-				Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>();
-				scores.put(String.valueOf(isample), null);
-				scores.put(GrammarRule.Unit.P, outScore);
-				scores.put(GrammarRule.Unit.C, cinScore);
-				lexicon.addCount(rule.lhs, (short) wordIdx, GrammarRule.LHSPACE, scores, isample, false); 
+				if (chart.containsKey(rule.lhs, idx, true, (short) 0) && chart.containsKey(rule.lhs, idx, false)) {
+					Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>();
+					cinScore = chart.getInsideScore(rule.lhs, idx, (short) 0);
+					outScore = chart.getOutsideScore(rule.lhs, idx);
+					scores.put(GrammarRule.Unit.P, outScore);
+					scores.put(GrammarRule.Unit.C, cinScore);
+					lexicon.addCount(rule.lhs, (short) word.wordIdx, GrammarRule.LHSPACE, scores, isample, false);
+				}
 			}
 		}
 	}
 	
+	private void mergeUnaryRuleCount(
+			Chart chart, int idx, UnaryGrammarRule rule, Map<String, GaussianMixture> scores, short olevel, short ilevel) {
+		if (chart.containsKey(rule.lhs, idx, false, olevel) && chart.containsKey(rule.rhs, idx, true, ilevel)) {
+			GaussianMixture cinScore = chart.getInsideScore(rule.rhs, idx, ilevel);
+			GaussianMixture outScore = chart.getOutsideScore(rule.lhs, idx, olevel);
+			if (scores.get(GrammarRule.Unit.P) != null) {
+				scores.get(GrammarRule.Unit.P).add(outScore);
+				scores.get(GrammarRule.Unit.UC).add(cinScore);
+			} else {
+				scores.put(GrammarRule.Unit.P, outScore.copy(true));
+				scores.put(GrammarRule.Unit.UC, cinScore.copy(true));
+			}
+		}
+	}
 	
 	private void outsideScoreForUnaryRule(Chart chart, Queue<Short> tagQueue, int idx, ChainUrule identifier) {
 		if (tagQueue != null) {
@@ -606,10 +632,74 @@ public class LVeGInferencer extends Inferencer {
 	}
 	
 	private void outsideScoreForUnaryRuleDefault(Chart chart, Queue<Short> tagQueue, int idx) {
-		
+		Set<Short> set;
+		short level = 0;
+		List<GrammarRule> rules;
+		String rmKey = GrammarRule.Unit.P;
+		GaussianMixture poutScore, coutScore;
+		// have to process ROOT node specifically
+		if (idx == 0 && (set = chart.keySet(idx, false, (short) (LENGTH_UCHAIN + 1))) != null) {
+			for (Short idTag : set) { // can only contain ROOT
+				rules = grammar.getUnaryRuleWithP(idTag);
+				Iterator<GrammarRule> iterator = rules.iterator();
+				poutScore = chart.getOutsideScore(idTag, idx, (short) (LENGTH_UCHAIN + 1));
+				while (iterator.hasNext()) {
+					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
+					coutScore = rule.weight.mulForInsideOutside(poutScore, rmKey, true);
+					chart.addOutsideScore(rule.rhs, idx, coutScore, level);
+				}
+			}
+		}
+		while(level < LENGTH_UCHAIN && (set = chart.keySet(idx, false, level)) != null) {
+			for (Short idTag : set) {
+				rules = grammar.getUnaryRuleWithP(idTag);
+				Iterator<GrammarRule> iterator = rules.iterator();
+				poutScore = chart.getOutsideScore(idTag, idx, level);
+				while (iterator.hasNext()) {
+					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
+					coutScore = rule.weight.mulForInsideOutside(poutScore, rmKey, true);
+					chart.addOutsideScore(rule.rhs, idx, coutScore, (short) (level + 1));
+				}
+			}
+			level++;
+		}
 	}
 	
 	private void insideScoreForUnaryRuleDefault(Chart chart, Queue<Short> tagQueue, int idx) {
+		String rmKey;
+		Set<Short> set;
+		short level = 0;
+		List<GrammarRule> rules;
+		GaussianMixture pinScore, cinScore;
+		while (level < LENGTH_UCHAIN && (set = chart.keySet(idx, true, level)) != null) {
+			for (Short idTag : set) {
+				rules = grammar.getUnaryRuleWithC(idTag);
+				Iterator<GrammarRule> iterator = rules.iterator();
+				cinScore = chart.getInsideScore(idTag, idx, level);
+				while (iterator.hasNext()) {
+					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
+					if (idx != 0 && rule.type == GrammarRule.RHSPACE) { continue; }
+					rmKey = rule.type == GrammarRule.RHSPACE ? GrammarRule.Unit.C : GrammarRule.Unit.UC;
+					pinScore = rule.weight.mulForInsideOutside(cinScore, rmKey, true);
+					chart.addInsideScore(rule.lhs, idx, pinScore, (short) (level + 1));
+				}
+			}
+			level++;
+		}
+		// have to process ROOT node specifically
+		if (idx == 0 && (set = chart.keySet(idx, true, LENGTH_UCHAIN)) != null) {
+			for (Short idTag : set) {
+				rules = grammar.getUnaryRuleWithC(idTag);
+				Iterator<GrammarRule> iterator = rules.iterator();
+				cinScore = chart.getInsideScore(idTag, idx, level);
+				while (iterator.hasNext()) {
+					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
+					if (rule.type != GrammarRule.RHSPACE) { continue; }
+					pinScore = rule.weight.mulForInsideOutside(cinScore, GrammarRule.Unit.C, true);
+					chart.addInsideScore(rule.lhs, idx, pinScore, (short) (LENGTH_UCHAIN + 1));
+				}
+			}
+		}
 	}
 	
 	private void outsideScoreForUnaryRuleNI(Chart chart, Queue<Short> tagQueue, int idx) {
@@ -885,6 +975,6 @@ public class LVeGInferencer extends Inferencer {
 	protected void setRootOutsideScore(Chart chart) {
 		GaussianMixture gm = new DiagonalGaussianMixture((short) 1);
 		gm.marginalizeToOne();
-		chart.addOutsideScore((short) 0, Chart.idx(0, 1), gm);
+		chart.addOutsideScore((short) 0, Chart.idx(0, 1), gm, (short) (LENGTH_UCHAIN + 1));
 	}
 }

@@ -83,7 +83,7 @@ public class GaussianMixture extends Recorder {
 	 * @param gm mixture of gaussians
 	 */
 	public void add(GaussianMixture gm) {
-		bias += gm.bias;
+		// TODO bias += gm.bias;
 		ncomponent += gm.ncomponent;
 		weights.addAll(gm.weights);
 		mixture.addAll(gm.mixture);

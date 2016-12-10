@@ -11,6 +11,8 @@ import edu.shanghaitech.ai.nlp.util.Recorder;
 
 public class Inferencer extends Recorder {
 	
+	protected final static short LENGTH_UCHAIN = 2;
+	
 	enum ChainUrule {
 		ALL_POSSIBLE_PATH, PRE_COMPUTE_CHAIN, NOT_PRE_ADD_INTER, NOT_PRE_NOT_INTER, DEFAULT,
 	}
@@ -67,8 +69,8 @@ public class Inferencer extends Recorder {
 		 * </pre>
 		 * 
 		 * @param i      index of the row
-		 * @param ilayer layer in the pyramid, from top (1) to bottom (ilayer);
-		 * 				  (n + n - ilayer + 1) * ilayer / 2 + i if ilayer ranges from bottom (0, 0)->0 to top (ilayer).
+		 * @param ilayer layer in the pyramid, from top (1) to bottom (ilayer), loc = ilayer * (ilayer - 1) / 2 + i;
+		 * 				  loc = (n + n - ilayer + 1) * ilayer / 2 + i if ilayer ranges from bottom (0, 0)->0 to top (ilayer).
 		 * @return
 		 */
 		public static int idx(int i, int ilayer) {
