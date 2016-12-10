@@ -14,7 +14,15 @@ public class SGDForMoGTest {
 //		int x = Integer.valueOf(key0);
 		int a = 24;
 		int b = 24;
-		assert(a != b);
+		assert(a == b);
+		
+		char x = (char) -1;
+		x = 1;
+		System.out.println((short) x);
+		System.out.println(x == 1);
+		
+		Byte f = -1;
+		System.out.println(f);
 	}
 
 }

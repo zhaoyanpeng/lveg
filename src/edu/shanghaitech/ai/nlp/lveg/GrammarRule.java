@@ -13,9 +13,9 @@ public abstract class GrammarRule implements Serializable {
 	 */
 	private static final long serialVersionUID = 1L;
 	
-	public final static char RHSPACE = 2;
-	public final static char LHSPACE = 1;
-	public final static char GENERAL = 0;
+	public final static byte RHSPACE = 2;
+	public final static byte LHSPACE = 1;
+	public final static byte GENERAL = 0;
 
 	/**
 	 * the ID of the left-hand side nonterminal

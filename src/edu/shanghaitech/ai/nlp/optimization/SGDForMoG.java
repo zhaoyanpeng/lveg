@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.Set;
 
 import edu.shanghaitech.ai.nlp.lveg.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.GrammarRule;
@@ -30,7 +29,6 @@ public class SGDForMoG extends Recorder {
 	protected List<Double> wgrads;
 	protected double wgrad;
 	
-	protected static double lr;
 	
 	/**
 	 * To avoid the excessive 'new' operations.
@@ -61,8 +59,7 @@ public class SGDForMoG extends Recorder {
 	public SGDForMoG(Random random) {
 		this();
 		this.random = random;
-		this.nsample = 3;
-		SGDForMoG.lr = 0.02;
+		this.nsample = 1;
 	}
 	
 	
@@ -70,10 +67,18 @@ public class SGDForMoG extends Recorder {
 		this();
 		this.random = random;
 		this.nsample = nsample;
-		SGDForMoG.lr = lr;
 	}
 	
 	
+	/**
+	 * TODO revise the computation in logarithm.
+	 * 
+	 * @param scoreT
+	 * @param scoreS
+	 * @param ioScoreWithT
+	 * @param ioScoreWithS
+	 * @return
+	 */
 	private double derivateRuleWeight(
 			double scoreT, 
 			double scoreS, 
@@ -104,7 +109,7 @@ public class SGDForMoG extends Recorder {
 			logger.error("Invalid tree score or sentence score.\n");
 			return -0.0;
 		}
-		dRuleW = countWithS / scoreS - countWithT / scoreT;
+		dRuleW = Math.exp(Math.log(countWithS) - scoreS) - Math.exp(Math.log(countWithT) - scoreT);
 		return dRuleW;
 	}
 	
@@ -128,10 +133,12 @@ public class SGDForMoG extends Recorder {
 		GaussianMixture ruleW = rule.getWeight();
 		int ncomponent = ruleW.getNcomponent();
 		List<Map<String, GaussianMixture>> iosWithT, iosWithS;
+		boolean removed = false, cumulative;
 		double scoreT, scoreS, dRuleW;
-		char uRuleType = (char) -1;
+		byte uRuleType = -1;
 		
 		for (int icomponent = 0; icomponent < ncomponent; icomponent++) {
+			removed = false; // only need to remove once
 			for (short isample = 0; isample < nsample; isample++) {
 				clearSample(); // to ensure the correct sample is in use
 				if (rule.isUnary()) {
@@ -160,6 +167,7 @@ public class SGDForMoG extends Recorder {
 					sample(sample.get(GrammarRule.Unit.LC), ruleW.getDim(icomponent, GrammarRule.Unit.LC));
 					sample(sample.get(GrammarRule.Unit.RC), ruleW.getDim(icomponent, GrammarRule.Unit.UC));
 				}
+				ruleW.restoreSample(icomponent, sample, truths);
 				for (int i = 0; i < batchsize; i++) {
 					iosWithT = ioScoreWithT.get(i);
 					iosWithS = ioScoreWithS.get(i);
@@ -171,16 +179,17 @@ public class SGDForMoG extends Recorder {
 					 * of the objective function w.r.t w(r) is (count(r | T_S) - count(r | S)) / w(r), 
 					 * which contains the term 1 / w(r), thus we could eliminate w(r) when computing it.
 					 */
-					if (uRuleType == GrammarRule.LHSPACE) {
+					if (!removed && uRuleType == GrammarRule.LHSPACE) { 
+						removed = true; // CHECK avoid impossible remove
 						for (Map<String, GaussianMixture> ios : iosWithT) { ios.remove(GrammarRule.Unit.C); }
 						for (Map<String, GaussianMixture> ios : iosWithS) { ios.remove(GrammarRule.Unit.C); }
 					}
-					ruleW.restoreSample(icomponent, sample, truths);
+					cumulative = (isample + i) > 0; // CHECK when to clear old gradients and accumulate new gradients
 					dRuleW = derivateRuleWeight(scoreT, scoreS, iosWithT, iosWithS);
-					ruleW.derivative(isample, icomponent, dRuleW, sample, ggrads, wgrads, true);
+					ruleW.derivative(cumulative, icomponent, dRuleW, sample, ggrads, wgrads, true);
 				}
 			}
-			ruleW.update(icomponent, lr, ggrads, wgrads);
+			ruleW.update(icomponent, ggrads, wgrads);
 		}
 	}
 	

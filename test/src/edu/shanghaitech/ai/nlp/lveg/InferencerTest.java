@@ -12,7 +12,7 @@ import edu.shanghaitech.ai.nlp.syntax.State;
 
 public class InferencerTest {
 	
-	private static Inferencer inferencer = new Inferencer(null, null);
+	private static LVeGInferencer inferencer = new LVeGInferencer(null, null);
 	
 	@Test
 	public void testInferencer() {

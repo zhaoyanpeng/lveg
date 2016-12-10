@@ -30,7 +30,6 @@ public class Optimizer extends Recorder {
 	private Set<GrammarRule> ruleSet;
 	
 	private SGDForMoG minimizer;
-	private double lr;
 	
 	
 	private Optimizer() {
@@ -42,14 +41,12 @@ public class Optimizer extends Recorder {
 	
 	public Optimizer(Random random) {
 		this();
-		lr = 0.02;
 		this.minimizer = new SGDForMoG(random);
 	}
 	
 	
 	public Optimizer(Random random, short nsample, double lr) {
 		this();
-		this.lr = lr;
 		this.minimizer = new SGDForMoG(random, nsample, lr);
 	}
 	

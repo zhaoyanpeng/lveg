@@ -189,7 +189,7 @@ public class LVeGGrammar extends Recorder implements Serializable {
 	/**
 	 * Compute the two-order unary chain.
 	 */
-	private void computeChainUnaryRule() {
+	protected void computeChainUnaryRule() {
 		Map<String, String> keys0 = new HashMap<String, String>();
 		Map<String, String> keys1 = new HashMap<String, String>();
 		keys1.put(GrammarRule.Unit.P, GrammarRule.Unit.RM);
@@ -201,7 +201,7 @@ public class LVeGGrammar extends Recorder implements Serializable {
 				if (iparent == ichild) { continue; }
 				boolean found = false;
 				int cnt = 0;
-				char type;
+				byte type;
 				keys0.clear();
 				if (iparent == 0) {
 					type = GrammarRule.RHSPACE;
@@ -267,7 +267,7 @@ public class LVeGGrammar extends Recorder implements Serializable {
 	}
 	
 	
-	public GaussianMixture getUnaryRuleScore(short idParent, short idChild, char type) {
+	public GaussianMixture getUnaryRuleScore(short idParent, short idChild, byte type) {
 		GrammarRule rule = getUnaryRule(idParent, idChild, type);
 		if (rule != null) {
 			return rule.getWeight();
@@ -289,13 +289,13 @@ public class LVeGGrammar extends Recorder implements Serializable {
 	}
 	
 	
-	public void addCount(short idParent, short idChild, char type, Map<String, GaussianMixture> count, short isample, boolean withTree) {
+	public void addCount(short idParent, short idChild, byte type, Map<String, GaussianMixture> count, short isample, boolean withTree) {
 		GrammarRule rule = getUnaryRule(idParent, idChild, type);
 		addCount(rule, count, isample, withTree);
 	}
 	
 	
-	public Map<Short, List<Map<String, GaussianMixture>>> getCount(short idParent, short idChild, char type, boolean withTree) {
+	public Map<Short, List<Map<String, GaussianMixture>>> getCount(short idParent, short idChild, byte type, boolean withTree) {
 		GrammarRule rule = getUnaryRule(idParent, idChild, type);
 		return getCount(rule, withTree);
 	}
@@ -317,7 +317,7 @@ public class LVeGGrammar extends Recorder implements Serializable {
 	}
 	
 	
-	public GrammarRule getUnaryRule(short idParent, short idChild, char type) {
+	public GrammarRule getUnaryRule(short idParent, short idChild, byte type) {
 		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
 		return unaryRuleMap.get(rule);
 	}

@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import edu.shanghaitech.ai.nlp.lveg.LVeGLearner.Params;
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
 import edu.shanghaitech.ai.nlp.util.Recorder;
 
@@ -145,6 +146,7 @@ public class GaussianMixture extends Recorder {
 	
 	/**
 	 * Add gaussian distributions to the specific portion of a component.
+	 * TODO can be further simplified, see {@code Inferencer.Cell.addScore}
 	 * 
 	 * @param component the component of the mixture of gaussians
 	 * @param key       which denotes the specific portion of a component
@@ -310,10 +312,10 @@ public class GaussianMixture extends Recorder {
 	 */
 	public GaussianMixture mulForInsideOutside(GaussianMixture gm, String key, boolean deep) {
 		GaussianMixture amixture = this.copy(deep);
-		double sum = MethodUtil.sum(gm.weights, true);
+		double logsum = gm.marginalize(true);
 		for (int i = 0; i < ncomponent; i++) {
 			// CHECK Math.log(Math.exp(a) * b)
-			double weight = amixture.weights.get(i) + Math.log(sum);
+			double weight = amixture.weights.get(i) + logsum;
 			amixture.weights.set(i, weight);
 			amixture.mixture.get(i).remove(key);
 		}
@@ -405,9 +407,17 @@ public class GaussianMixture extends Recorder {
 	/**
 	 * Marginalize the mixture of gaussians.
 	 * 
+	 * @param logarithm whether the return value is the logarithm form or not
 	 * @return
 	 */
-	public double marginalize() {
+	public double marginalize(boolean logarithm) {
+		if (logarithm) {
+			double logval = Double.NEGATIVE_INFINITY;
+			for (int i = 0; i < weights.size(); i++) {
+				logval = MethodUtil.logAdd(logval, weights.get(i));
+			}
+			return logval;
+		}
 		return MethodUtil.sum(weights, true);
 	}
 	
@@ -559,6 +569,13 @@ public class GaussianMixture extends Recorder {
 	}
 	
 	
+	/**
+	 * Eval the values of inside and outside score functions given the sample. Normal is supposed to be false.
+	 * 
+	 * @param sample the sample
+	 * @param normal whether the sample is from N(0, 1) (true) or not (false)
+	 * @return
+	 */
 	public double evalInsideOutside(List<Double> sample, boolean normal) {
 		double ret = 0.0, value;
 		for (int i = 0; i < ncomponent; i++) {
@@ -576,22 +593,25 @@ public class GaussianMixture extends Recorder {
 	
 	
 	/**
-	 * Eval the MoG using the given sample.
+	 * Eval the MoG using the given sample. Pay attention to the second parameter.
 	 * 
 	 * @param sample the sample
+	 * @param normal whether the sample is from N(0, 1) (true) or not (false); 
+	 * 		   when the sample is null, normal is used to indicate the return value in logarithm (true) or decimal (false)
 	 * @return
 	 */
-	public double eval(Map<String, List<Double>> sample) {
-		if (sample == null) { return eval(); }
+	public double eval(Map<String, List<Double>> sample, boolean normal) {
+		if (sample == null) { return eval(normal); }
 		
 		double ret = 0.0, value;
 		for (int i = 0; i < ncomponent; i++) {
+			// TODO This is not correct. Because every component contains the same variables but with different parameters.
 			Map<String, Set<GaussianDistribution>> component = mixture.get(i);
 			value = 1.0;
 			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
 				List<Double> slice = sample.get(gaussian.getKey());
 				for (GaussianDistribution gd : gaussian.getValue()) {
-					value *= gd.eval(slice);
+					value *= gd.eval(slice, normal);
 				}
 			}
 			ret += Math.exp(weights.get(i)) * value;
@@ -601,19 +621,19 @@ public class GaussianMixture extends Recorder {
 	
 	
 	/**
-	 * This method assumes the MoG is equivalent to a constant.
+	 * This method assumes the MoG is equivalent to a constant, e.g., no gaussians contained in any component.
 	 * 
+	 * @param normal whether the sample is from N(0, 1) (true) or not (false)
 	 * @return
 	 */
-	private double eval() {
-		double ret = 0.0;
+	private double eval(boolean logarithm) {
 		for (int i = 0; i < ncomponent; i++) {
 			if (mixture.get(i).size() > 0) {
 				logger.error("You are not supposed to call this method if the MoGul contains variables.\n");
+				return -0.0;
 			}
-			ret += Math.exp(weights.get(i));
 		}
-		return ret;
+		return marginalize(logarithm);
 	}
 	
 	
@@ -633,7 +653,7 @@ public class GaussianMixture extends Recorder {
 			List<Double> truth = truths.get(gaussian.getKey());
 			for (GaussianDistribution gd : gaussian.getValue()) {
 				gd.restoreSample(slice, truth);
-				break;
+				// break; // CHECK only one gaussian is allowed
 			}
 		}
 	}
@@ -662,7 +682,7 @@ public class GaussianMixture extends Recorder {
 	/**
 	 * Take the derivative of MoG w.r.t parameters (mu & sigma) of the component.
 	 * 
-	 * @param isample    # of sampling times
+	 * @param cumulative accumulate the gradients (true) or not (false)
 	 * @param icomponent index of the component of MoG
 	 * @param factor     derivative with respect to rule weight: (E[c(r, t) | T_x] - E[c(r, t) | x]) / w(r)
 	 * @param sample     the sample from the current component
@@ -671,24 +691,27 @@ public class GaussianMixture extends Recorder {
 	 * @param normal     whether the sample is from N(0, 1) (true) or not (false)
 	 */
 	public void derivative(
-			short isample, int icomponent, double factor, 
+			boolean cumulative, int icomponent, double factor, 
 			Map<String, List<Double>> sample, Map<String, List<Double>> ggrads, List<Double> wgrads, boolean normal) {
-		if (isample == 0) {
+		if (!cumulative) {
 			wgrads.clear();
 			for (int i = 0; i < ncomponent; i++) {
 				wgrads.add(0.0);
 			}
 		}
-		double dMixingW = derivateMixingWeight(sample, icomponent, normal);
-		factor = factor * Math.exp(weights.get(icomponent)) * dMixingW;
+		double weight = Math.exp(weights.get(icomponent));
+		double penalty = Params.reg ? (Params.l1 ? Params.wdecay * weight : Params.wdecay * Math.pow(weight, 2)) : 0.0;
+		double dMixingW = factor * weight * derivateMixingWeight(sample, icomponent, normal);
 		Map<String, Set<GaussianDistribution>> component = mixture.get(icomponent);
 		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
 			List<Double> slice = sample.get(gaussian.getKey());
 			List<Double> grads = ggrads.get(gaussian.getKey());
 			for (GaussianDistribution gd : gaussian.getValue()) {
-				gd.derivative(factor, slice, grads, isample, normal);
+				gd.derivative(dMixingW, slice, grads, cumulative, normal);
+				// break; // CHECK only one gaussian is allowed
 			}
 		}
+		dMixingW += penalty;
 		wgrads.set(icomponent, wgrads.get(icomponent) + dMixingW);
 	}
 	
@@ -697,19 +720,20 @@ public class GaussianMixture extends Recorder {
 	 * Update parameters using the gradient.
 	 * 
 	 * @param icomponent index of the component of MoG
-	 * @param lr         learning rate
 	 * @param ggrads     gradients of the parameters of gaussians
 	 * @param wgrads     gradients of the mixing weights of MoG
 	 */
-	public void update(int icomponent, double lr, Map<String, List<Double>> ggrads, List<Double> wgrads) {
+	public void update(int icomponent, Map<String, List<Double>> ggrads, List<Double> wgrads) {
 		Map<String, Set<GaussianDistribution>> component = mixture.get(icomponent);
 		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
 			List<Double> grads = ggrads.get(gaussian.getKey());
 			for (GaussianDistribution gd : gaussian.getValue()) {
-				gd.update(lr, grads);
+				gd.update(grads);
 			}
 		}
-		double weight = weights.get(icomponent) - lr * wgrads.get(icomponent);
+		double wgrad = wgrads.get(icomponent);
+		wgrad = Params.clip ? (Math.abs(wgrad) > Params.absmax ? Params.absmax * Math.signum(wgrad) : wgrad) : wgrad;
+		double weight = weights.get(icomponent) - Params.lr * wgrad;
 		weights.set(icomponent, weight);
 	}
 	
@@ -777,7 +801,7 @@ public class GaussianMixture extends Recorder {
 		if (simple) {
 			StringBuffer sb = new StringBuffer();
 			sb.append("GM [ncomponent=" + ncomponent + ", weights=" + 
-					MethodUtil.double2str(weights, LVeGLearner.precision, nfirst, true));
+					MethodUtil.double2str(weights, LVeGLearner.precision, nfirst, true, true));
 			sb.append("]");
 			return sb.toString();
 		} else {
@@ -789,6 +813,6 @@ public class GaussianMixture extends Recorder {
 	@Override
 	public String toString() {
 		return "GM [bias=" + bias + ", ncomponent=" + ncomponent + ", weights=" + 
-				MethodUtil.double2str(weights, LVeGLearner.precision, -1, true) + ", mixture=" + mixture + "]";
+				MethodUtil.double2str(weights, LVeGLearner.precision, -1, true, true) + ", mixture=" + mixture + "]";
 	}
 }

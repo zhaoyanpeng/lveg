@@ -137,7 +137,18 @@ public class LVeGLearner extends Recorder {
 		
 		@Option(name = "-logFile", usage = "Log file name (Default: log/log)")
 		public String logFile = "log/log";
-		
+	}
+	
+	
+	public static class Params {
+		public static double lr = 0.02;
+		public static boolean reg = true;
+		public static boolean clip = true;
+		public static double absmax = 5.0;
+		public static double wdecay = 5.0;
+		public static double momentum = 0.9;
+		// L1 (true) or L2 (false)
+		public static boolean l1 = true;
 	}
 	
 
@@ -314,7 +325,6 @@ public class LVeGLearner extends Recorder {
 		LVeGParser parser = new LVeGParser(grammar, lexicon);
 		for (Tree<State> tree : stateTreeList) {
 			ll = parser.probability(tree);
-			ll = Math.log(ll);
 			if (Double.isInfinite(ll) || Double.isNaN(ll)) {
 				nUnparsable++;
 			} else {

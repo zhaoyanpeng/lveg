@@ -3,6 +3,7 @@ package edu.shanghaitech.ai.nlp.lveg;
 import java.util.ArrayList;
 import java.util.List;
 
+import edu.shanghaitech.ai.nlp.lveg.LVeGLearner.Params;
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
 import edu.shanghaitech.ai.nlp.util.Recorder;
 
@@ -24,7 +25,8 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	/**
 	 * Covariances must be positive. We represent them in exponential 
 	 * form, and the real variances (for the diagonal) should be read 
-	 * as Math.exp(variances).
+	 * as Math.exp(2 * variances), and standard variance is Math.exp(
+	 * variances).
 	 */
 	protected List<Double> vars;
 	protected List<Double> mus;
@@ -35,8 +37,6 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 		this.dim = 0;
 		this.mus = new ArrayList<Double>();
 		this.vars = new ArrayList<Double>();
-//		this.mgrads = new ArrayList<Double>(0);
-//		this.vgrads = new ArrayList<Double>(0);
 	}
 	
 	
@@ -73,15 +73,6 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	
 	
 	/**
-	 * Eval the gaussian distribution using the given sample.
-	 * 
-	 * @param sample the sample from N(0, 1)
-	 * @return
-	 */
-	protected double eval(List<Double> sample) { return -0.0; }
-	
-	
-	/**
 	 * Eval the gaussian distribution using the given sample
 	 * 
 	 * @param sample the sample 
@@ -98,7 +89,7 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	protected List<Double> normalize(List<Double> sample) {
 		List<Double> list = new ArrayList<Double>();
 		for (int i = 0; i < dim; i++) {
-			list.add((sample.get(i) - mus.get(i)) / Math.exp(vars.get(i) / 2));
+			list.add((sample.get(i) - mus.get(i)) / Math.exp(vars.get(i)));
 		}
 		return list;
 	}
@@ -109,21 +100,11 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	 * 
 	 * @param factor  dRuleWeight * weight * dMixingWeight
 	 * @param sample  the sample from this gaussian distribution
+	 * @param cumulative accumulate the gradients (true) or not (false)
 	 * @param grads   gradients container
 	 * @param isample index of the sample
 	 */
-	protected void derivative(double factor, List<Double> sample, List<Double> grads) {}
-	
-	
-	/**
-	 * Take the derivative of gaussian distribution with respect to the parameters (mu & sigma).
-	 * 
-	 * @param factor  dRuleWeight * weight * dMixingWeight
-	 * @param sample  the sample from this gaussian distribution
-	 * @param grads   gradients container
-	 * @param isample index of the sample
-	 */
-	protected void derivative(double factor, List<Double> sample, List<Double> grads, short isample, boolean normal) {}
+	protected void derivative(double factor, List<Double> sample, List<Double> grads, boolean cumulative, boolean normal) {}
 	
 	
 	/**
@@ -135,8 +116,10 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	protected void restoreSample(List<Double> sample, List<Double> truth) {
 		assert(sample.size() == dim);
 		double real;
+		truth.clear();
 		for (int i = 0; i < dim; i++) {
-			real = sample.get(i) * Math.exp(vars.get(i) / 2) + mus.get(i);
+			// CHECK std = Math.exp(var)
+			real = sample.get(i) * Math.exp(vars.get(i)) + mus.get(i);
 			truth.add(real);
 		}
 	}
@@ -145,10 +128,22 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	/**
 	 * Update parameters using the gradients.
 	 * 
-	 * @param lr    the learning rate
 	 * @param grads gradients
 	 */
-	protected void update(double lr, List<Double> grads) {}
+	protected void update(List<Double> grads) {
+		assert(grads.size() == 2 * dim);
+		double mgrad, vgrad, mu, var;
+		for (int i = 0; i < dim; i++) {
+			mgrad = grads.get(i * 2);
+			mgrad = Params.clip ? (Math.abs(mgrad) > Params.absmax ? Params.absmax * Math.signum(mgrad) : mgrad) : mgrad;
+			vgrad = grads.get(i * 2 + 1);
+			vgrad = Params.clip ? (Math.abs(vgrad) > Params.absmax ? Params.absmax * Math.signum(vgrad) : vgrad) : vgrad;
+			mu = mus.get(i) - Params.lr * mgrad;
+			var = vars.get(i) - Params.lr * vgrad;
+			mus.set(i, mu);
+			vars.set(i, var);
+		}
+	}
 	
 	
 	/**
@@ -200,8 +195,8 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 
 	@Override
 	public String toString() {
-		return "GD [dim=" + dim + ", mus=" + MethodUtil.double2str(mus, LVeGLearner.precision, -1, false) + 
-				", vars=" + MethodUtil.double2str(vars, LVeGLearner.precision, -1, true) + "]";
+		return "GD [dim=" + dim + ", mus=" + MethodUtil.double2str(mus, LVeGLearner.precision, -1, false, true) + 
+				", stds=" + MethodUtil.double2str(vars, LVeGLearner.precision, -1, true, true) + "]";
 	}
 
 }

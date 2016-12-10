@@ -6,7 +6,10 @@ import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.Formatter;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
@@ -21,10 +24,10 @@ import javax.imageio.ImageIO;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.ui.TreeJPanel;
 import edu.berkeley.nlp.util.Numberer;
-import edu.shanghaitech.ai.nlp.lveg.Inferencer.Cell;
-import edu.shanghaitech.ai.nlp.lveg.Inferencer.Chart;
 import edu.shanghaitech.ai.nlp.lveg.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.Inferencer.Cell;
+import edu.shanghaitech.ai.nlp.lveg.Inferencer.Chart;
 import edu.shanghaitech.ai.nlp.lveg.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
 import edu.shanghaitech.ai.nlp.lveg.LVeGLexicon;
@@ -43,6 +46,7 @@ public class MethodUtil extends Recorder {
 	public final static double LOG_ZERO = -1.0e10;
 	public final static double LOG_TINY = -0.5e10;
 	public final static double EXP_ZERO = -Math.log(-LOG_ZERO);
+	public final static NumberFormat formatter = new DecimalFormat("0.###E0");
 	
 	
 	private static Random random = new Random(LVeGLearner.randomseed);
@@ -72,11 +76,11 @@ public class MethodUtil extends Recorder {
 	public static void debugCount(LVeGGrammar agrammar, LVeGLexicon alexicon, Tree<State> tree, Chart chart) {
 		grammar = agrammar;
 		lexicon = alexicon;
-		
-		double count0 = 0;
-		int niter = 20, iiter = 0;
-		Map<GrammarRule, GrammarRule> uRuleMap = grammar.getUnaryRuleMap();
-		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBinaryRuleMap();
+
+//		double count0 = 0;
+//		int niter = 20, iiter = 0;
+//		Map<GrammarRule, GrammarRule> uRuleMap = grammar.getUnaryRuleMap();
+//		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBinaryRuleMap();
 //		// unary grammar rules
 //		LVeGLearner.logger.trace("\n---Unary Grammar Rules---\n\n");
 //		for (Map.Entry<GrammarRule, GrammarRule> rmap : uRuleMap.entrySet()) {
@@ -141,7 +145,7 @@ public class MethodUtil extends Recorder {
 				State child = children.get(0).getLabel();
 				short idChild = child.getId();
 				
-				char type = idParent == 0 ? GrammarRule.RHSPACE : GrammarRule.GENERAL;
+				byte type = idParent == 0 ? GrammarRule.RHSPACE : GrammarRule.GENERAL;
 				ruleScore = grammar.getUnaryRuleScore(idParent, idChild, type);
 				logger.trace("Unary\trule: [" + idParent + ", " + idChild + "] " + ruleScore + "\n"); // DEBUG
 				break;
@@ -629,16 +633,17 @@ public class MethodUtil extends Recorder {
 	 * @param list        a list of doubles
 	 * @param precision   double precision
 	 * @param nfirst      print first # of items
-	 * @param exponential whether the list is in the exponential form or not.
+	 * @param exponential whether the list should be read in the exponential form or not
 	 * @return
 	 */
-	public static List<String> double2str(List<Double> list, int precision, int nfirst, boolean exponential) {
+	public static List<String> double2str(List<Double> list, int precision, int nfirst, boolean exponential, boolean scientific) {
 		List<String> strs = new ArrayList<String>();
-		String format = "%." + precision + "f";
+		String format = "%." + precision + "f", str;
 		if (nfirst < 0 || nfirst > list.size()) { nfirst = list.size(); }
 		for (int i = 0; i < nfirst; i++) {
 			double value = exponential ? Math.exp(list.get(i)) : list.get(i);
-			strs.add(String.format(format, value));
+			str = scientific ? formatter.format(value) : String.format(format, value);
+			strs.add(str);
 		}
 		/*
 		for (Double d : list) {
@@ -651,7 +656,7 @@ public class MethodUtil extends Recorder {
 	
 	/**
 	 * @param list        a list of doubles
-	 * @param exponential whether the list is in the exponential form or not
+	 * @param exponential whether the list should be read in the exponential form or not
 	 * @return
 	 */
 	public static double sum(List<Double> list, boolean exponential) {

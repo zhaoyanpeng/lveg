@@ -32,95 +32,46 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 	
 	
 	@Override
-	protected double eval(List<Double> sample) {
-		if (sample != null && sample.size() == dim) {
-			double exps = 0.0, sinv = 1.0;
-			for (int i = 0; i < dim; i++) {
-				exps -= Math.pow(sample.get(i), 2) / 2;
-				// CHECK Math.sqrt(Math.exp(x))
-				sinv /= Math.exp(vars.get(i) / 2);
-			}
-			// TODO shall we truncate it to zero if it is very small?
-			double value = Math.pow(2 * Math.PI, -dim / 2) * sinv * Math.exp(exps);
-			return value;
-		}
-		logger.error("The sample is not valid.\n");
-		return -1.0;
-	}
-	
-	
-	@Override
 	protected double eval(List<Double> sample, boolean normal) { 
-		if (!normal) {
+		if (sample != null && sample.size() == dim) {
 			// sample = normalize(sample);
 			double astd, norm, exps = 0.0, sinv = 1.0;
 			for (int i = 0; i < dim; i++) {
-				astd = Math.exp(vars.get(i) / 2);
-				norm = (sample.get(i) - mus.get(i)) / astd;
+				astd = Math.exp(vars.get(i));
+				norm = normal ? sample.get(i) : (sample.get(i) - mus.get(i)) / astd;
 				exps -= Math.pow(norm, 2) / 2;
 				sinv /= astd;
 			}
 			double value = Math.pow(2 * Math.PI, -dim / 2) * sinv * Math.exp(exps);
 			return value;
 		}
-		return eval(sample);
+		logger.error("Invalid input sample for evaling the gaussian.\n");
+		return -1.0;
 	}
 	
 	
 	@Override
-	protected void derivative(double factor, List<Double> sample, List<Double> grads) {
-		double sigma, mgrad, vgrad, point;
-		for (int i = 0; i < dim; i++) {
-			point = sample.get(i);
-			sigma = Math.exp(vars.get(i) / 2);
-			mgrad = factor * point / sigma;
-			// CHECK dw / dx = (dw / ds) * (ds / dx) = (factor * (point^2 - 1) / s) * ((1 / 2) * s), 
-			// where s = sigma = std = exp(x / 2)
-			vgrad = factor * (Math.pow(point, 2) - 1) / 2;
-			grads.set(i * 2, mgrad);
-			grads.set(i * 2 + 1, vgrad);
-		}
-	}
-	
-	
-	@Override
-	protected void derivative(double factor, List<Double> sample, List<Double> grads, short isample, boolean normal) {
+	protected void derivative(double factor, List<Double> sample, List<Double> grads, boolean cumulative, boolean normal) {
 		if (sample != null && sample.size() == dim) {
-			if (isample == 0) {
+			if (!cumulative) {
 				grads.clear();
 				for (int i = 0; i < dim * 2; i++) {
 					grads.add(0.0);
 				}
 			}
-			if (!normal) {
-				double sigma, point, mgrad, vgrad;
-				for (int i = 0; i < dim; i++) {
-					sigma = Math.exp(vars.get(i) / 2);
-					point = (sample.get(i) - mus.get(i)) / sigma;
-					mgrad = factor * point / sigma;
-					// CHECK dw / dx = (dw / ds) * (ds / dx) = (factor * (point^2 - 1) / s) * ((1 / 2) * s), 
-					// where s = sigma = std = exp(x / 2)
-					vgrad = factor * (Math.pow(point, 2) - 1) / 2;
-					grads.set(i * 2, mgrad);
-					grads.set(i * 2 + 1, vgrad);
-				}
-				return;
+			double sigma, point, mgrad, vgrad;
+			for (int i = 0; i < dim; i++) {
+				sigma = Math.exp(vars.get(i));
+				point = normal ? sample.get(i) : (sample.get(i) - mus.get(i)) / sigma;
+				mgrad = factor * point / sigma;
+				// CHECK dw / dx = (dw / ds) * (ds / dx) = (factor * (point^2 - 1) / s) * ((1 / 2) * s), 
+				// where s = sigma = std = exp(x / 2)
+				vgrad = factor * (Math.pow(point, 2) - 1);
+				grads.set(i * 2, grads.get(i * 2) + mgrad);
+				grads.set(i * 2 + 1, grads.get(i * 2 + 1) + vgrad);
 			}
-			derivative(factor, sample, grads);
 		}
-	}
-	
-	
-	@Override
-	protected void update(double lr, List<Double> grads) {
-		assert(grads.size() == 2 * dim);
-		double mu, var;
-		for (int i = 0; i < dim; i++) {
-			mu = mus.get(i) - lr * grads.get(i * 2);
-			var = vars.get(i) - lr * grads.get(i * 2 + 1);
-			mus.set(i, mu);
-			vars.set(i, var);
-		}
+		logger.error("Invalid input sample for taking derivative of the gaussian w.r.t mu & sigma.\n");
 	}
 	
 }

@@ -2,14 +2,17 @@ package edu.shanghaitech.ai.nlp.lveg;
 
 import static org.junit.Assert.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.junit.Test;
 
 import edu.shanghaitech.ai.nlp.lveg.GrammarRule.Unit;
+import edu.shanghaitech.ai.nlp.util.MethodUtil;
 
 public class GaussianMixtureTest {
 	
@@ -219,9 +222,54 @@ public class GaussianMixtureTest {
 	
 	@Test
 	public void testCast() {
-		Short x = 3;
-		Object xo = (Object) x;
-		System.out.println(xo);
+		System.out.println("---Efficiency Comparison---");
+		
+		int n = 1500;
+		List<Double> weights = new ArrayList<Double>();
+		MethodUtil.randomInitList(weights, Double.class, n, 10, false, true);
+		gm0.weights = weights;
+		
+		System.out.println("n = " + n);
+		long start = System.currentTimeMillis();
+		double margin = gm0.marginalize(false);
+		double matlog = Math.log(margin);
+		long time = System.currentTimeMillis() - start;
+		System.out.println("Math.exp: " + time);
+		
+		start = System.currentTimeMillis();
+		double logadd = gm0.marginalize(true);
+		time = System.currentTimeMillis() - start;
+		System.out.println("MyLogadd: " + time);
+		
+		double diff = logadd - matlog;
+		System.out.println("margin = " + margin + ", log margin = " + matlog + ", log add = " + logadd + ", diff = " + diff);
+		
+		/**
+		 * n = 15000000
+		 * Math.exp: 732
+		 * MyLogadd: 1207
+		 * margin = 3.3021925464538197E10, log margin = 24.22043758580791, log add = 24.22040516466863, diff = -3.2421139280813804E-5
+		 * 
+		 * n = 1500000
+		 * Math.exp: 76
+		 * MyLogadd: 131
+		 * margin = 3.308101687207093E9, log margin = 21.91964035341989, log add = 21.919640353396428, diff = -2.3462121134798508E-11
+		 * 
+		 * n = 15000
+		 * Math.exp: 12
+		 * MyLogadd: 17
+		 * margin = 3.3214069278252375E8, log margin = 19.621069210555493, log add = 19.621069210554907, diff = -5.861977570020827E-13
+		 * 
+		 * n = 15000
+		 * Math.exp: 2
+		 * MyLogadd: 3
+		 * margin = 3.3221488701829065E7, log margin = 17.318707474565834, log add = 17.31870747456588, diff = 4.618527782440651E-14
+		 * 
+		 * n = 1500
+		 * Math.exp: 0
+		 * MyLogadd: 1
+		 * margin = 3228167.3812916544, log margin = 14.987425159968073, log add = 14.987425159968073, diff = 0.0
+		 */
 	}
 	
 }

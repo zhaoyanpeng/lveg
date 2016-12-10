@@ -27,13 +27,13 @@ public abstract class LVeGLexicon {
 	protected int unknownLevel;
 	
 	
-	public void addCount(short idParent, short idChild, char type, Map<String, GaussianMixture> count, short isample, boolean withTree) {
+	public void addCount(short idParent, short idChild, byte type, Map<String, GaussianMixture> count, short isample, boolean withTree) {
 		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
 		addCount(rule, count, isample, withTree);
 	}
 	
 	
-	public Map<Short, List<Map<String, GaussianMixture>>> getCount(short idParent, short idChild, char type, boolean withTree) {
+	public Map<Short, List<Map<String, GaussianMixture>>> getCount(short idParent, short idChild, byte type, boolean withTree) {
 		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
 		return getCount(rule, withTree);
 	}

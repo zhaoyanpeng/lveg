@@ -12,7 +12,7 @@ public class LVeGLearnerTest {
 		String corpusPath = ROOT + "wsj_s2-21_tree";
 //		String corpusPath = ROOT + "treebank/combined/";
 		String outputFile = ROOT + "treebank/grammar.gr";
-		String logFile = "log/io_with_sentence_chain_cell_size_not_precompute_a";
+		String logFile = "log/io_with_s_chain_not_precompute_not_addinter";
 		
 		String[] args = {"-pathToCorpus", corpusPath, "-out", outputFile, "-logType", "-logFile", logFile};
 		

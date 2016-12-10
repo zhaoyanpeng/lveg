@@ -14,11 +14,11 @@ import edu.shanghaitech.ai.nlp.util.Recorder;
  */
 public class LVeGParser extends Recorder {
 	
-	private Inferencer inferencer;
+	private LVeGInferencer inferencer;
 	
 	
 	public LVeGParser(LVeGGrammar grammar, LVeGLexicon lexicon) {
-		this.inferencer = new Inferencer(grammar, lexicon);
+		this.inferencer = new LVeGInferencer(grammar, lexicon);
 	}
 	
 	
@@ -30,12 +30,12 @@ public class LVeGParser extends Recorder {
 		MethodUtil.debugChart(Chart.getChart(false), (short) 2); // DEBUG
 		
 		GaussianMixture score = chart.getInsideScore((short) 0, Chart.idx(0, 1));
-		double scoreS = score.eval(null);
+		double scoreS = score.eval(null, true);
 		
-		logger.trace("Sentence score: " + scoreS + ", Margin: " + score.marginalize() + "\n"); // DEBUG
+		logger.trace("Sentence score in logarithm: " + scoreS + ", Margin: " + score.marginalize(false) + "\n"); // DEBUG
 		logger.trace("\nEval rule count with the sentence...\n"); // DEBUG
 		
-		if (scoreS <= 0) {
+		if (Double.isInfinite(scoreS) || Double.isNaN(scoreS)) {
 			System.err.println("Fatal Error: Sentence score is smaller than zero: " + scoreS);
 			return -0.0;
 		}
@@ -55,12 +55,12 @@ public class LVeGParser extends Recorder {
 		
 		// the parse tree score, which should contain only weights of the components
 		GaussianMixture score = tree.getLabel().getInsideScore();
-		double scoreT = score.eval(null);
+		double scoreT = score.eval(null, true);
 		
 //		logger.trace("\nTree score: " + scoreT + "\n"); // DEBUG
 //		logger.trace("\nEval rule count with the tree...\n"); // DEBUG
 		
-		if (scoreT <= 0) {
+		if (Double.isInfinite(scoreT) || Double.isNaN(scoreT)) {
 			System.err.println("Fatal Error: Tree score is smaller than zero: " + scoreT + "\n");
 			return -0.0;
 		}
@@ -124,7 +124,7 @@ public class LVeGParser extends Recorder {
 	public double probability(Tree<State> tree) {
 		double jointdist = scoreTree(tree);
 		double partition = scoreSentence(tree);
-		double ll = jointdist / partition;
+		double ll = jointdist - partition; // in logarithm
 		return ll;
 	}
 	
@@ -138,7 +138,7 @@ public class LVeGParser extends Recorder {
 	public double scoreTree(Tree<State> tree) {
 		inferencer.insideScoreWithTree(tree);
 		GaussianMixture gm = tree.getLabel().getInsideScore();
-		double score = gm.eval(null);
+		double score = gm.eval(null, true);
 		return score;
 	}
 	
@@ -152,13 +152,10 @@ public class LVeGParser extends Recorder {
 	public double scoreSentence(Tree<State> tree) {
 		List<State> sentence = tree.getYield();
 		int nword = sentence.size();
-		
 		Inferencer.Chart chart = new Inferencer.Chart(nword);
 		inferencer.insideScore(chart, sentence, nword);
-		
 		GaussianMixture gm = chart.getInsideScore((short) 0, Chart.idx(0, 1));
-		double score = gm.eval(null);
-		
+		double score = gm.eval(null, true);
 		return score;
 	}
 	
