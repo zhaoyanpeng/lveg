@@ -130,6 +130,7 @@ public class SGDForMoG extends Recorder {
 			logger.error("Rule count with the tree is not equal to that with the sentence.\n");
 			return;
 		}
+		
 		GaussianMixture ruleW = rule.getWeight();
 		int ncomponent = ruleW.getNcomponent();
 		List<Map<String, GaussianMixture>> iosWithT, iosWithS;

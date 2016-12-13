@@ -23,6 +23,24 @@ public class SGDForMoGTest {
 		
 		Byte f = -1;
 		System.out.println(f);
+		
+		int xx = 98;
+		int mm = 100;
+		System.out.println(Integer.toBinaryString(xx));
+		xx =  (1 << 31) + (xx << 16);
+		System.out.println(Integer.toBinaryString(xx));
+		xx += mm;
+		System.out.println(Integer.toBinaryString(mm));
+		
+		System.out.println(Integer.toBinaryString(xx) + "\txx < 0: " + (xx < 0));
+		
+		xx = ((xx << 1) >>> 1);
+		System.out.println(Integer.toBinaryString(xx));
+		int xxx =  (xx >>> 16);
+		System.out.println(Integer.toBinaryString(xxx));
+		int mmm =  ((xx << 16) >>> 16);
+		System.out.println(Integer.toBinaryString(mmm));
+		
 	}
 
 }

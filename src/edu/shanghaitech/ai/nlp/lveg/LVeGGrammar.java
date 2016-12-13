@@ -23,7 +23,7 @@ public class LVeGGrammar extends Recorder implements Serializable {
 	private static final long serialVersionUID = 1L;
 	
 	public int nTag;
-	protected Numberer numbererTag;
+	protected Numberer tagNumberer;
 	
 	protected RuleTable<?> unaryRuleTable;
 	protected RuleTable<?> binaryRuleTable;
@@ -68,10 +68,10 @@ public class LVeGGrammar extends Recorder implements Serializable {
 		this.optimizer = new Optimizer(LVeGLearner.random);
 		
 		if (nTag < 0) {
-			this.numbererTag = Numberer.getGlobalNumberer(LVeGLearner.KEY_TAG_SET);
-			this.nTag = numbererTag.size();
+			this.tagNumberer = Numberer.getGlobalNumberer(LVeGLearner.KEY_TAG_SET);
+			this.nTag = tagNumberer.size();
 		} else {
-			this.numbererTag = null;
+			this.tagNumberer = null;
 			this.nTag = nTag;
 		}
 		
@@ -257,7 +257,7 @@ public class LVeGGrammar extends Recorder implements Serializable {
 	}
 	
 	
-	public GaussianMixture getBinaryRuleScore(short idParent, short idlChild, short idrChild) {
+	public GaussianMixture getBinaryRuleWeight(short idParent, short idlChild, short idrChild) {
 		GrammarRule rule = getBinaryRule(idParent, idlChild, idrChild);
 		if (rule != null) {
 			return rule.getWeight();
@@ -267,7 +267,7 @@ public class LVeGGrammar extends Recorder implements Serializable {
 	}
 	
 	
-	public GaussianMixture getUnaryRuleScore(short idParent, short idChild, byte type) {
+	public GaussianMixture getUnaryRuleWeight(short idParent, short idChild, byte type) {
 		GrammarRule rule = getUnaryRule(idParent, idChild, type);
 		if (rule != null) {
 			return rule.getWeight();

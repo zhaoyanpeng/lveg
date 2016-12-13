@@ -14,12 +14,12 @@ public class InferencerTest {
 	
 	private static LVeGInferencer inferencer = new LVeGInferencer(null, null);
 	
-	@Test
+//	@Test
 	public void testInferencer() {
 //		inferencer.insideScore(null, false);
 //		inferencer.outsideScore(null);
 		
-		Inferencer.Chart chart = new Inferencer.Chart(5);
+		Inferencer.Chart chart = new Inferencer.Chart(5, false);
 //		insideScore(chart, 5, 0, 4);
 		for (int i = 0; i < 5; i++) {
 			outsideScore(chart, 5, i, i);
@@ -28,7 +28,7 @@ public class InferencerTest {
 	}
 	
 	
-//	@Test
+	@Test
 	public void testInsideLoop() {
 		// inside score
 		int nword = 5;

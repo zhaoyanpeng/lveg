@@ -81,7 +81,7 @@ public class LVeGParser extends Recorder {
 	public Chart doInsideOutside(Tree<State> tree) {
 		List<State> sentence = tree.getYield();
 		int nword = sentence.size();
-		Chart chart = new Chart(nword);
+		Chart chart = new Chart(nword, false);
 		
 //		logger.trace("\nInside score...\n"); // DEBUG
 		inferencer.insideScore(chart, sentence, nword);
@@ -152,7 +152,7 @@ public class LVeGParser extends Recorder {
 	public double scoreSentence(Tree<State> tree) {
 		List<State> sentence = tree.getYield();
 		int nword = sentence.size();
-		Inferencer.Chart chart = new Inferencer.Chart(nword);
+		Inferencer.Chart chart = new Inferencer.Chart(nword, false);
 		inferencer.insideScore(chart, sentence, nword);
 		GaussianMixture gm = chart.getInsideScore((short) 0, Chart.idx(0, 1));
 		double score = gm.eval(null, true);
