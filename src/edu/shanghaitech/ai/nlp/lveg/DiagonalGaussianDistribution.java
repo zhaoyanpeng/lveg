@@ -45,7 +45,7 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 			double value = Math.pow(2 * Math.PI, -dim / 2) * sinv * Math.exp(exps);
 			return value;
 		}
-		logger.error("Invalid input sample for evaling the gaussian.\n");
+		logger.error("Invalid input sample for evaling the gaussian. sample: " + sample + ", dim: " + dim + "\n");
 		return -1.0;
 	}
 	
@@ -64,12 +64,13 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 				sigma = Math.exp(vars.get(i));
 				point = normal ? sample.get(i) : (sample.get(i) - mus.get(i)) / sigma;
 				mgrad = factor * point / sigma;
-				// CHECK dw / dx = (dw / ds) * (ds / dx) = (factor * (point^2 - 1) / s) * ((1 / 2) * s), 
-				// where s = sigma = std = exp(x / 2)
+				// CHECK dw / dx = (dw / ds) * (ds / dx) = (factor * (point^2 - 1) / s) * (s), 
+				// where s = sigma = std = exp(x)
 				vgrad = factor * (Math.pow(point, 2) - 1);
 				grads.set(i * 2, grads.get(i * 2) + mgrad);
 				grads.set(i * 2 + 1, grads.get(i * 2 + 1) + vgrad);
 			}
+			return;
 		}
 		logger.error("Invalid input sample for taking derivative of the gaussian w.r.t mu & sigma.\n");
 	}

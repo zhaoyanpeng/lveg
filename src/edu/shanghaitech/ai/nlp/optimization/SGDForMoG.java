@@ -52,7 +52,7 @@ public class SGDForMoG extends Recorder {
 		ggrads.put(GrammarRule.Unit.C, new ArrayList<Double>());
 		ggrads.put(GrammarRule.Unit.UC, new ArrayList<Double>());
 		ggrads.put(GrammarRule.Unit.LC, new ArrayList<Double>());
-		sample.put(GrammarRule.Unit.RC, new ArrayList<Double>());
+		ggrads.put(GrammarRule.Unit.RC, new ArrayList<Double>());
 	}
 	
 	
@@ -73,8 +73,8 @@ public class SGDForMoG extends Recorder {
 	/**
 	 * TODO revise the computation in logarithm.
 	 * 
-	 * @param scoreT
-	 * @param scoreS
+	 * @param scoreT in logarithmic form
+	 * @param scoreS in logarithmic form
 	 * @param ioScoreWithT
 	 * @param ioScoreWithS
 	 * @return
@@ -85,29 +85,29 @@ public class SGDForMoG extends Recorder {
 			List<Map<String, GaussianMixture>> ioScoreWithT,
 			List<Map<String, GaussianMixture>> ioScoreWithS) {
 		double countWithT = 0.0, countWithS = 0.0, cnt, part, dRuleW;
-		for (Map<String, GaussianMixture> iosWithT : ioScoreWithT) {
-			cnt = 1.0;
-			boolean found = false;
-			for (Map.Entry<String, GaussianMixture> ios : iosWithT.entrySet()) {
-				part = ios.getValue().evalInsideOutside(truths.get(ios.getKey()), false);
-				cnt *= part;
-				found = true;
+		if (ioScoreWithT != null) {
+			for (Map<String, GaussianMixture> iosWithT : ioScoreWithT) {
+				cnt = 1.0;
+				boolean found = false;
+				for (Map.Entry<String, GaussianMixture> ios : iosWithT.entrySet()) {
+					part = ios.getValue().evalInsideOutside(truths.get(ios.getKey()), false);
+					cnt *= part;
+					found = true;
+				}
+				if (found) { countWithT += cnt; }
 			}
-			if (found) { countWithT += cnt; }
 		}
-		for (Map<String, GaussianMixture> iosWithS : ioScoreWithS) {
-			cnt = 1.0;
-			boolean found = false;
-			for (Map.Entry<String, GaussianMixture> ios : iosWithS.entrySet()) {
-				part = ios.getValue().evalInsideOutside(truths.get(ios.getKey()), false);
-				cnt *= part;
-				found = true;
+		if (ioScoreWithS != null) {
+			for (Map<String, GaussianMixture> iosWithS : ioScoreWithS) {
+				cnt = 1.0;
+				boolean found = false;
+				for (Map.Entry<String, GaussianMixture> ios : iosWithS.entrySet()) {
+					part = ios.getValue().evalInsideOutside(truths.get(ios.getKey()), false);
+					cnt *= part;
+					found = true;
+				}
+				if (found) { countWithS += cnt; }
 			}
-			if (found) { countWithS += cnt; }
-		}
-		if (scoreT <= 0 || scoreS <= 0) {
-			logger.error("Invalid tree score or sentence score.\n");
-			return -0.0;
 		}
 		dRuleW = Math.exp(Math.log(countWithS) - scoreS) - Math.exp(Math.log(countWithT) - scoreT);
 		return dRuleW;
@@ -125,21 +125,15 @@ public class SGDForMoG extends Recorder {
 			Batch ioScoreWithT,
 			Batch ioScoreWithS,
 			List<Double> scoresSandT) {
-		int batchsize = ioScoreWithT.size();
-		if (batchsize != ioScoreWithS.size()) {
-			logger.error("Rule count with the tree is not equal to that with the sentence.\n");
-			return;
-		}
-		
+		int batchsize = scoresSandT.size() / 2;
 		GaussianMixture ruleW = rule.getWeight();
-		int ncomponent = ruleW.getNcomponent();
 		List<Map<String, GaussianMixture>> iosWithT, iosWithS;
-		boolean removed = false, cumulative;
+		boolean removed = false, cumulative, updated;
 		double scoreT, scoreS, dRuleW;
 		byte uRuleType = -1;
 		
-		for (int icomponent = 0; icomponent < ncomponent; icomponent++) {
-			removed = false; // only need to remove once
+		for (int icomponent = 0; icomponent < ruleW.getNcomponent(); icomponent++) {
+			updated = false; // 
 			for (short isample = 0; isample < nsample; isample++) {
 				clearSample(); // to ensure the correct sample is in use
 				if (rule.isUnary()) {
@@ -166,12 +160,13 @@ public class SGDForMoG extends Recorder {
 				} else {
 					sample(sample.get(GrammarRule.Unit.P), ruleW.getDim(icomponent, GrammarRule.Unit.P));
 					sample(sample.get(GrammarRule.Unit.LC), ruleW.getDim(icomponent, GrammarRule.Unit.LC));
-					sample(sample.get(GrammarRule.Unit.RC), ruleW.getDim(icomponent, GrammarRule.Unit.UC));
+					sample(sample.get(GrammarRule.Unit.RC), ruleW.getDim(icomponent, GrammarRule.Unit.RC));
 				}
 				ruleW.restoreSample(icomponent, sample, truths);
-				for (int i = 0; i < batchsize; i++) {
+				for (short i = 0; i < batchsize; i++) {
 					iosWithT = ioScoreWithT.get(i);
 					iosWithS = ioScoreWithS.get(i);
+					if (iosWithT == null && iosWithS == null) { continue; } // zero counts
 					scoreT = scoresSandT.get(i * 2);
 					scoreS = scoresSandT.get(i * 2 + 1);
 					/**
@@ -181,16 +176,19 @@ public class SGDForMoG extends Recorder {
 					 * which contains the term 1 / w(r), thus we could eliminate w(r) when computing it.
 					 */
 					if (!removed && uRuleType == GrammarRule.LHSPACE) { 
-						removed = true; // CHECK avoid impossible remove
-						for (Map<String, GaussianMixture> ios : iosWithT) { ios.remove(GrammarRule.Unit.C); }
-						for (Map<String, GaussianMixture> ios : iosWithS) { ios.remove(GrammarRule.Unit.C); }
+						if (iosWithT != null) { for (Map<String, GaussianMixture> ios : iosWithT) { ios.remove(GrammarRule.Unit.C); } }
+						if (iosWithS != null) { for (Map<String, GaussianMixture> ios : iosWithS) { ios.remove(GrammarRule.Unit.C); } }
 					}
 					cumulative = (isample + i) > 0; // CHECK when to clear old gradients and accumulate new gradients
 					dRuleW = derivateRuleWeight(scoreT, scoreS, iosWithT, iosWithS);
 					ruleW.derivative(cumulative, icomponent, dRuleW, sample, ggrads, wgrads, true);
+					updated = true; // CHECK do we need to update in the case where derivative() was not invoked.
 				}
+				removed = true; // CHECK avoid impossible remove
 			}
-			ruleW.update(icomponent, ggrads, wgrads);
+			if (updated) {
+				ruleW.update(icomponent, ggrads, wgrads);
+			}
 		}
 	}
 	

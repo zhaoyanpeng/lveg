@@ -16,12 +16,7 @@ import edu.shanghaitech.ai.nlp.syntax.State;
  *
  */
 public class MaxRuleInferencer extends Inferencer {
-	protected LVeGLexicon lexicon;
-	protected LVeGGrammar grammar;
-	
-	protected ChainUrule chainurule;
-	
-	
+
 	public MaxRuleInferencer(LVeGGrammar grammar, LVeGLexicon lexicon) {
 		this.grammar = grammar;
 		this.lexicon = lexicon;
@@ -129,24 +124,26 @@ public class MaxRuleInferencer extends Inferencer {
 		Set<Short> ikeyLevel0 = chart.keySet(idx, true, (short) 0);
 		Set<Short> ikeyLevel1 = chart.keySet(idx, true, (short) 1);
 		Set<Short> okeyLevel0 = chart.keySet(idx, false, (short) 0);
-		for (Short ikey : ikeyLevel0) {
-			if ((count = chart.getMaxRuleCount(ikey, idx, (short) 0)) == Double.NEGATIVE_INFINITY) { continue; }
-			for (Short okey : okeyLevel0) {
-				if ((maxcnt = chart.getMaxRuleCount(okey, idx)) > count) { continue; }
-				if ((cinScore = chart.getInsideScore(ikey, idx, (short) 0)) == null || 
-						(outScore = chart.getOutsideScore(okey, idx, (short) 0)) == null) {
-					continue;
-				}
-				for (Short mid : ikeyLevel1) {
-					if ((w0 = grammar.getUnaryRuleWeight(mid, ikey, GrammarRule.GENERAL)) == null ||
-							(w1 = grammar.getUnaryRuleWeight(okey, mid, GrammarRule.GENERAL)) == null) {
+		if (ikeyLevel0 != null && ikeyLevel1 != null && okeyLevel0 != null) {
+			for (Short ikey : ikeyLevel0) {
+				if ((count = chart.getMaxRuleCount(ikey, idx, (short) 0)) == Double.NEGATIVE_INFINITY) { continue; }
+				for (Short okey : okeyLevel0) {
+					if ((maxcnt = chart.getMaxRuleCount(okey, idx)) > count) { continue; }
+					if ((cinScore = chart.getInsideScore(ikey, idx, (short) 0)) == null || 
+							(outScore = chart.getOutsideScore(okey, idx, (short) 0)) == null) {
 						continue;
 					}
-					newcnt = count + cinScore.marginalize(true) + w0.marginalize(true) + 
-							w1.marginalize(true) + outScore.marginalize(true) - scoreS;
-					if (newcnt > maxcnt) {
-						int sons = (ikey << 16) + mid; // higher 2 bytes (grandson) <- lower 2 bytes (child)
-						chart.addMaxRuleCount(okey, idx, newcnt, sons, (short) -1, (short) 2);
+					for (Short mid : ikeyLevel1) {
+						if ((w0 = grammar.getUnaryRuleWeight(mid, ikey, GrammarRule.GENERAL)) == null ||
+								(w1 = grammar.getUnaryRuleWeight(okey, mid, GrammarRule.GENERAL)) == null) {
+							continue;
+						}
+						newcnt = count + cinScore.marginalize(true) + w0.marginalize(true) + 
+								w1.marginalize(true) + outScore.marginalize(true) - scoreS;
+						if (newcnt > maxcnt) {
+							int sons = (ikey << 16) + mid; // higher 2 bytes (grandson) <- lower 2 bytes (child)
+							chart.addMaxRuleCount(okey, idx, newcnt, sons, (short) -1, (short) 2);
+						}
 					}
 				}
 			}

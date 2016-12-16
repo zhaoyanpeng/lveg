@@ -644,9 +644,7 @@ public class GaussianMixture extends Recorder {
 	 * @param sample     the sample from N(0, 1)
 	 * @param truths     the placeholder
 	 */
-	public void restoreSample(int icomponent, 
-			Map<String, List<Double>> sample, 
-			Map<String, List<Double>> truths) {
+	public void restoreSample(int icomponent, Map<String, List<Double>> sample, Map<String, List<Double>> truths) {
 		Map<String, Set<GaussianDistribution>> component = mixture.get(icomponent);
 		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
 			List<Double> slice = sample.get(gaussian.getKey());

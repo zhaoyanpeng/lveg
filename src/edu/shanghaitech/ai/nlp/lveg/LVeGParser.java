@@ -3,6 +3,7 @@ package edu.shanghaitech.ai.nlp.lveg;
 import java.util.List;
 
 import edu.berkeley.nlp.syntax.Tree;
+import edu.shanghaitech.ai.nlp.lveg.Inferencer.Cell;
 import edu.shanghaitech.ai.nlp.lveg.Inferencer.Chart;
 import edu.shanghaitech.ai.nlp.syntax.State;
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
@@ -12,7 +13,7 @@ import edu.shanghaitech.ai.nlp.util.Recorder;
  * @author Yanpeng Zhao
  *
  */
-public class LVeGParser extends Recorder {
+public class LVeGParser extends Parser {
 	
 	private LVeGInferencer inferencer;
 	
@@ -24,16 +25,16 @@ public class LVeGParser extends Recorder {
 	
 	public double evalRuleCount(Tree<State> tree, short isample) {
 		Chart chart = doInsideOutside(tree);
-		logger.trace("\nInside scores with the sentence...\n\n"); // DEBUG
-		MethodUtil.debugChart(Chart.getChart(true), (short) 2); // DEBUG
-		logger.trace("\nOutside scores with the sentence...\n\n"); // DEBUG
-		MethodUtil.debugChart(Chart.getChart(false), (short) 2); // DEBUG
+//		logger.trace("\nInside scores with the sentence...\n\n"); // DEBUG
+//		MethodUtil.debugChart(Chart.getChart(true), (short) 2); // DEBUG
+//		logger.trace("\nOutside scores with the sentence...\n\n"); // DEBUG
+//		MethodUtil.debugChart(Chart.getChart(false), (short) 2); // DEBUG
 		
 		GaussianMixture score = chart.getInsideScore((short) 0, Chart.idx(0, 1));
 		double scoreS = score.eval(null, true);
 		
-		logger.trace("Sentence score in logarithm: " + scoreS + ", Margin: " + score.marginalize(false) + "\n"); // DEBUG
-		logger.trace("\nEval rule count with the sentence...\n"); // DEBUG
+//		logger.trace("Sentence score in logarithm: " + scoreS + ", Margin: " + score.marginalize(false) + "\n"); // DEBUG
+//		logger.trace("\nEval rule count with the sentence...\n"); // DEBUG
 		
 		if (Double.isInfinite(scoreS) || Double.isNaN(scoreS)) {
 			System.err.println("Fatal Error: Sentence score is smaller than zero: " + scoreS);

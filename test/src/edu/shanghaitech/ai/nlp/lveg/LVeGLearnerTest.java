@@ -12,10 +12,14 @@ public class LVeGLearnerTest {
 		String corpusPath = ROOT + "wsj_s2-21_tree";
 //		String corpusPath = ROOT + "treebank/combined/";
 		String outputFile = ROOT + "treebank/grammar.gr";
-		String logFile = "log/io_with_s_chain_not_precompute_not_addinter";
+		String logFile = "log/ll_s7_e8_b3";
 		
 		String[] args = {"-pathToCorpus", corpusPath, "-out", outputFile, "-logType", "-logFile", logFile};
 		
-		LVeGLearner.main(args);
+		try {
+			LVeGLearner.main(args);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 }

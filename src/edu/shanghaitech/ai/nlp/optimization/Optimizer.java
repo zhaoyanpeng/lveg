@@ -54,15 +54,27 @@ public class Optimizer extends Recorder {
 	/**
 	 * Stochastic gradient descent.
 	 * 
-	 * @param scoresOfST the parse tree score (odd index) and the sentence score (even index).
+	 * @param scoresOfST the parse tree score (odd index) and the sentence score (even index)
 	 */
 	public void applyGradientDescent(List<Double> scoresST) {
+		if (scoresST.size() == 0) { return; }
+		
+		int count = 0, total = ruleSet.size();
+		long start, ttime;
 		Batch cntWithT, cntWithS;
 		for (GrammarRule rule : ruleSet) {
 			cntWithT = cntsWithT.get(rule);
 			cntWithS = cntsWithS.get(rule);
+			if (cntWithT.size() == 0 && cntWithS.size() == 0) { continue; }
+			
+//			logger.trace(rule + "\t" + count + "\tof " + total + "..."); // DEBUG
+//			start = System.currentTimeMillis();
 			minimizer.optimize(rule, cntWithT, cntWithS, scoresST);
+//			ttime = System.currentTimeMillis() - start;
+//			logger.trace("gd consumed " + (ttime / 1000) + "s\n"); // DEBUG
+			count++;
 		}
+		reset();
 	}
 	
 	
@@ -115,7 +127,14 @@ public class Optimizer extends Recorder {
 	}
 	
 	
-	public void reset() { }
+	public void reset() { 
+		Batch cntWithT, cntWithS;
+		for (GrammarRule rule : ruleSet) {
+			if ((cntWithT = cntsWithT.get(rule)) != null) { cntWithT.clear(); }
+			if ((cntWithS = cntsWithS.get(rule)) != null) { cntWithS.clear(); }
+			
+		}
+	}
 	
 	
 	/**
@@ -150,8 +169,20 @@ public class Optimizer extends Recorder {
 			}
 		}
 		
-		protected List<Map<String, GaussianMixture>> get(int i) {
+		protected List<Map<String, GaussianMixture>> get(short i) {
 			return batch.get(i);
+		}
+		
+		protected boolean containsKey(short i) {
+			return batch.containsKey(i);
+		}
+		
+		protected Set<Short> keySet() {
+			return batch.keySet();
+		}
+		
+		protected void clear() {
+			batch.clear();
 		}
 		
 		protected int size() {

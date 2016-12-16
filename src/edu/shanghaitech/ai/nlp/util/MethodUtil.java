@@ -282,7 +282,7 @@ public class MethodUtil extends Recorder {
 					System.out.println("The tree contains the unary rule chain of length >= " + maxLength + ":");
 					System.out.println(tree);
 					try {
-						saveTree2image(tree, treeFileName + maxLength + "_" + count);
+						saveTree2image(tree, treeFileName + maxLength + "_" + count, null);
 						System.out.println("The tree has been saved to " + treeFileName + maxLength);
 					} catch (Exception e) {
 						// TODO Auto-generated catch block
@@ -556,14 +556,17 @@ public class MethodUtil extends Recorder {
 	
 	
 	/**
-	 * @param tree       the parse tree
+	 * @param stateTree  the state parse tree
 	 * @param filename   image name
+	 * @param stringTree the string parse tree
 	 * @throws Exception oops
 	 */
-	public static void saveTree2image(Tree<State> tree, String filename) throws Exception {
+	public static void saveTree2image(Tree<State> stateTree, String filename, Tree<String> stringTree) throws Exception {
 		TreeJPanel tjp = new TreeJPanel();
-		Tree<String> stringTree = StateTreeList.stateTreeToStringTree(tree, Numberer.getGlobalNumberer(LVeGLearner.KEY_TAG_SET));
-		System.out.println(stringTree);
+		if (stringTree == null) {
+			stringTree = StateTreeList.stateTreeToStringTree(stateTree, Numberer.getGlobalNumberer(LVeGLearner.KEY_TAG_SET));
+			logger.trace("STRING PARSE TREE: " + stringTree + "\n");
+		}
 		
 		tjp.setTree(stringTree);
 		BufferedImage bi = new BufferedImage(tjp.width(), tjp.height(), BufferedImage.TYPE_INT_ARGB);

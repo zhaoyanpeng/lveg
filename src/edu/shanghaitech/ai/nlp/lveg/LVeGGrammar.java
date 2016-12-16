@@ -262,7 +262,7 @@ public class LVeGGrammar extends Recorder implements Serializable {
 		if (rule != null) {
 			return rule.getWeight();
 		}
-		System.err.println("Binary Rule NOT Found: [P: " + idParent + ", LC: " + idlChild + ", RC: " + idrChild + "]");
+//		logger.warn("Binary Rule NOT Found: [P: " + idParent + ", LC: " + idlChild + ", RC: " + idrChild + "]\n");
 		return null;
 	}
 	
@@ -272,7 +272,7 @@ public class LVeGGrammar extends Recorder implements Serializable {
 		if (rule != null) {
 			return rule.getWeight();
 		}
-		System.err.println("Unary Rule NOT Found: [P: " + idParent + ", C: " + idChild + ", TYPE: " + type + "]");
+//		logger.warn("Unary Rule NOT Found: [P: " + idParent + ", C: " + idChild + ", TYPE: " + type + "]\n");
 		return null;
 	}
 	

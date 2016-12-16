@@ -1,5 +1,8 @@
 package edu.shanghaitech.ai.nlp.optimization;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import org.junit.Test;
 
 import edu.shanghaitech.ai.nlp.lveg.GrammarRule;
@@ -40,6 +43,12 @@ public class SGDForMoGTest {
 		System.out.println(Integer.toBinaryString(xxx));
 		int mmm =  ((xx << 16) >>> 16);
 		System.out.println(Integer.toBinaryString(mmm));
+		
+		System.out.println(Math.exp(Math.log(0.0) - 3));
+		
+		Set<Short> tmp = new HashSet<Short>();
+		tmp.add((short) 0);
+		System.out.println(tmp.contains((short) 0));
 		
 	}
 

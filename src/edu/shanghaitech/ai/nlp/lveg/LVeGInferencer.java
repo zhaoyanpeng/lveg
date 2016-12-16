@@ -335,7 +335,7 @@ public class LVeGInferencer extends Inferencer {
 			if (scores.get(GrammarRule.Unit.P) != null) {
 				scores.get(GrammarRule.Unit.P).add(outScore);
 				scores.get(GrammarRule.Unit.UC).add(cinScore);
-			} else {
+			} else { // new memory space
 				scores.put(GrammarRule.Unit.P, outScore.copy(true));
 				scores.put(GrammarRule.Unit.UC, cinScore.copy(true));
 			}
