@@ -1,7 +1,9 @@
 package edu.shanghaitech.ai.nlp.util;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 
 import org.junit.Test;
 
@@ -42,5 +44,15 @@ public class MethodUtilTest {
 		double z = MethodUtil.logAdd(x, y);
 		double m = Math.log((Math.exp(x) + Math.exp(y)));
 		System.out.println("Precision of the logAdd method is: " + (m - z) + ", [m = " + m + ", z =" + z + "]");
+	}
+	
+	@Test
+	public void testShuffle() {
+		List<Integer> listInt = new ArrayList<Integer>();
+		MethodUtil.randomInitList(listInt, Integer.class, 5, 2, false, true);
+		System.out.println("---shuffle test---");
+		System.out.println(listInt);
+		Collections.shuffle(listInt, new Random(0));
+		System.out.println(listInt);
 	}
 }

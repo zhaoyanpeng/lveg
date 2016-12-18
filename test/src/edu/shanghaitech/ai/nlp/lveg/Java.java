@@ -1,10 +1,13 @@
 package edu.shanghaitech.ai.nlp.lveg;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.junit.Test;
 
 public class Java {
 	
-	@Test
+//	@Test
 	public void testJava() {
 		Ghost ghost0 = new Ghost((short) 0);
 		System.out.println(ghost0);
@@ -53,5 +56,19 @@ public class Java {
 		public String toString() {
 			return soul + "-" + id;
 		}
+	}
+	
+	
+	@Test
+	public void testMain() {
+		List<Double> memo = null;
+		memo = changeRef(memo);
+		System.out.println(memo == null);
+		
+	}
+	
+	
+	protected List<Double> changeRef(List<Double> memo) {
+		return new ArrayList<Double>();
 	}
 }

@@ -2,6 +2,7 @@ package edu.shanghaitech.ai.nlp.lveg;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import edu.shanghaitech.ai.nlp.lveg.LVeGLearner.Params;
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
@@ -108,6 +109,26 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	
 	
 	/**
+	 * Sample from N(0, 1), and then restore the real sample according to the parameters of the gaussian distribution. 
+	 * 
+	 * @param slice placeholder, the sample sampled from N(0, 1)
+	 * @param truth placeholder, the sample from this gaussian distribution
+	 * @param rnd   random
+	 */
+	protected void sample(List<Double> slice, List<Double> truth, Random rnd) {
+		double real, norm;
+		slice.clear();
+		truth.clear();
+		for (int i = 0; i < dim; i++) {
+			norm = rnd.nextGaussian();
+			real = norm * Math.exp(vars.get(i)) + mus.get(i);
+			slice.add(norm);
+			truth.add(real);
+		}
+	}
+	
+	
+	/**
 	 * Restore the real sample from the sample that is sampled from the standard normal distribution.
 	 * 
 	 * @param sample the sample sampled from N(0, 1)
@@ -131,7 +152,10 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	 * @param grads gradients
 	 */
 	protected void update(List<Double> grads) {
-		assert(grads.size() == 2 * dim);
+		if (grads.size() == 0) { 
+//			logger.warn("No need to update because no gradients could be applied.");
+			return; 
+		}
 		double mgrad, vgrad, mu, var;
 		for (int i = 0; i < dim; i++) {
 			mgrad = grads.get(i * 2);

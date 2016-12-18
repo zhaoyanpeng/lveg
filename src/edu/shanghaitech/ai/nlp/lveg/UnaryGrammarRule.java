@@ -21,7 +21,6 @@ public class UnaryGrammarRule extends GrammarRule implements Comparable<Object> 
 	 * the ID of the right-hand side nonterminal
 	 */
 	protected short rhs;
-	protected byte type;
 	
 	
 	public UnaryGrammarRule() {
@@ -39,7 +38,7 @@ public class UnaryGrammarRule extends GrammarRule implements Comparable<Object> 
 	public UnaryGrammarRule(short lhs, short rhs) {
 		this.lhs = lhs;
 		this.rhs = rhs;
-		this.type = GENERAL;
+		this.type = LRURULE;
 		
 	}
 	
@@ -78,7 +77,7 @@ public class UnaryGrammarRule extends GrammarRule implements Comparable<Object> 
 				weight.add(i, Unit.P, set);
 			}
 			break;
-		case GENERAL: // general unary rules 
+		case LRURULE: // general unary rules 
 			for (int i = 0; i < LVeGLearner.ncomponent; i++) {
 				Map<String, Set<GaussianDistribution>> map = new HashMap<String, Set<GaussianDistribution>>();
 				Set<GaussianDistribution> set0 = new HashSet<GaussianDistribution>();
@@ -111,16 +110,6 @@ public class UnaryGrammarRule extends GrammarRule implements Comparable<Object> 
 
 	public void setRhs(short rhs) {
 		this.rhs = rhs;
-	}
-
-
-	public byte getType() {
-		return type;
-	}
-
-
-	public void setType(byte type) {
-		this.type = type;
 	}
 
 

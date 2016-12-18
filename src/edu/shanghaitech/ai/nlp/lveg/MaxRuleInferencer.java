@@ -134,8 +134,8 @@ public class MaxRuleInferencer extends Inferencer {
 						continue;
 					}
 					for (Short mid : ikeyLevel1) {
-						if ((w0 = grammar.getUnaryRuleWeight(mid, ikey, GrammarRule.GENERAL)) == null ||
-								(w1 = grammar.getUnaryRuleWeight(okey, mid, GrammarRule.GENERAL)) == null) {
+						if ((w0 = grammar.getUnaryRuleWeight(mid, ikey, GrammarRule.LRURULE)) == null ||
+								(w1 = grammar.getUnaryRuleWeight(okey, mid, GrammarRule.LRURULE)) == null) {
 							continue;
 						}
 						newcnt = count + cinScore.marginalize(true) + w0.marginalize(true) + 

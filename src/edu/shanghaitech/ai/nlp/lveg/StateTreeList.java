@@ -2,8 +2,10 @@ package edu.shanghaitech.ai.nlp.lveg;
 
 import java.util.AbstractCollection;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Random;
 
 import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.util.Numberer;
@@ -15,7 +17,7 @@ import edu.shanghaitech.ai.nlp.syntax.State;
  */
 public class StateTreeList extends AbstractCollection<Tree<State>> {
 	
-	private final static short ZERO = 0, ONE = 1;
+	private final static short ZERO = 0;
 	
 	private List<Tree<State>> trees;
 	
@@ -163,17 +165,6 @@ public class StateTreeList extends AbstractCollection<Tree<State>> {
 	
 	
 	/**
-	 * @return 
-	 * 
-	 * @deprecated StateTreeList is a list of itself
-	 * 
-	 */
-	public List<Tree<State>> getTrees() {
-		return trees;
-	}
-	
-	
-	/**
 	 * @param tree        a parse tree
 	 * @param numbererTag record the ids of tags
 	 * @return            parse tree represented by the state list
@@ -192,22 +183,25 @@ public class StateTreeList extends AbstractCollection<Tree<State>> {
 	}
 	
 	
-	protected void resetScore() {
+	public void shuffle(Random rnd) {
+		Collections.shuffle(trees, rnd);
+	}
+	
+	
+	protected void reset() {
 		for (Tree<State> tree : trees) {
-			resetScore(tree);
+			reset(tree);
 		}
 	}
 	
 	
-	public void resetScore(Tree<State> tree) {
+	public void reset(Tree<State> tree) {
 		if (tree.isLeaf()) { return; }
-		
 		if (tree.getLabel() != null) {
 			tree.getLabel().clear(false);
 		}
-		
 		for (Tree<State> child : tree.getChildren()) {
-			resetScore(child);
+			reset(child);
 		}
 	}
 	

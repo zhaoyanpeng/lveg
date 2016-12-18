@@ -7,6 +7,7 @@ import java.util.Set;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.util.Indexer;
 import edu.shanghaitech.ai.nlp.optimization.Optimizer;
+import edu.shanghaitech.ai.nlp.optimization.ParallelOptimizer;
 import edu.shanghaitech.ai.nlp.syntax.State;
 
 /**
@@ -18,7 +19,8 @@ public abstract class LVeGLexicon {
 	protected transient String lastWord;
 	protected transient String lastSignature;
 	protected transient int lastPosition;
-	protected Optimizer optimizer;
+//	private Optimizer optimizer;
+	protected ParallelOptimizer optimizer;
 	
 	
 	/**
@@ -102,11 +104,16 @@ public abstract class LVeGLexicon {
 	protected abstract boolean isKnown(String word);
 	
 	
+	public void evalGradients(List<Double> scoreOfST) {
+		optimizer.evalGradients(scoreOfST);
+	}
+	
+	
 	/**
 	 * Apply stochastic gradient descent.
 	 */
-	public void applyGradientDescent(List<Double> scoresOfST) {
-		optimizer.applyGradientDescent(scoresOfST);
+	public void applyGradientDescent(List<Double> scoreOfST) {
+		optimizer.applyGradientDescent(scoreOfST);
 	}
 	
 	

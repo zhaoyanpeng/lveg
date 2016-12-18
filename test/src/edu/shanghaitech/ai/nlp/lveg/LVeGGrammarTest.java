@@ -10,23 +10,23 @@ public class LVeGGrammarTest {
 	
 //	static {
 	// circle -3-5-7-
-	GrammarRule r0 = new UnaryGrammarRule((short) 1, (short) 0, GrammarRule.GENERAL);
-	GrammarRule r1 = new UnaryGrammarRule((short) 3, (short) 0, GrammarRule.GENERAL);
-	GrammarRule r2 = new UnaryGrammarRule((short) 2, (short) 1, GrammarRule.GENERAL);
-	GrammarRule r3 = new UnaryGrammarRule((short) 4, (short) 1, GrammarRule.GENERAL);
-	GrammarRule r4 = new UnaryGrammarRule((short) 8, (short) 2, GrammarRule.GENERAL);
-	UnaryGrammarRule r5 = new UnaryGrammarRule((short) 9, (short) 2, GrammarRule.GENERAL);
-	UnaryGrammarRule r6 = new UnaryGrammarRule((short) 5, (short) 3, GrammarRule.GENERAL);
-	UnaryGrammarRule r7 = new UnaryGrammarRule((short) 8, (short) 3, GrammarRule.GENERAL);
-	UnaryGrammarRule r8 = new UnaryGrammarRule((short) 9, (short) 3, GrammarRule.GENERAL);
-	UnaryGrammarRule r9 = new UnaryGrammarRule((short) 6, (short) 4, GrammarRule.GENERAL);
-	UnaryGrammarRule r10 = new UnaryGrammarRule((short) 9, (short) 4, GrammarRule.GENERAL);
-	UnaryGrammarRule r11 = new UnaryGrammarRule((short) 7, (short) 5, GrammarRule.GENERAL);
-	UnaryGrammarRule r12 = new UnaryGrammarRule((short) 8, (short) 6, GrammarRule.GENERAL);
-	UnaryGrammarRule r13 = new UnaryGrammarRule((short) 3, (short) 7, GrammarRule.GENERAL);
-	UnaryGrammarRule r14 = new UnaryGrammarRule((short) 8, (short) 7, GrammarRule.GENERAL);
-	UnaryGrammarRule r15 = new UnaryGrammarRule((short) 9, (short) 8, GrammarRule.GENERAL);
-	UnaryGrammarRule r25 = new UnaryGrammarRule((short) 9, (short) 8, GrammarRule.GENERAL);
+	GrammarRule r0 = new UnaryGrammarRule((short) 1, (short) 0, GrammarRule.LRURULE);
+	GrammarRule r1 = new UnaryGrammarRule((short) 3, (short) 0, GrammarRule.LRURULE);
+	GrammarRule r2 = new UnaryGrammarRule((short) 2, (short) 1, GrammarRule.LRURULE);
+	GrammarRule r3 = new UnaryGrammarRule((short) 4, (short) 1, GrammarRule.LRURULE);
+	GrammarRule r4 = new UnaryGrammarRule((short) 8, (short) 2, GrammarRule.LRURULE);
+	UnaryGrammarRule r5 = new UnaryGrammarRule((short) 9, (short) 2, GrammarRule.LRURULE);
+	UnaryGrammarRule r6 = new UnaryGrammarRule((short) 5, (short) 3, GrammarRule.LRURULE);
+	UnaryGrammarRule r7 = new UnaryGrammarRule((short) 8, (short) 3, GrammarRule.LRURULE);
+	UnaryGrammarRule r8 = new UnaryGrammarRule((short) 9, (short) 3, GrammarRule.LRURULE);
+	UnaryGrammarRule r9 = new UnaryGrammarRule((short) 6, (short) 4, GrammarRule.LRURULE);
+	UnaryGrammarRule r10 = new UnaryGrammarRule((short) 9, (short) 4, GrammarRule.LRURULE);
+	UnaryGrammarRule r11 = new UnaryGrammarRule((short) 7, (short) 5, GrammarRule.LRURULE);
+	UnaryGrammarRule r12 = new UnaryGrammarRule((short) 8, (short) 6, GrammarRule.LRURULE);
+	UnaryGrammarRule r13 = new UnaryGrammarRule((short) 3, (short) 7, GrammarRule.LRURULE);
+	UnaryGrammarRule r14 = new UnaryGrammarRule((short) 8, (short) 7, GrammarRule.LRURULE);
+	UnaryGrammarRule r15 = new UnaryGrammarRule((short) 9, (short) 8, GrammarRule.LRURULE);
+	UnaryGrammarRule r25 = new UnaryGrammarRule((short) 9, (short) 8, GrammarRule.LRURULE);
 	
 	BinaryGrammarRule rule16= new BinaryGrammarRule((short) 1, (short) 2, (short) 3);
 	BinaryGrammarRule rule17= new BinaryGrammarRule((short) 2, (short) 4, (short) 6);

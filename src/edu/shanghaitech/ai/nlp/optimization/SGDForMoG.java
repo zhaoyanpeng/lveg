@@ -8,8 +8,6 @@ import java.util.Random;
 
 import edu.shanghaitech.ai.nlp.lveg.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.GrammarRule;
-import edu.shanghaitech.ai.nlp.lveg.UnaryGrammarRule;
-import edu.shanghaitech.ai.nlp.optimization.Optimizer.Batch;
 import edu.shanghaitech.ai.nlp.util.Recorder;
 
 /**
@@ -63,7 +61,7 @@ public class SGDForMoG extends Recorder {
 	}
 	
 	
-	public SGDForMoG(Random random, short nsample, double lr) {
+	public SGDForMoG(Random random, short nsample) {
 		this();
 		this.random = random;
 		this.nsample = nsample;
@@ -132,35 +130,34 @@ public class SGDForMoG extends Recorder {
 		double scoreT, scoreS, dRuleW;
 		byte uRuleType = -1;
 		
-		for (int icomponent = 0; icomponent < ruleW.getNcomponent(); icomponent++) {
+		for (int icomponent = 0; icomponent < ruleW.ncomponent(); icomponent++) {
 			updated = false; // 
 			for (short isample = 0; isample < nsample; isample++) {
 				clearSample(); // to ensure the correct sample is in use
-				if (rule.isUnary()) {
-					UnaryGrammarRule urule = (UnaryGrammarRule) rule;
-					switch (urule.getType()) {
-					case GrammarRule.GENERAL: {
-						sample(sample.get(GrammarRule.Unit.P), ruleW.getDim(icomponent, GrammarRule.Unit.P));
-						sample(sample.get(GrammarRule.Unit.UC), ruleW.getDim(icomponent, GrammarRule.Unit.UC));
-						break;
-					}
-					case GrammarRule.LHSPACE: {
-						sample(sample.get(GrammarRule.Unit.P), ruleW.getDim(icomponent, GrammarRule.Unit.P));
-						uRuleType = GrammarRule.LHSPACE;
-						break;
-					}
-					case GrammarRule.RHSPACE: {
-						sample(sample.get(GrammarRule.Unit.C), ruleW.getDim(icomponent, GrammarRule.Unit.C));
-						break;
-					}
-					default: {
-						logger.error("Not a valid unary grammar rule.\n");
-					}
-					}
-				} else {
-					sample(sample.get(GrammarRule.Unit.P), ruleW.getDim(icomponent, GrammarRule.Unit.P));
-					sample(sample.get(GrammarRule.Unit.LC), ruleW.getDim(icomponent, GrammarRule.Unit.LC));
-					sample(sample.get(GrammarRule.Unit.RC), ruleW.getDim(icomponent, GrammarRule.Unit.RC));
+				switch (rule.getType()) {
+				case GrammarRule.LRBRULE: {
+					sample(sample.get(GrammarRule.Unit.P), ruleW.dim(icomponent, GrammarRule.Unit.P));
+					sample(sample.get(GrammarRule.Unit.LC), ruleW.dim(icomponent, GrammarRule.Unit.LC));
+					sample(sample.get(GrammarRule.Unit.RC), ruleW.dim(icomponent, GrammarRule.Unit.RC));
+					break;
+				}
+				case GrammarRule.LRURULE: {
+					sample(sample.get(GrammarRule.Unit.P), ruleW.dim(icomponent, GrammarRule.Unit.P));
+					sample(sample.get(GrammarRule.Unit.UC), ruleW.dim(icomponent, GrammarRule.Unit.UC));
+					break;
+				}
+				case GrammarRule.LHSPACE: {
+					sample(sample.get(GrammarRule.Unit.P), ruleW.dim(icomponent, GrammarRule.Unit.P));
+					uRuleType = GrammarRule.LHSPACE;
+					break;
+				}
+				case GrammarRule.RHSPACE: {
+					sample(sample.get(GrammarRule.Unit.C), ruleW.dim(icomponent, GrammarRule.Unit.C));
+					break;
+				}
+				default: {
+					logger.error("Not a valid unary grammar rule.\n");
+				}
 				}
 				ruleW.restoreSample(icomponent, sample, truths);
 				for (short i = 0; i < batchsize; i++) {

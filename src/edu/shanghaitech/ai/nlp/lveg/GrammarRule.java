@@ -13,14 +13,16 @@ public abstract class GrammarRule implements Serializable {
 	 */
 	private static final long serialVersionUID = 1L;
 	
-	public final static byte RHSPACE = 2;
-	public final static byte LHSPACE = 1;
-	public final static byte GENERAL = 0;
+	public final static byte LRBRULE = 3; // left and right hand sides, binary rule
+	public final static byte RHSPACE = 2; 
+	public final static byte LHSPACE = 1; 
+	public final static byte LRURULE = 0; // left and right hand sides, unary rule
 
 	/**
 	 * the ID of the left-hand side nonterminal
 	 */
 	protected short lhs;
+	protected byte type;
 
 	protected GaussianMixture weight;
 	
@@ -42,6 +44,16 @@ public abstract class GrammarRule implements Serializable {
 	
 	public abstract boolean isUnary();
 	public abstract GrammarRule copy();
+	
+	
+	public byte getType() {
+		return type;
+	}
+
+
+	public void setType(byte type) {
+		this.type = type;
+	}
 	
 	
 	public short getLhs() {

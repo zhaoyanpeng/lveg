@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
 import edu.shanghaitech.ai.nlp.lveg.LVeGLearner.Params;
@@ -638,26 +639,6 @@ public class GaussianMixture extends Recorder {
 	
 	
 	/**
-	 * Restore the real sample from the sample that is sampled from the standard normal distribution.
-	 * 
-	 * @param icomponent index of the component
-	 * @param sample     the sample from N(0, 1)
-	 * @param truths     the placeholder
-	 */
-	public void restoreSample(int icomponent, Map<String, List<Double>> sample, Map<String, List<Double>> truths) {
-		Map<String, Set<GaussianDistribution>> component = mixture.get(icomponent);
-		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
-			List<Double> slice = sample.get(gaussian.getKey());
-			List<Double> truth = truths.get(gaussian.getKey());
-			for (GaussianDistribution gd : gaussian.getValue()) {
-				gd.restoreSample(slice, truth);
-				// break; // CHECK only one gaussian is allowed
-			}
-		}
-	}
-	
-	
-	/**
 	 * Take the derivative of the MoG w.r.t the mixing weight.
 	 * 
 	 * @param sample     the sample from N(0, 1)
@@ -691,7 +672,7 @@ public class GaussianMixture extends Recorder {
 	public void derivative(
 			boolean cumulative, int icomponent, double factor, 
 			Map<String, List<Double>> sample, Map<String, List<Double>> ggrads, List<Double> wgrads, boolean normal) {
-		if (!cumulative) {
+		if (!cumulative && icomponent == 0) { // CHECK stupid if...else...
 			wgrads.clear();
 			for (int i = 0; i < ncomponent; i++) {
 				wgrads.add(0.0);
@@ -736,7 +717,95 @@ public class GaussianMixture extends Recorder {
 	}
 	
 	
-	public int getDim(int icomponent, String key) {
+	/**
+	 * Allocate memory space for gradients.
+	 * 
+	 * @return gradients holder
+	 */
+	public List<Map<String, List<Double>>> zeroslike() {
+		List<Map<String, List<Double>>> grads = new ArrayList<Map<String, List<Double>>>(ncomponent);
+		for (int i = 0; i < ncomponent; i++) {
+			Map<String, Set<GaussianDistribution>> component = mixture.get(i);
+			Map<String, List<Double>> gcomp = new HashMap<String, List<Double>>(component.size(), 1);
+			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
+				if (gaussian.getValue().size() > 1) { logger.error("Invalid rule weight.\n"); }
+				for (GaussianDistribution gd : gaussian.getValue()) {
+					List<Double> grad = new ArrayList<Double>(gd.dim * 2);
+					gcomp.put(gaussian.getKey(), grad);
+				}
+			}
+			grads.add(gcomp);
+		}
+		return grads;
+	}
+	
+	
+	/**
+	 * Allocate memory space for samples.
+	 * 
+	 * @param icomponent 0 by default, since all components are of the same dimension
+	 * @return
+	 */
+	public List<HashMap<String, List<Double>>> zeroslike(int icomponent) {
+		Map<String, Set<GaussianDistribution>> component = mixture.get(icomponent);
+		List<HashMap<String, List<Double>>> holder = new ArrayList<HashMap<String, List<Double>>>(2);
+		HashMap<String, List<Double>> sample = new HashMap<String, List<Double>>(component.size(), 1);
+		HashMap<String, List<Double>> truths = new HashMap<String, List<Double>>(component.size(), 1);
+		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
+			if (gaussian.getValue().size() > 1) { logger.error("Invalid rule weight.\n"); }
+			for (GaussianDistribution gd : gaussian.getValue()) {
+				sample.put(gaussian.getKey(), new ArrayList<Double>(gd.dim));
+				truths.put(gaussian.getKey(), new ArrayList<Double>(gd.dim));
+			}
+		}
+		holder.add(sample);
+		holder.add(truths);
+		return holder;
+	}
+	
+	
+	/**
+	 * Sample from N(0, 1), and then restore the real sample according to the parameters of the gaussian distribution. 
+	 * 
+	 * @param icomponent index of the component
+	 * @param sample     the sample from N(0, 1)
+	 * @param truths     the placeholder
+	 * @param rnd        random
+	 */
+	public void sample(int icomponent, Map<String, List<Double>> sample, Map<String, List<Double>> truths, Random rnd) {
+		Map<String, Set<GaussianDistribution>> component = mixture.get(icomponent);
+		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
+			 List<Double> slice = sample.get(gaussian.getKey());
+			 List<Double> truth = truths.get(gaussian.getKey());
+			 if (gaussian.getValue().size() > 1) { logger.error("Invalid rule weight.\n"); }
+			 for (GaussianDistribution gd : gaussian.getValue()) {
+				 gd.sample(slice, truth, rnd);
+			 }
+		}
+	}
+	
+	
+	/**
+	 * Restore the real sample from the sample that is sampled from the standard normal distribution.
+	 * 
+	 * @param icomponent index of the component
+	 * @param sample     the sample from N(0, 1)
+	 * @param truths     the placeholder
+	 */
+	public void restoreSample(int icomponent, Map<String, List<Double>> sample, Map<String, List<Double>> truths) {
+		Map<String, Set<GaussianDistribution>> component = mixture.get(icomponent);
+		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
+			List<Double> slice = sample.get(gaussian.getKey());
+			List<Double> truth = truths.get(gaussian.getKey());
+			for (GaussianDistribution gd : gaussian.getValue()) {
+				gd.restoreSample(slice, truth);
+				// break; // CHECK only one gaussian is allowed
+			}
+		}
+	}
+	
+	
+	public int dim(int icomponent, String key) {
 		Set<GaussianDistribution> gausses = mixture.get(icomponent).get(key);
 		for (GaussianDistribution gd : gausses) {
 			return gd.dim;
@@ -745,13 +814,18 @@ public class GaussianMixture extends Recorder {
 	}
 	
 	
-	public double getWeight(int icomponent) {
-		return Math.exp(weights.get(icomponent));
+	public int size(int icomponent) {
+		return mixture.get(icomponent).size();
 	}
 	
 	
-	public int getNcomponent() {
+	public int ncomponent() {
 		return ncomponent;
+	}
+	
+	
+	public double getWeight(int icomponent) {
+		return Math.exp(weights.get(icomponent));
 	}
 	
 	

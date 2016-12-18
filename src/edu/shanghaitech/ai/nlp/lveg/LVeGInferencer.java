@@ -64,7 +64,7 @@ public class LVeGInferencer extends Inferencer {
 				short idChild = child.getId();
 				
 				if (idParent != 0) {
-					ruleScore = grammar.getUnaryRuleWeight(idParent, idChild, GrammarRule.GENERAL);
+					ruleScore = grammar.getUnaryRuleWeight(idParent, idChild, GrammarRule.LRURULE);
 					pinScore = ruleScore.mulForInsideOutside(cinScore, GrammarRule.Unit.UC, true);
 				} else { // root, inside score of the root node is a constant in double
 					ruleScore = grammar.getUnaryRuleWeight(idParent, idChild, GrammarRule.RHSPACE);
@@ -122,7 +122,7 @@ public class LVeGInferencer extends Inferencer {
 				short idChild = child.getId();
 				
 				if (idParent != 0) {
-					ruleScore = grammar.getUnaryRuleWeight(idParent, idChild, GrammarRule.GENERAL);
+					ruleScore = grammar.getUnaryRuleWeight(idParent, idChild, GrammarRule.LRURULE);
 				} else { // root
 					ruleScore = grammar.getUnaryRuleWeight(idParent, idChild, GrammarRule.RHSPACE);
 				}
@@ -250,7 +250,7 @@ public class LVeGInferencer extends Inferencer {
 				GaussianMixture cinScore = child.getInsideScore();
 				// root, if (idParent == 0) is true
 				String key = idParent == 0 ? GrammarRule.Unit.C : GrammarRule.Unit.UC;
-				byte type = idParent == 0 ? GrammarRule.RHSPACE : GrammarRule.GENERAL;
+				byte type = idParent == 0 ? GrammarRule.RHSPACE : GrammarRule.LRURULE;
 				scores.put(key, cinScore);
 				grammar.addCount(idParent, idChild, type, scores, isample, true);
 				break;
@@ -307,7 +307,7 @@ public class LVeGInferencer extends Inferencer {
 			mergeUnaryRuleCount(chart, idx, rule, scores, (short) 0, (short) (0)); // O_{0}(X) I_{0}(Y)
 			mergeUnaryRuleCount(chart, idx, rule, scores, (short) 0, (short) (1)); // O_{0}(X) I_{1}(Y)
 			mergeUnaryRuleCount(chart, idx, rule, scores, (short) 1, (short) (0)); // O_{1}(X) I_{0}(Y)
-			if (!scores.isEmpty()) { grammar.addCount(rule.lhs, rule.rhs, GrammarRule.GENERAL, scores, isample, false); }
+			if (!scores.isEmpty()) { grammar.addCount(rule.lhs, rule.rhs, GrammarRule.LRURULE, scores, isample, false); }
 		}
 		// have to process unary rules containing LEXICONS specifically
 		if (word != null) {

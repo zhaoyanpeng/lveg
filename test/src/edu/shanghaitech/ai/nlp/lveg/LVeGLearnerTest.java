@@ -12,9 +12,9 @@ public class LVeGLearnerTest {
 		String corpusPath = ROOT + "wsj_s2-21_tree";
 //		String corpusPath = ROOT + "treebank/combined/";
 		String outputFile = ROOT + "treebank/grammar.gr";
-		String logFile = "log/ll_s7_e8_b3";
+		String logFile = "log/ll_s7_e8_b3_c5_l1_parallel";
 		
-		String[] args = {"-pathToCorpus", corpusPath, "-out", outputFile, "-logType", "-logFile", logFile};
+		String[] args = {"-pathToCorpus", corpusPath, "-out", outputFile, /*"-logType",*/ "-logFile", logFile};
 		
 		try {
 			LVeGLearner.main(args);

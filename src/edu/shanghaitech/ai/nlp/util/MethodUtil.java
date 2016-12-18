@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Formatter;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -54,6 +56,24 @@ public class MethodUtil extends Recorder {
 	private static LVeGLexicon lexicon;
 	
 	
+	public static void debugShuffle(StateTreeList trainTrees) {
+		int cnt = 0;
+		for (Tree<State> tree : trainTrees) {
+			logger.trace(tree.getYield() + "\n\n");
+			if (++cnt > 4) {
+				break;
+			}
+		}
+		trainTrees.shuffle(new Random(0));
+		cnt = 0;
+		for (Tree<State> tree : trainTrees) {
+			logger.trace(tree.getYield() + "\n\n");
+			if (++cnt > 4) {
+				break;
+			}
+		}
+	}
+	
 	public static void debugChainRule(LVeGGrammar agrammar) {
 		grammar = agrammar;
 		int count = 0, ncol = 1;
@@ -63,7 +83,7 @@ public class MethodUtil extends Recorder {
 			System.out.println("Tag: " + i);
 			List<GrammarRule> rules = grammar.getChainSumUnaryRulesWithP(i);
 			for (GrammarRule rule : rules) {
-				sb.append(rule + "\t" + rule.getWeight().getNcomponent());
+				sb.append(rule + "\t" + rule.getWeight().ncomponent());
 				if (++count % ncol == 0) {
 					sb.append("\n");
 				}
@@ -145,7 +165,7 @@ public class MethodUtil extends Recorder {
 				State child = children.get(0).getLabel();
 				short idChild = child.getId();
 				
-				byte type = idParent == 0 ? GrammarRule.RHSPACE : GrammarRule.GENERAL;
+				byte type = idParent == 0 ? GrammarRule.RHSPACE : GrammarRule.LRURULE;
 				ruleScore = grammar.getUnaryRuleWeight(idParent, idChild, type);
 				logger.trace("Unary\trule: [" + idParent + ", " + idChild + "] " + ruleScore + "\n"); // DEBUG
 				break;

@@ -11,6 +11,7 @@ import java.util.Set;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.optimization.Optimizer;
+import edu.shanghaitech.ai.nlp.optimization.ParallelOptimizer;
 import edu.shanghaitech.ai.nlp.syntax.State;
 import edu.shanghaitech.ai.nlp.util.Recorder;
 
@@ -57,7 +58,8 @@ public class LVeGGrammar extends Recorder implements Serializable {
 	private Map<GrammarRule, GrammarRule> unaryRuleMap;
 	private Map<GrammarRule, GrammarRule> binaryRuleMap;
 	
-	private Optimizer optimizer;
+//	private Optimizer optimizer;
+	private ParallelOptimizer optimizer;
 	
 	
 	public LVeGGrammar(LVeGGrammar oldGrammar, int nTag) {
@@ -65,7 +67,8 @@ public class LVeGGrammar extends Recorder implements Serializable {
 		this.binaryRuleTable = new RuleTable<BinaryGrammarRule>(BinaryGrammarRule.class);
 		this.unaryRuleMap  = new HashMap<GrammarRule, GrammarRule>();
 		this.binaryRuleMap = new HashMap<GrammarRule, GrammarRule>();
-		this.optimizer = new Optimizer(LVeGLearner.random);
+//		this.optimizer = new Optimizer(LVeGLearner.random);
+		this.optimizer = new ParallelOptimizer(LVeGLearner.random);
 		
 		if (nTag < 0) {
 			this.tagNumberer = Numberer.getGlobalNumberer(LVeGLearner.KEY_TAG_SET);
@@ -137,11 +140,16 @@ public class LVeGGrammar extends Recorder implements Serializable {
 	}
 	
 	
+	public void evalGradients(List<Double> scoreOfST) {
+		optimizer.evalGradients(scoreOfST);
+	}
+	
+	
 	/**
 	 * Apply stochastic gradient descent.
 	 */
-	public void applyGradientDescent(List<Double> scoresOfST) {
-		optimizer.applyGradientDescent(scoresOfST);
+	public void applyGradientDescent(List<Double> scoreOfST) {
+		optimizer.applyGradientDescent(scoreOfST);
 	}
 	
 	
@@ -162,7 +170,7 @@ public class LVeGGrammar extends Recorder implements Serializable {
 			UnaryGrammarRule rule;
 			short idChild = children.get(0).getLabel().getId();
 			if (idParent != 0) {
-				rule = new UnaryGrammarRule(idParent, idChild, GrammarRule.GENERAL);
+				rule = new UnaryGrammarRule(idParent, idChild, GrammarRule.LRURULE);
 			} else { // the root node
 				rule = new UnaryGrammarRule(idParent, idChild, GrammarRule.RHSPACE);
 			}
@@ -207,7 +215,7 @@ public class LVeGGrammar extends Recorder implements Serializable {
 					type = GrammarRule.RHSPACE;
 					keys0.put(GrammarRule.Unit.C, GrammarRule.Unit.RM);
 				} else {
-					type = GrammarRule.GENERAL;
+					type = GrammarRule.LRURULE;
 					keys0.put(GrammarRule.Unit.UC, GrammarRule.Unit.RM);
 				}
 				

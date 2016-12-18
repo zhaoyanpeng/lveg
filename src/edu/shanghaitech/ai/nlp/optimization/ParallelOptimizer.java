@@ -15,38 +15,36 @@ import edu.shanghaitech.ai.nlp.util.Recorder;
  * @author Yanpeng Zhao
  *
  */
-public class Optimizer extends Recorder {
-	/**
-	 * Pseudo counts of grammar rules given the parse tree (countWithT) or the sentence (countWithS).
-	 */
+public class ParallelOptimizer extends Recorder {
+	private static Random rnd;
+	private static short maxsample;
+	// which contains all the rules that need optimizing, it is used to quickly index the grammar rule.
+	private Set<GrammarRule> ruleSet;
+	// pseudo counts of grammar rules given the parse tree (countWithT) or the sentence (countWithS).
 	private Map<GrammarRule, Batch> cntsWithT;
 	private Map<GrammarRule, Batch> cntsWithS;
+	// gradients
+	private Map<GrammarRule, Gradient> gradients;
 	
-	/**
-	 * ruleset contains all the rules that are need to be optimized, it is 
-	 * used to quickly index the rules.
-	 */
-	private Set<GrammarRule> ruleSet;
-	
-	private SGDForMoG minimizer;
-	
-	
-	private Optimizer() {
+	private ParallelOptimizer() {
 		this.cntsWithS = new HashMap<GrammarRule, Batch>();
 		this.cntsWithT = new HashMap<GrammarRule, Batch>();
 		this.ruleSet = new HashSet<GrammarRule>();
+		this.gradients = new HashMap<GrammarRule, Gradient>();
 	}
 	
 	
-	public Optimizer(Random random) {
+	public ParallelOptimizer(Random random) {
 		this();
-		this.minimizer = new SGDForMoG(random);
+		rnd = random;
+		maxsample = 1;
 	}
 	
 	
-	public Optimizer(Random random, short nsample) {
+	public ParallelOptimizer(Random random, short nsample) {
 		this();
-		this.minimizer = new SGDForMoG(random, nsample);
+		rnd = random;
+		maxsample = nsample;
 	}
 	
 	
@@ -55,23 +53,36 @@ public class Optimizer extends Recorder {
 	 * 
 	 * @param scoresOfST the parse tree score (odd index) and the sentence score (even index)
 	 */
-	@SuppressWarnings("unused")
-	public void applyGradientDescent(List<Double> scoresST) {
-		if (scoresST.size() == 0) { return; }
-		long start, ttime;
-		int count = 0, total = ruleSet.size();
-		
+	public void evalGradients(List<Double> scoreSandT) {
+		if (scoreSandT.size() == 0) { return; }
+		Gradient gradient;
 		Batch cntWithT, cntWithS;
 		for (GrammarRule rule : ruleSet) {
+			boolean updated = false;
 			cntWithT = cntsWithT.get(rule);
 			cntWithS = cntsWithS.get(rule);
-			if (cntWithT.size() == 0 && cntWithS.size() == 0) { continue; }
-//			logger.trace(rule + "\t" + count + "\tof " + total + "..."); // DEBUG
-//			start = System.currentTimeMillis();
-			minimizer.optimize(rule, cntWithT, cntWithS, scoresST);
-//			ttime = System.currentTimeMillis() - start;
-//			logger.trace("gd consumed " + (ttime / 1000) + "s\n"); // DEBUG
-			count++;
+			for (short i = 0; i < Gradient.MAX_BATCH_SIZE; i++) {
+				if (cntWithT.get(i) != null || cntWithS.get(i) != null) { 
+					updated = true; 
+					break; 
+				} 
+			}
+			if (!updated) { continue; }
+			gradient = gradients.get(rule);
+			gradient.eval(rule, cntWithT, cntWithS, scoreSandT);
+			// clear
+			cntWithT.clear();
+			cntWithS.clear();
+		}
+	}
+	
+	
+	
+	public void applyGradientDescent(Object placeholder) {
+		Gradient gradient;
+		for (GrammarRule rule : ruleSet) {
+			gradient = gradients.get(rule);
+			gradient.applyGradientDescent(rule);
 		}
 		reset();
 	}
@@ -82,10 +93,12 @@ public class Optimizer extends Recorder {
 	 */
 	public void addRule(GrammarRule rule) {
 		ruleSet.add(rule);
-		Batch batchWithT = new Batch(-1);
-		Batch batchWithS = new Batch(-1);
+		Batch batchWithT = new Batch(Gradient.MAX_BATCH_SIZE);
+		Batch batchWithS = new Batch(Gradient.MAX_BATCH_SIZE);
 		cntsWithT.put(rule, batchWithT);
 		cntsWithS.put(rule, batchWithS);
+		Gradient gradient = new Gradient(rule, rnd, maxsample);
+		gradients.put(rule, gradient);
 	}
 	
 	
@@ -109,7 +122,7 @@ public class Optimizer extends Recorder {
 	
 	
 	/**
-	 * The method for debugging.
+	 * The method is used for debugging purpose.
 	 * 
 	 * @param rule     the grammar rule
 	 * @param withT type of the expected count
@@ -131,7 +144,6 @@ public class Optimizer extends Recorder {
 		for (GrammarRule rule : ruleSet) {
 			if ((cntWithT = cntsWithT.get(rule)) != null) { cntWithT.clear(); }
 			if ((cntWithS = cntsWithS.get(rule)) != null) { cntWithS.clear(); }
-			
 		}
 	}
 	

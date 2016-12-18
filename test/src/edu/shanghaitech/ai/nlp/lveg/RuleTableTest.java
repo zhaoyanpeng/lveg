@@ -22,8 +22,8 @@ public class RuleTableTest {
 //		RuleTable<?> unaryRuleTable = new RuleTable<UnaryGrammarRule>(UnaryGrammarRule.class);
 //		RuleTable<?> binaryRuleTable = new RuleTable<BinaryGrammarRule>(BinaryGrammarRule.class);
 		
-		GrammarRule rule0 = new UnaryGrammarRule((short) 1, (short) 2, GrammarRule.GENERAL);
-		GrammarRule rule1 = new UnaryGrammarRule((short) 1, (short) 2, GrammarRule.GENERAL);
+		GrammarRule rule0 = new UnaryGrammarRule((short) 1, (short) 2, GrammarRule.LRURULE);
+		GrammarRule rule1 = new UnaryGrammarRule((short) 1, (short) 2, GrammarRule.LRURULE);
 		GrammarRule rule5 = new UnaryGrammarRule((short) 1, (short) 2, GrammarRule.RHSPACE);	
 		GrammarRule rule8 = new UnaryGrammarRule((short) 1, (short) 2);	
 		
