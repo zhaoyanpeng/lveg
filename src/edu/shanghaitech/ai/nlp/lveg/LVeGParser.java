@@ -16,10 +16,13 @@ import edu.shanghaitech.ai.nlp.util.Recorder;
 public class LVeGParser extends Parser {
 	
 	private LVeGInferencer inferencer;
+//	private Chart chart;
+	private static final int MAX_SENTENCE_LEN = 8;
 	
 	
 	public LVeGParser(LVeGGrammar grammar, LVeGLexicon lexicon) {
 		this.inferencer = new LVeGInferencer(grammar, lexicon);
+//		this.chart = new Chart(MAX_SENTENCE_LEN, false);
 	}
 	
 	

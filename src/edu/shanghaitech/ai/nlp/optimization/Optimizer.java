@@ -131,7 +131,6 @@ public class Optimizer extends Recorder {
 		for (GrammarRule rule : ruleSet) {
 			if ((cntWithT = cntsWithT.get(rule)) != null) { cntWithT.clear(); }
 			if ((cntWithS = cntsWithS.get(rule)) != null) { cntWithS.clear(); }
-			
 		}
 	}
 	

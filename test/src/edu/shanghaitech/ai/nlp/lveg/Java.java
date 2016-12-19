@@ -1,7 +1,9 @@
 package edu.shanghaitech.ai.nlp.lveg;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.junit.Test;
 
@@ -61,14 +63,27 @@ public class Java {
 	
 	@Test
 	public void testMain() {
-		List<Double> memo = null;
-		memo = changeRef(memo);
-		System.out.println(memo == null);
+		class LL {
+			int x = 0;
+			public LL(int x) {
+				this.x = x;
+			}
+			public String toString() {
+				return String.valueOf(x);
+			}
+		}
+		Set<LL> container = new HashSet<LL>();
+		LL l0 = new LL(0);
+		LL l1 = new LL(1);
+		container.add(l0);
+		container.add(l1);
 		
-	}
-	
-	
-	protected List<Double> changeRef(List<Double> memo) {
-		return new ArrayList<Double>();
+		LL[] array = container.toArray(new LL[0]);
+		for (int i = 0; i < array.length; i++) {
+			System.out.println(array[i]);
+		}
+		array[1].x = 50;
+		System.out.println(container);
+		
 	}
 }

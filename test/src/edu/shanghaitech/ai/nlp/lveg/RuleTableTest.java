@@ -16,6 +16,7 @@ public class RuleTableTest {
 		
 		Map<GrammarRule, Double> rules = new HashMap<GrammarRule, Double>();
 		
+		Set<GrammarRule> ruleSet = new HashSet<GrammarRule>();
 		RuleTable<?> unaryRuleTable = new RuleTable(UnaryGrammarRule.class);
 		RuleTable<?> binaryRuleTable = new RuleTable(BinaryGrammarRule.class);
 		
@@ -36,6 +37,18 @@ public class RuleTableTest {
 		
 		GrammarRule rule9 = new UnaryGrammarRule((short) 7, (short) 2);
 		GrammarRule rule2 = new UnaryGrammarRule((short) 7, (short) 2);
+		
+		
+		ruleSet.add(rule0);
+		ruleSet.add(rule5);
+		ruleSet.add(rule3);
+		
+		GrammarRule[] ruleArray = ruleSet.toArray(new GrammarRule[0]);
+		for (int i = 0; i < ruleArray.length; i++) {
+			System.out.println(ruleArray[i]);
+		}
+//		ruleArray[1].type = 3;
+//		System.out.println(ruleSet);
 		
 		
 		assertFalse(rule0 instanceof BinaryGrammarRule);

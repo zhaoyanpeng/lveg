@@ -51,7 +51,7 @@ public class Gradient extends Recorder {
 	}
 	
 	
-	protected void applyGradientDescent(GrammarRule rule) {
+	protected void apply(GrammarRule rule) {
 		if (!updated) { return; } // no need to update because no gradients could be applied
 		GaussianMixture ruleW = rule.getWeight();
 		for (int icomponent = 0; icomponent < ruleW.ncomponent(); icomponent++) {
@@ -121,10 +121,10 @@ public class Gradient extends Recorder {
 					allocated = cumulative ? true : (isample > 0 ? true : (iallocated? true : false));
 					dRuleW = derivateRuleWeight(scoreT, scoreS, iosWithT, iosWithS);
 					ruleW.derivative(allocated, icomponent, dRuleW, sample, ggrad, wgrads, true);
-					iallocated = true; // ggrad must have been allocated after derivative() is invoked. 
+					iallocated = true; // ggrad must have been allocated after derivative() is invoked
 					updated = true; // we can apply gradient descent with the gradients
 				}
-				removed = true; // avoid replicate check and removement
+				removed = true; // avoid replicate checking and removing
 			}
 		}
 		cumulative = true; // 

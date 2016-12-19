@@ -114,7 +114,7 @@ public class LVeGLearner extends Recorder {
 		public short ncomponent = 2;
 		
 		@Option(name = "-batchsize", usage = "Sample times in one gradient update step (Default: 500)")
-		public short batchsize = 6;
+		public short batchsize = 3;
 		
 		@Option(name = "-maxramdom", usage = "Maximum random value (Default: 10)")
 		public short maxrandom = 1;
@@ -147,10 +147,15 @@ public class LVeGLearner extends Recorder {
 		public static boolean reg = true;
 		public static boolean clip = true;
 		public static double absmax = 5.0;
-		public static double wdecay = 0.002;
+		public static double wdecay = 0.02;
 		public static double momentum = 0.9;
 		// L1 (true) or L2 (false)
 		public static boolean l1 = true;
+		
+		public static String toString(boolean placeholder) {
+			return "Params [lr = " + lr + ", reg = " + ", clip = " + clip + ", absmax = " + 
+					absmax + ", wdecay = " + wdecay + ", momentum = " + momentum + ", l1 = " + l1 + "]";
+		}
 	}
 	
 
@@ -230,11 +235,14 @@ public class LVeGLearner extends Recorder {
 		}
 		*/
 		
-		int cnt = 0, droppingiter = 0, maxLength = 5, nbatch = 100;
+		boolean parallel = false;
+		int cnt = 0, droppingiter = 0, maxLength = 7, nbatch = 10;
 		double prell = 0.0;
 		double relativError = 0, ll, maxll = prell;
 		List<Double> scoresOfST = new ArrayList<Double>();
 		List<Double> likelihood = new ArrayList<Double>();
+		
+		logger.info("\n---SGD CONFIG---\n[parallel: " + parallel + "] " + Params.toString(false) + "\n");
 		
 		do {			
 			logger.trace("\n\n-------epoch " + cnt + " begins-------\n\n");
@@ -293,8 +301,8 @@ public class LVeGLearner extends Recorder {
 				logger.trace("eval gradients... ");
 				beginTime = System.currentTimeMillis();
 				
-				grammar.evalGradients(scoresOfST);
-				lexicon.evalGradients(scoresOfST);
+				grammar.evalGradients(scoresOfST, parallel);
+				lexicon.evalGradients(scoresOfST, parallel);
 				scoresOfST.clear();
 				
 				endTime = System.currentTimeMillis();
@@ -381,150 +389,6 @@ public class LVeGLearner extends Recorder {
 			
 		// relative error could be negative
 		} while(++cnt <= 8) /*while (cnt > 1 && Math.abs(relativError) < opts.relativerror && droppingiter < opts.droppintiter)*/;
-		
-/*		
-		int cnt = 0, droppingiter = 0, maxLength = 7, nbatch = 100;
-		double prell = 0.0;
-		double relativError = 0, ll, maxll = prell;
-		List<Double> scoresOfST = new ArrayList<Double>();
-		List<Double> likelihood = new ArrayList<Double>();
-		
-		do {			
-			logger.trace("\n\n-------epoch " + cnt + " begins-------\n\n");
-			short isample = 0, idx = 0;
-			long beginTime, endTime, startTime = System.currentTimeMillis();
-			for (Tree<State> tree : trainTrees) {
-				// DEBUG
-				System.out.println(tree.getTerminalYield());
-				System.out.println(tree.getYield());
-				
-				
-				// DEBUG 
-				parser.doInsideOutsideWithTree(tree);
-				MethodUtil.debugTree(tree, false, (short) 2);
-				trainTrees.resetScore(tree);
-				MethodUtil.debugTree(tree, false, (short) 2);
-				
-				
-				if (tree.getYield().size() > maxLength) { continue; }
-				
-				
-				try {// DEBUG max rule parser
-					String oldFilename = "log/groundtruth";
-					String newFilename = "log/maxrulerets";
-					MethodUtil.saveTree2image(tree, oldFilename, null);
-					Tree<String> parseTree = mrParser.parse(tree);
-					MethodUtil.saveTree2image(null, newFilename, parseTree);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-				System.exit(1);
-				
-				
-				
-				logger.trace(tree + "\n");
-				MethodUtil.debugRuleWeightInTheTree(grammar, lexicon, tree);
-				
-				
-				// DEBUG get the count of the specific rule
-				GrammarRule rule = new BinaryGrammarRule((short) 32, (short) 32, (short) 32);
-				Map<Short, List<Map<String, GaussianMixture>>> cnts = grammar.getCount(rule, false);
-				
-				
-				logger.trace("---Sample " + isample + "\tis being processed... ");
-				beginTime = System.currentTimeMillis();
-				
-				double scoreT = lvegParser.evalRuleCountWithTree(tree, (short) idx);
-				double scoreS = lvegParser.evalRuleCount(tree, (short) idx);
-				
-				endTime = System.currentTimeMillis();
-				logger.trace( + (endTime - beginTime) / 1000.0 + "\n");
-				
-				scoresOfST.add(scoreT);
-				scoresOfST.add(scoreS);
-				
-				isample++;
-				if (++idx % batchsize == 0) {
-					// apply gradient descent
-					logger.trace("+++Apply gradient descent for the batch " + (isample / batchsize) + "... ");
-					beginTime = System.currentTimeMillis();
-					
-					grammar.applyGradientDescent(scoresOfST);
-					lexicon.applyGradientDescent(scoresOfST);
-					
-					endTime = System.currentTimeMillis();
-					logger.trace( + (endTime - beginTime) / 1000.0 + "\n");
-					scoresOfST.clear();
-					idx = 0;
-					
-					if ((isample % (batchsize * nbatch)) == 0) {
-						// likelihood of the training set
-						logger.trace("\n-------ll of the training data after " + (isample / batchsize) + " batches in epoch " + cnt + " is... ");
-						ll = calculateLL(grammar, lexicon, trainTrees, maxLength);
-						logger.trace("-------" + ll + "\n");
-						trainTrees.reset();
-						// visualize the parse tree
-						parseTree = mrParser.parse(globalTree);
-						filename = newFilename + "_" + cnt + "_" + (isample / batchsize);
-						MethodUtil.saveTree2image(null, filename, parseTree);
-						// store the log score
-						likelihood.add(ll);
-					}
-				}
-			}
-			
-			// if not a multiple of batchsize
-			logger.trace("+++Apply gradient descent for the last batch " + (isample / batchsize) + "... ");
-			beginTime = System.currentTimeMillis();
-			grammar.applyGradientDescent(scoresOfST);
-			lexicon.applyGradientDescent(scoresOfST);
-			endTime = System.currentTimeMillis();
-			logger.trace((endTime - beginTime) / 1000.0 + "\n");
-			scoresOfST.clear();
-			
-			// a coarse summary
-			endTime = System.currentTimeMillis();
-			logger.trace("===Average time each sample cost is " + (endTime - startTime) / (1000.0 * isample) + "\n");
-			
-			// likelihood of the training set
-			logger.trace("-------ll of the training data in epoch " + cnt + " is... ");
-			ll = calculateLL(grammar, lexicon, trainTrees, maxLength);
-			likelihood.add(ll);
-			logger.trace(ll + "\n");
-			
-			
-			ll = calculateLL(grammar, lexicon, validationTrees);
-			relativError = (ll - prell) / prell;
-			
-			if (ll > maxll) {
-				maxll = ll;
-				prell = ll;
-				maxGrammar = grammar;
-				maxLexicon = lexicon;
-				droppingiter = 0;
-			} else {
-				droppingiter++;
-				if (droppingiter >= opts.droppintiter) {
-					System.out.println("Maximum-allowed-dropping-time reaching");
-				}
-			}
-			
-			if (cnt > opts.maxiter) {
-				System.out.println("Maximum-iteration-time exceeding.");
-				break;
-			}
-			
-			
-			// we shall clear the inside and outside score in each state 
-			// of the parse tree after the training on a sample 
-			trainTrees.reset();
-			trainTrees.shuffle(random);
-			
-			logger.trace("-------epoch " + cnt + " ends-------\n");
-			
-		// relative error could be negative
-		} while(++cnt <= 8) while (cnt > 1 && Math.abs(relativError) < opts.relativerror && droppingiter < opts.droppintiter);
-*/		
 		
 		logger.trace("Convergence Path: " + likelihood + "\n");
 		

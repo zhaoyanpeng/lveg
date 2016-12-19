@@ -232,13 +232,13 @@ public class MaxRuleInferencer extends Inferencer {
 			if (son == 0) {
 				children.add(new Tree<String>(sentence.get(left)));
 			} else {
-				logger.error("must be somthing wrong.");
+				logger.error("must be somthing wrong.\n");
 			}
 		} else {
 			int splitpoint = chart.getSplitPoint(idtag, idx);
 			if (splitpoint == -1) {
 				logger.error("\n---holly shit---\n");
-				logger.error("do you want to know what is wrong?");
+				logger.error("do you want to know what is wrong?\n");
 				return new Tree<String>("ROOT");
 			}
 			short lchild = (short) (son >>> 16);
