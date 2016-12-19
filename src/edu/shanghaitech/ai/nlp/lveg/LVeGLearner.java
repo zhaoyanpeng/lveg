@@ -234,7 +234,7 @@ public class LVeGLearner extends Recorder {
 			return;
 		}
 		*/
-		
+/*		
 		boolean parallel = false;
 		int cnt = 0, droppingiter = 0, maxLength = 7, nbatch = 10;
 		double prell = 0.0;
@@ -249,21 +249,21 @@ public class LVeGLearner extends Recorder {
 			short isample = 0, idx = 0;
 			long beginTime, endTime, startTime = System.currentTimeMillis();
 			for (Tree<State> tree : trainTrees) {
-				/*// DEBUG
+				// DEBUG
 				System.out.println(tree.getTerminalYield());
 				System.out.println(tree.getYield());
-				*/
 				
-				/*// DEBUG 
+				
+				// DEBUG 
 				parser.doInsideOutsideWithTree(tree);
 				MethodUtil.debugTree(tree, false, (short) 2);
 				trainTrees.resetScore(tree);
 				MethodUtil.debugTree(tree, false, (short) 2);
-				*/
+				
 				
 				if (tree.getYield().size() > maxLength) { continue; }
 				
-				/*
+				
 				try {// DEBUG max rule parser
 					String oldFilename = "log/groundtruth";
 					String newFilename = "log/maxrulerets";
@@ -274,17 +274,17 @@ public class LVeGLearner extends Recorder {
 					e.printStackTrace();
 				}
 				System.exit(1);
-				*/
 				
-				/*
+				
+				
 				logger.trace(tree + "\n");
 				MethodUtil.debugRuleWeightInTheTree(grammar, lexicon, tree);
-				*/
 				
-				/*// DEBUG get the count of the specific rule
+				
+				// DEBUG get the count of the specific rule
 				GrammarRule rule = new BinaryGrammarRule((short) 32, (short) 32, (short) 32);
 				Map<Short, List<Map<String, GaussianMixture>>> cnts = grammar.getCount(rule, false);
-				*/
+				
 				
 				logger.trace("---Sample " + isample + "\tis being processed... ");
 				beginTime = System.currentTimeMillis();
@@ -357,7 +357,7 @@ public class LVeGLearner extends Recorder {
 			likelihood.add(ll);
 			logger.trace(ll + "\n");
 			
-			/*
+			
 			ll = calculateLL(grammar, lexicon, validationTrees);
 			relativError = (ll - prell) / prell;
 			
@@ -378,7 +378,7 @@ public class LVeGLearner extends Recorder {
 				System.out.println("Maximum-iteration-time exceeding.");
 				break;
 			}
-			*/
+			
 			
 			// we shall clear the inside and outside score in each state 
 			// of the parse tree after the training on a sample 
@@ -388,9 +388,11 @@ public class LVeGLearner extends Recorder {
 			logger.trace("-------epoch " + cnt + " ends-------\n");
 			
 		// relative error could be negative
-		} while(++cnt <= 8) /*while (cnt > 1 && Math.abs(relativError) < opts.relativerror && droppingiter < opts.droppintiter)*/;
+		} while(++cnt <= 8) while (cnt > 1 && Math.abs(relativError) < opts.relativerror && droppingiter < opts.droppintiter);
 		
 		logger.trace("Convergence Path: " + likelihood + "\n");
+*/		
+		
 		
 		/*
 		if (relativError < opts.relativerror) {

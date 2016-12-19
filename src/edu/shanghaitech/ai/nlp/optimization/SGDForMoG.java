@@ -176,7 +176,9 @@ public class SGDForMoG extends Recorder {
 						if (iosWithT != null) { for (Map<String, GaussianMixture> ios : iosWithT) { ios.remove(GrammarRule.Unit.C); } }
 						if (iosWithS != null) { for (Map<String, GaussianMixture> ios : iosWithS) { ios.remove(GrammarRule.Unit.C); } }
 					}
-					cumulative = (isample + i) > 0; // CHECK when to clear old gradients and accumulate new gradients
+					// cumulative = (isample + i) > 0; // incorrect version
+					// CHECK when to clear old gradients and accumulate new gradients
+					cumulative = isample > 0 ? true : (updated ? true : false);
 					dRuleW = derivateRuleWeight(scoreT, scoreS, iosWithT, iosWithS);
 					ruleW.derivative(cumulative, icomponent, dRuleW, sample, ggrads, wgrads, true);
 					updated = true; // CHECK do we need to update in the case where derivative() was not invoked.
