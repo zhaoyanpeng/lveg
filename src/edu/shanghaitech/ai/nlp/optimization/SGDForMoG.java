@@ -57,7 +57,7 @@ public class SGDForMoG extends Recorder {
 	public SGDForMoG(Random random) {
 		this();
 		this.random = random;
-		this.nsample = 1;
+		this.nsample = 2;
 	}
 	
 	
@@ -173,8 +173,12 @@ public class SGDForMoG extends Recorder {
 					 * which contains the term 1 / w(r), thus we could eliminate w(r) when computing it.
 					 */
 					if (!removed && uRuleType == GrammarRule.LHSPACE) { 
-						if (iosWithT != null) { for (Map<String, GaussianMixture> ios : iosWithT) { ios.remove(GrammarRule.Unit.C); } }
-						if (iosWithS != null) { for (Map<String, GaussianMixture> ios : iosWithS) { ios.remove(GrammarRule.Unit.C); } }
+						if (iosWithT != null) { 
+							for (Map<String, GaussianMixture> ios : iosWithT) { ios.remove(GrammarRule.Unit.C); } 
+						}
+						if (iosWithS != null) { 
+							for (Map<String, GaussianMixture> ios : iosWithS) { ios.remove(GrammarRule.Unit.C); } 
+						}
 					}
 					// cumulative = (isample + i) > 0; // incorrect version
 					// CHECK when to clear old gradients and accumulate new gradients

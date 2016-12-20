@@ -30,6 +30,7 @@ public class BinaryGrammarRule extends GrammarRule implements Comparable<Object>
 		this.lhs = lhs;
 		this.lchild = lchild;
 		this.rchild = rchild;
+		this.type = LRBRULE;
 	}
 	
 	
@@ -45,6 +46,7 @@ public class BinaryGrammarRule extends GrammarRule implements Comparable<Object>
 		this.lhs = lhs;
 		this.lchild = lchild;
 		this.rchild = rchild;
+		this.type = LRBRULE;
 		initializeWeight();
 	}
 	
@@ -54,6 +56,7 @@ public class BinaryGrammarRule extends GrammarRule implements Comparable<Object>
 		this.lchild = lchild;
 		this.rchild = rchild;
 		this.weight = weight;
+		this.type = LRBRULE;
 	}
 	
 	

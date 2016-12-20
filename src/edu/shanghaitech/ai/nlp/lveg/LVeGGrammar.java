@@ -58,8 +58,8 @@ public class LVeGGrammar extends Recorder implements Serializable {
 	private Map<GrammarRule, GrammarRule> unaryRuleMap;
 	private Map<GrammarRule, GrammarRule> binaryRuleMap;
 	
-//	private Optimizer optimizer;
-	private ParallelOptimizer optimizer;
+	private Optimizer optimizer;
+//	private ParallelOptimizer optimizer;
 	
 	
 	public LVeGGrammar(LVeGGrammar oldGrammar, int nTag) {
@@ -67,8 +67,8 @@ public class LVeGGrammar extends Recorder implements Serializable {
 		this.binaryRuleTable = new RuleTable<BinaryGrammarRule>(BinaryGrammarRule.class);
 		this.unaryRuleMap  = new HashMap<GrammarRule, GrammarRule>();
 		this.binaryRuleMap = new HashMap<GrammarRule, GrammarRule>();
-//		this.optimizer = new Optimizer(LVeGLearner.random);
-		this.optimizer = new ParallelOptimizer(LVeGLearner.random);
+		this.optimizer = new Optimizer(LVeGLearner.random);
+//		this.optimizer = new ParallelOptimizer(LVeGLearner.random);
 		
 		if (nTag < 0) {
 			this.tagNumberer = Numberer.getGlobalNumberer(LVeGLearner.KEY_TAG_SET);
@@ -141,7 +141,7 @@ public class LVeGGrammar extends Recorder implements Serializable {
 	
 	
 	public void evalGradients(List<Double> scoreOfST, boolean parallel) {
-		optimizer.evalGradients(scoreOfST, parallel);
+//		optimizer.evalGradients(scoreOfST, parallel);
 	}
 	
 	

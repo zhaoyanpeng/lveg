@@ -199,8 +199,6 @@ public class LVeGLearner extends Recorder {
 		String oldFilename = "log/groundtruth";
 		String filename, newFilename = "log/maxrulerets";
 		
-		newFilename = "log/maxrulerets_parallel";
-		
 		LVeGGrammar grammar = new LVeGGrammar(null, -1);
 		LVeGLexicon lexicon = new SimpleLVeGLexicon();
 		LVeGParser lvegParser = new LVeGParser(grammar, lexicon);
@@ -234,7 +232,7 @@ public class LVeGLearner extends Recorder {
 			return;
 		}
 		*/
-/*		
+		
 		boolean parallel = false;
 		int cnt = 0, droppingiter = 0, maxLength = 7, nbatch = 10;
 		double prell = 0.0;
@@ -243,7 +241,91 @@ public class LVeGLearner extends Recorder {
 		List<Double> likelihood = new ArrayList<Double>();
 		
 		logger.info("\n---SGD CONFIG---\n[parallel: " + parallel + "] " + Params.toString(false) + "\n");
+		if (parallel) { newFilename = "log/maxrulerets_parallel"; }
 		
+		do {			
+			logger.trace("\n\n-------epoch " + cnt + " begins-------\n\n");
+			short isample = 0, idx = 0;
+			long beginTime, endTime, startTime = System.currentTimeMillis();
+			for (Tree<State> tree : trainTrees) {
+				
+				if (tree.getYield().size() > maxLength) { continue; }
+				
+				logger.trace("---Sample " + isample + "\tis being processed... ");
+				beginTime = System.currentTimeMillis();
+				
+				double scoreT = lvegParser.evalRuleCountWithTree(tree, (short) idx);
+				double scoreS = lvegParser.evalRuleCount(tree, (short) idx);
+				
+				endTime = System.currentTimeMillis();
+				logger.trace( + (endTime - beginTime) / 1000.0 + "\n");
+				
+				scoresOfST.add(scoreT);
+				scoresOfST.add(scoreS);
+				
+				isample++;
+				if (++idx % batchsize == 0) {
+					// apply gradient descent
+					logger.trace("+++Apply gradient descent for the batch " + (isample / batchsize) + "... ");
+					beginTime = System.currentTimeMillis();
+					
+					grammar.applyGradientDescent(scoresOfST);
+					lexicon.applyGradientDescent(scoresOfST);
+					
+					endTime = System.currentTimeMillis();
+					logger.trace( + (endTime - beginTime) / 1000.0 + "\n");
+					scoresOfST.clear();
+					idx = 0;
+					
+					if ((isample % (batchsize * nbatch)) == 0) {
+						// likelihood of the training set
+						logger.trace("\n-------ll of the training data after " + (isample / batchsize) + " batches in epoch " + cnt + " is... ");
+						ll = calculateLL(grammar, lexicon, trainTrees, maxLength);
+						logger.trace("------->" + ll + "\n");
+						trainTrees.reset();
+						// visualize the parse tree
+						parseTree = mrParser.parse(globalTree);
+						filename = newFilename + "_" + cnt + "_" + (isample / (batchsize * nbatch));
+						MethodUtil.saveTree2image(null, filename, parseTree);
+						// store the log score
+						likelihood.add(ll);
+					}
+				}
+			}
+			
+			// if not a multiple of batchsize
+			logger.trace("+++Apply gradient descent for the last batch " + (isample / batchsize) + "... ");
+			beginTime = System.currentTimeMillis();
+			grammar.applyGradientDescent(scoresOfST);
+			lexicon.applyGradientDescent(scoresOfST);
+			endTime = System.currentTimeMillis();
+			logger.trace((endTime - beginTime) / 1000.0 + "\n");
+			scoresOfST.clear();
+			
+			// a coarse summary
+			endTime = System.currentTimeMillis();
+			logger.trace("===Average time each sample cost is " + (endTime - startTime) / (1000.0 * isample) + "\n");
+			
+			// likelihood of the training set
+			logger.trace("-------ll of the training data in epoch " + cnt + " is... ");
+			ll = calculateLL(grammar, lexicon, trainTrees, maxLength);
+			likelihood.add(ll);
+			logger.trace(ll + "\n");
+			
+			// we shall clear the inside and outside score in each state 
+			// of the parse tree after the training on a sample 
+			trainTrees.reset();
+			trainTrees.shuffle(random);
+			
+			// CHECK shuffle the training data, does this work?
+			Collections.shuffle(Arrays.asList(trainTrees.toArray()), random);
+			
+			logger.trace("-------epoch " + cnt + " ends-------\n");
+			
+		// relative error could be negative
+		} while(++cnt <= 8) /*while (cnt > 1 && Math.abs(relativError) < opts.relativerror && droppingiter < opts.droppintiter)*/;
+		
+/*		
 		do {			
 			logger.trace("\n\n-------epoch " + cnt + " begins-------\n\n");
 			short isample = 0, idx = 0;
