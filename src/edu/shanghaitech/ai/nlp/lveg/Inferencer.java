@@ -279,11 +279,11 @@ public abstract class Inferencer extends Recorder {
 		private List<Cell> ichart = null;
 		private List<Cell> mchart = null; // for max rule
 		
-		public Chart() {
+		protected Chart() { // TODO make it static? See clear().
 			if (ichart == null || ichart.size() != LVeGLearner.maxlength) {
 				initialize(LVeGLearner.maxlength, false);
 			} else {
-				clear();
+				clear(-1);
 			}
 		}
 		
@@ -292,7 +292,7 @@ public abstract class Inferencer extends Recorder {
 		}
 		
 		private void initialize(int n, boolean maxrule) {
-			clear(); // empty the old memory
+			clear(n); // empty the old memory
 			int size = n * (n + 1) / 2;
 			ochart = new ArrayList<Cell>(size);
 			ichart = new ArrayList<Cell>(size);
@@ -432,18 +432,31 @@ public abstract class Inferencer extends Recorder {
 			ochart.get(idx).addScore(key, gm);
 		}
 		
-		public void clear() {
+		public void clear(int n) {
+			int cnt, max = n > 0 ? (n * (n + 1) / 2) : ichart.size();
 			if (ichart != null) {
+				cnt = 0;
 				for (Cell cell : ichart) {
+					if (++cnt > max) { break; }
 					if (cell != null) { cell.clear(); }
 				}
-				// ichart.clear();
+				if (n < 0) { ichart.clear(); }
 			}
 			if (ochart != null) {
+				cnt = 0;
 				for (Cell cell : ochart) {
+					if (++cnt > max) { break; }
 					if (cell != null) { cell.clear(); }
 				}
-				// ochart.clear();
+				if (n < 0) { ochart.clear(); }
+			}
+			if (mchart != null) {
+				cnt = 0;
+				for (Cell cell : mchart) {
+					if (++cnt > max) { break; }
+					if (cell != null) { cell.clear(); }
+				}
+				if (n < 0) { mchart.clear(); }
 			}
 		}
 		
@@ -474,7 +487,7 @@ public abstract class Inferencer extends Recorder {
 		private Map<Short, Short> splitPoint;
 		
 		
-		public Cell() {
+		private Cell() {
 			this.status = false;
 			this.totals = new HashMap<Short, GaussianMixture>();
 			this.scores = new HashMap<Short, Map<Short, GaussianMixture>>();
@@ -592,11 +605,31 @@ public abstract class Inferencer extends Recorder {
 		
 		protected void clear() {
 			status = false;
-			for (Map.Entry<Short, GaussianMixture> map : totals.entrySet()) {
-				GaussianMixture gm = map.getValue();
-				if (gm != null) { gm.clear(); }
+			if (scores != null) {
+				for (Map.Entry<Short, Map<Short, GaussianMixture>> level : scores.entrySet()) {
+					for (Map.Entry<Short, GaussianMixture> entry : level.getValue().entrySet()) {
+						if (entry.getValue() != null) { entry.getValue().clear(); }
+					}
+					level.getValue().clear();
+				}
+				scores.clear();
 			}
-			scores.clear();
+			if (totals != null) {
+				for (Map.Entry<Short, GaussianMixture> entry : totals.entrySet()) {
+					if (entry.getValue() != null) { entry.getValue().clear(); }
+				}
+				totals.clear();
+			}
+			// the following is for max rule parser
+			if (maxRuleCnt != null) {
+				for (Map.Entry<Short, Map<Short, Double>> entry : maxRuleCnt.entrySet()) {
+					if (entry.getValue() != null) { entry.getValue().clear(); }
+				}
+				maxRuleCnt.clear();
+			}
+			if (maxRuleSon != null) { maxRuleSon.clear(); }
+			if (maxRulePos != null) { maxRulePos.clear(); }
+			if (splitPoint != null) { splitPoint.clear(); }
 		}
 		
 		public String toString(boolean simple, int nfirst) {

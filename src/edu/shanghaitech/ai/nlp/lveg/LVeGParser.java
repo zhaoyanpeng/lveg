@@ -1,33 +1,41 @@
 package edu.shanghaitech.ai.nlp.lveg;
 
 import java.util.List;
+import java.util.concurrent.Callable;
 
 import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.lveg.Inferencer.Cell;
 import edu.shanghaitech.ai.nlp.lveg.Inferencer.Chart;
+import edu.shanghaitech.ai.nlp.lveg.MultiThreadedValuator.Score;
 import edu.shanghaitech.ai.nlp.syntax.State;
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
-import edu.shanghaitech.ai.nlp.util.Recorder;
 
 /**
  * @author Yanpeng Zhao
  *
  */
-public class LVeGParser extends Parser {
+public class LVeGParser extends Parser implements Callable {
 	
 	private LVeGInferencer inferencer;
-//	private Chart chart;
-	private static final int MAX_SENTENCE_LEN = 8;
+	private boolean reuse;
 	
 	
-	public LVeGParser(LVeGGrammar grammar, LVeGLexicon lexicon) {
+	private LVeGParser(LVeGParser parser) {
+		this.inferencer = parser.inferencer;
+		this.chart = parser.reuse ? new Chart(MAX_SENTENCE_LEN, false) : null;
+		this.reuse = parser.reuse;
+	}
+	
+	
+	public LVeGParser(LVeGGrammar grammar, LVeGLexicon lexicon, boolean reuse) {
 		this.inferencer = new LVeGInferencer(grammar, lexicon);
-//		this.chart = new Chart(MAX_SENTENCE_LEN, false);
+		this.chart = reuse ? new Chart(MAX_SENTENCE_LEN, false) : null;
+		this.reuse = reuse;
 	}
 	
 	
 	public double evalRuleCount(Tree<State> tree, short isample) {
-		Chart chart = doInsideOutside(tree);
+		doInsideOutside(tree); 
 //		logger.trace("\nInside scores with the sentence...\n\n"); // DEBUG
 //		MethodUtil.debugChart(Chart.getChart(true), (short) 2); // DEBUG
 //		logger.trace("\nOutside scores with the sentence...\n\n"); // DEBUG
@@ -82,11 +90,15 @@ public class LVeGParser extends Parser {
 	 * @param tree the parse tree
 	 * @return
 	 */
-	public Chart doInsideOutside(Tree<State> tree) {
+	private void doInsideOutside(Tree<State> tree) {
 		List<State> sentence = tree.getYield();
 		int nword = sentence.size();
-		Chart chart = new Chart(nword, false);
-		
+		if (reuse) {
+			chart.clear(nword);
+		} else {
+			if (chart != null) { chart.clear(-1); }
+			chart = new Chart(nword, false);
+		}
 //		logger.trace("\nInside score...\n"); // DEBUG
 		inferencer.insideScore(chart, sentence, nword);
 //		MethodUtil.debugChart(Chart.iGetChart(), (short) 2); // DEBUG
@@ -95,8 +107,6 @@ public class LVeGParser extends Parser {
 		inferencer.setRootOutsideScore(chart);
 		inferencer.outsideScore(chart, sentence, nword);
 //		MethodUtil.debugChart(Chart.oGetChart(), (short) 2); // DEBUG
-		
-		return chart;
 	}
 	
 	
@@ -106,7 +116,7 @@ public class LVeGParser extends Parser {
 	 * 
 	 * @param tree the parse tree
 	 */
-	public void doInsideOutsideWithTree(Tree<State> tree) {
+	private void doInsideOutsideWithTree(Tree<State> tree) {
 //		logger.trace("\nInside score with the tree...\n"); // DEBUG	
 		inferencer.insideScoreWithTree(tree);
 //		MethodUtil.debugTree(tree, false, (short) 2); // DEBUG
@@ -117,6 +127,26 @@ public class LVeGParser extends Parser {
 //		MethodUtil.debugTree(tree, false, (short) 2); // DEBUG
 	}
 	
+	
+	protected LVeGParser newInstance() {
+		LVeGParser parser = new LVeGParser(this);
+		return parser;
+	}
+	
+	
+	@Override
+	public synchronized Double call() {
+		if (sample == null) { return 0.0; }
+		double ll = probability(sample);
+		Score score = new Score(isample, ll);
+		synchronized (scores) {
+			scores.add(score);
+			scores.notifyAll();
+		}
+		sample = null;
+		return null;
+	}
+	
 
 	/**
 	 * Compute \log p(t | s) = \log {p(t, s) / p(s)}, where s denotes the 
@@ -125,7 +155,7 @@ public class LVeGParser extends Parser {
 	 * @param tree the parse tree
 	 * @return
 	 */
-	public double probability(Tree<State> tree) {
+	protected double probability(Tree<State> tree) {
 		double jointdist = scoreTree(tree);
 		double partition = scoreSentence(tree);
 		double ll = jointdist - partition; // in logarithm
@@ -139,7 +169,7 @@ public class LVeGParser extends Parser {
 	 * @param tree the parse tree
 	 * @return
 	 */
-	public double scoreTree(Tree<State> tree) {
+	protected double scoreTree(Tree<State> tree) {
 		inferencer.insideScoreWithTree(tree);
 		GaussianMixture gm = tree.getLabel().getInsideScore();
 		double score = gm.eval(null, true);
@@ -153,10 +183,15 @@ public class LVeGParser extends Parser {
 	 * @param tree in which only the sentence is used.
 	 * @return
 	 */
-	public double scoreSentence(Tree<State> tree) {
+	protected double scoreSentence(Tree<State> tree) {
 		List<State> sentence = tree.getYield();
 		int nword = sentence.size();
-		Inferencer.Chart chart = new Inferencer.Chart(nword, false);
+		if (reuse) {
+			chart.clear(nword);
+		} else {
+			if (chart != null) { chart.clear(-1); }
+			chart = new Chart(nword, false);
+		}
 		inferencer.insideScore(chart, sentence, nword);
 		GaussianMixture gm = chart.getInsideScore((short) 0, Chart.idx(0, 1));
 		double score = gm.eval(null, true);

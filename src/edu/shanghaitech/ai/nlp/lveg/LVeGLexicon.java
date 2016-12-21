@@ -19,8 +19,8 @@ public abstract class LVeGLexicon {
 	protected transient String lastWord;
 	protected transient String lastSignature;
 	protected transient int lastPosition;
-	protected Optimizer optimizer;
-//	protected ParallelOptimizer optimizer;
+//	protected Optimizer optimizer;
+	protected ParallelOptimizer optimizer;
 	
 	
 	/**
@@ -105,7 +105,7 @@ public abstract class LVeGLexicon {
 	
 	
 	public void evalGradients(List<Double> scoreOfST, boolean parallel) {
-//		optimizer.evalGradients(scoreOfST, parallel);
+		optimizer.evalGradients(scoreOfST, parallel);
 	}
 	
 	

@@ -63,8 +63,8 @@ public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
 		this.urules = new UnaryGrammarRule[nTag][];
 		this.wordIndexMap = new IndexMap[nTag];
 		this.wordCounter = new int[nWord];
-		this.optimizer = new Optimizer(LVeGLearner.random);
-//		this.optimizer = new ParallelOptimizer(LVeGLearner.random);
+//		this.optimizer = new Optimizer(LVeGLearner.random);
+		this.optimizer = new ParallelOptimizer(LVeGLearner.random);
 		
 		for (int i = 0; i < nTag; i++) {
 			wordIndexMap[i] = new IndexMap(nWord);

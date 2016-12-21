@@ -16,7 +16,7 @@ import edu.shanghaitech.ai.nlp.util.Recorder;
  * @author Yanpeng Zhao
  *
  */
-public class SGDForMoG extends Recorder {
+public class SimpleMinimizer extends Recorder {
 	
 	protected Random random;
 	protected short nsample;
@@ -31,7 +31,7 @@ public class SGDForMoG extends Recorder {
 	/**
 	 * To avoid the excessive 'new' operations.
 	 */
-	public SGDForMoG() {
+	public SimpleMinimizer() {
 		this.sample = new HashMap<String, List<Double>>();
 		sample.put(GrammarRule.Unit.P, new ArrayList<Double>());
 		sample.put(GrammarRule.Unit.C, new ArrayList<Double>());
@@ -54,14 +54,7 @@ public class SGDForMoG extends Recorder {
 	}
 	
 	
-	public SGDForMoG(Random random) {
-		this();
-		this.random = random;
-		this.nsample = 2;
-	}
-	
-	
-	public SGDForMoG(Random random, short nsample) {
+	public SimpleMinimizer(Random random, short nsample) {
 		this();
 		this.random = random;
 		this.nsample = nsample;
@@ -133,7 +126,6 @@ public class SGDForMoG extends Recorder {
 		for (int icomponent = 0; icomponent < ruleW.ncomponent(); icomponent++) {
 			updated = false; // 
 			for (short isample = 0; isample < nsample; isample++) {
-				clearSample(); // to ensure the correct sample is in use
 				switch (rule.getType()) {
 				case GrammarRule.LRBRULE: {
 					sample(sample.get(GrammarRule.Unit.P), ruleW.dim(icomponent, GrammarRule.Unit.P));
@@ -200,16 +192,6 @@ public class SGDForMoG extends Recorder {
 		slice.clear();
 		for (int i = 0; i < dim; i++) {
 			slice.add(random.nextGaussian());
-		}
-	}
-	
-	
-	protected void clearSample() {
-		for (Map.Entry<String, List<Double>> slice : sample.entrySet()) {
-			slice.getValue().clear();
-		}
-		for (Map.Entry<String, List<Double>> truth : truths.entrySet()) {
-			truth.getValue().clear();
 		}
 	}
 	

@@ -20,9 +20,9 @@ public class Gradient extends Recorder {
 	 * which is equally saying that the batch size is always 1.
 	 */
 	protected static final short MAX_BATCH_SIZE = 1;
-	
-	protected static short maxsample = 1;
+	protected static short maxsample = 2;
 	protected static Random rnd;
+	
 	protected boolean updated;
 	protected boolean cumulative;
 	protected List<Double> wgrads;
@@ -118,7 +118,7 @@ public class Gradient extends Recorder {
 					 * notice that wgrad should be clear only when icomponent = 1.
 					 * Incorrect version: local = cumulative ? true : (isample + i) > 0;
 					 */
-					allocated = cumulative ? true : (isample > 0 ? true : (iallocated? true : false));
+					allocated = cumulative ? true : (isample > 0 ? true : (iallocated ? true : false));
 					dRuleW = derivateRuleWeight(scoreT, scoreS, iosWithT, iosWithS);
 					ruleW.derivative(allocated, icomponent, dRuleW, sample, ggrad, wgrads, true);
 					iallocated = true; // ggrad must have been allocated after derivative() is invoked

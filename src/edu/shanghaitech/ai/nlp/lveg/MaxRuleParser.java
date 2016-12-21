@@ -8,21 +8,21 @@ import edu.shanghaitech.ai.nlp.syntax.State;
 
 public class MaxRuleParser extends Parser {
 	private MaxRuleInferencer inferencer;
+	private boolean reuse;
 	
-	public MaxRuleParser(LVeGGrammar grammar, LVeGLexicon lexicon) {
+	
+	public MaxRuleParser(LVeGGrammar grammar, LVeGLexicon lexicon, boolean reuse) {
 		this.inferencer = new MaxRuleInferencer(grammar, lexicon);
+		this.chart = reuse ? new Chart(MAX_SENTENCE_LEN, true) : null;
+		this.reuse = reuse;
 	}
 	
 	
 	public Tree<String> parse(Tree<State> tree) {
 //		logger.trace("eval max rule counts...");
-		Chart chart = evalMaxRuleCount(tree);
+		evalMaxRuleCount(tree);
 //		logger.trace("over\n");
-		
-		if (chart == null) { 
-			logger.error("rule-counts chart is null.\n"); 
-			return null;
-		}
+
 		Tree<String> strTree = StateTreeList.stateTreeToStringTree(tree, inferencer.grammar.tagNumberer);
 		
 //		logger.trace("extract max rule parse tree...");
@@ -33,10 +33,10 @@ public class MaxRuleParser extends Parser {
 	}
 	
 	
-	public Chart evalMaxRuleCount(Tree<State> tree) {
+	protected void evalMaxRuleCount(Tree<State> tree) {
 		List<State> sentence = tree.getYield();
 		int nword = sentence.size();
-		Chart chart = doInsideOutside(tree, sentence, nword);
+		doInsideOutside(tree, sentence, nword);
 //		logger.trace("\nInside scores with the sentence...\n\n"); // DEBUG
 //		MethodUtil.debugChart(Chart.getChart(true), (short) 2); // DEBUG
 //		logger.trace("\nOutside scores with the sentence...\n\n"); // DEBUG
@@ -50,10 +50,9 @@ public class MaxRuleParser extends Parser {
 		
 		if (Double.isInfinite(scoreS) || Double.isNaN(scoreS)) {
 			System.err.println("Fatal Error: Sentence score is smaller than zero: " + scoreS);
-			return null;
+			return;
 		}
 		inferencer.evalMaxRuleCount(chart, sentence, nword, scoreS);
-		return chart;
 	}
 	
 	
@@ -61,9 +60,13 @@ public class MaxRuleParser extends Parser {
 	 * @param tree the parse tree
 	 * @return
 	 */
-	public Chart doInsideOutside(Tree<State> tree, List<State> sentence, int nword) {
-		Chart chart = new Chart(nword, true);
-		
+	private Chart doInsideOutside(Tree<State> tree, List<State> sentence, int nword) {
+		if (reuse) {
+			chart.clear(nword);
+		} else {
+			if (chart != null) { chart.clear(-1); }
+			chart = new Chart(nword, true);
+		}
 //		logger.trace("\nInside score...\n"); // DEBUG
 		inferencer.insideScore(chart, sentence, nword);
 //		MethodUtil.debugChart(Chart.iGetChart(), (short) 2); // DEBUG
