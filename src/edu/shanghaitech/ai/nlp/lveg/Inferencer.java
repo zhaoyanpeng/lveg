@@ -21,7 +21,7 @@ public abstract class Inferencer extends Recorder {
 	protected final static short ROOT = 0;
 	protected final static short LENGTH_UCHAIN = 2;
 	
-	enum ChainUrule {
+	protected enum ChainUrule {
 		ALL_POSSIBLE_PATH, PRE_COMPUTE_CHAIN, NOT_PRE_ADD_INTER, NOT_PRE_NOT_INTER, DEFAULT,
 	}
 	

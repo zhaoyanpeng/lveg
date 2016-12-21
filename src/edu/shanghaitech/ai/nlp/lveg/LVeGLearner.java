@@ -233,8 +233,8 @@ public class LVeGLearner extends Recorder {
 		}
 		*/
 		
-		boolean parallel = false;
-		int cnt = 0, droppingiter = 0, maxLength = 7, nbatch = 10;
+		boolean parallel = true;
+		int cnt = 0, droppingiter = 0, maxLength = 7, nbatch = 2;
 		double prell = 0.0;
 		double relativError = 0, ll, maxll = prell;
 		List<Double> scoresOfST = new ArrayList<Double>();
@@ -495,14 +495,13 @@ public class LVeGLearner extends Recorder {
 		MultiThreadedValuator valuator = new MultiThreadedValuator(parser, 6);
 		for (Tree<State> tree : stateTreeList) {
 			if (tree.getYield().size() > maxLength) { continue; }
-			// if (++cnt > 10) { break; } // DEBUG
+			if (++cnt > 200) { break; } // DEBUG
 			valuator.parse(tree);
 			while (valuator.hasNext()) {
 				ll = valuator.getNext();
 				if (Double.isInfinite(ll) || Double.isNaN(ll)) {
 					nUnparsable++;
 				} else {
-					// logger.trace("\n===> sub-ll: " + ll + ", id: " + (cnt - 1) + "\n"); // DEBUG
 					sumll += ll;
 				}
 			}
@@ -511,13 +510,6 @@ public class LVeGLearner extends Recorder {
 		cnt = 0;
 		while (!valuator.isDone()) {
 			while (valuator.hasNext()) {
-				/*// DEBUG
-				logger.trace("b:" + cnt + " ");
-				if (++cnt > 100) { 
-					logger.trace("\n->cnt: " + cnt + "\n");
-					break; 
-				}
-				*/
 				ll = valuator.getNext();
 				if (Double.isInfinite(ll) || Double.isNaN(ll)) {
 					nUnparsable++;
@@ -525,13 +517,6 @@ public class LVeGLearner extends Recorder {
 					sumll += ll;
 				}
 			}
-			/*// DEBUG
-			logger.trace("a:" + cnt + " ");
-			if (cnt++ > 100) { 
-				logger.trace("\n---breakdown---\n");
-				break; 
-			}
-			*/
 		}
 		logger.trace("\n[in calculating log likelihood " + nUnparsable + " unparsable sample(s) of " + stateTreeList.size() + " training samples]\n");
 		return sumll;
@@ -544,16 +529,15 @@ public class LVeGLearner extends Recorder {
 		double ll = 0, sumll = 0;
 		for (Tree<State> tree : stateTreeList) {
 			if (tree.getYield().size() > maxLength) { continue; }
-			if (++cnt > 10) { break; }
+			if (++cnt > 200) { break; }
 			ll = parser.probability(tree);
 			if (Double.isInfinite(ll) || Double.isNaN(ll)) {
 				nUnparsable++;
 			} else {
-				logger.trace("\n===> sub-ll: " + ll + ", id: " + (cnt - 1) + "\n");
+				// logger.trace("\n===> sub-ll: " + ll + ", id: " + (cnt - 1) + "\n"); // DEBUG
 				sumll += ll;
 			}
 		}
-		logger.trace("\n+++>likelihood: " + sumll + "\n");
 		logger.trace("\n[in calculating log likelihood " + nUnparsable + " unparsable sample(s) of " + stateTreeList.size() + " training samples]\n");
 		return sumll;
 	}

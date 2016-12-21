@@ -585,6 +585,9 @@ public class GaussianMixture extends Recorder {
 			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
 				for (GaussianDistribution gd : gaussian.getValue()) {
 					value *= gd.eval(sample, normal);
+					if (value < 0) {
+						logger.trace("\n---eval inside outside---\n" + this + "\n");
+					}
 				}
 			}
 			ret += Math.exp(weights.get(i)) * value;
@@ -652,6 +655,9 @@ public class GaussianMixture extends Recorder {
 			List<Double> slice = sample.get(gaussian.getKey());
 			for (GaussianDistribution gd : gaussian.getValue()) {
 				value *= gd.eval(slice, normal);
+				if (value < 0) {
+					logger.trace("\n---derivate the mixting weight---\n" + this + "\n");
+				}
 			}
 		}
 		return value;

@@ -20,7 +20,7 @@ public class Gradient extends Recorder {
 	 * which is equally saying that the batch size is always 1.
 	 */
 	protected static final short MAX_BATCH_SIZE = 1;
-	protected static short maxsample = 2;
+	protected static short maxsample;
 	protected static Random rnd;
 	
 	protected boolean updated;
@@ -51,13 +51,14 @@ public class Gradient extends Recorder {
 	}
 	
 	
-	protected void apply(GrammarRule rule) {
-		if (!updated) { return; } // no need to update because no gradients could be applied
+	protected boolean apply(GrammarRule rule) {
+		if (!updated) { return false; } // no need to update because no gradients could be applied
 		GaussianMixture ruleW = rule.getWeight();
 		for (int icomponent = 0; icomponent < ruleW.ncomponent(); icomponent++) {
 			ruleW.update(icomponent, ggrads.get(icomponent), wgrads);
 		}
 		reset();
+		return true;
 	}
 	
 	
@@ -81,7 +82,7 @@ public class Gradient extends Recorder {
 	 * @param ioScoreWithS
 	 * @param scoreSandT
 	 */
-	protected void eval(GrammarRule rule, Batch ioScoreWithT, Batch ioScoreWithS, List<Double> scoreSandT) {
+	protected boolean eval(GrammarRule rule, Batch ioScoreWithT, Batch ioScoreWithS, List<Double> scoreSandT) {
 		List<Map<String, GaussianMixture>> iosWithT, iosWithS;
 		GaussianMixture ruleW = rule.getWeight();
 		Map<String, List<Double>> ggrad;
@@ -92,6 +93,9 @@ public class Gradient extends Recorder {
 			iallocated = false; // assume ggrad has not been allocated
 			for (short isample = 0; isample < maxsample; isample++) {
 				ruleW.sample(icomponent, sample, truths, rnd);
+				
+//				logger.trace("\n" + rule + ", icomp" + icomponent + ", isample: " + isample + "\nsample: " + sample + "\ntruths: " + truths + "\n"); // DEBUG
+				
 				for (short i = 0; i < MAX_BATCH_SIZE; i++) {
 					iosWithT = ioScoreWithT.get(i);
 					iosWithS = ioScoreWithS.get(i);
@@ -125,9 +129,13 @@ public class Gradient extends Recorder {
 					updated = true; // we can apply gradient descent with the gradients
 				}
 				removed = true; // avoid replicate checking and removing
+				
+//				logger.trace(rule + ", icomp" + icomponent + ", isample: " + isample + "\nwgrads: " + wgrads + "\nggrads: " + ggrads + "\n"); // DEBUG
+			
 			}
 		}
 		cumulative = true; // 
+		return updated;
 	}
 	
 	

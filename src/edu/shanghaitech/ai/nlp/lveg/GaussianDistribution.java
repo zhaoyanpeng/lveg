@@ -3,6 +3,7 @@ package edu.shanghaitech.ai.nlp.lveg;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import edu.shanghaitech.ai.nlp.lveg.LVeGLearner.Params;
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
@@ -119,11 +120,15 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 		double real, norm;
 		slice.clear();
 		truth.clear();
-		for (int i = 0; i < dim; i++) {
-			norm = rnd.nextGaussian();
-			real = norm * Math.exp(vars.get(i)) + mus.get(i);
-			slice.add(norm);
-			truth.add(real);
+		synchronized (rnd) {
+			for (int i = 0; i < dim; i++) {
+				norm = rnd.nextGaussian();
+	//			norm = ThreadLocalRandom.current().nextGaussian();
+				real = norm * Math.exp(vars.get(i)) + mus.get(i);
+				slice.add(norm);
+				truth.add(real);
+			}
+			rnd.notifyAll();
 		}
 	}
 	

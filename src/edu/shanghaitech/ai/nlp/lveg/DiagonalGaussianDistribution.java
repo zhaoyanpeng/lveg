@@ -45,7 +45,7 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 			double value = Math.pow(2 * Math.PI, -dim / 2) * sinv * Math.exp(exps);
 			return value;
 		}
-		logger.error("Invalid input sample for evaling the gaussian. sample: " + sample + ", dim: " + dim + "\n");
+		logger.error("Invalid input sample for evaling the gaussian. sample: " + sample + ", this: " + this + "\n");
 		return -1.0;
 	}
 	

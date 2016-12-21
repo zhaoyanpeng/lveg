@@ -7,10 +7,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ForkJoinTask;
+import java.util.concurrent.Future;
 import java.util.concurrent.RecursiveAction;
+import java.util.concurrent.TimeUnit;
 
 import edu.shanghaitech.ai.nlp.lveg.GrammarRule;
 
@@ -19,18 +25,28 @@ import edu.shanghaitech.ai.nlp.lveg.GrammarRule;
  *
  */
 public class ParallelOptimizer extends Optimizer {
-	private static final short THREADS_NUM = 10;
+	private static final short THREADS_NUM = 2;
+	protected enum ParallelMode {
+		INVOKE_ALL, COMPLETION_SERVICE, CUSTOMIZED_BLOCK, FORK_JOIN
+	}
+	private ParallelMode mode;
 	private Map<GrammarRule, Gradient> gradients; // gradients
 	
 	private GrammarRule[] ruleArray;
-	private ExecutorService service;
-	private List<Callable<Object>> tasks;
+	private ExecutorService pool;
+	private List<Future<Boolean>> futures;
+	private List<Callable<Boolean>> tasks;
+	private CompletionService<Boolean> service;
+	
 	
 	private ParallelOptimizer() {
 		this.cntsWithS = new HashMap<GrammarRule, Batch>();
 		this.cntsWithT = new HashMap<GrammarRule, Batch>();
 		this.ruleSet = new HashSet<GrammarRule>();
 		this.gradients = new HashMap<GrammarRule, Gradient>();
+		this.mode = ParallelMode.INVOKE_ALL;
+		this.futures = null;
+		this.tasks = null;
 	}
 	
 	
@@ -48,18 +64,12 @@ public class ParallelOptimizer extends Optimizer {
 	
 	
 	private void evalGradientsParallel(List<Double> scoreSandT) {
-		/*
-		if (ruleArray == null) { ruleArray = ruleSet.toArray(new GrammarRule[0]); }
-		ForkJoinPool pool = new ForkJoinPool(THREADS_NUM);
-		pool.invoke(new ParallelForLoop(0, ruleArray.length, scoreSandT));
-		*/
-		
 		if (tasks == null) { 
-			tasks = new ArrayList<Callable<Object>>(ruleSet.size()); 
+			tasks = new ArrayList<Callable<Boolean>>(ruleSet.size()); 
 			for (GrammarRule rule : ruleSet) {
-				tasks.add(new Callable<Object>() {
+				tasks.add(new Callable<Boolean>() {
 					@Override
-					public Object call() throws Exception {
+					public Boolean call() throws Exception {
 						boolean updated = false;
 						Batch cntWithT = cntsWithT.get(rule);
 						Batch cntWithS = cntsWithS.get(rule);
@@ -69,62 +79,141 @@ public class ParallelOptimizer extends Optimizer {
 								break; 
 							} 
 						}
-						if (!updated) { return null; }
+						if (!updated) { return false; }
 						Gradient gradient = gradients.get(rule);
-						gradient.eval(rule, cntWithT, cntWithS, scoreSandT);
+						boolean ichanged = gradient.eval(rule, cntWithT, cntWithS, scoreSandT);
 						// clear
 						cntWithT.clear();
 						cntWithS.clear();
-						return null;
+						return ichanged;
 					}
 				});
 			}
 		}
+		switch (mode) {
+		case COMPLETION_SERVICE: {
+			useCompletionService();
+			break;
+		}
+		case CUSTOMIZED_BLOCK: {
+			useCustomizedBlock();
+			break;
+		}
+		case INVOKE_ALL: {
+			useInvokeAll();
+			break;
+		}
+		case FORK_JOIN: { // not encouraged, need to tune the size of the chunk that a thread eats
+			useForkJoin(scoreSandT);
+			break;
+		}
+		}
+	}
+	
+	
+	private void useInvokeAll() {
+		boolean exit = true;
+		int nchanged = 0;
 		try {
-			service.invokeAll(tasks);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
+			if (pool == null) { 
+				pool = Executors.newFixedThreadPool(THREADS_NUM); 
+			}
+			List<Future<Boolean>> futures = pool.invokeAll(tasks);
+			for (Future<Boolean> future : futures) {
+				if (future.get()) { nchanged++; }
+			}
+			// we do not require the pool to exit for the purpose of reusing
+			// pool.shutdown();
+			// exit = pool.awaitTermination(10, TimeUnit.MILLISECONDS);
+		} catch (ExecutionException | InterruptedException e) {
 			e.printStackTrace();
 		}
-		
-/*		
-		service = Executors.newFixedThreadPool(THREADS_NUM);
-		for (GrammarRule rule : ruleSet) {
-			service.submit(new Callable<Object>() {
-				@Override
-				public Object call() throws Exception {
-					boolean updated = false;
-					Batch cntWithT = cntsWithT.get(rule);
-					Batch cntWithS = cntsWithS.get(rule);
-					for (short i = 0; i < Gradient.MAX_BATCH_SIZE; i++) {
-						if (cntWithT.get(i) != null || cntWithS.get(i) != null) { 
-							updated = true; 
-							break; 
-						} 
-					}
-					if (!updated) { return null; }
-					Gradient gradient = gradients.get(rule);
-					gradient.eval(rule, cntWithT, cntWithS, scoreSandT);
-					// clear
-					cntWithT.clear();
-					cntWithS.clear();
-					return null;
-				}
-			});
+		logger.trace("exit: " + exit + ", nchanged: " + nchanged + " of " + ruleSet.size() + "..." + pool.isTerminated() + "...");
+	}
+	
+	
+	private void useCompletionService() {
+		boolean exit = true;
+		int nchanged = 0, isdone = 0;
+		pool = Executors.newFixedThreadPool(THREADS_NUM);
+		service = new ExecutorCompletionService<Boolean>(pool);
+		for (Callable<Boolean> task : tasks) {
+			service.submit(task);
 		}
-		service.shutdown();
-*/		
+		try {
+			pool.shutdown();
+			// while (!pool.isTerminated()) { // CHECK why does it still returns false while all tasks are done?
+			for (int i = 0; i < ruleSet.size(); i++) {
+				Future<Boolean> future = service.take();
+				if (future.get()) { nchanged++; }
+				if (future.isDone()) { isdone++; }
+			}
+			// I found 10ms is very useful than 0ms, because it can ensure the pool is terminated but 0ms cannot?
+			exit = pool.awaitTermination(10, TimeUnit.MILLISECONDS);
+		} catch (ExecutionException | InterruptedException e) {
+			e.printStackTrace();
+		}
+		logger.trace("exit: " + exit + ", nchanged: " + nchanged + " of " + ruleSet.size() + "(" + isdone + ")" + "..." + pool.isTerminated() + "...");
+	}
+	
+	
+	private void useCustomizedBlock() {
+		boolean exit = true;
+		int nchanged = 0, isdone = 0;
+		if (futures == null) { 
+			futures = new ArrayList<Future<Boolean>>(ruleSet.size()); 
+		}
+		futures.clear();
+		pool = Executors.newFixedThreadPool(THREADS_NUM);
+		for (Callable<Boolean> task : tasks) {
+			futures.add(pool.submit(task));
+		}
+		try {
+			pool.shutdown();
+			boolean done = true;
+			while (done) { 
+				for (Future<Boolean> future : futures) {
+					if (!future.isDone()) { done = false; } 
+				}
+				done = done ? false : true;
+			} // I observe that enumerating the futures can ensure right outputs, why?
+			// errors may occur when comment the while loop and the exit line
+			exit = pool.awaitTermination(10, TimeUnit.MILLISECONDS);
+			for (Future<Boolean> future : futures) {
+				if (future.get()) { nchanged++; }
+				if (future.isDone()) { isdone++; }
+				// exchange the above two lines, isdone would be wrongly counted, why?
+			}
+		} catch (ExecutionException | InterruptedException e) {
+			e.printStackTrace();
+		}
+		logger.trace("exit: " + exit + ", nchanged: " + nchanged + " of " + ruleSet.size() + "(" + isdone + ")" + "..." + pool.isTerminated() + "...");
+	}
+	
+	
+	private void useForkJoin(List<Double> scoreSandT) {
+		if (watch == null) { watch = new Watch(); }
+		if (ruleArray == null) { ruleArray = ruleSet.toArray(new GrammarRule[0]); }
+		watch.clear();
+		ForkJoinPool pool = new ForkJoinPool(THREADS_NUM);
+		ParallelForLoop loop = new ParallelForLoop(0, ruleArray.length, scoreSandT);
+		pool.invoke(loop);
+		logger.trace("nchanged: " + watch.nchanged + " of " + ruleArray.length + "(" + watch.nskipped + ")" + "...");
 	}
 	
 	
 	@Override
 	public void applyGradientDescent(List<Double> scoresST) {
 		Gradient gradient;
+		int nupdated = 0;
 		for (GrammarRule rule : ruleSet) {
 			gradient = gradients.get(rule);
-			gradient.apply(rule);
+			if (gradient.apply(rule)) {
+				nupdated++;
+			}
 		}
 		reset();
+		logger.trace("nupdated=" + nupdated + " of " + ruleSet.size() + "...");
 	}
 	
 	
@@ -135,8 +224,9 @@ public class ParallelOptimizer extends Optimizer {
 			evalGradientsParallel(scoreSandT); 
 			return;
 		}
-		Gradient gradient;
+
 		Batch cntWithT, cntWithS;
+		int nchanged = 0, nskipped = 0;
 		for (GrammarRule rule : ruleSet) {
 			boolean updated = false;
 			cntWithT = cntsWithT.get(rule);
@@ -147,13 +237,16 @@ public class ParallelOptimizer extends Optimizer {
 					break; 
 				} 
 			}
-			if (!updated) { continue; }
-			gradient = gradients.get(rule);
-			gradient.eval(rule, cntWithT, cntWithS, scoreSandT);
+			if (!updated) { nskipped++; continue; }
+			Gradient gradient = gradients.get(rule);
+			if (gradient.eval(rule, cntWithT, cntWithS, scoreSandT)) {
+				nchanged++;
+			}
 			// clear
 			cntWithT.clear();
 			cntWithS.clear();
 		}
+		logger.trace("nchanged=" + nchanged + " of " + ruleSet.size() + "(" + nskipped + ")" + "...");
 	}
 	
 	
@@ -179,19 +272,34 @@ public class ParallelOptimizer extends Optimizer {
 	}
 	
 	
+	public void shutdown() {
+		if (pool != null) {
+			try {
+				pool.shutdown();
+				pool.awaitTermination(10, TimeUnit.MILLISECONDS);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	
 	/**
 	 * @author Yanpeng Zhao
 	 *
 	 */
+	protected Watch watch = new Watch();
+	class Watch { int nchanged, nskipped; void clear() { nchanged = 0; nskipped = 0; } }
 	class ParallelForLoop extends RecursiveAction {
 		/* */
 		private static final long serialVersionUID = 1L;
+		private int step = ruleArray.length / THREADS_NUM;
 		
 		private List<Double> score;
-		private int from, to, step;
+		private int from, to;
 		
 		public ParallelForLoop(int from, int to, List<Double> score) {
-			this.step = ruleArray.length / THREADS_NUM;
 			this.from = from;
 			this.to = to;
 			this.score = score;
@@ -200,14 +308,15 @@ public class ParallelOptimizer extends Optimizer {
 		
 		@Override
 		protected void compute() {
-			// TODO Auto-generated method stub
 			int range = to - from;
-			if (range < step) {
+			if (range <= step) {
 				run(from, to);
 			} else {
 				int mid = (from + to) >>> 1;
-				new ParallelForLoop(from, mid, score).fork();
-				new ParallelForLoop(mid, to, score).fork();
+				ForkJoinTask<Void> lhs = new ParallelForLoop(from, mid, score).fork();
+				ForkJoinTask<Void> rhs = new ParallelForLoop(mid, to, score).fork();
+				lhs.join();
+				rhs.join();
 			}
 		}
 		
@@ -223,9 +332,17 @@ public class ParallelOptimizer extends Optimizer {
 						break; 
 					} 
 				}
-				if (!updated) { continue; }
+				synchronized (watch) {
+					if (!updated) { 
+						watch.nskipped++; 
+						continue; 
+					}
+				}
 				Gradient gradient = gradients.get(rule);
-				gradient.eval(rule, cntWithT, cntWithS, score);
+				boolean ichanged = gradient.eval(rule, cntWithT, cntWithS, score);
+				synchronized (watch) {
+					if (ichanged) { watch.nchanged++; }
+				}
 				// clear
 				cntWithT.clear();
 				cntWithS.clear();
