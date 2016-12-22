@@ -1,5 +1,6 @@
 package edu.shanghaitech.ai.nlp.optimization;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -8,7 +9,11 @@ import java.util.Set;
 
 import edu.shanghaitech.ai.nlp.lveg.GaussianMixture;
 
-public class Batch {
+public class Batch implements Serializable {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -5018573183821755031L;
 	protected Map<Short, List<Map<String, GaussianMixture>>> batch;
 	
 	/**

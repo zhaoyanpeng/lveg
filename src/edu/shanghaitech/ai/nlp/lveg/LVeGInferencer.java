@@ -25,7 +25,12 @@ import edu.shanghaitech.ai.nlp.syntax.State;
  *
  */
 public class LVeGInferencer extends Inferencer {
-	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -3716227615216124859L;
+
+
 	public LVeGInferencer(LVeGGrammar grammar, LVeGLexicon lexicon) {
 		this.grammar = grammar;
 		this.lexicon = lexicon;

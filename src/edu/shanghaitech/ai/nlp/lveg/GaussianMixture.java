@@ -1,5 +1,6 @@
 package edu.shanghaitech.ai.nlp.lveg;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -22,7 +23,11 @@ import edu.shanghaitech.ai.nlp.util.Recorder;
  * @author Yanpeng Zhao
  *
  */
-public class GaussianMixture extends Recorder {
+public class GaussianMixture extends Recorder implements Serializable {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -822680841484765529L;
 	/**
 	 * Not sure if it is necessary.
 	 * 
@@ -708,15 +713,15 @@ public class GaussianMixture extends Recorder {
 	 * @param ggrads     gradients of the parameters of gaussians
 	 * @param wgrads     gradients of the mixing weights of MoG
 	 */
-	public void update(int icomponent, Map<String, List<Double>> ggrads, List<Double> wgrads) {
+	public void update(int icomponent, Map<String, List<Double>> ggrads, List<Double> wgrads, int nsample) {
 		Map<String, Set<GaussianDistribution>> component = mixture.get(icomponent);
 		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
 			List<Double> grads = ggrads.get(gaussian.getKey());
 			for (GaussianDistribution gd : gaussian.getValue()) {
-				gd.update(grads);
+				gd.update(grads, nsample);
 			}
 		}
-		double wgrad = wgrads.get(icomponent);
+		double wgrad = wgrads.get(icomponent) / nsample;
 		wgrad = Params.clip ? (Math.abs(wgrad) > Params.absmax ? Params.absmax * Math.signum(wgrad) : wgrad) : wgrad;
 		double weight = weights.get(icomponent) - Params.lr * wgrad;
 		weights.set(icomponent, weight);

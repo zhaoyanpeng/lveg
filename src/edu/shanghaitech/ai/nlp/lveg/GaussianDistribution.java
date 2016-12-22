@@ -1,5 +1,6 @@
 package edu.shanghaitech.ai.nlp.lveg;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -16,7 +17,11 @@ import edu.shanghaitech.ai.nlp.util.Recorder;
  * @author Yanpeng Zhao
  *
  */
-public class GaussianDistribution extends Recorder implements Comparable<Object> {
+public class GaussianDistribution extends Recorder implements Comparable<Object>, Serializable {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 5123783591853232548L;
 	/**
 	 * We may need the hash set be able to hold the gaussians that 
 	 * are the same but the ids, which is just the future feature.
@@ -120,16 +125,16 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 		double real, norm;
 		slice.clear();
 		truth.clear();
-		synchronized (rnd) {
+//		synchronized (rnd) {
 			for (int i = 0; i < dim; i++) {
-				norm = rnd.nextGaussian();
-	//			norm = ThreadLocalRandom.current().nextGaussian();
+//				norm = rnd.nextGaussian();
+				norm = ThreadLocalRandom.current().nextGaussian();
 				real = norm * Math.exp(vars.get(i)) + mus.get(i);
 				slice.add(norm);
 				truth.add(real);
 			}
-			rnd.notifyAll();
-		}
+//			rnd.notifyAll();
+//		}
 	}
 	
 	
@@ -156,16 +161,16 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	 * 
 	 * @param grads gradients
 	 */
-	protected void update(List<Double> grads) {
+	protected void update(List<Double> grads, int nsample) {
 		if (grads.size() == 0) { 
 //			logger.warn("No need to update because no gradients could be applied.");
 			return; 
 		}
 		double mgrad, vgrad, mu, var;
 		for (int i = 0; i < dim; i++) {
-			mgrad = grads.get(i * 2);
+			mgrad = grads.get(i * 2) / nsample;
 			mgrad = Params.clip ? (Math.abs(mgrad) > Params.absmax ? Params.absmax * Math.signum(mgrad) : mgrad) : mgrad;
-			vgrad = grads.get(i * 2 + 1);
+			vgrad = grads.get(i * 2 + 1) / nsample;
 			vgrad = Params.clip ? (Math.abs(vgrad) > Params.absmax ? Params.absmax * Math.signum(vgrad) : vgrad) : vgrad;
 			mu = mus.get(i) - Params.lr * mgrad;
 			var = vars.get(i) - Params.lr * vgrad;

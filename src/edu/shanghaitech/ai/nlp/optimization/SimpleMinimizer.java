@@ -1,5 +1,6 @@
 package edu.shanghaitech.ai.nlp.optimization;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -16,11 +17,16 @@ import edu.shanghaitech.ai.nlp.util.Recorder;
  * @author Yanpeng Zhao
  *
  */
-public class SimpleMinimizer extends Recorder {
-	
-	protected Random random;
-	protected short nsample;
-	
+public class SimpleMinimizer extends Recorder implements Serializable {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -4030933989131874669L;
+	/*
+	protected static short maxsample = Optimizer.maxsample;
+	protected static short batchsize = Optimizer.batchsize;
+	protected static Random rnd = Optimizer.rnd;
+	*/
 	protected Map<String, List<Double>> truths;
 	protected Map<String, List<Double>> sample;
 	protected Map<String, List<Double>> ggrads;
@@ -54,10 +60,13 @@ public class SimpleMinimizer extends Recorder {
 	}
 	
 	
-	public SimpleMinimizer(Random random, short nsample) {
+	public SimpleMinimizer(Random random, short msample, short bsize) {
 		this();
-		this.random = random;
-		this.nsample = nsample;
+		/*
+		rnd = random;
+		batchsize = bsize;
+		maxsample = msample;
+		*/
 	}
 	
 	
@@ -125,7 +134,7 @@ public class SimpleMinimizer extends Recorder {
 		
 		for (int icomponent = 0; icomponent < ruleW.ncomponent(); icomponent++) {
 			updated = false; // 
-			for (short isample = 0; isample < nsample; isample++) {
+			for (short isample = 0; isample < Optimizer.maxsample; isample++) {
 				switch (rule.getType()) {
 				case GrammarRule.LRBRULE: {
 					sample(sample.get(GrammarRule.Unit.P), ruleW.dim(icomponent, GrammarRule.Unit.P));
@@ -182,7 +191,7 @@ public class SimpleMinimizer extends Recorder {
 				removed = true; // CHECK avoid impossible remove
 			}
 			if (updated) {
-				ruleW.update(icomponent, ggrads, wgrads);
+				ruleW.update(icomponent, ggrads, wgrads, Optimizer.maxsample);
 			}
 		}
 	}
@@ -191,7 +200,7 @@ public class SimpleMinimizer extends Recorder {
 	protected void sample(List<Double> slice, int dim) {
 		slice.clear();
 		for (int i = 0; i < dim; i++) {
-			slice.add(random.nextGaussian());
+			slice.add(Optimizer.rnd.nextGaussian());
 		}
 	}
 	

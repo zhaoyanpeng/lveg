@@ -20,9 +20,10 @@ import edu.shanghaitech.ai.nlp.util.Recorder;
  *
  */
 public class LVeGGrammar extends Recorder implements Serializable {
-	
-	private static final long serialVersionUID = 1L;
-	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 650638115156791313L;
 	public int nTag;
 	protected Numberer tagNumberer;
 	
@@ -58,8 +59,7 @@ public class LVeGGrammar extends Recorder implements Serializable {
 	private Map<GrammarRule, GrammarRule> unaryRuleMap;
 	private Map<GrammarRule, GrammarRule> binaryRuleMap;
 	
-//	private Optimizer optimizer;
-	private ParallelOptimizer optimizer;
+	private Optimizer optimizer;
 	
 	
 	public LVeGGrammar(LVeGGrammar oldGrammar, int nTag) {
@@ -68,7 +68,7 @@ public class LVeGGrammar extends Recorder implements Serializable {
 		this.unaryRuleMap  = new HashMap<GrammarRule, GrammarRule>();
 		this.binaryRuleMap = new HashMap<GrammarRule, GrammarRule>();
 //		this.optimizer = new Optimizer(LVeGLearner.random);
-		this.optimizer = new ParallelOptimizer(LVeGLearner.random);
+//		this.optimizer = new ParallelOptimizer(LVeGLearner.random);
 		
 		if (nTag < 0) {
 			this.tagNumberer = Numberer.getGlobalNumberer(LVeGLearner.KEY_TAG_SET);
@@ -137,6 +137,11 @@ public class LVeGGrammar extends Recorder implements Serializable {
 		unaryRulesWithC[rule.rhs].add(rule);
 		unaryRuleMap.put(rule, rule);
 		optimizer.addRule(rule);
+	}
+	
+	
+	public void setOptimizer(Optimizer optimizer) {
+		this.optimizer = optimizer;
 	}
 	
 	

@@ -1,5 +1,6 @@
 package edu.shanghaitech.ai.nlp.lveg;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -7,20 +8,22 @@ import java.util.Set;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.util.Indexer;
 import edu.shanghaitech.ai.nlp.optimization.Optimizer;
-import edu.shanghaitech.ai.nlp.optimization.ParallelOptimizer;
 import edu.shanghaitech.ai.nlp.syntax.State;
 
 /**
  * @author Yanpeng Zhao
  *
  */
-public abstract class LVeGLexicon {
-	
+public abstract class LVeGLexicon implements Serializable {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 255983044651602165L;
 	protected transient String lastWord;
 	protected transient String lastSignature;
 	protected transient int lastPosition;
-//	protected Optimizer optimizer;
-	protected ParallelOptimizer optimizer;
+	
+	protected Optimizer optimizer;
 	
 	
 	/**
@@ -98,10 +101,21 @@ public abstract class LVeGLexicon {
 	
 	
 	/**
+	 * @param trees
+	 */
+	public abstract void labelTrees(StateTreeList trees);
+	
+	
+	/**
 	 * @param word a terminal node
 	 * @return
 	 */
 	protected abstract boolean isKnown(String word);
+	
+	
+	public void setOptimizer(Optimizer optimizer) {
+		this.optimizer = optimizer;
+	}
 	
 	
 	public void evalGradients(List<Double> scoreOfST, boolean parallel) {

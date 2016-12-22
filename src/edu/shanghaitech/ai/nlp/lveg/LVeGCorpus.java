@@ -1,5 +1,6 @@
 package edu.shanghaitech.ai.nlp.lveg;
 
+import java.io.Serializable;
 import java.util.List;
 
 import edu.berkeley.nlp.syntax.Tree;
@@ -10,8 +11,11 @@ import edu.shanghaitech.ai.nlp.syntax.State;
  * @author Yanpeng Zhao
  *
  */
-public class LVeGCorpus {
-
+public class LVeGCorpus implements Serializable {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1278753896112455981L;
 
 	/**
 	 * @param trees         the parse tree

@@ -4,17 +4,48 @@ import java.util.List;
 
 import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.lveg.Inferencer.Chart;
+import edu.shanghaitech.ai.nlp.lveg.Parser.Meta;
 import edu.shanghaitech.ai.nlp.syntax.State;
 
-public class MaxRuleParser extends Parser {
+public class MaxRuleParser<T> extends Parser<T> {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 514004588461969299L;
 	private MaxRuleInferencer inferencer;
-	private boolean reuse;
+	
+	
+	private MaxRuleParser(MaxRuleParser<?> parser) {
+		this.inferencer = parser.inferencer;
+		this.chart = parser.reuse ? new Chart(MAX_SENTENCE_LEN, true) : null;
+		this.reuse = parser.reuse;
+	}
 	
 	
 	public MaxRuleParser(LVeGGrammar grammar, LVeGLexicon lexicon, boolean reuse) {
 		this.inferencer = new MaxRuleInferencer(grammar, lexicon);
 		this.chart = reuse ? new Chart(MAX_SENTENCE_LEN, true) : null;
 		this.reuse = reuse;
+	}
+	
+
+	@Override
+	public synchronized Object call() throws Exception {
+		if (sample == null) { return null; }
+		Tree<String> tree = parse(sample);
+		Meta<T> cache = new Meta(isample, tree);
+		synchronized (caches) {
+			caches.add(cache);
+			caches.notifyAll();
+		}
+		sample = null;
+		return null;
+	}
+	
+
+	@Override
+	protected MaxRuleParser<?> newInstance() {
+		return new MaxRuleParser<T>(this);
 	}
 	
 	
@@ -78,4 +109,5 @@ public class MaxRuleParser extends Parser {
 		
 		return chart;
 	}
+	
 }

@@ -1,5 +1,6 @@
 package edu.shanghaitech.ai.nlp.optimization;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -25,18 +26,22 @@ import edu.shanghaitech.ai.nlp.lveg.GrammarRule;
  *
  */
 public class ParallelOptimizer extends Optimizer {
-	private static final short THREADS_NUM = 2;
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -6206396492328441930L;
+	private static final short THREADS_NUM = 3; // TODO make it non-static
 	protected enum ParallelMode {
 		INVOKE_ALL, COMPLETION_SERVICE, CUSTOMIZED_BLOCK, FORK_JOIN
 	}
 	private ParallelMode mode;
 	private Map<GrammarRule, Gradient> gradients; // gradients
 	
-	private GrammarRule[] ruleArray;
-	private ExecutorService pool;
-	private List<Future<Boolean>> futures;
-	private List<Callable<Boolean>> tasks;
-	private CompletionService<Boolean> service;
+	private transient GrammarRule[] ruleArray;
+	private transient ExecutorService pool;
+	private transient List<Future<Boolean>> futures;
+	private transient List<Callable<Boolean>> tasks;
+	private transient CompletionService<Boolean> service;
 	
 	
 	private ParallelOptimizer() {
@@ -44,7 +49,7 @@ public class ParallelOptimizer extends Optimizer {
 		this.cntsWithT = new HashMap<GrammarRule, Batch>();
 		this.ruleSet = new HashSet<GrammarRule>();
 		this.gradients = new HashMap<GrammarRule, Gradient>();
-		this.mode = ParallelMode.INVOKE_ALL;
+		this.mode = ParallelMode.COMPLETION_SERVICE;
 		this.futures = null;
 		this.tasks = null;
 	}
@@ -56,10 +61,11 @@ public class ParallelOptimizer extends Optimizer {
 	}
 	
 	
-	public ParallelOptimizer(Random random, short nsample) {
+	public ParallelOptimizer(Random random, short msample, short bsize) {
 		this();
 		rnd = random;
-		maxsample = nsample;
+		batchsize = bsize;
+		maxsample = msample;
 	}
 	
 	
@@ -103,7 +109,7 @@ public class ParallelOptimizer extends Optimizer {
 			useInvokeAll();
 			break;
 		}
-		case FORK_JOIN: { // not encouraged, need to tune the size of the chunk that a thread eats
+		case FORK_JOIN: {
 			useForkJoin(scoreSandT);
 			break;
 		}
@@ -132,6 +138,9 @@ public class ParallelOptimizer extends Optimizer {
 	}
 	
 	
+	/**
+	 * See comments in the method.
+	 */
 	private void useCompletionService() {
 		boolean exit = true;
 		int nchanged = 0, isdone = 0;
@@ -157,6 +166,9 @@ public class ParallelOptimizer extends Optimizer {
 	}
 	
 	
+	/**
+	 * See comments in the method.
+	 */
 	private void useCustomizedBlock() {
 		boolean exit = true;
 		int nchanged = 0, isdone = 0;
@@ -191,6 +203,12 @@ public class ParallelOptimizer extends Optimizer {
 	}
 	
 	
+	/**
+	 * Need to tune the size of the chunk that a thread eats, but it is somewhat memory-efficiency? 
+	 * TODO Need more trials.
+	 * 
+	 * @param scoreSandT
+	 */
 	private void useForkJoin(List<Double> scoreSandT) {
 		if (watch == null) { watch = new Watch(); }
 		if (ruleArray == null) { ruleArray = ruleSet.toArray(new GrammarRule[0]); }
@@ -257,7 +275,7 @@ public class ParallelOptimizer extends Optimizer {
 		Batch batchWithS = new Batch(Gradient.MAX_BATCH_SIZE);
 		cntsWithT.put(rule, batchWithT);
 		cntsWithS.put(rule, batchWithS);
-		Gradient gradient = new Gradient(rule, rnd, maxsample);
+		Gradient gradient = new Gradient(rule, rnd, maxsample, batchsize);
 		gradients.put(rule, gradient);
 	}
 	
@@ -278,7 +296,6 @@ public class ParallelOptimizer extends Optimizer {
 				pool.shutdown();
 				pool.awaitTermination(10, TimeUnit.MILLISECONDS);
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
@@ -290,7 +307,13 @@ public class ParallelOptimizer extends Optimizer {
 	 *
 	 */
 	protected Watch watch = new Watch();
-	class Watch { int nchanged, nskipped; void clear() { nchanged = 0; nskipped = 0; } }
+	class Watch implements Serializable { 
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 4040589141969741180L;
+		int nchanged, nskipped; void clear() { nchanged = 0; nskipped = 0; } 
+	}
 	class ParallelForLoop extends RecursiveAction {
 		/* */
 		private static final long serialVersionUID = 1L;

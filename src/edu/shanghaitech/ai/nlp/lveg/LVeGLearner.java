@@ -17,6 +17,8 @@ import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
 import edu.shanghaitech.ai.nlp.util.Recorder;
+import edu.shanghaitech.ai.nlp.optimization.Optimizer;
+import edu.shanghaitech.ai.nlp.optimization.ParallelOptimizer;
 import edu.shanghaitech.ai.nlp.syntax.State;
 
 /**
@@ -199,23 +201,60 @@ public class LVeGLearner extends Recorder {
 		String oldFilename = "log/groundtruth";
 		String filename, newFilename = "log/maxrulerets_chart";
 		
+		batchsize = 6;
+		short maxsample = 3;
+		boolean useOldGram = false, saveNewGram = false;
+		boolean parallelgrad = true, parallelbatch = false;
+		int cnt = 0, droppingiter = 0, maxLength = 7, nbatch = 1;
+		
 		LVeGGrammar grammar = new LVeGGrammar(null, -1);
 		LVeGLexicon lexicon = new SimpleLVeGLexicon();
-		LVeGParser lvegParser = new LVeGParser(grammar, lexicon, true);
-		MaxRuleParser mrParser = new MaxRuleParser(grammar, lexicon, true);
+		Valuator<?> valuator = new Valuator<Double>(grammar, lexicon, true);
+				
+		if (useOldGram && opts.inFile != null) {
+			GrammarFile gfile = GrammarFile.load(opts.inFile);
+			grammar = gfile.getGrammar();
+			lexicon = gfile.getLexicon();
+			lexicon.labelTrees(trainTrees); // FIXME no errors, just alert you to pay attention to it 
+			Optimizer.config(random, maxsample, batchsize); // FIXME no errors, just alert you...
+			valuator = new Valuator<Double>(grammar, lexicon, true);			
 			
-		for (Tree<State> tree : trainTrees) {
-			lexicon.tallyStateTree(tree);
-			grammar.tallyStateTree(tree);
-			if (tree.getYield().size() == 6) {
-				globalTree = tree.copy();
-			} // a global tree
+			for (Tree<State> tree : trainTrees) {
+				if (tree.getYield().size() == 6) {
+					globalTree = tree.copy();
+					break;
+				} // a global tree
+			}
+			
+			// likelihood of the training set
+			logger.trace("-------ll of the training data initially is... ");
+			long beginTime = System.currentTimeMillis();
+			double ll = calculateLL(grammar, lexicon, valuator, trainTrees, maxLength);
+			long endTime = System.currentTimeMillis();
+			logger.trace("------->" + ll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");	
+		} else {
+			Optimizer goptimizer = new ParallelOptimizer(LVeGLearner.random, maxsample, batchsize);
+			Optimizer loptimizer = new ParallelOptimizer(LVeGLearner.random, maxsample, batchsize);
+			grammar.setOptimizer(goptimizer);
+			lexicon.setOptimizer(loptimizer);
+			
+			for (Tree<State> tree : trainTrees) {
+				lexicon.tallyStateTree(tree);
+				grammar.tallyStateTree(tree);
+				if (tree.getYield().size() == 6) {
+					globalTree = tree.copy();
+				} // a global tree
+			}
+			logger.trace("Going through the training set is over.\n");
+			
+			grammar.postInitialize(0.0);
+			lexicon.postInitialize(trainTrees, numbererTag.size());
+			logger.trace("Post-initializing is over.\n");
 		}
-		logger.trace("Going through the training set is over.\n");
+		LVeGParser<?> lvegParser = new LVeGParser<List<Double>>(grammar, lexicon, true);
+		MaxRuleParser<?> mrParser = new MaxRuleParser<Tree<String>>(grammar, lexicon, true);
 		
-		grammar.postInitialize(0.0);
-		lexicon.postInitialize(trainTrees, numbererTag.size());
-		logger.trace("Post-initializing is over.\n");
+		MultiThreadedParser trainer = new MultiThreadedParser(lvegParser, 3);
 		
 		MethodUtil.saveTree2image(globalTree, oldFilename, null);
 		Tree<String> parseTree = mrParser.parse(globalTree);
@@ -233,84 +272,77 @@ public class LVeGLearner extends Recorder {
 		}
 		*/
 		
-		boolean parallel = true;
-		int cnt = 0, droppingiter = 0, maxLength = 7, nbatch = 2;
 		double prell = 0.0;
 		double relativError = 0, ll, maxll = prell;
-		List<Double> scoresOfST = new ArrayList<Double>();
+		List<Double> scoresOfST = new ArrayList<Double>(2);
 		List<Double> likelihood = new ArrayList<Double>();
 		
-		logger.info("\n---SGD CONFIG---\n[parallel: " + parallel + "] " + Params.toString(false) + "\n");
-		if (parallel) { newFilename = "log/maxrulerets_parallel"; }
+		logger.info("\n---SGD CONFIG---\n[parallel: " + parallelgrad + "] " + Params.toString(false) + "\n");
+		if (parallelgrad) { newFilename = "log/maxrulerets_parallel"; }
 		
+		if (parallelbatch) {
 		
 		do {			
 			logger.trace("\n\n-------epoch " + cnt + " begins-------\n\n");
-			short isample = 0, idx = 0;
+			short isample = 0, idx = 0, nfailed = 0;
 			long beginTime, endTime, startTime = System.currentTimeMillis();
+			long batchstart = System.currentTimeMillis(), batchend;
 			for (Tree<State> tree : trainTrees) {
-				/*// DEBUG
-				System.out.println(tree.getTerminalYield());
-				System.out.println(tree.getYield());
-				*/
-				
-				/*// DEBUG 
-				parser.doInsideOutsideWithTree(tree);
-				MethodUtil.debugTree(tree, false, (short) 2);
-				trainTrees.resetScore(tree);
-				MethodUtil.debugTree(tree, false, (short) 2);
-				*/
-				
+
 				if (tree.getYield().size() > maxLength) { continue; }
 				
+				trainer.parse(tree);
 				
-				/*try {// DEBUG max rule parser
-					String oldFilename = "log/groundtruth";
-					String newFilename = "log/maxrulerets";
-					MethodUtil.saveTree2image(tree, oldFilename, null);
-					Tree<String> parseTree = mrParser.parse(tree);
-					MethodUtil.saveTree2image(null, newFilename, parseTree);
-				} catch (Exception e) {
-					e.printStackTrace();
+				while (trainer.hasNext()) {
+					List<Double> score = (List<Double>) trainer.getNext();
+					if (score == null) {
+						nfailed++;
+					} else {
+						logger.trace("\n~~~score: " + MethodUtil.double2str(score, precision, -1, false, true) + "\n");
+					}
 				}
-				System.exit(1);
-				*/
 				
-				/*// DEBUG
-				logger.trace(tree + "\n");
-				MethodUtil.debugRuleWeightInTheTree(grammar, lexicon, tree);
-				*/
 				
-				/*// DEBUG get the count of the specific rule
-				GrammarRule rule = new BinaryGrammarRule((short) 32, (short) 32, (short) 32);
-				Map<Short, List<Map<String, GaussianMixture>>> cnts = grammar.getCount(rule, false);
-				*/
-				
-				logger.trace("---Sample " + isample + "\tis being processed... ");
-				beginTime = System.currentTimeMillis();
-				
-				double scoreT = lvegParser.evalRuleCountWithTree(tree, (short) 0);
-				double scoreS = lvegParser.evalRuleCount(tree, (short) 0);
-				
-				endTime = System.currentTimeMillis();
-				logger.trace( + (endTime - beginTime) / 1000.0 + "\t");
-				
-				scoresOfST.add(scoreT);
-				scoresOfST.add(scoreS);
-				
-				logger.trace("eval gradients... ");
-				beginTime = System.currentTimeMillis();
-				
-				grammar.evalGradients(scoresOfST, parallel);
-				lexicon.evalGradients(scoresOfST, parallel);
-				scoresOfST.clear();
-				
-				endTime = System.currentTimeMillis();
-				logger.trace( + (endTime - beginTime) / 1000.0 + "\n");
+//				logger.trace("---Sample " + isample + "...\t");
+//				beginTime = System.currentTimeMillis();
+//				
+//				double scoreT = lvegParser.evalRuleCountWithTree(tree, (short) 0);
+//				double scoreS = lvegParser.evalRuleCount(tree, (short) 0);
+//				
+//				endTime = System.currentTimeMillis();
+//				logger.trace( + (endTime - beginTime) / 1000.0 + "\t");
+//				
+//				scoresOfST.add(scoreT);
+//				scoresOfST.add(scoreS);
+//				
+//				logger.trace("scores: " + MethodUtil.double2str(scoresOfST, precision, -1, false, true) + "\teval gradients... ");
+//				beginTime = System.currentTimeMillis();
+//				
+//				grammar.evalGradients(scoresOfST, parallelgrad);
+//				lexicon.evalGradients(scoresOfST, parallelgrad);
+//				scoresOfST.clear();
+//				
+//				endTime = System.currentTimeMillis();
+//				logger.trace( + (endTime - beginTime) / 1000.0 + "\n");
 				
 				
 				isample++;
 				if (++idx % batchsize == 0) {
+					
+					while (!trainer.isDone()) {
+						while (trainer.hasNext()) {
+							List<Double> score = (List<Double>) trainer.getNext();
+							if (score == null) {
+								nfailed++;
+							} else {
+								logger.trace("\n~~~score: " + MethodUtil.double2str(score, precision, -1, false, true) + "\n");
+							}
+						}
+					}
+					trainer.reset();
+					
+					batchend = System.currentTimeMillis();
+					
 					// apply gradient descent
 					logger.trace("+++Apply gradient descent for the batch " + (isample / batchsize) + "... ");
 					beginTime = System.currentTimeMillis();
@@ -319,14 +351,14 @@ public class LVeGLearner extends Recorder {
 					lexicon.applyGradientDescent(scoresOfST);
 					
 					endTime = System.currentTimeMillis();
-					logger.trace( + (endTime - beginTime) / 1000.0 + "\n");
+					logger.trace((endTime - beginTime) / 1000.0 + "... batch time: " + (batchend - batchstart) / 1000.0 + ", nfailed: " + nfailed + "\n");
 					idx = 0;
 					
 					if ((isample % (batchsize * nbatch)) == 0) {
 						// likelihood of the training set
 						logger.trace("\n-------ll of the training data after " + (isample / batchsize) + " batches in epoch " + cnt + " is... ");
 						beginTime = System.currentTimeMillis();
-						ll = calculateLL(grammar, lexicon, lvegParser, trainTrees, maxLength);
+						ll = calculateLL(grammar, lexicon, valuator, trainTrees, maxLength);
 						endTime = System.currentTimeMillis();
 						logger.trace("------->" + ll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");
 						trainTrees.reset();
@@ -337,6 +369,9 @@ public class LVeGLearner extends Recorder {
 						// store the log score
 						likelihood.add(ll);
 					}
+					
+					nfailed = 0;
+					batchstart = System.currentTimeMillis();
 				}
 			}
 			
@@ -356,33 +391,10 @@ public class LVeGLearner extends Recorder {
 			// likelihood of the training set
 			logger.trace("-------ll of the training data in epoch " + cnt + " is... ");
 			beginTime = System.currentTimeMillis();
-			ll = calculateLL(grammar, lexicon, lvegParser, trainTrees, maxLength);
+			ll = calculateLL(grammar, lexicon, valuator, trainTrees, maxLength);
 			endTime = System.currentTimeMillis();
 			likelihood.add(ll);
 			logger.trace("------->" + ll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");
-			
-			/*
-			ll = calculateLL(grammar, lexicon, validationTrees);
-			relativError = (ll - prell) / prell;
-			
-			if (ll > maxll) {
-				maxll = ll;
-				prell = ll;
-				maxGrammar = grammar;
-				maxLexicon = lexicon;
-				droppingiter = 0;
-			} else {
-				droppingiter++;
-				if (droppingiter >= opts.droppintiter) {
-					System.out.println("Maximum-allowed-dropping-time reaching");
-				}
-			}
-			
-			if (cnt > opts.maxiter) {
-				System.out.println("Maximum-iteration-time exceeding.");
-				break;
-			}
-			*/
 			
 			// we shall clear the inside and outside score in each state 
 			// of the parse tree after the training on a sample 
@@ -394,8 +406,121 @@ public class LVeGLearner extends Recorder {
 		// relative error could be negative
 		} while(++cnt <= 8) /*while (cnt > 1 && Math.abs(relativError) < opts.relativerror && droppingiter < opts.droppintiter)*/;
 		
-		logger.trace("Convergence Path: " + likelihood + "\n");
+		} else {
 		
+		do {			
+			logger.trace("\n\n-------epoch " + cnt + " begins-------\n\n");
+			short isample = 0, idx = 0;
+			long beginTime, endTime, startTime = System.currentTimeMillis();
+			long batchstart = System.currentTimeMillis(), batchend;
+			for (Tree<State> tree : trainTrees) {
+				if (tree.getYield().size() > maxLength) { continue; }
+				
+				if (isample < batchsize) { isample++; continue; }
+				
+				logger.trace("---Sample " + isample + "...\t");
+				beginTime = System.currentTimeMillis();
+				
+				double scoreT = lvegParser.evalRuleCountWithTree(tree, (short) 0);
+				double scoreS = lvegParser.evalRuleCount(tree, (short) 0);
+				
+				endTime = System.currentTimeMillis();
+				logger.trace( + (endTime - beginTime) / 1000.0 + "\t");
+				
+				scoresOfST.add(scoreT);
+				scoresOfST.add(scoreS);
+				
+				logger.trace("scores: " + MethodUtil.double2str(scoresOfST, precision, -1, false, true) + "\teval gradients... ");
+				beginTime = System.currentTimeMillis();
+				
+				grammar.evalGradients(scoresOfST, parallelgrad);
+				lexicon.evalGradients(scoresOfST, parallelgrad);
+				scoresOfST.clear();
+				
+				endTime = System.currentTimeMillis();
+				logger.trace( + (endTime - beginTime) / 1000.0 + "\n");
+				
+				isample++;
+				if (++idx % batchsize == 0) {
+					batchend = System.currentTimeMillis();
+					
+					// apply gradient descent
+					logger.trace("+++Apply gradient descent for the batch " + (isample / batchsize) + "... ");
+					beginTime = System.currentTimeMillis();
+					
+					grammar.applyGradientDescent(scoresOfST);
+					lexicon.applyGradientDescent(scoresOfST);
+					
+					endTime = System.currentTimeMillis();
+					logger.trace((endTime - beginTime) / 1000.0 + "... batch time: " + (batchend - batchstart) / 1000.0 + "\n");
+					idx = 0;
+					
+					if ((isample % (batchsize * nbatch)) == 0) {
+						
+						
+						if (saveNewGram && opts.outFile != null) {
+							GrammarFile gfile = new GrammarFile(grammar, lexicon);
+							String gfilename = opts.outFile + "_" + (isample / batchsize) + "_" + cnt + ".gr";
+							if (gfile.save(gfilename)) {
+								logger.info("\n-------save grammar file to \'" + gfile + "\'");
+							} else {
+								logger.info("\n-------failed to save grammar file to \'" + gfile + "\'");
+							}
+						}
+						
+						
+						// likelihood of the training set
+						logger.trace("\n-------ll of the training data after " + (isample / batchsize) + " batches in epoch " + cnt + " is... ");
+						beginTime = System.currentTimeMillis();
+						ll = calculateLL(grammar, lexicon, valuator, trainTrees, maxLength);
+						endTime = System.currentTimeMillis();
+						logger.trace("------->" + ll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");
+						trainTrees.reset();
+						// visualize the parse tree
+						parseTree = mrParser.parse(globalTree);
+						filename = newFilename + "_" + cnt + "_" + (isample / (batchsize * nbatch));
+						MethodUtil.saveTree2image(null, filename, parseTree);
+						// store the log score
+						likelihood.add(ll);
+					}
+		
+					batchstart = System.currentTimeMillis();
+				}
+			}
+			
+			// if not a multiple of batchsize
+			logger.trace("+++Apply gradient descent for the last batch " + (isample / batchsize) + "... ");
+			beginTime = System.currentTimeMillis();
+			grammar.applyGradientDescent(scoresOfST);
+			lexicon.applyGradientDescent(scoresOfST);
+			endTime = System.currentTimeMillis();
+			logger.trace((endTime - beginTime) / 1000.0 + "\n");
+			scoresOfST.clear();
+			
+			// a coarse summary
+			endTime = System.currentTimeMillis();
+			logger.trace("===Average time each sample cost is " + (endTime - startTime) / (1000.0 * isample) + "\n");
+			
+			// likelihood of the training set
+			logger.trace("-------ll of the training data in epoch " + cnt + " is... ");
+			beginTime = System.currentTimeMillis();
+			ll = calculateLL(grammar, lexicon, valuator, trainTrees, maxLength);
+			endTime = System.currentTimeMillis();
+			likelihood.add(ll);
+			logger.trace("------->" + ll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");
+			
+			// we shall clear the inside and outside score in each state 
+			// of the parse tree after the training on a sample 
+			trainTrees.reset();
+			trainTrees.shuffle(random);
+			
+			logger.trace("-------epoch " + cnt + " ends-------\n");
+			
+		// relative error could be negative
+		} while(++cnt <= 8) /*while (cnt > 1 && Math.abs(relativError) < opts.relativerror && droppingiter < opts.droppintiter)*/;
+		
+		
+		}
 		
 		
 //		do {			
@@ -428,7 +553,7 @@ public class LVeGLearner extends Recorder {
 //					lexicon.applyGradientDescent(scoresOfST);
 //					
 //					endTime = System.currentTimeMillis();
-//					logger.trace( + (endTime - beginTime) / 1000.0 + "\n");
+//					logger.trace((endTime - beginTime) / 1000.0 + "\n");
 //					scoresOfST.clear();
 //					idx = 0;
 //					
@@ -481,6 +606,7 @@ public class LVeGLearner extends Recorder {
 //		} while(++cnt <= 8) /*while (cnt > 1 && Math.abs(relativError) < opts.relativerror && droppingiter < opts.droppintiter)*/;
 		
 		
+		logger.trace("Convergence Path: " + likelihood + "\n");
 		/*
 		if (relativError < opts.relativerror) {
 			System.out.println("Maximum-relative-error reaching.");
@@ -489,6 +615,41 @@ public class LVeGLearner extends Recorder {
 	}
 	
 	
+	public static double calculateLL(LVeGGrammar grammar, LVeGLexicon lexicon, Parser<?> parser, StateTreeList stateTreeList, int maxLength) {
+		int nUnparsable = 0, cnt = 0;
+		double ll = 0, sumll = 0;
+		MultiThreadedParser valuator = new MultiThreadedParser(parser, 6);
+		for (Tree<State> tree : stateTreeList) {
+			if (tree.getYield().size() > maxLength) { continue; }
+			if (++cnt > 200) { break; } // DEBUG
+			valuator.parse(tree);
+			while (valuator.hasNext()) {
+				ll = (double) valuator.getNext();
+				if (Double.isInfinite(ll) || Double.isNaN(ll)) {
+					nUnparsable++;
+				} else {
+					sumll += ll;
+				}
+			}
+		}
+		cnt = 0;
+		while (!valuator.isDone()) {
+			while (valuator.hasNext()) {
+				ll = (double) valuator.getNext();
+				if (Double.isInfinite(ll) || Double.isNaN(ll)) {
+					nUnparsable++;
+				} else {
+					sumll += ll;
+				}
+			}
+		}
+		valuator.shutdown();
+		logger.trace("\n[in calculating log likelihood " + nUnparsable + " unparsable sample(s) of " + stateTreeList.size() + " training samples]\n");
+		return sumll;
+	}
+	
+	
+/*	
 	public static double calculateLL(LVeGGrammar grammar, LVeGLexicon lexicon, LVeGParser parser, StateTreeList stateTreeList, int maxLength) {
 		int nUnparsable = 0, cnt = 0;
 		double ll = 0, sumll = 0;
@@ -521,27 +682,27 @@ public class LVeGLearner extends Recorder {
 		logger.trace("\n[in calculating log likelihood " + nUnparsable + " unparsable sample(s) of " + stateTreeList.size() + " training samples]\n");
 		return sumll;
 	}
-	
-	
-/*	
-	public static double calculateLL(LVeGGrammar grammar, LVeGLexicon lexicon, LVeGParser parser, StateTreeList stateTreeList, int maxLength) {
-		int nUnparsable = 0, cnt = 0;
-		double ll = 0, sumll = 0;
-		for (Tree<State> tree : stateTreeList) {
-			if (tree.getYield().size() > maxLength) { continue; }
-			if (++cnt > 200) { break; }
-			ll = parser.probability(tree);
-			if (Double.isInfinite(ll) || Double.isNaN(ll)) {
-				nUnparsable++;
-			} else {
-				// logger.trace("\n===> sub-ll: " + ll + ", id: " + (cnt - 1) + "\n"); // DEBUG
-				sumll += ll;
-			}
-		}
-		logger.trace("\n[in calculating log likelihood " + nUnparsable + " unparsable sample(s) of " + stateTreeList.size() + " training samples]\n");
-		return sumll;
-	}
 */	
+	
+	
+//	public static double calculateLL(LVeGGrammar grammar, LVeGLexicon lexicon, Valuator parser, StateTreeList stateTreeList, int maxLength) {
+//		int nUnparsable = 0, cnt = 0;
+//		double ll = 0, sumll = 0;
+//		for (Tree<State> tree : stateTreeList) {
+//			if (tree.getYield().size() > maxLength) { continue; }
+//			if (++cnt > 200) { break; }
+//			ll = parser.probability(tree);
+//			if (Double.isInfinite(ll) || Double.isNaN(ll)) {
+//				nUnparsable++;
+//			} else {
+//				// logger.trace("\n===> sub-ll: " + ll + ", id: " + (cnt - 1) + "\n"); // DEBUG
+//				sumll += ll;
+//			}
+//		}
+//		logger.trace("\n[in calculating log likelihood " + nUnparsable + " unparsable sample(s) of " + stateTreeList.size() + " training samples]\n");
+//		return sumll;
+//	}
+	
 	
 	private static void initializeLearner(Options opts) {
 		if (opts.outFile == null) {

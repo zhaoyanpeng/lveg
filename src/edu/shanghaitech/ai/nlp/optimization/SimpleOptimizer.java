@@ -12,6 +12,10 @@ import edu.shanghaitech.ai.nlp.lveg.GrammarRule;
  *
  */
 public class SimpleOptimizer extends Optimizer {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -1474006225613054835L;
 	private SimpleMinimizer minimizer;
 	
 	private SimpleOptimizer() {
@@ -24,15 +28,16 @@ public class SimpleOptimizer extends Optimizer {
 	public SimpleOptimizer(Random random) {
 		this();
 		rnd = random;
-		this.minimizer = new SimpleMinimizer(random, maxsample);
+		this.minimizer = new SimpleMinimizer(random, maxsample, batchsize);
 	}
 	
 	
-	public SimpleOptimizer(Random random, short nsample) {
+	public SimpleOptimizer(Random random, short msample, short bsize) {
 		this();
 		rnd = random;
-		maxsample = nsample;
-		this.minimizer = new SimpleMinimizer(random, maxsample);
+		batchsize = bsize;
+		maxsample = msample;
+		this.minimizer = new SimpleMinimizer(random, maxsample, batchsize);
 	}
 	
 	

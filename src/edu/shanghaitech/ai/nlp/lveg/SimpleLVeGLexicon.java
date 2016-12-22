@@ -16,10 +16,11 @@ import edu.shanghaitech.ai.nlp.syntax.State;
  * @author Yanpeng Zhao
  *
  */
-public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
-
-	private static final long serialVersionUID = 1L;
-	
+public class SimpleLVeGLexicon extends LVeGLexicon {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -1066429113106930585L;
 	public IndexMap[] wordIndexMap;
 	public Indexer<String> wordIndexer;
 
@@ -64,7 +65,7 @@ public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
 		this.wordIndexMap = new IndexMap[nTag];
 		this.wordCounter = new int[nWord];
 //		this.optimizer = new Optimizer(LVeGLearner.random);
-		this.optimizer = new ParallelOptimizer(LVeGLearner.random);
+//		this.optimizer = new ParallelOptimizer(LVeGLearner.random);
 		
 		for (int i = 0; i < nTag; i++) {
 			wordIndexMap[i] = new IndexMap(nWord);
@@ -100,6 +101,12 @@ public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
 				optimizer.addRule(urules[i][j]);
 			}
 		}
+		labelTrees(trees); // CHECK stupid method, need to make it independent with lexicon, use as the static method?
+	}
+	
+	
+	@Override
+	public void labelTrees(StateTreeList trees) {
 		labelTrees(wordIndexer, trees);
 	}
 	
@@ -216,9 +223,10 @@ public class SimpleLVeGLexicon extends LVeGLexicon implements Serializable {
 	 *
 	 */
 	protected static class IndexMap implements Serializable {
-
-		private static final long serialVersionUID = 1L;
-		
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 7305207097186685083L;
 		private int count;
 		private List<Integer> to;
 		private List<Integer> from;

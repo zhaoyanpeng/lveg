@@ -9,8 +9,12 @@ import java.util.List;
  *
  */
 public class DiagonalGaussianDistribution extends GaussianDistribution {
-	
-	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 4484028334969182856L;
+
+
 	public DiagonalGaussianDistribution() {
 		super();
 	}

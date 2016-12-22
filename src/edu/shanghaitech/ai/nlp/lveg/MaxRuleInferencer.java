@@ -16,6 +16,10 @@ import edu.shanghaitech.ai.nlp.syntax.State;
  *
  */
 public class MaxRuleInferencer extends Inferencer {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 3844565735030401845L;
 
 	public MaxRuleInferencer(LVeGGrammar grammar, LVeGLexicon lexicon) {
 		this.grammar = grammar;

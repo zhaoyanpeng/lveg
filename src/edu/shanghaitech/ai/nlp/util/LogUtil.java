@@ -1,5 +1,7 @@
 package edu.shanghaitech.ai.nlp.util;
 
+import java.io.Serializable;
+
 import org.apache.log4j.Logger;
 import org.apache.log4j.xml.DOMConfigurator;
 
@@ -12,7 +14,12 @@ import org.apache.log4j.xml.DOMConfigurator;
  * @author Yanpeng Zhao
  *
  */
-public class LogUtil {
+public class LogUtil implements Serializable {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -113853579415943859L;
+
 	private static LogUtil instance;
 	
 	private static Logger logCons = null;

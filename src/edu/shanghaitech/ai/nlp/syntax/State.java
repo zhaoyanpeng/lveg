@@ -1,5 +1,7 @@
 package edu.shanghaitech.ai.nlp.syntax;
 
+import java.io.Serializable;
+
 import edu.berkeley.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.lveg.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
@@ -12,8 +14,11 @@ import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
  * @author Yanpeng Zhao
  *
  */
-public class State {
-	
+public class State implements Serializable {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -7306026179545408514L;
 	private String name; 
 	private short id;
 	

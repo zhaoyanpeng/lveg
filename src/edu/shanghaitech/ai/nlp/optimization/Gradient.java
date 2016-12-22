@@ -1,5 +1,6 @@
 package edu.shanghaitech.ai.nlp.optimization;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -14,15 +15,21 @@ import edu.shanghaitech.ai.nlp.util.Recorder;
  * @author Yanpeng Zhao
  *
  */
-public class Gradient extends Recorder {
+public class Gradient extends Recorder implements Serializable {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 2620919219751675203L;
 	/*
 	 * It always holds the counts calculated from only one sample, 
 	 * which is equally saying that the batch size is always 1.
 	 */
 	protected static final short MAX_BATCH_SIZE = 1;
-	protected static short maxsample;
-	protected static Random rnd;
-	
+	/*
+	protected static short maxsample = Optimizer.maxsample;
+	protected static short batchsize = Optimizer.batchsize;
+	protected static Random rnd = Optimizer.rnd;
+	*/
 	protected boolean updated;
 	protected boolean cumulative;
 	protected List<Double> wgrads;
@@ -32,9 +39,12 @@ public class Gradient extends Recorder {
 	protected Map<String, List<Double>> sample;
 	
 	
-	public Gradient(GrammarRule rule, Random random, short nsample) {
+	public Gradient(GrammarRule rule, Random random, short msample, short bsize) {
+		/*
 		rnd = random;
-		maxsample = nsample;
+		batchsize = bsize;
+		maxsample = msample;
+		*/
 		initialize(rule);
 	}
 	
@@ -55,7 +65,7 @@ public class Gradient extends Recorder {
 		if (!updated) { return false; } // no need to update because no gradients could be applied
 		GaussianMixture ruleW = rule.getWeight();
 		for (int icomponent = 0; icomponent < ruleW.ncomponent(); icomponent++) {
-			ruleW.update(icomponent, ggrads.get(icomponent), wgrads);
+			ruleW.update(icomponent, ggrads.get(icomponent), wgrads, Optimizer.maxsample/*maxsample * batchsize*/);
 		}
 		reset();
 		return true;
@@ -91,8 +101,8 @@ public class Gradient extends Recorder {
 		for (int icomponent = 0; icomponent < ruleW.ncomponent(); icomponent++) {
 			ggrad = ggrads.get(icomponent);
 			iallocated = false; // assume ggrad has not been allocated
-			for (short isample = 0; isample < maxsample; isample++) {
-				ruleW.sample(icomponent, sample, truths, rnd);
+			for (short isample = 0; isample < Optimizer.maxsample; isample++) {
+				ruleW.sample(icomponent, sample, truths, Optimizer.rnd);
 				
 //				logger.trace("\n" + rule + ", icomp" + icomponent + ", isample: " + isample + "\nsample: " + sample + "\ntruths: " + truths + "\n"); // DEBUG
 				

@@ -1,5 +1,6 @@
 package edu.shanghaitech.ai.nlp.optimization;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -13,7 +14,11 @@ import edu.shanghaitech.ai.nlp.util.Recorder;
  * @author Yanpeng Zhao
  *
  */
-public abstract class Optimizer extends Recorder {
+public abstract class Optimizer extends Recorder implements Serializable {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -6185772433718644490L;
 	/**
 	 * Pseudo counts of grammar rules given the parse tree (countWithT) or the sentence (countWithS).
 	 */
@@ -27,24 +32,26 @@ public abstract class Optimizer extends Recorder {
 	protected Set<GrammarRule> ruleSet;
 	protected static Random rnd;
 	protected static short maxsample = 2;
+	protected static short batchsize = 1;
+	
+	
+	/**
+	 * @param scoreSandT the parse tree score (odd index) and the sentence score (even index)
+	 * @param parallel   parallel (true) or serialize (false)
+	 */
+	public abstract void evalGradients(List<Double> scoresST, boolean parallel);
 	
 	/**
 	 * Stochastic gradient descent.
 	 * 
 	 * @param scoresOfST the parse tree score (odd index) and the sentence score (even index)
 	 */
-	protected abstract void applyGradientDescent(List<Double> scoresST);
-	
-	/**
-	 * @param scoreSandT the parse tree score (odd index) and the sentence score (even index)
-	 * @param parallel   parallel (true) or serialize (false)
-	 */
-	protected abstract void evalGradients(List<Double> scoresST, boolean parallel);
+	public abstract void applyGradientDescent(List<Double> scoresST);
 	
 	/**
 	 * @param rule the rule that needs optimizing.
 	 */
-	protected abstract void addRule(GrammarRule rule);
+	public abstract void addRule(GrammarRule rule);
 	
 	protected abstract void reset();
 	
@@ -84,6 +91,22 @@ public abstract class Optimizer extends Recorder {
 		logger.error("Not a valid grammar rule or the rule was not found.\n");
 		return null;
 	}
+	
+	
+	/**
+	 * Terrible data-structure design. Object saving leaves out the static members of the object.
+	 * FIXME no errors, just alert you to pay attention to it and improve it in future.
+	 * 
+	 * @param random
+	 * @param msample
+	 * @param bsize
+	 */
+	public static void config(Random random, short msample, short bsize) {
+		rnd = random;
+		batchsize = bsize;
+		maxsample = msample;
+	}
+	
 	
 	/**
 	 * Get set of the rules.

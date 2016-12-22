@@ -12,12 +12,10 @@ import java.util.Set;
  *
  */
 public class RuleTable<T> implements Serializable {
-
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 1L;
-
+	private static final long serialVersionUID = 7379371632425330796L;
 	Class<T> type;
 	Map<GrammarRule, GaussianMixture> table;
 	

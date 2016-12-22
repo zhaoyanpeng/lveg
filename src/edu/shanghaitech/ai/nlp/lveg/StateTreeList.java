@@ -1,5 +1,6 @@
 package edu.shanghaitech.ai.nlp.lveg;
 
+import java.io.Serializable;
 import java.util.AbstractCollection;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -15,8 +16,12 @@ import edu.shanghaitech.ai.nlp.syntax.State;
  * @author Yanpeng Zhao
  *
  */
-public class StateTreeList extends AbstractCollection<Tree<State>> {
-	
+public class StateTreeList extends AbstractCollection<Tree<State>> implements Serializable {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 6424710107698526446L;
+
 	private final static short ZERO = 0;
 	
 	private List<Tree<State>> trees;

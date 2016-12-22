@@ -7,12 +7,10 @@ import java.io.Serializable;
  *
  */
 public abstract class GrammarRule implements Serializable {
-
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 1L;
-	
+	private static final long serialVersionUID = -1464935410648668068L;
 	public final static byte LRBRULE = 3; // left and right hand sides, binary rule
 	public final static byte RHSPACE = 2; 
 	public final static byte LHSPACE = 1; 

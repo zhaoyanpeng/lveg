@@ -11,10 +11,15 @@ public class LVeGLearnerTest {
 	public void testLVeGLearner() {
 		String corpusPath = ROOT + "wsj_s2-21_tree";
 //		String corpusPath = ROOT + "treebank/combined/";
-		String outputFile = ROOT + "treebank/grammar.gr";
+//		String outputFile = ROOT + "treebank/grammar.gr";
 		String logFile = "log/ll_parallel";
+//		String inputFile = ROOT + "lvegrammar.gr";
+		String inputFile = ROOT + "lvegrammar_1_0.gr";
+		String outputFile = ROOT + "lvegrammar";
 		
-		String[] args = {"-pathToCorpus", corpusPath, "-out", outputFile, /*"-logType",*/ "-logFile", logFile};
+		
+		String[] args = {"-pathToCorpus", corpusPath, "-out", outputFile, /*"-logType",*/ "-logFile", logFile,
+				"-in", inputFile};
 		
 		try {
 			LVeGLearner.main(args);

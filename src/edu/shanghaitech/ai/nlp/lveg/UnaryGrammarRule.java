@@ -11,12 +11,10 @@ import java.util.Set;
  *
  */
 public class UnaryGrammarRule extends GrammarRule implements Comparable<Object> {
-
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 1L;
-	
+	private static final long serialVersionUID = 7796142278063439713L;
 	/**
 	 * the ID of the right-hand side nonterminal
 	 */

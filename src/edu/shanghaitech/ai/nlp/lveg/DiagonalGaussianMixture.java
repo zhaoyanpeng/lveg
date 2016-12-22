@@ -11,6 +11,11 @@ import java.util.Set;
  *
  */
 public class DiagonalGaussianMixture extends GaussianMixture {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1083077972374093199L;
+
 
 	public DiagonalGaussianMixture() {
 		super();

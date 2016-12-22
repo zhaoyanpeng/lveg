@@ -10,12 +10,10 @@ import java.util.HashSet;
  *
  */
 public class BinaryGrammarRule extends GrammarRule implements Comparable<Object> {
-
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 1L;
-	
+	private static final long serialVersionUID = 7092883784519182728L;
 	/**
 	 * the IDs of the two right-hand side nonterminals
 	 */
