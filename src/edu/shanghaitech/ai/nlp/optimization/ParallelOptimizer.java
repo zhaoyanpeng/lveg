@@ -30,10 +30,10 @@ public class ParallelOptimizer extends Optimizer {
 	 * 
 	 */
 	private static final long serialVersionUID = -6206396492328441930L;
-	private static final short THREADS_NUM = 3; // TODO make it non-static
 	protected enum ParallelMode {
 		INVOKE_ALL, COMPLETION_SERVICE, CUSTOMIZED_BLOCK, FORK_JOIN
 	}
+	private short nthread;
 	private ParallelMode mode;
 	private Map<GrammarRule, Gradient> gradients; // gradients
 	
@@ -55,17 +55,19 @@ public class ParallelOptimizer extends Optimizer {
 	}
 	
 	
-	public ParallelOptimizer(Random random) {
+	public ParallelOptimizer(Random random, short nthread) {
 		this();
 		rnd = random;
+		this.nthread = nthread;
 	}
 	
 	
-	public ParallelOptimizer(Random random, short msample, short bsize) {
+	public ParallelOptimizer(Random random, short msample, short bsize, short nthread) {
 		this();
 		rnd = random;
 		batchsize = bsize;
 		maxsample = msample;
+		this.nthread = nthread;
 	}
 	
 	
@@ -122,7 +124,7 @@ public class ParallelOptimizer extends Optimizer {
 		int nchanged = 0;
 		try {
 			if (pool == null) { 
-				pool = Executors.newFixedThreadPool(THREADS_NUM); 
+				pool = Executors.newFixedThreadPool(nthread); 
 			}
 			List<Future<Boolean>> futures = pool.invokeAll(tasks);
 			for (Future<Boolean> future : futures) {
@@ -144,7 +146,7 @@ public class ParallelOptimizer extends Optimizer {
 	private void useCompletionService() {
 		boolean exit = true;
 		int nchanged = 0, isdone = 0;
-		pool = Executors.newFixedThreadPool(THREADS_NUM);
+		pool = Executors.newFixedThreadPool(nthread);
 		service = new ExecutorCompletionService<Boolean>(pool);
 		for (Callable<Boolean> task : tasks) {
 			service.submit(task);
@@ -176,7 +178,7 @@ public class ParallelOptimizer extends Optimizer {
 			futures = new ArrayList<Future<Boolean>>(ruleSet.size()); 
 		}
 		futures.clear();
-		pool = Executors.newFixedThreadPool(THREADS_NUM);
+		pool = Executors.newFixedThreadPool(nthread);
 		for (Callable<Boolean> task : tasks) {
 			futures.add(pool.submit(task));
 		}
@@ -213,7 +215,7 @@ public class ParallelOptimizer extends Optimizer {
 		if (watch == null) { watch = new Watch(); }
 		if (ruleArray == null) { ruleArray = ruleSet.toArray(new GrammarRule[0]); }
 		watch.clear();
-		ForkJoinPool pool = new ForkJoinPool(THREADS_NUM);
+		ForkJoinPool pool = new ForkJoinPool(nthread);
 		ParallelForLoop loop = new ParallelForLoop(0, ruleArray.length, scoreSandT);
 		pool.invoke(loop);
 		logger.trace("nchanged: " + watch.nchanged + " of " + ruleArray.length + "(" + watch.nskipped + ")" + "...");
@@ -317,7 +319,7 @@ public class ParallelOptimizer extends Optimizer {
 	class ParallelForLoop extends RecursiveAction {
 		/* */
 		private static final long serialVersionUID = 1L;
-		private int step = ruleArray.length / THREADS_NUM;
+		private int step = ruleArray.length / nthread;
 		
 		private List<Double> score;
 		private int from, to;
