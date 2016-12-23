@@ -15,7 +15,7 @@ public abstract class Parser<T> extends Recorder implements Callable<Object>, Se
 	 */
 	private static final long serialVersionUID = -7112164011234304607L;
 	protected static final short MAX_SENTENCE_LEN = 12;
-	protected static class Meta<T> {
+	public static class Meta<T> {
 		public int id;
 		public T value;
 		public Meta(int id, T value) {

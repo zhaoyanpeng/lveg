@@ -31,10 +31,10 @@ public class LVeGInferencer extends Inferencer {
 	private static final long serialVersionUID = -3716227615216124859L;
 
 
-	public LVeGInferencer(LVeGGrammar grammar, LVeGLexicon lexicon) {
-		this.grammar = grammar;
-		this.lexicon = lexicon;
-		this.chainurule = ChainUrule.DEFAULT;
+	public LVeGInferencer(LVeGGrammar agrammar, LVeGLexicon alexicon) {
+		grammar = agrammar;
+		lexicon = alexicon;
+		chainurule = ChainUrule.DEFAULT;
 	}
 	
 	
@@ -44,7 +44,7 @@ public class LVeGInferencer extends Inferencer {
 	 * @param tree the parse tree
 	 * @return
 	 */
-	protected void insideScoreWithTree(Tree<State> tree) {
+	protected static void insideScoreWithTree(Tree<State> tree) {
 		if (tree.isLeaf()) { return; }
 		List<Tree<State>> children = tree.getChildren();
 		for (Tree<State> child : children) {
@@ -107,7 +107,7 @@ public class LVeGInferencer extends Inferencer {
 	 * 
 	 * @param tree the parse tree
 	 */
-	protected void outsideScoreWithTree(Tree<State> tree) {
+	protected static void outsideScoreWithTree(Tree<State> tree) {
 		if (tree.isLeaf()) { return; }
 		List<Tree<State>> children = tree.getChildren();
 		State parent = tree.getLabel();
@@ -353,7 +353,7 @@ public class LVeGInferencer extends Inferencer {
 	 * 
 	 * @param tree the parse tree
 	 */
-	protected void setRootOutsideScore(Tree<State> tree) {
+	protected static void setRootOutsideScore(Tree<State> tree) {
 		GaussianMixture gm = new DiagonalGaussianMixture((short) 1);
 		gm.marginalizeToOne();
 		tree.getLabel().setOutsideScore(gm);

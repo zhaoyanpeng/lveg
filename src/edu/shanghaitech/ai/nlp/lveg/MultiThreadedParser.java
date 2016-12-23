@@ -70,7 +70,7 @@ public class MultiThreadedParser extends Recorder implements Serializable {
 	}
 	
 	
-	protected Object getNext() {
+	public Object getNext() {
 		if (!hasNext()) { return new Double(0.0); }
 		lastReturn++;
 		// logger.trace("\n--->last-ret: " + lastReturn + "\n"); // DEBUG
@@ -83,7 +83,7 @@ public class MultiThreadedParser extends Recorder implements Serializable {
 	}
 	
 	
-	protected boolean hasNext() {
+	public boolean hasNext() {
 		synchronized (scores) {
 			if (scores.isEmpty()) { return false; }
 			Meta<?> score = scores.peek();
@@ -93,12 +93,12 @@ public class MultiThreadedParser extends Recorder implements Serializable {
 	}
 	
 	
-	protected boolean isDone() {
+	public boolean isDone() {
 		return (lastSubmission - 1) == lastReturn;
 	}
 	
 	
-	protected void shutdown() {
+	public void shutdown() {
 		if (pool != null) {
 			try {
 				pool.shutdown();

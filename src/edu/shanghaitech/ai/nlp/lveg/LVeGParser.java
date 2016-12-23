@@ -111,12 +111,12 @@ public class LVeGParser<T> extends Parser<T> {
 			chart = new Chart(nword, false);
 		}
 //		logger.trace("\nInside score...\n"); // DEBUG
-		inferencer.insideScore(chart, sentence, nword);
+		LVeGInferencer.insideScore(chart, sentence, nword);
 //		MethodUtil.debugChart(Chart.iGetChart(), (short) 2); // DEBUG
 
 //		logger.trace("\nOutside score...\n"); // DEBUG
-		inferencer.setRootOutsideScore(chart);
-		inferencer.outsideScore(chart, sentence, nword);
+		LVeGInferencer.setRootOutsideScore(chart);
+		LVeGInferencer.outsideScore(chart, sentence, nword);
 //		MethodUtil.debugChart(Chart.oGetChart(), (short) 2); // DEBUG
 		
 		GaussianMixture score = chart.getInsideScore((short) 0, Chart.idx(0, 1));
@@ -141,12 +141,12 @@ public class LVeGParser<T> extends Parser<T> {
 	 */
 	private double doInsideOutsideWithTree(Tree<State> tree) {
 //		logger.trace("\nInside score with the tree...\n"); // DEBUG	
-		inferencer.insideScoreWithTree(tree);
+		LVeGInferencer.insideScoreWithTree(tree);
 //		MethodUtil.debugTree(tree, false, (short) 2); // DEBUG
 		
 //		logger.trace("\nOutside score with the tree...\n"); // DEBUG
-		inferencer.setRootOutsideScore(tree);
-		inferencer.outsideScoreWithTree(tree);
+		LVeGInferencer.setRootOutsideScore(tree);
+		LVeGInferencer.outsideScoreWithTree(tree);
 //		MethodUtil.debugTree(tree, false, (short) 2); // DEBUG
 		
 		// the parse tree score, which should contain only weights of the components

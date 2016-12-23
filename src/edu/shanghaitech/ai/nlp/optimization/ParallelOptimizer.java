@@ -191,9 +191,9 @@ public class ParallelOptimizer extends Optimizer {
 				}
 				done = done ? false : true;
 			} // I observe that enumerating the futures can ensure right outputs, why?
-			// errors may occur when comment the while loop and the exit line
+			// errors may occur when comment the while loop and the 'exit' line
 			exit = pool.awaitTermination(10, TimeUnit.MILLISECONDS);
-			for (Future<Boolean> future : futures) {
+			for (Future<Boolean> future : futures) { // counting debugging data
 				if (future.get()) { nchanged++; }
 				if (future.isDone()) { isdone++; }
 				// exchange the above two lines, isdone would be wrongly counted, why?

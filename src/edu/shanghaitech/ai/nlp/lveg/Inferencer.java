@@ -17,10 +17,10 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	 * 
 	 */
 	private static final long serialVersionUID = 3449371510125004187L;
-	protected LVeGLexicon lexicon;
-	protected LVeGGrammar grammar;
+	protected static LVeGLexicon lexicon;
+	protected static LVeGGrammar grammar;
 	
-	protected ChainUrule chainurule;
+	protected static ChainUrule chainurule;
 	
 	protected final static short ROOT = 0;
 	protected final static short LENGTH_UCHAIN = 2;
@@ -49,7 +49,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	 * @param tree  in which only the sentence is used
 	 * @param nword # of words in the sentence
 	 */
-	protected void insideScore(Chart chart, List<State> sentence, int nword) {
+	protected static void insideScore(Chart chart, List<State> sentence, int nword) {
 		int x0, y0, x1, y1, c0, c1, c2;
 		GaussianMixture pinScore, linScore, rinScore, ruleScore;
 		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBinaryRuleMap();
@@ -114,7 +114,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	 * @param tree  in which only the sentence is used.
 	 * @param nword # of words in the sentence
 	 */
-	protected void outsideScore(Chart chart, List<State> sentence, int nword) {
+	protected static void outsideScore(Chart chart, List<State> sentence, int nword) {
 		int x0, y0, x1, y1, c0, c1, c2;
 		GaussianMixture poutScore, linScore, rinScore, loutScore, routScore, ruleScore;
 		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBinaryRuleMap();
@@ -177,7 +177,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 		}
 	}
 	
-	private void outsideScoreForUnaryRule(Chart chart, int idx, ChainUrule identifier) {
+	private static void outsideScoreForUnaryRule(Chart chart, int idx, ChainUrule identifier) {
 		switch (identifier) {
 		case DEFAULT: {
 			outsideScoreForUnaryRuleDefault(chart, idx);
@@ -189,7 +189,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	}
 	
 	
-	private void insideScoreForUnaryRule(Chart chart, int idx, ChainUrule identifier) {
+	private static void insideScoreForUnaryRule(Chart chart, int idx, ChainUrule identifier) {
 		switch (identifier) {
 		case DEFAULT: {
 			insideScoreForUnaryRuleDefault(chart, idx);
@@ -200,7 +200,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 		}
 	}
 	
-	private void outsideScoreForUnaryRuleDefault(Chart chart, int idx) {
+	private static void outsideScoreForUnaryRuleDefault(Chart chart, int idx) {
 		Set<Short> set;
 		short level = 0;
 		List<GrammarRule> rules;
@@ -234,7 +234,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 		}
 	}
 	
-	private void insideScoreForUnaryRuleDefault(Chart chart, int idx) {
+	private static void insideScoreForUnaryRuleDefault(Chart chart, int idx) {
 		String rmKey;
 		Set<Short> set;
 		short level = 0;
@@ -274,7 +274,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	/**
 	 * @param chart 
 	 */
-	protected void setRootOutsideScore(Chart chart) {
+	protected static void setRootOutsideScore(Chart chart) {
 		GaussianMixture gm = new DiagonalGaussianMixture((short) 1);
 		gm.marginalizeToOne();
 		chart.addOutsideScore((short) 0, Chart.idx(0, 1), gm, (short) (LENGTH_UCHAIN + 1));

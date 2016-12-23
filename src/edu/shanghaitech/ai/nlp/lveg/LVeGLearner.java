@@ -201,9 +201,9 @@ public class LVeGLearner extends Recorder {
 		String oldFilename = "log/groundtruth";
 		String filename, newFilename = "log/maxrulerets_chart";
 		
-		batchsize = 6;
+		batchsize = 60;
 		short maxsample = 3;
-		short ntheadgrad = 3, nthreadeval = 6, nthreadbatch = 3; // eval gradients, calculate ll, parallelize in the batch
+		short ntheadgrad = 6, nthreadeval = 6, nthreadbatch = 6; // eval gradients, calculate ll, parallelize in the batch
 		boolean parallelgrad = true, parallelbatch = true;
 		boolean useOldGram = false, saveNewGram = false;
 		int cnt = 0, droppingiter = 0, maxLength = 7, nbatch = 1;
