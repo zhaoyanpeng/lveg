@@ -48,7 +48,6 @@ public class LVeGParser<T> extends Parser<T> {
 			inferencer.evalRuleCountWithTree(sample, (short) 0);
 			inferencer.evalRuleCount(sample, chart, (short) 0);
 			inferencer.evalGradients(scores, parallel);
-			inferencer.notifyAll();
 		}
 		Meta<T> cache = new Meta(isample, scores);
 		synchronized (caches) {

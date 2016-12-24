@@ -133,7 +133,6 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 				slice.add(norm);
 				truth.add(real);
 			}
-//			rnd.notifyAll();
 //		}
 	}
 	

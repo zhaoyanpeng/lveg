@@ -87,7 +87,7 @@ public class MultiThreadedParser extends Recorder implements Serializable {
 		synchronized (scores) {
 			if (scores.isEmpty()) { return false; }
 			Meta<?> score = scores.peek();
-			scores.notifyAll();
+			scores.notifyAll(); // actually unnecessary
 			return score.id == (lastReturn + 1);
 		}
 	}
