@@ -18,7 +18,7 @@ public class LVeGLearnerTest {
 		String outputFile = ROOT + "lvegrammar";
 		
 		
-		String[] args = {"-pathToCorpus", corpusPath, "-out", outputFile, /*"-logType",*/ "-logFile", logFile,
+		String[] args = {"-train", corpusPath, "-out", outputFile, /*"-logType",*/ "-logFile", logFile,
 				"-in", inputFile};
 		
 		try {

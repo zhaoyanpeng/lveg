@@ -1,6 +1,8 @@
 package edu.shanghaitech.ai.nlp.lveg;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -62,6 +64,13 @@ public class Java {
 	
 	
 	@Test
+	public void testDate() {
+		String timeStamp = new SimpleDateFormat(".yyyyMMddHHmmss").format(new Date());
+		System.out.println(timeStamp);
+	}
+	
+	
+//	@Test
 	public void testMain() {
 		class LL {
 			int x = 0;

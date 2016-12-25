@@ -30,6 +30,7 @@ import edu.shanghaitech.ai.nlp.lveg.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.GrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.Inferencer.Cell;
 import edu.shanghaitech.ai.nlp.lveg.Inferencer.Chart;
+import edu.shanghaitech.ai.nlp.lveg.LVeGLearner.Options;
 import edu.shanghaitech.ai.nlp.lveg.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
 import edu.shanghaitech.ai.nlp.lveg.LVeGLexicon;
@@ -263,6 +264,15 @@ public class MethodUtil extends Recorder {
 		StringBuilder sb = new StringBuilder();
 		toString(tree, simple, nfirst, sb);
 		logger.debug(sb + "\n");
+	}
+	
+	public static void debugNumbererTag(Numberer numbererTag, Options opts) {
+		if (opts.verbose || true) {
+			for (int i = 0; i < numbererTag.size(); i++) {
+//				logger.trace("Tag " + i + "\t" +  (String) numbererTag.object(i) + "\n"); // DEBUG
+			}
+		}
+		logger.debug("There are " + numbererTag.size() + " observed tags.\n");
 	}
 	
 	
