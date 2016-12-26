@@ -134,6 +134,8 @@ public class LearnerConfig extends Recorder {
 		public short maxsample = 3;
 		@Option(name = "-evalfraction", usage = "fraction of the training data on which the grammar evaluation is conducted (default: 0.2)")
 		public double evalfraction = 0.2;
+		@Option(name = "-firstk", usage = "evaluate the grammar on the only first k samples, on such constraints if it is negative (default: 200)")
+		public int firstk = 200;
 		@Option(name = "-nepoch", usage = "# of epoches (default: 10)")
 		public int nepoch = 10;
 		@Option(name = "-relativediff", usage = "maximum relative difference between the neighboring iterations (default: 1e-6)")
@@ -236,7 +238,7 @@ public class LearnerConfig extends Recorder {
 		maxrandom = opts.maxrandom;
 		ncomponent = opts.ncomponent;
 		randomseed = 0/*opts.randomSeed*/;
-		random = new Random(randomseed);
+		random = new Random(randomseed); // FIXME random and random seed
 		Params.config(opts);
 	}
 	

@@ -1,8 +1,9 @@
-/bin/
-/log/
-/classes/
+bin/
+log/
+target/
+classes/
 
-/.settings/
+.settings/
 .classpath
 .gitignore
 .project

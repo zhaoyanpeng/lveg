@@ -25,7 +25,7 @@ public class LVeGLearner extends LearnerConfig {
 	private static final long serialVersionUID = 1249878080098056557L;
 
 	public static void main(String[] args) throws Exception {
-		String fparams = "param.ini";
+		String fparams = args[0];
 		try {
 			args = readFile(fparams, StandardCharsets.UTF_8).split(",");
 		} catch (IOException e) {
@@ -78,15 +78,15 @@ public class LVeGLearner extends LearnerConfig {
 			
 			for (Tree<State> tree : trainTrees) {
 				if (tree.getYield().size() == 6) {
-					globalTree = tree.copy();
+					globalTree = tree.shallowClone();
 					break;
 				} // a global tree
 			}
 		} else {
 			Optimizer goptimizer = new ParallelOptimizer(LVeGLearner.random, opts.maxsample, 
-					opts.batchsize, opts.ntheadgrad, opts.parallelgrad, opts.parallelmode, true/*opts.pverbose*/);
+					opts.batchsize, opts.ntheadgrad, opts.parallelgrad, opts.parallelmode, opts.pverbose);
 			Optimizer loptimizer = new ParallelOptimizer(LVeGLearner.random, opts.maxsample, 
-					opts.batchsize, opts.ntheadgrad, opts.parallelgrad, opts.parallelmode, true/*opts.pverbose*/);
+					opts.batchsize, opts.ntheadgrad, opts.parallelgrad, opts.parallelmode, opts.pverbose);
 			grammar.setOptimizer(goptimizer);
 			lexicon.setOptimizer(loptimizer);
 			
@@ -94,7 +94,7 @@ public class LVeGLearner extends LearnerConfig {
 				lexicon.tallyStateTree(tree);
 				grammar.tallyStateTree(tree);
 				if (tree.getYield().size() == 6) {
-					globalTree = tree.copy();
+					globalTree = tree.shallowClone();
 				} // a global tree
 			}
 			logger.trace("\n--->Going through the training set is over...");
@@ -386,7 +386,10 @@ public class LVeGLearner extends LearnerConfig {
 			if (opts.onlyLength > 0) {
 				if (tree.getYield().size() > opts.onlyLength) { continue; }
 			}
-			if (++cnt > 200) { break; } // DEBUG
+			if (opts.firstk > 0) {
+				if (++cnt > opts.firstk) { break; } // DEBUG
+			}
+			
 			valuator.execute(tree);
 			while (valuator.hasNext()) {
 				ll = (double) valuator.getNext();

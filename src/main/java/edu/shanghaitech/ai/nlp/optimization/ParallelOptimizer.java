@@ -40,7 +40,7 @@ public class ParallelOptimizer extends Optimizer {
 	private boolean verbose;
 	private boolean parallel;
 	private ParallelMode mode;
-	private Map<GrammarRule, Gradient> gradients; // gradients
+	private final Map<GrammarRule, Gradient> gradients; // gradients
 	
 	private transient ThreadPool mpool;
 	private transient GrammarRule[] ruleArray;
@@ -82,14 +82,14 @@ public class ParallelOptimizer extends Optimizer {
 	}
 	
 	
-	private void composeTasks(List<Double> scoreSandT) {
+	private void composeTasks(final List<Double> scoreSandT) {
 		if (tasks == null) {
 			tasks = new ArrayList<Callable<Boolean>>(ruleSet.size()); 
 		}
-		for (GrammarRule rule : ruleSet) {
+		for (final GrammarRule rule : ruleSet) {
 			boolean updated = false;
-			Batch cntWithT = cntsWithT.get(rule);
-			Batch cntWithS = cntsWithS.get(rule);
+			final Batch cntWithT = cntsWithT.get(rule);
+			final Batch cntWithS = cntsWithS.get(rule);
 			for (short i = 0; i < Gradient.MAX_BATCH_SIZE; i++) {
 				if (cntWithT.get(i) != null || cntWithS.get(i) != null) { 
 					updated = true; 
