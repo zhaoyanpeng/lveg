@@ -13,7 +13,6 @@ lazy val commonSettings = Seq(
 	Library.BerkeleyParser
   ),
   javacOptions ++= Seq("-source", "1.8"),
-  javaOptions += "-Xlint:unchecked",
   javaOptions += "-Xmx10g",
   fork := true
 )
