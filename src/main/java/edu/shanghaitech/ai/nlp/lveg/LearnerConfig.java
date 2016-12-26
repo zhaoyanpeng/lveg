@@ -132,16 +132,10 @@ public class LearnerConfig extends Recorder {
 		public short batchsize = 128;
 		@Option(name = "-maxsample", usage = "sampling times when approximating gradients (default: 3)")
 		public short maxsample = 3;
-		@Option(name = "-evalfraction", usage = "fraction of the training data on which the grammar evaluation is conducted (default: 0.2)")
-		public double evalfraction = 0.2;
-		@Option(name = "-firstk", usage = "evaluate the grammar on the only first k samples, on such constraints if it is negative (default: 200)")
-		public int firstk = 200;
 		@Option(name = "-nepoch", usage = "# of epoches (default: 10)")
 		public int nepoch = 10;
 		@Option(name = "-relativediff", usage = "maximum relative difference between the neighboring iterations (default: 1e-6)")
 		public double relativerror = 1e-6;
-		@Option(name = "-onlyLength", usage = "train on only the sentences of length less than or equal to the specific length, no such constraints if it is negative (default: 50)")
-		public int onlyLength = 50;
 		@Option(name = "-ncomponent", usage = "# of gaussian components (default: 2)")
 		public short ncomponent = 2;
 		@Option(name = "-dim", usage = "dimension of the gaussian (default: 2)")
@@ -149,6 +143,19 @@ public class LearnerConfig extends Recorder {
 		@Option(name = "-maxramdom", usage = "maximum random value in initializing MoGul parameters (Default: 1)")
 		public short maxrandom = 1;
 		/* training-configurations section ends */
+		
+		/* evaluation section begins */
+		@Option(name = "-evalfraction", usage = "fraction of the training data on which the grammar evaluation is conducted (default: 0.2)")
+		public double evalfraction = 0.2;
+		@Option(name = "-onlyLength", usage = "train or eval on only the sentences of length less than or equal to the specific length, no such constraints if it is negative (default: 50)")
+		public int onlyLength = 50;
+		@Option(name = "-firstk", usage = "evaluate the grammar on the only first k samples, no such constraints if it is negative (default: 200)")
+		public int firstk = 200;
+		@Option(name = "-evalondev", usage = "evaluate the grammar on the dev-data (true) or not (false) (default: false)")
+		public boolean evalondev = true;
+		@Option(name = "-evalontrain", usage = "evaluate the grammar on the train-data (true) or not (false) (default: true)")
+		public boolean evalontrain = true;
+		/* evaluation section ends */
 		
 		/* logger configurations section begins */
 		@Option(name = "-logType", usage = "console (false) or file (true) (default: true)")
@@ -237,8 +244,8 @@ public class LearnerConfig extends Recorder {
 		precision = opts.precision;
 		maxrandom = opts.maxrandom;
 		ncomponent = opts.ncomponent;
-		randomseed = 0/*opts.randomSeed*/;
-		random = new Random(randomseed); // FIXME random and random seed
+		randomseed = opts.randomSeed;
+		random = new Random(randomseed);
 		Params.config(opts);
 	}
 	
@@ -273,7 +280,7 @@ public class LearnerConfig extends Recorder {
 		trees.put(ID_DEV, devTrees);
 		
 		if (opts.saveCorpus && opts.outCorpus != null) {
-			logger.info("\n-------save corpus file...");
+			logger.info("\n-------saving corpus file...");
 			CorpusFile corpus = new CorpusFile(trainTrees, testTrees, devTrees, numberer);
 			String filename = opts.datadir + opts.outCorpus;
 			if (corpus.save(filename)) {

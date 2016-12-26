@@ -1,11 +1,11 @@
 bin/
 log/
+libs
 target/
 classes/
-
+berkeley/
 .settings/
 .classpath
-.gitignore
 .project
 .log
 
