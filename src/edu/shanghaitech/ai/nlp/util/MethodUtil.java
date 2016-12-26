@@ -6,6 +6,9 @@ import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
@@ -553,6 +556,12 @@ public class MethodUtil extends Recorder {
 	}
 	
 	
+	public static String readFile(String path, Charset encoding) throws IOException {
+	  byte[] encoded = Files.readAllBytes(Paths.get(path));
+	  return new String(encoded, encoding);
+	}
+	
+	
 	/**
 	 * Return log(a + b) given log(a) and log(b).
 	 * 
@@ -598,7 +607,7 @@ public class MethodUtil extends Recorder {
 		TreeJPanel tjp = new TreeJPanel();
 		if (stringTree == null) {
 			stringTree = StateTreeList.stateTreeToStringTree(stateTree, Numberer.getGlobalNumberer(LVeGLearner.KEY_TAG_SET));
-			logger.trace("STRING PARSE TREE: " + stringTree + "\n");
+			logger.trace("\nSTRING PARSE TREE: " + stringTree + "\n");
 		}
 		
 		tjp.setTree(stringTree);

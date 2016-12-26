@@ -34,6 +34,7 @@ public class ParallelOptimizer extends Optimizer {
 		INVOKE_ALL, COMPLETION_SERVICE, CUSTOMIZED_BLOCK, FORK_JOIN
 	}
 	private short nthread;
+	private boolean parallel;
 	private ParallelMode mode;
 	private Map<GrammarRule, Gradient> gradients; // gradients
 	
@@ -49,7 +50,7 @@ public class ParallelOptimizer extends Optimizer {
 		this.cntsWithT = new HashMap<GrammarRule, Batch>();
 		this.ruleSet = new HashSet<GrammarRule>();
 		this.gradients = new HashMap<GrammarRule, Gradient>();
-		this.mode = ParallelMode.COMPLETION_SERVICE;
+		this.mode = ParallelMode.INVOKE_ALL;
 		this.futures = null;
 		this.tasks = null;
 	}
@@ -62,12 +63,13 @@ public class ParallelOptimizer extends Optimizer {
 	}
 	
 	
-	public ParallelOptimizer(Random random, short msample, short bsize, short nthread) {
+	public ParallelOptimizer(Random random, short msample, short bsize, short nthread, boolean parall) {
 		this();
 		rnd = random;
 		batchsize = bsize;
 		maxsample = msample;
 		this.nthread = nthread;
+		this.parallel = parall;
 	}
 	
 	
@@ -75,9 +77,20 @@ public class ParallelOptimizer extends Optimizer {
 		if (tasks == null) { 
 			tasks = new ArrayList<Callable<Boolean>>(ruleSet.size()); 
 			for (GrammarRule rule : ruleSet) {
+				boolean updated = false;
+				Batch cntWithT = cntsWithT.get(rule);
+				Batch cntWithS = cntsWithS.get(rule);
+				for (short i = 0; i < Gradient.MAX_BATCH_SIZE; i++) {
+					if (cntWithT.get(i) != null || cntWithS.get(i) != null) { 
+						updated = true; 
+						break; 
+					} 
+				}
+				if (!updated) { continue; }
 				tasks.add(new Callable<Boolean>() {
 					@Override
 					public Boolean call() throws Exception {
+						/*
 						boolean updated = false;
 						Batch cntWithT = cntsWithT.get(rule);
 						Batch cntWithS = cntsWithS.get(rule);
@@ -88,6 +101,7 @@ public class ParallelOptimizer extends Optimizer {
 							} 
 						}
 						if (!updated) { return false; }
+						*/
 						Gradient gradient = gradients.get(rule);
 						boolean ichanged = gradient.eval(rule, cntWithT, cntWithS, scoreSandT);
 						// clear
@@ -116,6 +130,7 @@ public class ParallelOptimizer extends Optimizer {
 			break;
 		}
 		}
+		tasks = null;
 	}
 	
 	
@@ -238,7 +253,7 @@ public class ParallelOptimizer extends Optimizer {
 	
 	
 	@Override
-	public void evalGradients(List<Double> scoreSandT, boolean parallel) {
+	public void evalGradients(List<Double> scoreSandT) {
 		if (scoreSandT.size() == 0) { return; }
 		if (parallel) { 
 			evalGradientsParallel(scoreSandT); 

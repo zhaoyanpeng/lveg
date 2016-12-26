@@ -1,5 +1,7 @@
 package edu.shanghaitech.ai.nlp.util;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -46,7 +48,7 @@ public class MethodUtilTest {
 		System.out.println("Precision of the logAdd method is: " + (m - z) + ", [m = " + m + ", z =" + z + "]");
 	}
 	
-	@Test
+//	@Test
 	public void testShuffle() {
 		List<Integer> listInt = new ArrayList<Integer>();
 		MethodUtil.randomInitList(listInt, Integer.class, 5, 2, false, true);
@@ -54,5 +56,24 @@ public class MethodUtilTest {
 		System.out.println(listInt);
 		Collections.shuffle(listInt, new Random(0));
 		System.out.println(listInt);
+	}
+	
+	@Test
+	public void stringFormat() {
+		double x = Double.parseDouble("1e-3");
+		System.out.println(x);
+		
+		
+		try {
+			String str = MethodUtil.readFile("param.ini", StandardCharsets.UTF_8);
+			System.out.println(str);
+			String[] arr = str.split(",");
+			for (int i = 0; i < arr.length; i++) {
+				System.out.println(i + " | " + arr[i].trim() + ")");
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 }

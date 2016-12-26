@@ -56,7 +56,7 @@ public class SimpleOptimizer extends Optimizer {
 	
 	
 	@Override
-	public void evalGradients(List<Double> scoreSandT, boolean parallel) {
+	public void evalGradients(List<Double> scoreSandT) {
 		return;
 	}
 	

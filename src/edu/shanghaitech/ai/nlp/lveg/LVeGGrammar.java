@@ -153,8 +153,8 @@ public class LVeGGrammar extends Recorder implements Serializable {
 	}
 	
 	
-	public void evalGradients(List<Double> scoreOfST, boolean parallel) {
-		optimizer.evalGradients(scoreOfST, parallel);
+	public void evalGradients(List<Double> scoreOfST) {
+		optimizer.evalGradients(scoreOfST);
 	}
 	
 	

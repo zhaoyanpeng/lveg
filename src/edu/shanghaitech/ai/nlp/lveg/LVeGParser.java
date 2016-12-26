@@ -44,10 +44,15 @@ public class LVeGParser<T> extends Parser<T> {
 		double scoreS = doInsideOutside(sample); 
 		scores.add(scoreT);
 		scores.add(scoreS);
+//		logger.trace("\no---id=" + Thread.currentThread().getId() + ", isample=" + isample + " " + 
+//				MethodUtil.double2str(scores, 3, -1, false, true) + " comes...\n"); // DEBUG
 		synchronized (inferencer) {
+//			logger.trace("\ni---id=" + Thread.currentThread().getId() + ", isample=" + isample + " enters...\n"); // DEBUG
 			inferencer.evalRuleCountWithTree(sample, (short) 0);
 			inferencer.evalRuleCount(sample, chart, (short) 0);
-			inferencer.evalGradients(scores, parallel);
+			inferencer.evalGradients(scores);
+//			logger.trace("\ni---id=" + Thread.currentThread().getId() + ", isample=" + isample + " " + 
+//					MethodUtil.double2str(scores, 3, -1, false, true) + " leaves...\n"); // DEBUG
 		}
 		Meta<T> cache = new Meta(isample, scores);
 		synchronized (caches) {

@@ -19,6 +19,7 @@ public abstract class LVeGLexicon implements Serializable {
 	 * 
 	 */
 	private static final long serialVersionUID = 255983044651602165L;
+	public final String TOKEN_UNKNOWN = "UNK";
 	protected transient String lastWord;
 	protected transient String lastSignature;
 	protected transient int lastPosition;
@@ -118,8 +119,8 @@ public abstract class LVeGLexicon implements Serializable {
 	}
 	
 	
-	public void evalGradients(List<Double> scoreOfST, boolean parallel) {
-		optimizer.evalGradients(scoreOfST, parallel);
+	public void evalGradients(List<Double> scoreOfST) {
+		optimizer.evalGradients(scoreOfST);
 	}
 	
 	
@@ -191,7 +192,7 @@ public abstract class LVeGLexicon implements Serializable {
 	 * @return
 	 */
 	public String getSignature(String word, int pos) {
-		StringBuffer sb = new StringBuffer(LVeGLearner.TOKEN_UNKNOWN);
+		StringBuffer sb = new StringBuffer(TOKEN_UNKNOWN);
 		
 		if (word == null || word.length() == 0) {
 			return sb.toString();

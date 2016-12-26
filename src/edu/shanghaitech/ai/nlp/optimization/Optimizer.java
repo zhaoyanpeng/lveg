@@ -37,9 +37,8 @@ public abstract class Optimizer extends Recorder implements Serializable {
 	
 	/**
 	 * @param scoreSandT the parse tree score (odd index) and the sentence score (even index)
-	 * @param parallel   parallel (true) or serialize (false)
 	 */
-	public abstract void evalGradients(List<Double> scoresST, boolean parallel);
+	public abstract void evalGradients(List<Double> scoresST);
 	
 	/**
 	 * Stochastic gradient descent.

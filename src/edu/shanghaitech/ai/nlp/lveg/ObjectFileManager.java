@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -19,7 +21,9 @@ public class ObjectFileManager {
 		private static final long serialVersionUID = 1852249590891181238L;
 		
 		public boolean save(String filename) {
-			if (new File(filename).exists()) { filename += ".new"; }
+			if (new File(filename).exists()) { 
+				filename += new SimpleDateFormat(".yyyyMMddHHmmss").format(new Date());
+			}
 			try {
 				FileOutputStream fos = new FileOutputStream(filename);
 				GZIPOutputStream gos = new GZIPOutputStream(fos);

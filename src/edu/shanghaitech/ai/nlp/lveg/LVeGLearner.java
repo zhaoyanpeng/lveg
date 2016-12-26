@@ -1,6 +1,10 @@
 package edu.shanghaitech.ai.nlp.lveg;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,12 +13,11 @@ import java.util.Random;
 import edu.berkeley.nlp.PCFGLA.Corpus.TreeBankType;
 import edu.berkeley.nlp.PCFGLA.Binarization;
 import edu.berkeley.nlp.PCFGLA.Corpus;
-import edu.berkeley.nlp.PCFGLA.Option;
-import edu.berkeley.nlp.PCFGLA.OptionParser;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
 import edu.shanghaitech.ai.nlp.util.Recorder;
+import edu.shanghaitech.ai.nlp.lveg.ObjectFileManager.GrammarFile;
 import edu.shanghaitech.ai.nlp.optimization.Optimizer;
 import edu.shanghaitech.ai.nlp.optimization.ParallelOptimizer;
 import edu.shanghaitech.ai.nlp.syntax.State;
@@ -27,15 +30,15 @@ public class LVeGLearner extends Recorder {
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -4975261706356545370L;
+	private static final long serialVersionUID = 1249878080098056557L;
 	public final static String KEY_TAG_SET = "tags";
 	public final static String TOKEN_UNKNOWN = "UNK";
-	public final static String ID_TRAINING = "training";
-	public final static String ID_VALIDATION = "validation";
+	private final static String ID_TRAIN = "train";
+	private final static String ID_TEST = "test";
+	private final static String ID_DEV = "dev";
 	
 	public static short dim        =  5;
 	public static short maxrandom  =  1;
-	public static short batchsize  = 50;
 	public static short ncomponent =  5;
 	public static short maxlength  = 30;
 	
@@ -43,6 +46,7 @@ public class LVeGLearner extends Recorder {
 	public static int precision  = 3;
 	
 	public static Random random;
+	private static Options opts;
 	
 	public static class Params {
 		public static double lr;
@@ -64,19 +68,21 @@ public class LVeGLearner extends Recorder {
 		}
 		
 		public static String toString(boolean placeholder) {
-			return "Params [lr = " + lr + ", reg = " + ", clip = " + clip + ", absmax = " + 
+			return "Params [lr = " + lr + ", reg = " + reg + ", clip = " + clip + ", absmax = " + 
 					absmax + ", wdecay = " + wdecay + ", momentum = " + momentum + ", l1 = " + l1 + "]";
 		}
 	}
 	
 	public static class Options {
 		/* corpus section begins */
+		@Option(name = "-datadir", required = true, usage = "absolute path pointing to the data directory (default: null)")
+		public String datadir = null;
+		@Option(name = "-train", required = true, usage = "path to the training data (default: null)")
+		public String train = null;
 		@Option(name = "-test", usage = "path to the test data (default: null")
 		public String test = null;
 		@Option(name = "-dev", usage = "path to the development data (default: null)")
 		public String dev = null;
-		@Option(name = "-train", usage = "path to the training data (default: null)")
-		public String train = null;
 		@Option(name = "-inCorpus", usage = "input object file of the training, development, and test data (default: null" )
 		public String inCorpus = null;
 		@Option(name = "-outCorpus", usage = "output object file of the training, development, and test data (default: null" )
@@ -87,10 +93,27 @@ public class LVeGLearner extends Recorder {
 		public boolean loadCorpus = false;
 		/* corpus section ends */
 		
+		/* optimization-parameter section begins*/
+		@Option(name = "-lr", usage = "learning rate (default: 1.0)")
+		public double lr = 0.02;
+		@Option(name = "-reg", usage = "using regularization (true) or not (false) (default: true)")
+		public boolean reg = true;
+		@Option(name = "-clip", usage = "clip the gradients (true) or not (false) (default: true)")
+		public boolean clip = true;
+		@Option(name = "-absmax", usage = "threshold for clipping gradients (default: 5.0)")
+		public double absmax = 5.0;
+		@Option(name = "-wdecay", usage = "weight decay rate (default: 0.02)")
+		public double wdecay = 0.02;
+		@Option(name = "-momentum", usage = "momentum used in the gradient update (default: 0.9)")
+		public double momentum = 0.9;
+		@Option(name = "-l1", usage = "using l1 regularization (true) or l2 regularization (false) (default: true)")
+		public boolean l1 = true;
+		/* optimization-parameter section ends*/
+		
 		/* grammar-data section begins */
-		@Option(name = "-in", usage = "input object file of the grammar (default: null)")
+		@Option(name = "-inGrammar", usage = "input object file of the grammar (default: null)")
 		public String inGrammar = null;
-		@Option(name = "-out", usage = "output object file of the grammar (default: null)")
+		@Option(name = "-outGrammar", usage = "output object file of the grammar (default: null)")
 		public String outGrammar = null;
 		@Option(name = "-saveGrammar", usage = "save grammar (true) or not (false) (default: false)")
 		public boolean saveGrammar = false;
@@ -120,7 +143,7 @@ public class LVeGLearner extends Recorder {
 		public short maxrandom = 1;
 		@Option(name = "-batchsize", usage = "# of the samples in a batch (default: 128)")
 		public short batchsize = 128;
-		@Option(name = "-maxsample", usage = "sampling times when approximate gradients (default: 3)")
+		@Option(name = "-maxsample", usage = "sampling times when approximating gradients (default: 3)")
 		public short maxsample = 3;
 		@Option(name = "-evalfraction", usage = "fraction of the training data on which the grammar evaluation is conducted (default: 0.2)")
 		public double evalfraction = 0.2;
@@ -128,26 +151,9 @@ public class LVeGLearner extends Recorder {
 		public int nepoch = 10;
 		@Option(name = "-relativediff", usage = "maximum relative difference between the neighboring iterations (default: 1e-6)")
 		public double relativerror = 1e-6;
-		@Option(name = "-onlyLength", usage = "train on only the sentences of length less than or equal to the specific length (default: 50)")
+		@Option(name = "-onlyLength", usage = "train on only the sentences of length less than or equal to the specific length, no such constraints if it is negative (default: 50)")
 		public int onlyLength = 50;
 		/* training-configurations section ends */
-		
-		/* optimization-parameter section begins*/
-		@Option(name = "-lr", usage = "learning rate (default: 1.0)")
-		public double lr = 1.0;
-		@Option(name = "-reg", usage = "using regularization (true) or not (false) (default: true)")
-		public boolean reg = true;
-		@Option(name = "-clip", usage = "clip the gradients (true) or not (false) (default: true)")
-		public boolean clip = true;
-		@Option(name = "-absmax", usage = "threshold for clipping gradients (default: 5.0)")
-		public double absmax = 5.0;
-		@Option(name = "-wdecay", usage = "weight decay rate (default: 0.02)")
-		public double wdecay = 0.02;
-		@Option(name = "-momentum", usage = "momentum used in the gradient update (default: 0.9)")
-		public double momentum = 0.9;
-		@Option(name = "-l1", usage = "using l1 regularization (true) or l2 regularization (false) (default: true)")
-		public boolean l1 = true;
-		/* optimization-parameter section ends*/
 		
 		/* logger configurations section begins */
 		@Option(name = "-logType", usage = "console (false) or file (true) (default: true)")
@@ -158,21 +164,21 @@ public class LVeGLearner extends Recorder {
 		public short nbatch = 1;
 		/* logger-configurations section ends */
 		
+		
+		
 		/* file prefix section begins */
 		@Option(name = "-imagePrefix", usage = "prefix of the image of the parse tree obtained from max rule parser (default: maxrule")
-		public String imagePrefix = "maxrule";
+		public String imagePrefix = "log/maxrule";
 		/* file prefix section ends */
 		
 		
-		@Option(name = "-seed", usage = "seed for random number generator (default: 111)")
-		public int seed = 111;
+		@Option(name = "-randomSeed", usage = "Seed for random number generator (Default: 111)")
+		public int randomSeed = 111;
 		
-		@Option(name = "-maxLength", usage = "maximum sentence length (default: <= 10000)")
-		public int maxLength = 10000;
-		
-		@Option(name = "-treebank", usage = "language: WSJ, CHINESE, SINGLEFILE (default: SINGLEFILE)")
+		@Option(name = "-treebank", usage = "Language: WSJ, CHINESE, SINGLEFILE (Default: SINGLEFILE)")
 		public TreeBankType treebank = TreeBankType.SINGLEFILE;
-
+//		public TreeBankType treebank = TreeBankType.WSJ;
+		
 		
 		@Option(name = "-skipSection", usage = "Skip a particular section of the WSJ training corpus (Needed for training Mark Johnsons reranker (Default: -1)")
 		public int skipSection = -1;
@@ -194,6 +200,9 @@ public class LVeGLearner extends Recorder {
 		
 		@Option(name = "-trainOnDevSet", usage = "Include the development set into the training set (Default: false)")
 		public boolean trainOnDevSet = false;
+		
+		@Option(name = "-maxSentenceLength", usage = "Maximum sentence length (Default: <= 10000)")
+		public int maxSentenceLength = 10000;
 		
 		@Option(name = "-binarization", usage = "Left/Right binarization (Default: RIGHT)")
 		public Binarization binarization = Binarization.RIGHT;
@@ -218,75 +227,63 @@ public class LVeGLearner extends Recorder {
 		
 		@Option(name = "-verbose", usage = "Verbose/Quiet (Default: false)")
 		public boolean verbose = false;
+		
+		@Option(name = "-maxiter", usage = "Maximum iteration time (Default: 1000)")
+		public int maxiter = 1000;
+		
+		@Option(name = "-droppingiter", usage = "Maximum consecutive dropping time (Default: 6)")
+		public int droppintiter = 6;
 	}
-	
 
 	public static void main(String[] args) throws Exception {
-		// TODO Auto-generated method stub
-		OptionParser optionParser = new OptionParser(Options.class);
-		Options opts = (Options) optionParser.parse(args, true);
-		System.out.println("Calling with " + optionParser.getPassedInOptions());
-		
-		initializeLearner(opts); // 
-		
-		Map<String, List<Tree<String>>> stringTrees = loadData(opts);
+		// configurations
+		initializeLearner("param.ini");
+		// loading data
 		Numberer numbererTag = Numberer.getGlobalNumberer(KEY_TAG_SET);
-		
-		Map<String, StateTreeList> stateTrees = stringTreeToStateTree(stringTrees, numbererTag, opts);
-		
+		Map<String, StateTreeList> trees = loadData(numbererTag);
+		// training
 		long startTime = System.currentTimeMillis();
-		train(stateTrees, numbererTag, opts);
+		train(trees, numbererTag);
 		long endTime = System.currentTimeMillis();
 		logger.trace("[total time] " + (endTime - startTime) / 1000.0 + "\n");
 	}
 	
 	
 	@SuppressWarnings("unused")
-	private static void train(Map<String, StateTreeList> stateTrees, Numberer numbererTag, Options opts) throws Exception {
-		StateTreeList trainTrees = new StateTreeList(stateTrees.get(ID_TRAINING));
-		StateTreeList validationTrees = new StateTreeList(stateTrees.get(ID_VALIDATION));
+	private static void train(Map<String, StateTreeList> trees, Numberer numbererTag) throws Exception {
+		StateTreeList trainTrees = trees.get(ID_TRAIN);
+		StateTreeList testTrees = trees.get(ID_TEST);
+		StateTreeList devTrees = trees.get(ID_DEV);
 		
+		double ll = Double.NEGATIVE_INFINITY;
 		Tree<State> globalTree = null;
-		String oldFilename = "log/" + opts.imagePrefix + "_gd";
-		String filename, newFilename = "log/" + opts.imagePrefix + "_tr";
+		String filename = opts.imagePrefix + "_gd";
+		String treeFile = opts.imagePrefix + "_tr";
 		
-		batchsize = 60;
-		short maxsample = 3;
-		short ntheadgrad = 6, nthreadeval = 6, nthreadbatch = 6; // eval gradients, calculate ll, parallelize in the batch
-		boolean parallelgrad = true, parallelbatch = false;
-		boolean useOldGram = false, saveNewGram = false;
-		int cnt = 0, droppingiter = 0, maxLength = 7, nbatch = 1;
 		
 		LVeGGrammar grammar = new LVeGGrammar(null, -1);
 		LVeGLexicon lexicon = new SimpleLVeGLexicon();
 		Valuator<?> valuator = new Valuator<Double>(grammar, lexicon, true);
-		MultiThreadedParser mvaluator = new MultiThreadedParser(valuator, nthreadeval);
+		MultiThreadedParser mvaluator = new MultiThreadedParser(valuator, opts.nthreadeval);
 				
-		if (useOldGram && opts.inGrammar != null) {
-			GrammarFile gfile = GrammarFile.load(opts.inGrammar);
+		if (opts.loadGrammar && opts.inGrammar != null) {
+			GrammarFile gfile = GrammarFile.load(opts.datadir + opts.inGrammar);
 			grammar = gfile.getGrammar();
 			lexicon = gfile.getLexicon();
 			lexicon.labelTrees(trainTrees); // FIXME no errors, just alert you to pay attention to it 
-			Optimizer.config(random, maxsample, batchsize); // FIXME no errors, just alert you...
+			Optimizer.config(random, opts.maxsample, opts.batchsize); // FIXME no errors, just alert you...
 			valuator = new Valuator<Double>(grammar, lexicon, true);			
-			mvaluator = new MultiThreadedParser(valuator, nthreadeval);
+			mvaluator = new MultiThreadedParser(valuator, opts.nthreadeval);
 			
 			for (Tree<State> tree : trainTrees) {
 				if (tree.getYield().size() == 6) {
-					globalTree = tree.shallowClone();
+					globalTree = tree.copy();
 					break;
 				} // a global tree
 			}
-			
-			// likelihood of the training set
-			logger.trace("-------ll of the training data initially is... ");
-			long beginTime = System.currentTimeMillis();
-			double ll = calculateLL(grammar, mvaluator, trainTrees, maxLength);
-			long endTime = System.currentTimeMillis();
-			logger.trace("------->" + ll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");	
 		} else {
-			Optimizer goptimizer = new ParallelOptimizer(LVeGLearner.random, maxsample, batchsize, ntheadgrad);
-			Optimizer loptimizer = new ParallelOptimizer(LVeGLearner.random, maxsample, batchsize, ntheadgrad);
+			Optimizer goptimizer = new ParallelOptimizer(LVeGLearner.random, opts.maxsample, opts.batchsize, opts.ntheadgrad, opts.parallelgrad);
+			Optimizer loptimizer = new ParallelOptimizer(LVeGLearner.random, opts.maxsample, opts.batchsize, opts.ntheadgrad, opts.parallelgrad);
 			grammar.setOptimizer(goptimizer);
 			lexicon.setOptimizer(loptimizer);
 			
@@ -297,42 +294,62 @@ public class LVeGLearner extends Recorder {
 					globalTree = tree.copy();
 				} // a global tree
 			}
-			logger.trace("Going through the training set is over.\n");
-			
+			logger.trace("\n--->Going through the training set is over...");
 			grammar.postInitialize(0.0);
 			lexicon.postInitialize(trainTrees, numbererTag.size());
-			logger.trace("Post-initializing is over.\n");
+			logger.trace("post-initializing is over.\n");
 		}
+		/*
+		// initial likelihood of the training set
+		logger.trace("\n-------ll of the training data initially is... ");
+		long beginTime = System.currentTimeMillis();
+		ll = calculateLL(grammar, mvaluator, trainTrees);
+		long endTime = System.currentTimeMillis();
+		logger.trace("------->" + ll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");	
+		*/
 		LVeGParser<?> lvegParser = new LVeGParser<List<Double>>(grammar, lexicon, true);
 		MaxRuleParser<?> mrParser = new MaxRuleParser<Tree<String>>(grammar, lexicon, true);
+		MultiThreadedParser trainer = new MultiThreadedParser(lvegParser, opts.nthreadbatch);
 		
-		MultiThreadedParser trainer = new MultiThreadedParser(lvegParser, nthreadbatch);
-		
-		MethodUtil.saveTree2image(globalTree, oldFilename, null);
+		MethodUtil.saveTree2image(globalTree, filename, null);
 		Tree<String> parseTree = mrParser.parse(globalTree);
-		MethodUtil.saveTree2image(null, newFilename + "_ini", parseTree);
+		MethodUtil.saveTree2image(null, treeFile + "_ini", parseTree);
 		
-		double prell = 0.0;
-		double relativError = 0, ll, maxll = prell;
+		logger.info("\n---SGD CONFIG---\n[parallel: batch-" + opts.parallelbatch + ", grad-" + opts.parallelgrad +"] " + Params.toString(false) + "\n");
+		
+		if (opts.parallelbatch) {
+			parallelInBatch(grammar, lexicon, mvaluator, trainer, mrParser, trees, globalTree, treeFile, ll);
+		} else {
+			serialInBatch(grammar, lexicon, mvaluator, lvegParser, mrParser, trees, globalTree, treeFile, ll);
+		}
+		
+		/*
+		if (relativError < opts.relativerror) {
+			System.out.println("Maximum-relative-error reaching.");
+		}
+		*/
+	}
+	
+	
+	public static void parallelInBatch(LVeGGrammar grammar, LVeGLexicon lexicon, MultiThreadedParser mvaluator, MultiThreadedParser trainer, 
+			MaxRuleParser<?> mrParser, Map<String, StateTreeList> trees, Tree<State> globalTree, String treeFile, double prell) throws Exception {
 		List<Double> scoresOfST = new ArrayList<Double>(2);
 		List<Double> likelihood = new ArrayList<Double>();
-		
-		logger.info("\n---SGD CONFIG---\n[parallel: " + parallelgrad + "] " + Params.toString(false) + "\n");
-		if (parallelgrad) { newFilename = "log/maxrulerets_parallel"; }
-		
-		if (parallelbatch) {
-		
+		StateTreeList trainTrees = trees.get(ID_TRAIN);
+		StateTreeList testTrees = trees.get(ID_TEST);
+		StateTreeList devTrees = trees.get(ID_DEV);
+		int cnt = 0;
+		double ll;
 		do {			
 			logger.trace("\n\n-------epoch " + cnt + " begins-------\n\n");
 			short isample = 0, idx = 0, nfailed = 0;
 			long beginTime, endTime, startTime = System.currentTimeMillis();
 			long batchstart = System.currentTimeMillis(), batchend;
 			for (Tree<State> tree : trainTrees) {
-
-				if (tree.getYield().size() > maxLength) { continue; }
-				
+				if (opts.onlyLength > 0) {
+					if (tree.getYield().size() > opts.onlyLength) { continue; }
+				}
 				trainer.parse(tree);
-				
 				while (trainer.hasNext()) {
 					List<Double> score = (List<Double>) trainer.getNext();
 					if (score == null) {
@@ -341,9 +358,9 @@ public class LVeGLearner extends Recorder {
 						logger.trace("\n~~~score: " + MethodUtil.double2str(score, precision, -1, false, true) + "\n");
 					}
 				}
+				
 				isample++;
-				if (++idx % batchsize == 0) {
-					
+				if (++idx % opts.batchsize == 0) {
 					while (!trainer.isDone()) {
 						while (trainer.hasNext()) {
 							List<Double> score = (List<Double>) trainer.getNext();
@@ -355,11 +372,10 @@ public class LVeGLearner extends Recorder {
 						}
 					}
 					trainer.reset();
-					
 					batchend = System.currentTimeMillis();
 					
 					// apply gradient descent
-					logger.trace("+++Apply gradient descent for the batch " + (isample / batchsize) + "... ");
+					logger.trace("+++Apply gradient descent for the batch " + (isample / opts.batchsize) + "... ");
 					beginTime = System.currentTimeMillis();
 					
 					grammar.applyGradientDescent(scoresOfST);
@@ -369,35 +385,36 @@ public class LVeGLearner extends Recorder {
 					logger.trace((endTime - beginTime) / 1000.0 + "... batch time: " + (batchend - batchstart) / 1000.0 + ", nfailed: " + nfailed + "\n");
 					idx = 0;
 					
-					if ((isample % (batchsize * nbatch)) == 0) {
+					if ((isample % (opts.batchsize * opts.nbatch)) == 0) {
 						// likelihood of the training set
-						logger.trace("\n-------ll of the training data after " + (isample / batchsize) + " batches in epoch " + cnt + " is... ");
+						logger.trace("\n-------ll of the training data after " + (isample / opts.batchsize) + " batches in epoch " + cnt + " is... ");
 						beginTime = System.currentTimeMillis();
-						ll = calculateLL(grammar, mvaluator, trainTrees, maxLength);
+						ll = calculateLL(grammar, mvaluator, trainTrees);
 						endTime = System.currentTimeMillis();
 						logger.trace("------->" + ll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");
 						trainTrees.reset();
 						// visualize the parse tree
-						parseTree = mrParser.parse(globalTree);
-						filename = newFilename + "_" + cnt + "_" + (isample / (batchsize * nbatch));
+						Tree<String> parseTree = mrParser.parse(globalTree);
+						String filename = treeFile + "_" + cnt + "_" + (isample / (opts.batchsize * opts.nbatch));
 						MethodUtil.saveTree2image(null, filename, parseTree);
 						// store the log score
 						likelihood.add(ll);
 					}
-					
 					nfailed = 0;
 					batchstart = System.currentTimeMillis();
 				}
 			}
 			
 			// if not a multiple of batchsize
-			logger.trace("+++Apply gradient descent for the last batch " + (isample / batchsize) + "... ");
-			beginTime = System.currentTimeMillis();
-			grammar.applyGradientDescent(scoresOfST);
-			lexicon.applyGradientDescent(scoresOfST);
-			endTime = System.currentTimeMillis();
-			logger.trace((endTime - beginTime) / 1000.0 + "\n");
-			scoresOfST.clear();
+			if (idx != 0) {
+				logger.trace("+++Apply gradient descent for the last batch " + (isample / opts.batchsize) + "... ");
+				beginTime = System.currentTimeMillis();
+				grammar.applyGradientDescent(scoresOfST);
+				lexicon.applyGradientDescent(scoresOfST);
+				endTime = System.currentTimeMillis();
+				logger.trace((endTime - beginTime) / 1000.0 + "\n");
+				scoresOfST.clear();
+			}
 			
 			// a coarse summary
 			endTime = System.currentTimeMillis();
@@ -406,7 +423,7 @@ public class LVeGLearner extends Recorder {
 			// likelihood of the training set
 			logger.trace("-------ll of the training data in epoch " + cnt + " is... ");
 			beginTime = System.currentTimeMillis();
-			ll = calculateLL(grammar, mvaluator, trainTrees, maxLength);
+			ll = calculateLL(grammar, mvaluator, trainTrees);
 			endTime = System.currentTimeMillis();
 			likelihood.add(ll);
 			logger.trace("------->" + ll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");
@@ -420,8 +437,18 @@ public class LVeGLearner extends Recorder {
 			
 		// relative error could be negative
 		} while(++cnt <= 8) /*while (cnt > 1 && Math.abs(relativError) < opts.relativerror && droppingiter < opts.droppintiter)*/;
-		
-		} else {
+		logger.trace("Convergence Path: " + likelihood + "\n");
+	}
+	
+	public static void serialInBatch(LVeGGrammar grammar, LVeGLexicon lexicon, MultiThreadedParser mvaluator, LVeGParser<?> lvegParser, 
+			MaxRuleParser<?> mrParser, Map<String, StateTreeList> trees, Tree<State> globalTree, String treeFile, double prell) throws Exception {
+		List<Double> scoresOfST = new ArrayList<Double>(2);
+		List<Double> likelihood = new ArrayList<Double>();
+		StateTreeList trainTrees = trees.get(ID_TRAIN);
+		StateTreeList testTrees = trees.get(ID_TEST);
+		StateTreeList devTrees = trees.get(ID_DEV);
+		int cnt = 0;
+		double ll;
 		
 		do {			
 			logger.trace("\n\n-------epoch " + cnt + " begins-------\n\n");
@@ -429,7 +456,11 @@ public class LVeGLearner extends Recorder {
 			long beginTime, endTime, startTime = System.currentTimeMillis();
 			long batchstart = System.currentTimeMillis(), batchend;
 			for (Tree<State> tree : trainTrees) {
-				if (tree.getYield().size() > maxLength) { continue; }
+				if (opts.onlyLength > 0) {
+					if (tree.getYield().size() > opts.onlyLength) { continue; }
+				}
+				
+//				if (isample < batchsize) { isample++; continue; }
 				
 				logger.trace("---Sample " + isample + "...\t");
 				beginTime = System.currentTimeMillis();
@@ -446,19 +477,19 @@ public class LVeGLearner extends Recorder {
 				logger.trace("scores: " + MethodUtil.double2str(scoresOfST, precision, -1, false, true) + "\teval gradients... ");
 				beginTime = System.currentTimeMillis();
 				
-				grammar.evalGradients(scoresOfST, parallelgrad);
-				lexicon.evalGradients(scoresOfST, parallelgrad);
+				grammar.evalGradients(scoresOfST);
+				lexicon.evalGradients(scoresOfST);
 				scoresOfST.clear();
 				
 				endTime = System.currentTimeMillis();
 				logger.trace( + (endTime - beginTime) / 1000.0 + "\n");
 				
 				isample++;
-				if (++idx % batchsize == 0) {
+				if (++idx % opts.batchsize == 0) {
 					batchend = System.currentTimeMillis();
 					
 					// apply gradient descent
-					logger.trace("+++Apply gradient descent for the batch " + (isample / batchsize) + "... ");
+					logger.trace("+++Apply gradient descent for the batch " + (isample / opts.batchsize) + "... ");
 					beginTime = System.currentTimeMillis();
 					
 					grammar.applyGradientDescent(scoresOfST);
@@ -468,47 +499,44 @@ public class LVeGLearner extends Recorder {
 					logger.trace((endTime - beginTime) / 1000.0 + "... batch time: " + (batchend - batchstart) / 1000.0 + "\n");
 					idx = 0;
 					
-					if ((isample % (batchsize * nbatch)) == 0) {
-						
-						
-						if (saveNewGram && opts.outGrammar != null) {
+					if ((isample % (opts.batchsize * opts.nbatch)) == 0) {
+						if (opts.saveGrammar && opts.outGrammar != null) {
 							GrammarFile gfile = new GrammarFile(grammar, lexicon);
-							String gfilename = opts.outGrammar + "_" + (isample / batchsize) + "_" + cnt + ".gr";
+							String gfilename = opts.datadir + opts.outGrammar + "_" + (isample / opts.batchsize) + "_" + cnt + ".gr";
 							if (gfile.save(gfilename)) {
-								logger.info("\n-------save grammar file to \'" + gfile + "\'");
+								logger.info("\n-------save grammar file to \'" + gfilename + "\'");
 							} else {
-								logger.info("\n-------failed to save grammar file to \'" + gfile + "\'");
+								logger.error("\n-------failed to save grammar file to \'" + gfilename + "\'");
 							}
 						}
-						
-						
 						// likelihood of the training set
-						logger.trace("\n-------ll of the training data after " + (isample / batchsize) + " batches in epoch " + cnt + " is... ");
+						logger.trace("\n-------ll of the training data after " + (isample / opts.batchsize) + " batches in epoch " + cnt + " is... ");
 						beginTime = System.currentTimeMillis();
-						ll = calculateLL(grammar, mvaluator, trainTrees, maxLength);
+						ll = calculateLL(grammar, mvaluator, trainTrees);
 						endTime = System.currentTimeMillis();
 						logger.trace("------->" + ll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");
 						trainTrees.reset();
 						// visualize the parse tree
-						parseTree = mrParser.parse(globalTree);
-						filename = newFilename + "_" + cnt + "_" + (isample / (batchsize * nbatch));
+						Tree<String> parseTree = mrParser.parse(globalTree);
+						String filename = treeFile + "_" + cnt + "_" + (isample / (opts.batchsize * opts.nbatch));
 						MethodUtil.saveTree2image(null, filename, parseTree);
 						// store the log score
 						likelihood.add(ll);
 					}
-		
 					batchstart = System.currentTimeMillis();
 				}
 			}
 			
 			// if not a multiple of batchsize
-			logger.trace("+++Apply gradient descent for the last batch " + (isample / batchsize) + "... ");
-			beginTime = System.currentTimeMillis();
-			grammar.applyGradientDescent(scoresOfST);
-			lexicon.applyGradientDescent(scoresOfST);
-			endTime = System.currentTimeMillis();
-			logger.trace((endTime - beginTime) / 1000.0 + "\n");
-			scoresOfST.clear();
+			if (idx != 0) {
+				logger.trace("+++Apply gradient descent for the last batch " + (isample / opts.batchsize) + "... ");
+				beginTime = System.currentTimeMillis();
+				grammar.applyGradientDescent(scoresOfST);
+				lexicon.applyGradientDescent(scoresOfST);
+				endTime = System.currentTimeMillis();
+				logger.trace((endTime - beginTime) / 1000.0 + "\n");
+				scoresOfST.clear();
+			}
 			
 			// a coarse summary
 			endTime = System.currentTimeMillis();
@@ -517,7 +545,7 @@ public class LVeGLearner extends Recorder {
 			// likelihood of the training set
 			logger.trace("-------ll of the training data in epoch " + cnt + " is... ");
 			beginTime = System.currentTimeMillis();
-			ll = calculateLL(grammar, mvaluator, trainTrees, maxLength);
+			ll = calculateLL(grammar, mvaluator, trainTrees);
 			endTime = System.currentTimeMillis();
 			likelihood.add(ll);
 			logger.trace("------->" + ll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");
@@ -532,23 +560,17 @@ public class LVeGLearner extends Recorder {
 		// relative error could be negative
 		} while(++cnt <= 8) /*while (cnt > 1 && Math.abs(relativError) < opts.relativerror && droppingiter < opts.droppintiter)*/;
 		
-		
-		}
-		
 		logger.trace("Convergence Path: " + likelihood + "\n");
-		/*
-		if (relativError < opts.relativerror) {
-			System.out.println("Maximum-relative-error reaching.");
-		}
-		*/
 	}
 	
 	
-	public static double calculateLL(LVeGGrammar grammar, MultiThreadedParser valuator, StateTreeList stateTreeList, int maxLength) {
+	public static double calculateLL(LVeGGrammar grammar, MultiThreadedParser valuator, StateTreeList stateTreeList) {
 		int nUnparsable = 0, cnt = 0;
 		double ll = 0, sumll = 0;
 		for (Tree<State> tree : stateTreeList) {
-			if (tree.getYield().size() > maxLength) { continue; }
+			if (opts.onlyLength > 0) {
+				if (tree.getYield().size() > opts.onlyLength) { continue; }
+			}
 			if (++cnt > 200) { break; } // DEBUG
 			valuator.parse(tree);
 			while (valuator.hasNext()) {
@@ -577,80 +599,80 @@ public class LVeGLearner extends Recorder {
 	}
 	
 	
-	private static void initializeLearner(Options opts) {
+	private static void initializeLearner(String paramfile) {
+		String[] args = null;
+		try {
+			args = MethodUtil.readFile(paramfile, StandardCharsets.UTF_8).split(",");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		OptionParser optionParser = new OptionParser(Options.class);
+		opts = (Options) optionParser.parse(args, true);
+		
 		if (opts.outGrammar == null) {
 			throw new IllegalArgumentException("Output file is required.");
-		} else {
-			if (opts.logType) {
-				logger = logUtil.getFileLogger(opts.logFile);
-			} else {
-				logger = logUtil.getConsoleLogger();
-			}
-			System.out.println("Grammar file will be saved to " + opts.outGrammar + ".");
 		}
+		if (opts.logType) {
+			logger = logUtil.getFileLogger(opts.logFile);
+		} else {
+			logger = logUtil.getConsoleLogger();
+		}
+		logger.info("Calling with " + optionParser.getParsedOptions() + "\n");
+		logger.info("Random number generator seeded at " + opts.randomSeed + ".\n");
+		
 		dim = opts.dim;
 		maxrandom = opts.maxrandom;
-		batchsize = opts.batchsize;
-		randomseed = opts.seed;
 		ncomponent = opts.ncomponent;
-		random = new Random(opts.seed);
-		System.out.println("Random number generator seeded at " + opts.seed + ".");
+		random = new Random(opts.randomSeed);
 		Params.config(opts);
 	}
 	
 	
-	private static Map<String, List<Tree<String>>> loadData(Options opts) {
-		System.out.println("Loading trees from " + opts.train + " and using languange " + opts.treebank);
-		
-		boolean onlyTest = false, manualAnnotation = false;
-		Map<String, List<Tree<String>>> datasets = new HashMap<String, List<Tree<String>>>();
-		
-		Corpus corpus = new Corpus(
-				opts.train, opts.treebank, opts.trainingFraction,
-				onlyTest,
-				opts.skipSection, opts.skipBilingual, opts.keepFunctionLabel);
-		List<Tree<String>> trainTrees = Corpus.binarizeAndFilterTrees(
-				corpus.getTrainTrees(), opts.verticalMarkovization, opts.horizontalMarkovization, 
-				opts.maxLength, opts.binarization, manualAnnotation, opts.verbose);
-		List<Tree<String>> validationTrees = Corpus.binarizeAndFilterTrees(
-				corpus.getValidationTrees(), opts.verticalMarkovization, opts.horizontalMarkovization, 
-				opts.maxLength, opts.binarization, manualAnnotation, opts.verbose);
-		
+	protected static  Map<String, StateTreeList> loadData(Numberer numbererTag) {
+		Map<String, StateTreeList> trees = new HashMap<String, StateTreeList>(3, 1);
+		List<Tree<String>> trainString = loadStringTree(opts.datadir + opts.train, numbererTag);
+		List<Tree<String>> testString = loadStringTree(opts.datadir + opts.test, numbererTag);
+		List<Tree<String>> devString = loadStringTree(opts.datadir + opts.dev, numbererTag);
 		if (opts.trainOnDevSet) {
-			System.out.println("Adding development set to the training data.");
-			trainTrees.addAll(validationTrees);
+			logger.info("Adding development set to the training data.\n");
+			trainString.addAll(devString);
 		}
+		StateTreeList trainTrees = stringTreeToStateTree(trainString, numbererTag);
+		StateTreeList testTrees = stringTreeToStateTree(testString, numbererTag);
+		StateTreeList devTrees = stringTreeToStateTree(devString, numbererTag);
+		trees.put(ID_TRAIN, trainTrees);
+		trees.put(ID_TEST, testTrees);
+		trees.put(ID_DEV, devTrees);
+		return trees;
+	}
+	
+	
+	protected static List<Tree<String>> loadStringTree(String path, Numberer numbererTag) {
+		logger.trace("--->Loading trees from " + path + " and using languange " + opts.treebank + "\n");
+		boolean onlyTest = false, manualAnnotation = false;
+		Corpus corpus = new Corpus(
+				path, opts.treebank, opts.trainingFraction, onlyTest,
+				opts.skipSection, opts.skipBilingual, opts.keepFunctionLabel);
+		List<Tree<String>> data = Corpus.binarizeAndFilterTrees(
+				corpus.getTrainTrees(), opts.verticalMarkovization, opts.horizontalMarkovization, 
+				opts.maxSentenceLength, opts.binarization, manualAnnotation, opts.verbose);
+		return data;
+	}
+	
+	
+	protected static StateTreeList stringTreeToStateTree(List<Tree<String>> stringTrees, Numberer numbererTag) {
 		if (opts.lowercase) {
 			System.out.println("Lowercasing the treebank.");
-			Corpus.lowercaseWords(trainTrees);
-			Corpus.lowercaseWords(validationTrees);
+			Corpus.lowercaseWords(stringTrees);
 		}
-		logger.trace("There are " + trainTrees.size() + " trees in the training set.\n");
-		datasets.put(ID_TRAINING, trainTrees);
-		datasets.put(ID_VALIDATION, validationTrees);
-		
-		return datasets;
-	}
-	
-	
-	private static Map<String, StateTreeList> stringTreeToStateTree(
-			Map<String, List<Tree<String>>> stringTrees, Numberer numbererTag, Options opts) {
-		Map<String, StateTreeList> datasets = new HashMap<String, StateTreeList>();
-		
-		StateTreeList trainStateTrees = new StateTreeList(stringTrees.get(ID_TRAINING), numbererTag);
-		StateTreeList validationStateTrees = new StateTreeList(stringTrees.get(ID_VALIDATION), numbererTag);
-		
-		MethodUtil.debugNumbererTag(numbererTag, opts);
-		
-		datasets.put(ID_TRAINING, trainStateTrees);
-		datasets.put(ID_VALIDATION, validationStateTrees);
-		
+		logger.trace("--->There are " + stringTrees.size() + " trees in the corpus.\n");
+		StateTreeList stateTreeList = new StateTreeList(stringTrees, numbererTag);
+		MethodUtil.debugNumbererTag(numbererTag, opts); // DEBUG
 		if (opts.simpleLexicon) {
 			System.out.println("Replacing words appearing less than 5 times with their signature.");
-			LVeGCorpus.replaceRareWords(trainStateTrees, new SimpleLVeGLexicon(), opts.rareThreshold);
+			LVeGCorpus.replaceRareWords(stateTreeList, new SimpleLVeGLexicon(), opts.rareThreshold);
 		}
-		
-		return datasets;
+		return stateTreeList;
 	}
-
+	
 }

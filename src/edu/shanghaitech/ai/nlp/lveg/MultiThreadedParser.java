@@ -55,7 +55,7 @@ public class MultiThreadedParser extends Recorder implements Serializable {
 				for (int i = 0; i < nthread; i++) {
 					if (submits[i] == null || submits[i].isDone()) {
 						parsers[i].setNextSample(sample, lastSubmission++);
-						// logger.trace("\n--->last-sub: " + lastSubmission + "\n"); // DEBUG
+						// logger.trace("\n--->last-submission: " + lastSubmission + "\n"); // DEBUG
 						submits[i] = pool.submit(parsers[i]);
 						return;
 					}

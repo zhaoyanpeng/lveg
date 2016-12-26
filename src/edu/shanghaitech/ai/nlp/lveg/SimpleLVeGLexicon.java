@@ -40,7 +40,7 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 	
 	public SimpleLVeGLexicon() {
 		this.wordIndexer = new Indexer<String>();
-		this.lastWord = LVeGLearner.TOKEN_UNKNOWN;
+		this.lastWord = TOKEN_UNKNOWN;
 		this.lastPosition = -1;
 		this.lastSignature = "";
 		this.unknownLevel = 5; // 5 is English specific

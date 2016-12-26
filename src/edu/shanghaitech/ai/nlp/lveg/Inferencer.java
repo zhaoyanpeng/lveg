@@ -36,9 +36,9 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	 * @param scores   score of the parse tree and score of the sentence
 	 * @param parallel parallel (true) or not (false)
 	 */
-	protected void evalGradients(List<Double> scores, boolean parallel) {
-		grammar.evalGradients(scores, parallel);
-		lexicon.evalGradients(scores, parallel);
+	protected void evalGradients(List<Double> scores) {
+		grammar.evalGradients(scores);
+		lexicon.evalGradients(scores);
 	}
 	
 	
