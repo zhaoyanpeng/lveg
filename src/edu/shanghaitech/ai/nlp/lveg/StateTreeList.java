@@ -9,8 +9,8 @@ import java.util.List;
 import java.util.Random;
 
 import edu.berkeley.nlp.syntax.Tree;
-import edu.berkeley.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.syntax.State;
+import edu.shanghaitech.ai.nlp.util.Numberer;
 
 /**
  * @author Yanpeng Zhao
@@ -139,10 +139,10 @@ public class StateTreeList extends AbstractCollection<Tree<State>> implements Se
 	}
 	
 	
-	public StateTreeList(List<Tree<String>> trees, Numberer numbererTag) {
+	public StateTreeList(List<Tree<String>> trees, Numberer numberer) {
 		this.trees = new ArrayList<Tree<State>>();
 		for (Tree<String> tree : trees) {
-			this.trees.add(stringTreeToStateTree(tree, numbererTag));
+			this.trees.add(stringTreeToStateTree(tree, numberer));
 			tree = null; // clean the memory
 		}
 	}
@@ -150,35 +150,33 @@ public class StateTreeList extends AbstractCollection<Tree<State>> implements Se
 
 	/**
 	 * @param trees       parse trees
-	 * @param numbererTag recording the ids of tags
+	 * @param numberer recording the ids of tags
 	 * 
 	 */
 	public static void initializeNumbererTag(
-			List<Tree<String>> trees, Numberer numbererTag) {
+			List<Tree<String>> trees, Numberer numberer) {
 		for (Tree<String> tree : trees) {
-			stringTreeToStateTree(tree, numbererTag);
+			stringTreeToStateTree(tree, numberer);
 		}
 	}
 	
 	
 	public static void stringTreeToStateTree(
-			List<Tree<String>> trees, Numberer numbererTag) {
+			List<Tree<String>> trees, Numberer numberer) {
 		for (Tree<String> tree : trees) {
-			stringTreeToStateTree(tree, numbererTag);
+			stringTreeToStateTree(tree, numberer);
 		}
 	}
 	
 	
 	/**
 	 * @param tree        a parse tree
-	 * @param numbererTag record the ids of tags
+	 * @param numberer record the ids of tags
 	 * @return            parse tree represented by the state list
 	 * 
 	 */
-	public static Tree<State> stringTreeToStateTree(
-			Tree<String> tree, Numberer numbererTag) {
-		Tree<State> result = stringTreeToStateTree(
-				tree, numbererTag, 0, tree.getYield().size());
+	public static Tree<State> stringTreeToStateTree(Tree<String> tree, Numberer numberer) {
+		Tree<State> result = stringTreeToStateTree(tree, numberer, 0, tree.getYield().size());
 		List<State> words = result.getYield();
 		for (short pos = 0; pos < words.size(); pos++) {
 			words.get(pos).from = pos;
@@ -215,21 +213,21 @@ public class StateTreeList extends AbstractCollection<Tree<State>> implements Se
 	 * Convert a state tree to a string tree.
 	 * 
 	 * @param tree        a state tree
-	 * @param numbererTag which records the ids of tags
+	 * @param numberer which records the ids of tags
 	 * @return
 	 */
-	public static Tree<String> stateTreeToStringTree(Tree<State> tree, Numberer numbererTag) {
+	public static Tree<String> stateTreeToStringTree(Tree<State> tree, Numberer numberer) {
 		if (tree.isLeaf()) {
 			String name = tree.getLabel().getName();
 			return new Tree<String>(name);
 		}
 		
-		String name = (String) numbererTag.object(tree.getLabel().getId());
+		String name = (String) numberer.object(tree.getLabel().getId());
 		Tree<String> newTree = new Tree<String>(name);
 		List<Tree<String>> children = new ArrayList<Tree<String>>();
 		
 		for (Tree<State> child : tree.getChildren()) {
-			Tree<String> newChild = stateTreeToStringTree(child, numbererTag);
+			Tree<String> newChild = stateTreeToStringTree(child, numberer);
 			children.add(newChild);
 		}
 		newTree.setChildren(children);
@@ -241,33 +239,27 @@ public class StateTreeList extends AbstractCollection<Tree<State>> implements Se
 	 * Convert a string tree to a state tree.
 	 * 
 	 * @param tree        a parse tree
-	 * @param numbererTag which records the ids of tags
+	 * @param numberer which records the ids of tags
 	 * @param from        starting point of the span
 	 * @param to          ending point of the span
 	 * @return            parse tree represented by the state list
 	 * 
 	 */
-	private static Tree<State> stringTreeToStateTree(
-			Tree<String> tree, Numberer numbererTag, int from, int to) {
+	private static Tree<State> stringTreeToStateTree(Tree<String> tree, Numberer numberer, int from, int to) {
 		if (tree.isLeaf()) {
-			State state = new State(
-					tree.getLabel().intern(), ZERO, (short) from, (short) to);
+			State state = new State(tree.getLabel().intern(), (short) -1, (short) from, (short) to);
 			return new Tree<State>(state);
 		}
-		
-		/* numbererTag is initialized here */
-		short id = (short) numbererTag.number(tree.getLabel());
+		/* numberer is initialized here */
+		short id = (short) numberer.number(tree.getLabel());
 		
 		// System.out.println(tree.getLabel().intern()); // tag name
 		State state = new State(null, id, (short) from, (short) to);
-		
 		Tree<State> newTree = new Tree<State>(state);
 		List<Tree<State>> children = new ArrayList<Tree<State>>();
-		
 		for (Tree<String> child : tree.getChildren()) {
 			short length = (short) child.getYield().size();
-			Tree<State> newChild = stringTreeToStateTree(
-					child, numbererTag, from, from + length);
+			Tree<State> newChild = stringTreeToStateTree(child, numberer, from, from + length);
 			from += length;
 			children.add(newChild);
 		}

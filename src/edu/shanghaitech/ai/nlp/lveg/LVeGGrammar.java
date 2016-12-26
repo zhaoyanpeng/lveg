@@ -9,10 +9,9 @@ import java.util.Map;
 import java.util.Set;
 
 import edu.berkeley.nlp.syntax.Tree;
-import edu.berkeley.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.optimization.Optimizer;
-import edu.shanghaitech.ai.nlp.optimization.ParallelOptimizer;
 import edu.shanghaitech.ai.nlp.syntax.State;
+import edu.shanghaitech.ai.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.util.Recorder;
 
 /**
@@ -25,7 +24,7 @@ public class LVeGGrammar extends Recorder implements Serializable {
 	 */
 	private static final long serialVersionUID = 650638115156791313L;
 	public int nTag;
-	protected Numberer tagNumberer;
+	protected Numberer numberer;
 	
 	protected RuleTable<?> unaryRuleTable;
 	protected RuleTable<?> binaryRuleTable;
@@ -62,7 +61,7 @@ public class LVeGGrammar extends Recorder implements Serializable {
 	private Optimizer optimizer;
 	
 	
-	public LVeGGrammar(LVeGGrammar oldGrammar, int nTag) {
+	public LVeGGrammar(LVeGGrammar oldGrammar, Numberer numberer, int nTag) {
 		this.unaryRuleTable  = new RuleTable<UnaryGrammarRule>(UnaryGrammarRule.class);
 		this.binaryRuleTable = new RuleTable<BinaryGrammarRule>(BinaryGrammarRule.class);
 		this.unaryRuleMap  = new HashMap<GrammarRule, GrammarRule>();
@@ -70,13 +69,14 @@ public class LVeGGrammar extends Recorder implements Serializable {
 //		this.optimizer = new Optimizer(LVeGLearner.random);
 //		this.optimizer = new ParallelOptimizer(LVeGLearner.random);
 		
-		if (nTag < 0) {
-			this.tagNumberer = Numberer.getGlobalNumberer(LVeGLearner.KEY_TAG_SET);
-			this.nTag = tagNumberer.size();
-		} else {
-			this.tagNumberer = null;
+		if (numberer == null) {
+			this.numberer = null;
 			this.nTag = nTag;
+		} else {
+			this.numberer = numberer;
+			this.nTag = numberer.size();
 		}
+		
 		
 		if (oldGrammar != null) {
 			// TODO

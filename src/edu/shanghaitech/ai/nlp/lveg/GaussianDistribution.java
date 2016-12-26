@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
-import edu.shanghaitech.ai.nlp.lveg.LVeGLearner.Params;
+import edu.shanghaitech.ai.nlp.lveg.LearnerConfig.Params;
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
 import edu.shanghaitech.ai.nlp.util.Recorder;
 

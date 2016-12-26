@@ -37,6 +37,7 @@ public class ParallelOptimizer extends Optimizer {
 		INVOKE_ALL, COMPLETION_SERVICE, CUSTOMIZED_BLOCK, FORK_JOIN, THREAD_POOL
 	}
 	private short nthread;
+	private boolean verbose;
 	private boolean parallel;
 	private ParallelMode mode;
 	private Map<GrammarRule, Gradient> gradients; // gradients
@@ -63,16 +64,19 @@ public class ParallelOptimizer extends Optimizer {
 	public ParallelOptimizer(Random random, short nthread) {
 		this();
 		rnd = random;
+		this.verbose = false;
 		this.nthread = nthread;
 	}
 	
 	
-	public ParallelOptimizer(Random random, short msample, short bsize, short nthread, boolean parall, ParallelMode mode) {
+	public ParallelOptimizer(Random random, short msample, short bsize, 
+			short nthread, boolean parall, ParallelMode mode, boolean verbose) {
 		this();
 		rnd = random;
 		batchsize = bsize;
 		maxsample = msample;
 		this.mode = mode;
+		this.verbose = verbose;
 		this.nthread = nthread;
 		this.parallel = parall;
 	}
@@ -172,7 +176,9 @@ public class ParallelOptimizer extends Optimizer {
 		} catch (ExecutionException | InterruptedException e) {
 			e.printStackTrace();
 		}
-		logger.trace("exit: " + exit + ", nchanged: " + nchanged + " of " + ruleSet.size() + "..." + pool.isTerminated() + "...");
+		if (verbose) {
+			logger.trace("exit: " + exit + ", nchanged: " + nchanged + " of " + ruleSet.size() + "..." + pool.isTerminated() + "...");
+		}
 	}
 	
 	
@@ -200,7 +206,9 @@ public class ParallelOptimizer extends Optimizer {
 		} catch (ExecutionException | InterruptedException e) {
 			e.printStackTrace();
 		}
-		logger.trace("exit: " + exit + ", nchanged: " + nchanged + " of " + ruleSet.size() + "(" + isdone + ")" + "..." + pool.isTerminated() + "...");
+		if (verbose) {
+			logger.trace("exit: " + exit + ", nchanged: " + nchanged + " of " + ruleSet.size() + "(" + isdone + ")" + "..." + pool.isTerminated() + "...");
+		}
 	}
 	
 	
@@ -241,7 +249,9 @@ public class ParallelOptimizer extends Optimizer {
 				}
 			}
 		}
-		logger.trace("nchanged=" + nchanged + "(" + nfailed + ") of " + ruleSet.size() + "(" + nskipped + ")" + "...");
+		if (verbose) {
+			logger.trace("nchanged=" + nchanged + "(" + nfailed + ") of " + ruleSet.size() + "(" + nskipped + ")" + "...");
+		}
 	}
 	
 	
@@ -278,12 +288,14 @@ public class ParallelOptimizer extends Optimizer {
 		} catch (ExecutionException | InterruptedException e) {
 			e.printStackTrace();
 		}
-		logger.trace("exit: " + exit + ", nchanged: " + nchanged + " of " + ruleSet.size() + "(" + isdone + ")" + "..." + pool.isTerminated() + "...");
+		if (verbose) {
+			logger.trace("exit: " + exit + ", nchanged: " + nchanged + " of " + ruleSet.size() + "(" + isdone + ")" + "..." + pool.isTerminated() + "...");
+		}
 	}
 	
 	
 	/**
-	 * Need to tune the size of the chunk that a thread eats, but it is somewhat memory-efficiency? 
+	 * Need to tune the size of the chunk that a thread eats, but it is somewhat memory friendly? 
 	 * TODO Need more trials.
 	 * 
 	 * @param scoreSandT
@@ -295,7 +307,9 @@ public class ParallelOptimizer extends Optimizer {
 		ForkJoinPool pool = new ForkJoinPool(nthread);
 		ParallelForLoop loop = new ParallelForLoop(0, ruleArray.length, scoreSandT);
 		pool.invoke(loop);
-		logger.trace("nchanged: " + watch.nchanged + " of " + ruleArray.length + "(" + watch.nskipped + ")" + "...");
+		if (verbose) {
+			logger.trace("nchanged: " + watch.nchanged + " of " + ruleArray.length + "(" + watch.nskipped + ")" + "...");
+		}
 	}
 	
 	
@@ -310,7 +324,9 @@ public class ParallelOptimizer extends Optimizer {
 			}
 		}
 		reset();
-		logger.trace("nupdated=" + nupdated + " of " + ruleSet.size() + "...");
+		if (verbose) {
+			logger.trace("nupdated=" + nupdated + " of " + ruleSet.size() + "...");
+		}
 	}
 	
 	

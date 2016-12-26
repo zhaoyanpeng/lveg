@@ -1,7 +1,6 @@
 package edu.shanghaitech.ai.nlp.lveg;
 
 import java.util.List;
-import java.util.concurrent.Callable;
 
 import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.lveg.Inferencer.Chart;

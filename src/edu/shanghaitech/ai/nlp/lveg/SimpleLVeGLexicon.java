@@ -7,10 +7,10 @@ import java.util.List;
 import edu.berkeley.nlp.PCFGLA.Corpus;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.util.Indexer;
-import edu.berkeley.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.optimization.Optimizer;
 import edu.shanghaitech.ai.nlp.optimization.ParallelOptimizer;
 import edu.shanghaitech.ai.nlp.syntax.State;
+import edu.shanghaitech.ai.nlp.util.Numberer;
 
 /**
  * @author Yanpeng Zhao
@@ -101,7 +101,6 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 				optimizer.addRule(urules[i][j]);
 			}
 		}
-		labelTrees(trees); // CHECK stupid method, need to make it independent with lexicon, use as the static method?
 	}
 	
 	
@@ -137,7 +136,12 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 	@Override
 	public GaussianMixture score(State word, short idTag) {
 		// map the word to its real index
-		int ruleIdx = wordIndexMap[idTag].indexOf(word.wordIdx); 
+		int wordIdx = word.wordIdx;
+		if (wordIdx < 0) {
+			wordIdx = wordIndexer.indexOf(word.getName());
+			word.wordIdx = wordIdx;
+		}
+		int ruleIdx = wordIndexMap[idTag].indexOf(wordIdx); 
 		if (ruleIdx == -1) {
 			System.err.println("Unknown word: " + word.getName());
 			return null;
@@ -180,9 +184,7 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 		return;
 	}
 	
-	
-	@Override
-	public String toString() {
+	public String toString(Numberer numberer) {
 		String word = null;
 		int count = 0, ncol = 1;
 		StringBuffer sb = new StringBuffer();
@@ -196,8 +198,6 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 				sb.append("\n");
 			}
 		}
-		
-		Numberer numberer = Numberer.getGlobalNumberer(LVeGLearner.KEY_TAG_SET);
 
 		sb.append("\n");
 		sb.append("---Unary Rules---\n");

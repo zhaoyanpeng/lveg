@@ -2,9 +2,9 @@ package edu.shanghaitech.ai.nlp.syntax;
 
 import java.io.Serializable;
 
-import edu.berkeley.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.lveg.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
+import edu.shanghaitech.ai.nlp.util.Numberer;
 
 /**
  * Represent the nodes, non-terminals or terminals (words), of parse tree. 
@@ -45,6 +45,8 @@ public class State implements Serializable {
 		this.from = from;
 		this.to = to;
 		this.id = id;
+		this.wordIdx = -1;
+		this.signIdx = -1;
 	}
 	
 	
@@ -53,6 +55,8 @@ public class State implements Serializable {
 		this.from = state.from;
 		this.to = state.to;
 		this.id = state.id;
+		this.wordIdx = state.wordIdx;
+		this.signIdx = state.signIdx;
 		
 		if (copyScore) {
 			this.insideScore = state.insideScore;
@@ -139,13 +143,12 @@ public class State implements Serializable {
 	}
 	
 	
-	public String toString(boolean simple, short nfirst) {
+	public String toString(boolean simple, short nfirst, Numberer numberer) {
 		if (simple) {
 			return toString();
 		} else {
 			StringBuffer sb = new StringBuffer();
-			name = name != null ? name
-					: (String) Numberer.getGlobalNumberer(LVeGLearner.KEY_TAG_SET).object(id);
+			name = name != null ? name : (String) numberer.object(id);
 			sb.append("State [name=" + name + ", id=" + id + ", from=" + from + ", to=" + to + "]");
 			if (insideScore != null) {
 				sb.append("->[iscore=");
@@ -166,10 +169,8 @@ public class State implements Serializable {
 	}
 
 
-	@Override
-	public String toString() {
-		name = name != null ? name
-				: (String) Numberer.getGlobalNumberer(LVeGLearner.KEY_TAG_SET).object(id);
+	public String toString(Numberer numberer) {
+		name = name != null ? name : (String) (String) numberer.object(id);
 		return "State [name=" + name + ", id=" + id + ", from=" + from + ", to=" + to + "]";
 	}
 	

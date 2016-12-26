@@ -28,15 +28,15 @@ import javax.imageio.ImageIO;
 
 import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.ui.TreeJPanel;
-import edu.berkeley.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.lveg.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.GrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.Inferencer.Cell;
 import edu.shanghaitech.ai.nlp.lveg.Inferencer.Chart;
-import edu.shanghaitech.ai.nlp.lveg.LVeGLearner.Options;
 import edu.shanghaitech.ai.nlp.lveg.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
 import edu.shanghaitech.ai.nlp.lveg.LVeGLexicon;
+import edu.shanghaitech.ai.nlp.lveg.LearnerConfig.Options;
+import edu.shanghaitech.ai.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.lveg.StateTreeList;
 import edu.shanghaitech.ai.nlp.lveg.UnaryGrammarRule;
 import edu.shanghaitech.ai.nlp.syntax.State;
@@ -267,17 +267,7 @@ public class MethodUtil extends Recorder {
 		StringBuilder sb = new StringBuilder();
 		toString(tree, simple, nfirst, sb);
 		logger.debug(sb + "\n");
-	}
-	
-	public static void debugNumbererTag(Numberer numbererTag, Options opts) {
-		if (opts.verbose || true) {
-			for (int i = 0; i < numbererTag.size(); i++) {
-//				logger.trace("Tag " + i + "\t" +  (String) numbererTag.object(i) + "\n"); // DEBUG
-			}
-		}
-		logger.debug("There are " + numbererTag.size() + " observed tags.\n");
-	}
-	
+	}	
 	
 	private static void toString(Tree<State> tree, boolean simple, short nfirst, StringBuilder sb) {
 		if (tree.isLeaf()) { sb.append("[" + tree.getLabel().wordIdx + "]"); return; }
@@ -310,7 +300,7 @@ public class MethodUtil extends Recorder {
 	 * @param maxLength     find the unary chain rule with the specific length
 	 * @param treeFileName  file name that is used to save the tree to the image
 	 */
-	public static void lenUnaryRuleChain(StateTreeList stateTreeList, short maxLength, String treeFileName) {
+	public static void lenUnaryRuleChain(StateTreeList stateTreeList, short maxLength, String treeFileName, Numberer numberer) {
 		int count = 0;
 		for (Tree<State> tree : stateTreeList) {
 			if (lenUnaryRuleChain(tree, (short) 0, maxLength)) {
@@ -318,7 +308,7 @@ public class MethodUtil extends Recorder {
 					System.out.println("The tree contains the unary rule chain of length >= " + maxLength + ":");
 					System.out.println(tree);
 					try {
-						saveTree2image(tree, treeFileName + maxLength + "_" + count, null);
+						saveTree2image(tree, treeFileName + maxLength + "_" + count, null, numberer);
 						System.out.println("The tree has been saved to " + treeFileName + maxLength);
 					} catch (Exception e) {
 						// TODO Auto-generated catch block
@@ -556,12 +546,6 @@ public class MethodUtil extends Recorder {
 	}
 	
 	
-	public static String readFile(String path, Charset encoding) throws IOException {
-	  byte[] encoded = Files.readAllBytes(Paths.get(path));
-	  return new String(encoded, encoding);
-	}
-	
-	
 	/**
 	 * Return log(a + b) given log(a) and log(b).
 	 * 
@@ -603,10 +587,10 @@ public class MethodUtil extends Recorder {
 	 * @param stringTree the string parse tree
 	 * @throws Exception oops
 	 */
-	public static void saveTree2image(Tree<State> stateTree, String filename, Tree<String> stringTree) throws Exception {
+	public static void saveTree2image(Tree<State> stateTree, String filename, Tree<String> stringTree, Numberer numberer) throws Exception {
 		TreeJPanel tjp = new TreeJPanel();
 		if (stringTree == null) {
-			stringTree = StateTreeList.stateTreeToStringTree(stateTree, Numberer.getGlobalNumberer(LVeGLearner.KEY_TAG_SET));
+			stringTree = StateTreeList.stateTreeToStringTree(stateTree, numberer);
 			logger.trace("\nSTRING PARSE TREE: " + stringTree + "\n");
 		}
 		

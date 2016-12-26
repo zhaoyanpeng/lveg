@@ -19,7 +19,7 @@ public abstract class LVeGLexicon implements Serializable {
 	 * 
 	 */
 	private static final long serialVersionUID = 255983044651602165L;
-	public final String TOKEN_UNKNOWN = "UNK";
+	public static final String TOKEN_UNKNOWN = "UNK";
 	protected transient String lastWord;
 	protected transient String lastSignature;
 	protected transient int lastPosition;

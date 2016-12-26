@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
-import edu.shanghaitech.ai.nlp.lveg.LVeGLearner.Params;
+import edu.shanghaitech.ai.nlp.lveg.LearnerConfig.Params;
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
 import edu.shanghaitech.ai.nlp.util.Recorder;
 

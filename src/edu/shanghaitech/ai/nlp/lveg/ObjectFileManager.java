@@ -12,6 +12,8 @@ import java.util.Date;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
+import edu.shanghaitech.ai.nlp.util.Numberer;
+
 public class ObjectFileManager {
 	
 	public static class ObjectFile implements Serializable {
@@ -40,13 +42,13 @@ public class ObjectFileManager {
 			return true;
 		}
 		
-		public static GrammarFile load(String filename) {
-			GrammarFile gfile = null;
+		public static Object load(String filename) {
+			Object o = null;
 			try {
 				FileInputStream fis = new FileInputStream(filename);
 				GZIPInputStream gis = new GZIPInputStream(fis);
 				ObjectInputStream ois = new ObjectInputStream(gis);
-				gfile = (GrammarFile) ois.readObject();
+				o = ois.readObject();
 				ois.close();
 				gis.close();
 				fis.close();
@@ -54,7 +56,7 @@ public class ObjectFileManager {
 				e.printStackTrace();
 				return null;
 			}
-			return gfile;
+			return o;
 		}
 	}
 	
@@ -67,8 +69,10 @@ public class ObjectFileManager {
 		private StateTreeList train;
 		private StateTreeList test;
 		private StateTreeList dev;
+		private Numberer numberer;
 		
-		public CorpusFile(StateTreeList train, StateTreeList test, StateTreeList dev) {
+		public CorpusFile(StateTreeList train, StateTreeList test, StateTreeList dev, Numberer numberer) {
+			this.numberer = numberer;
 			this.train = train;
 			this.test = test;
 			this.dev = dev;
@@ -84,6 +88,10 @@ public class ObjectFileManager {
 
 		public StateTreeList getDev() {
 			return dev;
+		}
+		
+		public Numberer getNumberer() {
+			return numberer;
 		}
 	}
 	

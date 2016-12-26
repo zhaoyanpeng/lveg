@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import edu.berkeley.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.syntax.State;
 import edu.shanghaitech.ai.nlp.util.Recorder;
 
@@ -655,7 +654,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				sb.append("Cell [status=" + status + ", size=" + totals.size());
 				
 				for (Map.Entry<Short, GaussianMixture> score : totals.entrySet()) {
-					name = (String) Numberer.getGlobalNumberer(LVeGLearner.KEY_TAG_SET).object(score.getKey());
+					name = (String) grammar.numberer.object(score.getKey());
 					// sb.append(", " + name + "=" + score.getValue().toString(simple, nfirst));
 					sb.append(", " + name + ":nc=" + score.getValue().ncomponent);
 				}
@@ -673,7 +672,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 			StringBuffer sb = new StringBuffer();
 			sb.append("Cell [status=" + status + ", size=" + totals.size());
 			for (Map.Entry<Short, GaussianMixture> score : totals.entrySet()) {
-				name = (String) Numberer.getGlobalNumberer(LVeGLearner.KEY_TAG_SET).object(score.getKey());
+				name = (String)grammar.numberer.object(score.getKey());
 				sb.append(", " + name + "=" + score.getValue());
 			}
 			sb.append("]");

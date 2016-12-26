@@ -6,8 +6,6 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
-import edu.berkeley.nlp.util.MutableInteger;
-
 /**
  * Rewrite, changing static fields to non-static ones, to be able to save to the object.
  * 
@@ -27,17 +25,23 @@ public class Numberer implements Serializable {
 	private Map obj2idx;
 	private int count;
 	
-	public Numberer() {
+	public Numberer() {}
+	
+	public Numberer(boolean placeholder) {
 		this.count = 0;
 		this.idx2obj = new HashMap();
 		this.obj2idx = new HashMap();
 		this.idx = new MutableInteger();
 	}
 	
+	public void put(String key, Object o) {
+		numbererMap.put(key, o);
+	}
+	
 	public Numberer getGlobalNumberer(String key) {
 		Numberer value = (Numberer) numbererMap.get(key);
 		if (value == null) {
-			value = new Numberer();
+			value = new Numberer(true);
 			numbererMap.put(key, value);
 		}
 		return value;

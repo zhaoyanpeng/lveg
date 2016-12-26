@@ -9,6 +9,8 @@ import java.util.Random;
 
 import org.junit.Test;
 
+import edu.shanghaitech.ai.nlp.lveg.LearnerConfig;
+
 public class MethodUtilTest {
 	
 	@Test
@@ -65,7 +67,7 @@ public class MethodUtilTest {
 		
 		
 		try {
-			String str = MethodUtil.readFile("param.ini", StandardCharsets.UTF_8);
+			String str = LearnerConfig.readFile("param.ini", StandardCharsets.UTF_8);
 			System.out.println(str);
 			String[] arr = str.split(",");
 			for (int i = 0; i < arr.length; i++) {
