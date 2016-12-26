@@ -6,7 +6,6 @@ import java.util.List;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.lveg.Inferencer.Cell;
 import edu.shanghaitech.ai.nlp.lveg.Inferencer.Chart;
-import edu.shanghaitech.ai.nlp.lveg.Parser.Meta;
 import edu.shanghaitech.ai.nlp.syntax.State;
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
 
@@ -14,7 +13,7 @@ import edu.shanghaitech.ai.nlp.util.MethodUtil;
  * @author Yanpeng Zhao
  *
  */
-public class LVeGParser<T> extends Parser<T> {
+public class LVeGParser<I, O> extends Parser<I, O> {
 	/**
 	 * 
 	 */
@@ -22,7 +21,7 @@ public class LVeGParser<T> extends Parser<T> {
 	private LVeGInferencer inferencer;
 	
 	
-	private LVeGParser(LVeGParser<?> parser) {
+	private LVeGParser(LVeGParser<?, ?> parser) {
 		this.inferencer = parser.inferencer;
 		this.chart = parser.reuse ? new Chart(MAX_SENTENCE_LEN, false) : null;
 		this.reuse = parser.reuse;
@@ -39,22 +38,23 @@ public class LVeGParser<T> extends Parser<T> {
 	@Override
 	public synchronized Object call() throws Exception {
 		if (sample == null) { return null; }
+		Tree<State> asample = (Tree<State>) sample;
 		List<Double> scores = new ArrayList<Double>(2);
-		double scoreT = doInsideOutsideWithTree(sample); 
-		double scoreS = doInsideOutside(sample); 
+		double scoreT = doInsideOutsideWithTree(asample); 
+		double scoreS = doInsideOutside(asample); 
 		scores.add(scoreT);
 		scores.add(scoreS);
 //		logger.trace("\no---id=" + Thread.currentThread().getId() + ", isample=" + isample + " " + 
 //				MethodUtil.double2str(scores, 3, -1, false, true) + " comes...\n"); // DEBUG
 		synchronized (inferencer) {
 //			logger.trace("\ni---id=" + Thread.currentThread().getId() + ", isample=" + isample + " enters...\n"); // DEBUG
-			inferencer.evalRuleCountWithTree(sample, (short) 0);
-			inferencer.evalRuleCount(sample, chart, (short) 0);
+			inferencer.evalRuleCountWithTree(asample, (short) 0);
+			inferencer.evalRuleCount(asample, chart, (short) 0);
 			inferencer.evalGradients(scores);
 //			logger.trace("\ni---id=" + Thread.currentThread().getId() + ", isample=" + isample + " " + 
 //					MethodUtil.double2str(scores, 3, -1, false, true) + " leaves...\n"); // DEBUG
 		}
-		Meta<T> cache = new Meta(isample, scores);
+		Meta<O> cache = new Meta(isample, scores);
 		synchronized (caches) {
 			caches.add(cache);
 			caches.notifyAll();
@@ -65,8 +65,8 @@ public class LVeGParser<T> extends Parser<T> {
 
 
 	@Override
-	protected LVeGParser<?> newInstance() {
-		return new LVeGParser<T>(this);
+	public LVeGParser<?, ?> newInstance() {
+		return new LVeGParser<I, O>(this);
 	}
 	
 	

@@ -1,17 +1,18 @@
 package edu.shanghaitech.ai.nlp.lveg;
 
+import java.io.Serializable;
 import java.util.PriorityQueue;
+import java.util.concurrent.Callable;
 
-public interface Executor<I, O> {
-	
-	public static class Meta<T> {
+public interface Executor<I, O> extends Callable<Object>, Serializable {
+	public static class Meta<O> {
 		public int id;
-		public T value;
-		public Meta(int id, T value) {
+		public O value;
+		public Meta(int id, O value) {
 			this.id = id;
 			this.value = value;
 		}
-		public T value() { return value; }
+		public O value() { return value; }
 		@Override
 		public String toString() {
 			return "Meta [id=" + id + ", value=" + value + "]";
@@ -20,7 +21,7 @@ public interface Executor<I, O> {
 	
 	public abstract Executor<?, ?> newInstance();
 	
-	public abstract void setNextSample(I sample, int isample);
+	public abstract void setNextSample(int isample, I sample);
 	
 	public abstract void setIdx(int idx, PriorityQueue<Meta<O>> caches);
 }

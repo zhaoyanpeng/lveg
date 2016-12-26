@@ -7,7 +7,7 @@ import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.lveg.Inferencer.Chart;
 import edu.shanghaitech.ai.nlp.syntax.State;
 
-public class Valuator<T> extends Parser<T> implements Callable<Object> {
+public class Valuator<I, O> extends Parser<I, O> {
 	/**
 	 * 
 	 */
@@ -15,7 +15,7 @@ public class Valuator<T> extends Parser<T> implements Callable<Object> {
 	private LVeGInferencer inferencer;
 	
 	
-	private Valuator(Valuator<?> valuator) {
+	private Valuator(Valuator<?, ?> valuator) {
 		this.inferencer = valuator.inferencer;
 		this.chart = valuator.reuse ? new Chart(MAX_SENTENCE_LEN, false) : null;
 		this.reuse = valuator.reuse;
@@ -29,16 +29,18 @@ public class Valuator<T> extends Parser<T> implements Callable<Object> {
 	}
 
 	
-	protected Valuator<?> newInstance() {
-		return new Valuator<T>(this);
+	@Override
+	public Valuator<?, ?> newInstance() {
+		return new Valuator<I, O>(this);
 	}
+	
 	
 	
 	@Override
 	public synchronized Object call() {
 		if (sample == null) { return null; }
-		double ll = probability(sample);
-		Meta<T> cache = new Meta(isample, ll);
+		double ll = probability((Tree<State>) sample);
+		Meta<O> cache = new Meta(isample, ll);
 		synchronized (caches) {
 			caches.add(cache);
 			caches.notifyAll();
@@ -70,7 +72,7 @@ public class Valuator<T> extends Parser<T> implements Callable<Object> {
 	 * @return
 	 */
 	protected double scoreTree(Tree<State> tree) {
-		inferencer.insideScoreWithTree(tree);
+		LVeGInferencer.insideScoreWithTree(tree);
 		GaussianMixture gm = tree.getLabel().getInsideScore();
 		double score = gm.eval(null, true);
 		return score;
@@ -92,7 +94,7 @@ public class Valuator<T> extends Parser<T> implements Callable<Object> {
 			if (chart != null) { chart.clear(-1); }
 			chart = new Chart(nword, false);
 		}
-		inferencer.insideScore(chart, sentence, nword);
+		LVeGInferencer.insideScore(chart, sentence, nword);
 		GaussianMixture gm = chart.getInsideScore((short) 0, Chart.idx(0, 1));
 		double score = gm.eval(null, true);
 		return score;

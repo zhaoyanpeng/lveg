@@ -8,12 +8,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import edu.berkeley.nlp.syntax.Tree;
-import edu.shanghaitech.ai.nlp.lveg.Parser.Meta;
-import edu.shanghaitech.ai.nlp.syntax.State;
+import edu.shanghaitech.ai.nlp.lveg.Executor.Meta;
 import edu.shanghaitech.ai.nlp.util.Recorder;
 
-public class MultiThreadedParser extends Recorder implements Serializable {
+public class ThreadPool extends Recorder implements Serializable {
 	/**
 	 * 
 	 */
@@ -29,34 +27,34 @@ public class MultiThreadedParser extends Recorder implements Serializable {
 	
 	protected int nthread;
 	protected Future[] submits;
-	protected Parser[] parsers;
+	protected Executor[] executors;
 	protected ExecutorService pool;
 	protected PriorityQueue<Meta<?>> scores;
 	
 	
-	public MultiThreadedParser(Parser<?> parser, int nthread) {
+	public ThreadPool(Executor<?, ?> executor, int nthread) {
 		this.nthread = nthread;
 		this.submits = new Future[nthread];
-		this.parsers = new Parser[nthread];
+		this.executors = new Executor[nthread];
 		this.pool = Executors.newFixedThreadPool(nthread);
 		this.scores = new PriorityQueue<Meta<?>>(idcomparator);
 		this.lastReturn = -1;
 		this.lastSubmission = 0;
 		for (int i = 0; i < nthread; i++) {
-			parsers[i] = parser.newInstance();
-			parsers[i].setIdx(i, scores);
+			executors[i] = executor.newInstance();
+			executors[i].setIdx(i, scores);
 		}
 	}
 	
 	
-	public void parse(Tree<State> sample) {
+	public void execute(Object sample) {
 		synchronized (scores) {
 			while (true) {
 				for (int i = 0; i < nthread; i++) {
 					if (submits[i] == null || submits[i].isDone()) {
-						parsers[i].setNextSample(sample, lastSubmission++);
+						executors[i].setNextSample(lastSubmission++, sample);
 						// logger.trace("\n--->last-submission: " + lastSubmission + "\n"); // DEBUG
-						submits[i] = pool.submit(parsers[i]);
+						submits[i] = pool.submit(executors[i]);
 						return;
 					}
 				}

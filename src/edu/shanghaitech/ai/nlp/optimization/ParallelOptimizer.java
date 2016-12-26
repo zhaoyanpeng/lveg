@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
@@ -19,7 +20,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.TimeUnit;
 
+import edu.shanghaitech.ai.nlp.lveg.Executor;
 import edu.shanghaitech.ai.nlp.lveg.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.ThreadPool;
 
 /**
  * @author Yanpeng Zhao
@@ -30,14 +33,15 @@ public class ParallelOptimizer extends Optimizer {
 	 * 
 	 */
 	private static final long serialVersionUID = -6206396492328441930L;
-	protected enum ParallelMode {
-		INVOKE_ALL, COMPLETION_SERVICE, CUSTOMIZED_BLOCK, FORK_JOIN
+	public enum ParallelMode {
+		INVOKE_ALL, COMPLETION_SERVICE, CUSTOMIZED_BLOCK, FORK_JOIN, THREAD_POOL
 	}
 	private short nthread;
 	private boolean parallel;
 	private ParallelMode mode;
 	private Map<GrammarRule, Gradient> gradients; // gradients
 	
+	private transient ThreadPool mpool;
 	private transient GrammarRule[] ruleArray;
 	private transient ExecutorService pool;
 	private transient List<Future<Boolean>> futures;
@@ -50,7 +54,7 @@ public class ParallelOptimizer extends Optimizer {
 		this.cntsWithT = new HashMap<GrammarRule, Batch>();
 		this.ruleSet = new HashSet<GrammarRule>();
 		this.gradients = new HashMap<GrammarRule, Gradient>();
-		this.mode = ParallelMode.INVOKE_ALL;
+		this.mode = ParallelMode.THREAD_POOL;
 		this.futures = null;
 		this.tasks = null;
 	}
@@ -63,74 +67,91 @@ public class ParallelOptimizer extends Optimizer {
 	}
 	
 	
-	public ParallelOptimizer(Random random, short msample, short bsize, short nthread, boolean parall) {
+	public ParallelOptimizer(Random random, short msample, short bsize, short nthread, boolean parall, ParallelMode mode) {
 		this();
 		rnd = random;
 		batchsize = bsize;
 		maxsample = msample;
+		this.mode = mode;
 		this.nthread = nthread;
 		this.parallel = parall;
 	}
 	
 	
-	private void evalGradientsParallel(List<Double> scoreSandT) {
-		if (tasks == null) { 
+	private void composeTasks(List<Double> scoreSandT) {
+		if (tasks == null) {
 			tasks = new ArrayList<Callable<Boolean>>(ruleSet.size()); 
-			for (GrammarRule rule : ruleSet) {
-				boolean updated = false;
-				Batch cntWithT = cntsWithT.get(rule);
-				Batch cntWithS = cntsWithS.get(rule);
-				for (short i = 0; i < Gradient.MAX_BATCH_SIZE; i++) {
-					if (cntWithT.get(i) != null || cntWithS.get(i) != null) { 
-						updated = true; 
-						break; 
-					} 
-				}
-				if (!updated) { continue; }
-				tasks.add(new Callable<Boolean>() {
-					@Override
-					public Boolean call() throws Exception {
-						/*
-						boolean updated = false;
-						Batch cntWithT = cntsWithT.get(rule);
-						Batch cntWithS = cntsWithS.get(rule);
-						for (short i = 0; i < Gradient.MAX_BATCH_SIZE; i++) {
-							if (cntWithT.get(i) != null || cntWithS.get(i) != null) { 
-								updated = true; 
-								break; 
-							} 
-						}
-						if (!updated) { return false; }
-						*/
-						Gradient gradient = gradients.get(rule);
-						boolean ichanged = gradient.eval(rule, cntWithT, cntWithS, scoreSandT);
-						// clear
-						cntWithT.clear();
-						cntWithS.clear();
-						return ichanged;
-					}
-				});
-			}
 		}
+		for (GrammarRule rule : ruleSet) {
+			boolean updated = false;
+			Batch cntWithT = cntsWithT.get(rule);
+			Batch cntWithS = cntsWithS.get(rule);
+			for (short i = 0; i < Gradient.MAX_BATCH_SIZE; i++) {
+				if (cntWithT.get(i) != null || cntWithS.get(i) != null) { 
+					updated = true; 
+					break; 
+				} 
+			}
+			if (!updated) { continue; }
+			tasks.add(new Callable<Boolean>() {
+				@Override
+				public Boolean call() throws Exception {
+					/*
+					boolean updated = false;
+					Batch cntWithT = cntsWithT.get(rule);
+					Batch cntWithS = cntsWithS.get(rule);
+					for (short i = 0; i < Gradient.MAX_BATCH_SIZE; i++) {
+						if (cntWithT.get(i) != null || cntWithS.get(i) != null) { 
+							updated = true; 
+							break; 
+						} 
+					}
+					if (!updated) { return false; }
+					*/
+					Gradient gradient = gradients.get(rule);
+					boolean ichanged = gradient.eval(rule, cntWithT, cntWithS, scoreSandT);
+					// clear
+					cntWithT.clear();
+					cntWithS.clear();
+					return ichanged;
+				}
+			});
+		}
+	}
+	
+	
+	private void evalGradientsParallel(List<Double> scoreSandT) {
 		switch (mode) {
 		case COMPLETION_SERVICE: {
+			composeTasks(scoreSandT);
 			useCompletionService();
+			tasks.clear();
 			break;
 		}
 		case CUSTOMIZED_BLOCK: {
+			composeTasks(scoreSandT);
 			useCustomizedBlock();
+			tasks.clear();
+			break;
+		}
+		case THREAD_POOL: {
+			useThreadPool(scoreSandT);
 			break;
 		}
 		case INVOKE_ALL: {
+			composeTasks(scoreSandT);
 			useInvokeAll();
+			tasks.clear();
 			break;
 		}
 		case FORK_JOIN: {
 			useForkJoin(scoreSandT);
 			break;
 		}
+		default: {
+			logger.error("unmatched parallel mode.\n");
 		}
-		tasks = null;
+		}
 	}
 	
 	
@@ -180,6 +201,47 @@ public class ParallelOptimizer extends Optimizer {
 			e.printStackTrace();
 		}
 		logger.trace("exit: " + exit + ", nchanged: " + nchanged + " of " + ruleSet.size() + "(" + isdone + ")" + "..." + pool.isTerminated() + "...");
+	}
+	
+	
+	private void useThreadPool(List<Double> scoreSandT) {
+		if (mpool == null) {
+			SubOptimizer<?, ?> subOptimizer = new SubOptimizer<Resource, Boolean>();
+			mpool = new ThreadPool(subOptimizer, nthread);
+		}
+		int nchanged = 0, nskipped = 0, nfailed = 0;
+		for (GrammarRule rule : ruleSet) {
+			boolean updated = false;
+			Batch cntWithT = cntsWithT.get(rule);
+			Batch cntWithS = cntsWithS.get(rule);
+			for (short i = 0; i < Gradient.MAX_BATCH_SIZE; i++) {
+				if (cntWithT.get(i) != null || cntWithS.get(i) != null) { 
+					updated = true; 
+					break; 
+				} 
+			}
+			if (!updated) { nskipped++; continue; }
+			Gradient gradient = gradients.get(rule);
+			Resource rsc = new Resource(rule, gradient, cntWithT, cntWithS, scoreSandT);
+			mpool.execute(rsc);
+			while (mpool.hasNext()) {
+				if ((Boolean) mpool.getNext()) {
+					nchanged++;
+				} else {
+					nfailed++;
+				}
+			}
+		}
+		while (!mpool.isDone()) {
+			while (mpool.hasNext()) {
+				if ((Boolean) mpool.getNext()) {
+					nchanged++;
+				} else {
+					nfailed++;
+				}
+			}
+		}
+		logger.trace("nchanged=" + nchanged + "(" + nfailed + ") of " + ruleSet.size() + "(" + nskipped + ")" + "...");
 	}
 	
 	
@@ -316,8 +378,85 @@ public class ParallelOptimizer extends Optimizer {
 				e.printStackTrace();
 			}
 		}
+		if (mpool != null) {
+			mpool.shutdown();
+		}
 	}
 	
+	
+	
+	/**
+	 * Type declaration of the input to the SubOptimizer.
+	 *
+	 */
+	class Resource {
+		protected GrammarRule rule;
+		protected Gradient gradient;
+		protected List<Double> scores;
+		protected Batch iosWithT;
+		protected Batch iosWithS;
+		public Resource(GrammarRule rule, Gradient gradient, Batch iosWithT, Batch iosWithS, List<Double> scores) {
+			this.rule = rule;
+			this.gradient = gradient;
+			this.iosWithT = iosWithT;
+			this.iosWithS = iosWithS;
+			this.scores = scores;
+		}
+	}
+	/**
+	 * @author Yanpeng Zhao
+	 *
+	 * @param <I> data type of the input, the resources to be consumed by threads
+	 * @param <O> data type of the output, the returns returned in the method call()
+	 */
+	class SubOptimizer<I, O> implements Executor<I, O> {
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 5638564355997342275L;
+		protected int idx;
+		protected I sample;
+		protected int isample;
+		protected PriorityQueue<Meta<O>> caches;
+		
+		public SubOptimizer() {}
+		
+		private SubOptimizer(SubOptimizer<?, ?> subOptimizer) {}
+
+		@Override
+		public synchronized Object call() throws Exception {
+			if (sample == null) { return null; }
+			Resource rsc = (Resource) sample;
+			boolean status = rsc.gradient.eval(rsc.rule, rsc.iosWithT, rsc.iosWithS, rsc.scores);
+			rsc.iosWithS.clear();
+			rsc.iosWithT.clear();
+			Meta<O> cache = new Meta(isample, status);
+			synchronized (caches) {
+				caches.add(cache);
+				caches.notifyAll();
+			}
+			sample = null;
+			return null;
+		}
+
+		@Override
+		public SubOptimizer<?, ?> newInstance() {
+			return new SubOptimizer<I, O>(this);
+		}
+
+		@Override
+		public void setNextSample(int isample, I sample) {
+			this.sample = sample;
+			this.isample = isample;
+		}
+
+		@Override
+		public void setIdx(int idx, PriorityQueue<Meta<O>> caches) {
+			this.idx = idx;
+			this.caches = caches;
+		}
+		
+	}
 	
 	/**
 	 * @author Yanpeng Zhao
@@ -388,6 +527,7 @@ public class ParallelOptimizer extends Optimizer {
 				cntWithS.clear();
 			}
 		}
+		
 	}
 	
 }

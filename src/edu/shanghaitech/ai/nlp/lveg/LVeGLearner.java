@@ -20,6 +20,7 @@ import edu.shanghaitech.ai.nlp.util.Recorder;
 import edu.shanghaitech.ai.nlp.lveg.ObjectFileManager.GrammarFile;
 import edu.shanghaitech.ai.nlp.optimization.Optimizer;
 import edu.shanghaitech.ai.nlp.optimization.ParallelOptimizer;
+import edu.shanghaitech.ai.nlp.optimization.ParallelOptimizer.ParallelMode;
 import edu.shanghaitech.ai.nlp.syntax.State;
 
 /**
@@ -132,6 +133,8 @@ public class LVeGLearner extends Recorder {
 		public boolean parallelgrad = true;
 		@Option(name = "-parallelbatch", usage = "parallize the minibatch training (true) or not (false) (default: false)")
 		public boolean parallelbatch = true;
+		@Option(name = "-parallelmode", usage = "the mode of parallelizing gradient evaluation (default: THREAD_POOL")
+		public ParallelMode parallelmode = ParallelMode.THREAD_POOL;
 		/* parallel-configurations section ends */
 		
 		/* training configurations section begins */
@@ -263,8 +266,8 @@ public class LVeGLearner extends Recorder {
 		
 		LVeGGrammar grammar = new LVeGGrammar(null, -1);
 		LVeGLexicon lexicon = new SimpleLVeGLexicon();
-		Valuator<?> valuator = new Valuator<Double>(grammar, lexicon, true);
-		MultiThreadedParser mvaluator = new MultiThreadedParser(valuator, opts.nthreadeval);
+		Valuator<?, ?> valuator = new Valuator<Tree<State>, Double>(grammar, lexicon, true);
+		ThreadPool mvaluator = new ThreadPool(valuator, opts.nthreadeval);
 				
 		if (opts.loadGrammar && opts.inGrammar != null) {
 			GrammarFile gfile = GrammarFile.load(opts.datadir + opts.inGrammar);
@@ -272,8 +275,8 @@ public class LVeGLearner extends Recorder {
 			lexicon = gfile.getLexicon();
 			lexicon.labelTrees(trainTrees); // FIXME no errors, just alert you to pay attention to it 
 			Optimizer.config(random, opts.maxsample, opts.batchsize); // FIXME no errors, just alert you...
-			valuator = new Valuator<Double>(grammar, lexicon, true);			
-			mvaluator = new MultiThreadedParser(valuator, opts.nthreadeval);
+			valuator = new Valuator<Tree<State>, Double>(grammar, lexicon, true);			
+			mvaluator = new ThreadPool(valuator, opts.nthreadeval);
 			
 			for (Tree<State> tree : trainTrees) {
 				if (tree.getYield().size() == 6) {
@@ -282,8 +285,10 @@ public class LVeGLearner extends Recorder {
 				} // a global tree
 			}
 		} else {
-			Optimizer goptimizer = new ParallelOptimizer(LVeGLearner.random, opts.maxsample, opts.batchsize, opts.ntheadgrad, opts.parallelgrad);
-			Optimizer loptimizer = new ParallelOptimizer(LVeGLearner.random, opts.maxsample, opts.batchsize, opts.ntheadgrad, opts.parallelgrad);
+			Optimizer goptimizer = new ParallelOptimizer(LVeGLearner.random, opts.maxsample, 
+					opts.batchsize, opts.ntheadgrad, opts.parallelgrad, opts.parallelmode);
+			Optimizer loptimizer = new ParallelOptimizer(LVeGLearner.random, opts.maxsample, 
+					opts.batchsize, opts.ntheadgrad, opts.parallelgrad, opts.parallelmode);
 			grammar.setOptimizer(goptimizer);
 			lexicon.setOptimizer(loptimizer);
 			
@@ -307,9 +312,9 @@ public class LVeGLearner extends Recorder {
 		long endTime = System.currentTimeMillis();
 		logger.trace("------->" + ll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");	
 		*/
-		LVeGParser<?> lvegParser = new LVeGParser<List<Double>>(grammar, lexicon, true);
-		MaxRuleParser<?> mrParser = new MaxRuleParser<Tree<String>>(grammar, lexicon, true);
-		MultiThreadedParser trainer = new MultiThreadedParser(lvegParser, opts.nthreadbatch);
+		LVeGParser<?, ?> lvegParser = new LVeGParser<Tree<State>, List<Double>>(grammar, lexicon, true);
+		MaxRuleParser<?, ?> mrParser = new MaxRuleParser<Tree<State>, Tree<String>>(grammar, lexicon, true);
+		ThreadPool trainer = new ThreadPool(lvegParser, opts.nthreadbatch);
 		
 		MethodUtil.saveTree2image(globalTree, filename, null);
 		Tree<String> parseTree = mrParser.parse(globalTree);
@@ -331,8 +336,8 @@ public class LVeGLearner extends Recorder {
 	}
 	
 	
-	public static void parallelInBatch(LVeGGrammar grammar, LVeGLexicon lexicon, MultiThreadedParser mvaluator, MultiThreadedParser trainer, 
-			MaxRuleParser<?> mrParser, Map<String, StateTreeList> trees, Tree<State> globalTree, String treeFile, double prell) throws Exception {
+	public static void parallelInBatch(LVeGGrammar grammar, LVeGLexicon lexicon, ThreadPool mvaluator, ThreadPool trainer, 
+			MaxRuleParser<?, ?> mrParser, Map<String, StateTreeList> trees, Tree<State> globalTree, String treeFile, double prell) throws Exception {
 		List<Double> scoresOfST = new ArrayList<Double>(2);
 		List<Double> likelihood = new ArrayList<Double>();
 		StateTreeList trainTrees = trees.get(ID_TRAIN);
@@ -349,7 +354,7 @@ public class LVeGLearner extends Recorder {
 				if (opts.onlyLength > 0) {
 					if (tree.getYield().size() > opts.onlyLength) { continue; }
 				}
-				trainer.parse(tree);
+				trainer.execute(tree);
 				while (trainer.hasNext()) {
 					List<Double> score = (List<Double>) trainer.getNext();
 					if (score == null) {
@@ -440,8 +445,8 @@ public class LVeGLearner extends Recorder {
 		logger.trace("Convergence Path: " + likelihood + "\n");
 	}
 	
-	public static void serialInBatch(LVeGGrammar grammar, LVeGLexicon lexicon, MultiThreadedParser mvaluator, LVeGParser<?> lvegParser, 
-			MaxRuleParser<?> mrParser, Map<String, StateTreeList> trees, Tree<State> globalTree, String treeFile, double prell) throws Exception {
+	public static void serialInBatch(LVeGGrammar grammar, LVeGLexicon lexicon, ThreadPool mvaluator, LVeGParser<?, ?> lvegParser, 
+			MaxRuleParser<?, ?> mrParser, Map<String, StateTreeList> trees, Tree<State> globalTree, String treeFile, double prell) throws Exception {
 		List<Double> scoresOfST = new ArrayList<Double>(2);
 		List<Double> likelihood = new ArrayList<Double>();
 		StateTreeList trainTrees = trees.get(ID_TRAIN);
@@ -564,7 +569,7 @@ public class LVeGLearner extends Recorder {
 	}
 	
 	
-	public static double calculateLL(LVeGGrammar grammar, MultiThreadedParser valuator, StateTreeList stateTreeList) {
+	public static double calculateLL(LVeGGrammar grammar, ThreadPool valuator, StateTreeList stateTreeList) {
 		int nUnparsable = 0, cnt = 0;
 		double ll = 0, sumll = 0;
 		for (Tree<State> tree : stateTreeList) {
@@ -572,7 +577,7 @@ public class LVeGLearner extends Recorder {
 				if (tree.getYield().size() > opts.onlyLength) { continue; }
 			}
 			if (++cnt > 200) { break; } // DEBUG
-			valuator.parse(tree);
+			valuator.execute(tree);
 			while (valuator.hasNext()) {
 				ll = (double) valuator.getNext();
 				if (Double.isInfinite(ll) || Double.isNaN(ll)) {

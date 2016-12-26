@@ -9,11 +9,10 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.Test;
 
-import edu.shanghaitech.ai.nlp.lveg.MultiThreadedParser;
 import edu.shanghaitech.ai.nlp.lveg.Parser;
+import edu.shanghaitech.ai.nlp.lveg.ThreadPool;
 import edu.shanghaitech.ai.nlp.lveg.Valuator;
 import edu.shanghaitech.ai.nlp.lveg.Inferencer.Chart;
-import edu.shanghaitech.ai.nlp.lveg.Parser.Meta;
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
 
 public class ParallelOptimizerTest {
@@ -39,7 +38,7 @@ public class ParallelOptimizerTest {
 		}
 	}
 	
-	protected static class Puppet<T> extends Parser<T> implements Callable<Object> {
+	protected static class Puppet<I, O> extends Parser<I, O> {
 		/**
 		 * 
 		 */
@@ -48,7 +47,7 @@ public class ParallelOptimizerTest {
 		protected Muppet muppet;
 		protected String name;
 		
-		private Puppet(Puppet<?> puppet) {
+		private Puppet(Puppet<?, ?> puppet) {
 			this.muppet = puppet.muppet;
 			this.reuse = puppet.reuse;
 			this.name = puppet.name;
@@ -73,7 +72,7 @@ public class ParallelOptimizerTest {
 			
 //			staticPrint(idx, isample); // 0: uncomment to test static method accessing
 			
-			Meta<T> cache = new Meta(isample, ll);
+			Meta<O> cache = new Meta(isample, ll);
 			
 			synchronized (muppet) {
 				
@@ -99,8 +98,8 @@ public class ParallelOptimizerTest {
 		}
 
 		@Override
-		protected Parser<?> newInstance() {
-			return new Puppet<T>(this);
+		public Parser<?, ?> newInstance() {
+			return new Puppet<I, O>(this);
 		}
 	}
 	
@@ -110,10 +109,10 @@ public class ParallelOptimizerTest {
 		// static or non-static methods accessing test
 		String ll = null;
 		int nthread = 2, nfailed = 0;
-		Puppet<?> puppet = new Puppet<Double>("puppet");
-		MultiThreadedParser mpuppet = new MultiThreadedParser(puppet, nthread);
+		Puppet<?, ?> puppet = new Puppet<Object, Double>("puppet");
+		ThreadPool mpuppet = new ThreadPool(puppet, nthread);
 		for (int i = 0; i < 4; i++) {
-			mpuppet.parse(null);
+			mpuppet.execute(null);
 			while (mpuppet.hasNext()) {
 				ll = (String) mpuppet.getNext();
 				if (ll == null) {
