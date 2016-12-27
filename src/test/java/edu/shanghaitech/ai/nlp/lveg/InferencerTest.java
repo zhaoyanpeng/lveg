@@ -7,7 +7,9 @@ import java.util.Queue;
 
 import org.junit.Test;
 
-import edu.shanghaitech.ai.nlp.lveg.Inferencer.Chart;
+import edu.shanghaitech.ai.nlp.lveg.impl.LVeGInferencer;
+import edu.shanghaitech.ai.nlp.lveg.model.Inferencer;
+import edu.shanghaitech.ai.nlp.lveg.model.Inferencer.Chart;
 import edu.shanghaitech.ai.nlp.syntax.State;
 
 public class InferencerTest {

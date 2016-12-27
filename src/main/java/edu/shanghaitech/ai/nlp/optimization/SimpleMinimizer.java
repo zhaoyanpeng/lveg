@@ -7,8 +7,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-import edu.shanghaitech.ai.nlp.lveg.GaussianMixture;
-import edu.shanghaitech.ai.nlp.lveg.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
 import edu.shanghaitech.ai.nlp.util.Recorder;
 
 /**

@@ -9,7 +9,11 @@ import java.util.Set;
 
 import org.junit.Test;
 
-import edu.shanghaitech.ai.nlp.lveg.GrammarRule.Unit;
+import edu.shanghaitech.ai.nlp.lveg.impl.DiagonalGaussianDistribution;
+import edu.shanghaitech.ai.nlp.lveg.impl.DiagonalGaussianMixture;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.Unit;
 
 public class UnaryGrammarRuleTest {
 	

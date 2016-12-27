@@ -1,4 +1,4 @@
-package edu.shanghaitech.ai.nlp.lveg;
+package edu.shanghaitech.ai.nlp.util;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -7,8 +7,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-
-import edu.shanghaitech.ai.nlp.util.Recorder;
 
 public class OptionParser extends Recorder {
 	/**

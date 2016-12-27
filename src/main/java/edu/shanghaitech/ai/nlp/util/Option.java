@@ -1,4 +1,4 @@
-package edu.shanghaitech.ai.nlp.lveg;
+package edu.shanghaitech.ai.nlp.util;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

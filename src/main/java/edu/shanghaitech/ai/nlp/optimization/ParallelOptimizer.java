@@ -20,9 +20,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.TimeUnit;
 
-import edu.shanghaitech.ai.nlp.lveg.Executor;
-import edu.shanghaitech.ai.nlp.lveg.GrammarRule;
-import edu.shanghaitech.ai.nlp.lveg.ThreadPool;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+import edu.shanghaitech.ai.nlp.util.Executor;
+import edu.shanghaitech.ai.nlp.util.ThreadPool;
 
 /**
  * @author Yanpeng Zhao
@@ -431,8 +431,9 @@ public class ParallelOptimizer extends Optimizer {
 		 */
 		private static final long serialVersionUID = 5638564355997342275L;
 		protected int idx;
-		protected I sample;
-		protected int isample;
+		
+		protected I task;
+		protected int itask;
 		protected PriorityQueue<Meta<O>> caches;
 		
 		public SubOptimizer() {}
@@ -441,17 +442,17 @@ public class ParallelOptimizer extends Optimizer {
 
 		@Override
 		public synchronized Object call() throws Exception {
-			if (sample == null) { return null; }
-			Resource rsc = (Resource) sample;
+			if (task == null) { return null; }
+			Resource rsc = (Resource) task;
 			boolean status = rsc.gradient.eval(rsc.rule, rsc.iosWithT, rsc.iosWithS, rsc.scores);
 			rsc.iosWithS.clear();
 			rsc.iosWithT.clear();
-			Meta<O> cache = new Meta(isample, status);
+			Meta<O> cache = new Meta(itask, status);
 			synchronized (caches) {
 				caches.add(cache);
 				caches.notifyAll();
 			}
-			sample = null;
+			task = null;
 			return null;
 		}
 
@@ -461,9 +462,9 @@ public class ParallelOptimizer extends Optimizer {
 		}
 
 		@Override
-		public void setNextSample(int isample, I sample) {
-			this.sample = sample;
-			this.isample = isample;
+		public void setNextTask(int itask, I task) {
+			this.task = task;
+			this.itask = itask;
 		}
 
 		@Override

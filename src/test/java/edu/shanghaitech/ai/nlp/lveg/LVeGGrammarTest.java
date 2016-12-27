@@ -4,6 +4,11 @@ import java.util.List;
 
 import org.junit.Test;
 
+import edu.shanghaitech.ai.nlp.lveg.impl.BinaryGrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGGrammar;
+import edu.shanghaitech.ai.nlp.lveg.impl.UnaryGrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
 
 public class LVeGGrammarTest {
@@ -40,7 +45,7 @@ public class LVeGGrammarTest {
 //	}
 	
 	int nTag = 10;
-	LVeGGrammar grammar = new LVeGGrammar(null, null, nTag);
+	LVeGGrammar grammar = new SimpleLVeGGrammar(null, nTag);
 	
 	@Test
 	public void testLVeGGrammar() {

@@ -1,4 +1,4 @@
-package edu.shanghaitech.ai.nlp.lveg;
+package edu.shanghaitech.ai.nlp.lveg.impl;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -7,8 +7,10 @@ import java.util.List;
 import edu.berkeley.nlp.PCFGLA.Corpus;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.util.Indexer;
-import edu.shanghaitech.ai.nlp.optimization.Optimizer;
-import edu.shanghaitech.ai.nlp.optimization.ParallelOptimizer;
+import edu.shanghaitech.ai.nlp.lveg.StateTreeList;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
 import edu.shanghaitech.ai.nlp.syntax.State;
 import edu.shanghaitech.ai.nlp.util.Numberer;
 
@@ -30,12 +32,6 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 	
 	protected GaussianMixture[][] counts;  // tag-word
 	protected UnaryGrammarRule[][] urules; // tag-word
-
-	
-	/**
-	 * Rules with probabilities below this value will be filtered.
-	 */
-	private double filterThreshold;
 	
 	
 	public SimpleLVeGLexicon() {
@@ -44,7 +40,6 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 		this.lastPosition = -1;
 		this.lastSignature = "";
 		this.unknownLevel = 5; // 5 is English specific
-		
 		if ((Corpus.myTreebank != Corpus.TreeBankType.WSJ) ||
 				Corpus.myTreebank == Corpus.TreeBankType.BROWN) {
 			this.unknownLevel = 4;
@@ -64,8 +59,6 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 		this.urules = new UnaryGrammarRule[nTag][];
 		this.wordIndexMap = new IndexMap[nTag];
 		this.wordCounter = new int[nWord];
-//		this.optimizer = new Optimizer(LVeGLearner.random);
-//		this.optimizer = new ParallelOptimizer(LVeGLearner.random);
 		
 		for (int i = 0; i < nTag; i++) {
 			wordIndexMap[i] = new IndexMap(nWord);
@@ -78,7 +71,7 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 			for (int i = 0; i < words.size(); i++) {
 				int wordIdx = wordIndexer.indexOf(words.get(i).getName());
 				if (wordIdx < 0) { 
-					System.err.println("Word \"" + words.get(i).getName() + "\" NOT Found.");
+					logger.error("Word \"" + words.get(i).getName() + "\" NOT Found.\n");
 					continue; 
 				}
 				wordCounter[wordIdx]++;
@@ -121,7 +114,7 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 	
 	
 	@Override
-	protected List<GrammarRule> getRulesWithWord(int wordIdx) {
+	public List<GrammarRule> getRulesWithWord(int wordIdx) {
 		List<GrammarRule> list = new ArrayList<GrammarRule>();
 		for (short i = 0; i < nTag; i++) {
 			int ruleIdx = wordIndexMap[i].indexOf(wordIdx);
@@ -154,35 +147,7 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 	protected boolean isKnown(String word) {
 		return wordIndexer.indexOf(word) != -1;
 	}
-
-
-	@Override
-	public void tieRareWordStats(int threshold) {
-		// CHECK nothing to do (the same as the Berkeley's implementation)
-		return;
-	}
-
-
-	@Override
-	public void optimize() {
-		// TODO smooth the score
-		// In Berkeley's implementation, scores are initialized with the expected counts. 
-		// The same for the unary or binary rule probability initialization, which first
-		// is randomly initialized to a double value, and then is normalized.
-		// 
-		// How should we implement the same mechanism with MixtureGaussian counts? 
-		// DONE We can start training with E-Step or M-Step in EM. And Berkeley's
-		// way can be seen as starting training with M-Step.
-		for (int i = 0; i < nTag; i++) {
-			int nmap = wordIndexMap[i].size();
-			for (int j = 0; j < nmap; j++) {
-				if (urules[i][j].getWeight().getBias() < filterThreshold) {
-					// TODO May be we could remove the rare rules using filterThreshold
-				}
-			}
-		}
-		return;
-	}
+	
 	
 	public String toString(Numberer numberer) {
 		String word = null;
@@ -232,7 +197,6 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 		private List<Integer> from;
 		private List<Integer> frequency;
 		
-		
 		public IndexMap(int n) {
 			this.count = 0;
 			this.to = new ArrayList<Integer>(n);
@@ -245,7 +209,6 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 				frequency.add(0);
 			}
 		}
-		
 		
 		/**
 		 * @param i word index
@@ -260,7 +223,6 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 			frequency.set(i, frequency.get(i) + 1);
 		}
 		
-		
 		/**
 		 * @param i word index
 		 * @return  frequency of the rule with i as the child
@@ -269,7 +231,6 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 			if (i < 0 || i > to.size()) { return -1; }
 			return frequency.get(i);
 		}
-		
 		
 		/**
 		 * @param i mapping index
@@ -280,17 +241,14 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 			return from.get(i);
 		}
 		
-		
 		public int indexOf(int i) {
 			if (i < 0 || i > to.size()) { return -1; }
 			return to.get(i);
 		}
 		
-		
 		public int size() {
 			return this.count;
 		}
-		
 		
 		public IndexMap copy() {
 			IndexMap map = new IndexMap(to.size());
@@ -302,12 +260,18 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 			return map;
 		}
 		
-		
 		public void clear() {
 			this.count = 0;
 			this.to.clear();
 			this.from.clear();
 		}
+	}
+
+
+	@Override
+	public void postInitialize(double randomness) {
+		// TODO Auto-generated method stub
+		
 	}
 	
 }

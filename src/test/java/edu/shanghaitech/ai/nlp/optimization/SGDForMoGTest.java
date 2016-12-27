@@ -5,7 +5,7 @@ import java.util.Set;
 
 import org.junit.Test;
 
-import edu.shanghaitech.ai.nlp.lveg.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
 
 public class SGDForMoGTest {
 	

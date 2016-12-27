@@ -5,6 +5,7 @@ import java.util.List;
 
 import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.util.Counter;
+import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGLexicon;
 import edu.shanghaitech.ai.nlp.syntax.State;
 
 /**

@@ -1,4 +1,4 @@
-package edu.shanghaitech.ai.nlp.lveg;
+package edu.shanghaitech.ai.nlp.util;
 
 import java.io.Serializable;
 import java.util.PriorityQueue;
@@ -21,7 +21,7 @@ public interface Executor<I, O> extends Callable<Object>, Serializable {
 	
 	public abstract Executor<?, ?> newInstance();
 	
-	public abstract void setNextSample(int isample, I sample);
+	public abstract void setNextTask(int itask, I task);
 	
 	public abstract void setIdx(int idx, PriorityQueue<Meta<O>> caches);
 }

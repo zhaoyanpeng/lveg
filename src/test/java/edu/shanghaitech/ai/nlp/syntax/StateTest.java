@@ -4,8 +4,8 @@ import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
-import edu.shanghaitech.ai.nlp.lveg.DiagonalGaussianMixture;
-import edu.shanghaitech.ai.nlp.lveg.GaussianMixture;
+import edu.shanghaitech.ai.nlp.lveg.impl.DiagonalGaussianMixture;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 
 public class StateTest {
 	

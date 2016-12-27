@@ -2,8 +2,8 @@ package edu.shanghaitech.ai.nlp.syntax;
 
 import java.io.Serializable;
 
-import edu.shanghaitech.ai.nlp.lveg.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.util.Numberer;
 
 /**

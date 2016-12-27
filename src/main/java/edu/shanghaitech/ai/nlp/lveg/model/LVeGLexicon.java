@@ -1,4 +1,4 @@
-package edu.shanghaitech.ai.nlp.lveg;
+package edu.shanghaitech.ai.nlp.lveg.model;
 
 import java.io.Serializable;
 import java.util.List;
@@ -7,14 +7,14 @@ import java.util.Set;
 
 import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.util.Indexer;
-import edu.shanghaitech.ai.nlp.optimization.Optimizer;
+import edu.shanghaitech.ai.nlp.lveg.StateTreeList;
 import edu.shanghaitech.ai.nlp.syntax.State;
 
 /**
  * @author Yanpeng Zhao
  *
  */
-public abstract class LVeGLexicon implements Serializable {
+public abstract class LVeGLexicon extends LVeGGrammar implements Serializable {
 	/**
 	 * 
 	 */
@@ -24,35 +24,11 @@ public abstract class LVeGLexicon implements Serializable {
 	protected transient String lastSignature;
 	protected transient int lastPosition;
 	
-	protected Optimizer optimizer;
-	
 	
 	/**
 	 * Different modes for unknown words. See {@link #SimpleLVeGLexicon()}.
 	 */
 	protected int unknownLevel;
-	
-	
-	public void addCount(short idParent, short idChild, byte type, Map<String, GaussianMixture> count, short isample, boolean withTree) {
-		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
-		addCount(rule, count, isample, withTree);
-	}
-	
-	
-	public Map<Short, List<Map<String, GaussianMixture>>> getCount(short idParent, short idChild, byte type, boolean withTree) {
-		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
-		return getCount(rule, withTree);
-	}
-	
-	
-	public void addCount(GrammarRule rule, Map<String, GaussianMixture> count, short isample, boolean withTree) {
-		optimizer.addCount(rule, count, isample, withTree);
-	}
-	
-	
-	public Map<Short, List<Map<String, GaussianMixture>>> getCount(GrammarRule rule, boolean withTree) {
-		return optimizer.getCount(rule, withTree);
-	}
 	
 	
 	/**
@@ -65,32 +41,12 @@ public abstract class LVeGLexicon implements Serializable {
 	
 	
 	/**
-	 * Tally (go over and record) the rules existing in the parse tree.
-	 * 
-	 * @param tree a parse tree
-	 */
-	protected abstract void tallyStateTree(Tree<State> tree);
-	
-	
-	/**
-	 * @param threshold which measures how rare the word is
-	 */
-	protected abstract void tieRareWordStats(int threshold);
-
-	
-	/**
-	 * TODO TBD
-	 */
-	protected abstract void optimize();
-	
-	
-	/**
 	 * Get the unary rules that contain the word specified by the index (by reference).
 	 * 
 	 * @param wordIdx id of the word
 	 * @return
 	 */
-	protected abstract List<GrammarRule> getRulesWithWord(int wordIdx);
+	public abstract List<GrammarRule> getRulesWithWord(int wordIdx);
 	
 	
 	/**
@@ -112,34 +68,6 @@ public abstract class LVeGLexicon implements Serializable {
 	 * @return
 	 */
 	protected abstract boolean isKnown(String word);
-	
-	
-	public void setOptimizer(Optimizer optimizer) {
-		this.optimizer = optimizer;
-	}
-	
-	
-	public void evalGradients(List<Double> scoreOfST) {
-		optimizer.evalGradients(scoreOfST);
-	}
-	
-	
-	/**
-	 * Apply stochastic gradient descent.
-	 */
-	public void applyGradientDescent(List<Double> scoreOfST) {
-		optimizer.applyGradientDescent(scoreOfST);
-	}
-	
-	
-	/**
-	 * Get set of the rules.
-	 * 
-	 * @return
-	 */
-	public Set<GrammarRule> getRuleSet() {
-		return optimizer.getRuleSet();
-	}
 	
 	
 	/**
@@ -169,7 +97,7 @@ public abstract class LVeGLexicon implements Serializable {
 	 * @param pos  the position of the word in the sentence
 	 * @return
 	 */
-	protected String getCachedSignature(String word, int pos) {
+	public String getCachedSignature(String word, int pos) {
 		// TODO determine the frequency of the usage of "if" branch
 		if (word == null) { return lastWord; }
 		if (word.equals(lastWord) && pos == lastPosition) {
@@ -193,21 +121,18 @@ public abstract class LVeGLexicon implements Serializable {
 	 */
 	public String getSignature(String word, int pos) {
 		StringBuffer sb = new StringBuffer(TOKEN_UNKNOWN);
-		
 		if (word == null || word.length() == 0) {
 			return sb.toString();
 		}
-		
 		switch (unknownLevel) {
 		case 5: {
 			char ch;
 			int ncap = 0;
 			int wlen = word.length();
-			
 			boolean hasDash = false;
 			boolean hasDigit = false;
 			boolean hasLower = false;
-			
+
 			for (int i = 0; i < wlen; i++) {
 				ch = word.charAt(i);
 				if (Character.isDigit(ch)) {
@@ -225,7 +150,6 @@ public abstract class LVeGLexicon implements Serializable {
 					}
 				}
 			}
-			
 			
 			ch = word.charAt(0);
 			String lowered = word.toLowerCase();

@@ -9,6 +9,10 @@ import java.util.Set;
 
 import org.junit.Test;
 
+import edu.shanghaitech.ai.nlp.lveg.impl.BinaryGrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.impl.UnaryGrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+
 public class RuleTableTest {
 
 	@Test

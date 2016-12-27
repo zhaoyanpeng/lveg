@@ -1,4 +1,4 @@
-package edu.shanghaitech.ai.nlp.lveg;
+package edu.shanghaitech.ai.nlp.lveg.model;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -8,6 +8,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
+import edu.shanghaitech.ai.nlp.lveg.impl.BinaryGrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.impl.DiagonalGaussianMixture;
+import edu.shanghaitech.ai.nlp.lveg.impl.UnaryGrammarRule;
 import edu.shanghaitech.ai.nlp.syntax.State;
 import edu.shanghaitech.ai.nlp.util.Recorder;
 
@@ -16,15 +20,15 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	 * 
 	 */
 	private static final long serialVersionUID = 3449371510125004187L;
-	protected static LVeGLexicon lexicon;
-	protected static LVeGGrammar grammar;
+	public static LVeGLexicon lexicon;
+	public static LVeGGrammar grammar;
 	
 	protected static ChainUrule chainurule;
 	
 	protected final static short ROOT = 0;
 	protected final static short LENGTH_UCHAIN = 2;
 	
-	protected enum ChainUrule {
+	public enum ChainUrule {
 		ALL_POSSIBLE_PATH, PRE_COMPUTE_CHAIN, NOT_PRE_ADD_INTER, NOT_PRE_NOT_INTER, DEFAULT,
 	}
 	
@@ -35,7 +39,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	 * @param scores   score of the parse tree and score of the sentence
 	 * @param parallel parallel (true) or not (false)
 	 */
-	protected void evalGradients(List<Double> scores) {
+	public void evalGradients(List<Double> scores) {
 		grammar.evalGradients(scores);
 		lexicon.evalGradients(scores);
 	}
@@ -48,7 +52,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	 * @param tree  in which only the sentence is used
 	 * @param nword # of words in the sentence
 	 */
-	protected static void insideScore(Chart chart, List<State> sentence, int nword) {
+	public static void insideScore(Chart chart, List<State> sentence, int nword) {
 		int x0, y0, x1, y1, c0, c1, c2;
 		GaussianMixture pinScore, linScore, rinScore, ruleScore;
 		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBinaryRuleMap();
@@ -113,7 +117,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	 * @param tree  in which only the sentence is used.
 	 * @param nword # of words in the sentence
 	 */
-	protected static void outsideScore(Chart chart, List<State> sentence, int nword) {
+	public static void outsideScore(Chart chart, List<State> sentence, int nword) {
 		int x0, y0, x1, y1, c0, c1, c2;
 		GaussianMixture poutScore, linScore, rinScore, loutScore, routScore, ruleScore;
 		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBinaryRuleMap();
@@ -273,7 +277,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	/**
 	 * @param chart 
 	 */
-	protected static void setRootOutsideScore(Chart chart) {
+	public static void setRootOutsideScore(Chart chart) {
 		GaussianMixture gm = new DiagonalGaussianMixture((short) 1);
 		gm.marginalizeToOne();
 		chart.addOutsideScore((short) 0, Chart.idx(0, 1), gm, (short) (LENGTH_UCHAIN + 1));
@@ -357,7 +361,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 			mchart.get(idx).addMaxRuleCount(key, count, sons, splitpoint, level);
 		}
 		
-		protected int getMaxRuleSon(short key, int idx) {
+		public int getMaxRuleSon(short key, int idx) {
 			return mchart.get(idx).getMaxRuleSon(key);
 		}
 		
@@ -369,7 +373,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 			return mchart.get(idx).getMaxRuleCount(key);
 		}
 		
-		protected short getSplitPoint(short key, int idx) {
+		public short getSplitPoint(short key, int idx) {
 			return mchart.get(idx).getSplitPoint(key);
 		}
 		

@@ -7,6 +7,9 @@ import java.util.List;
 
 import org.junit.Test;
 
+import edu.shanghaitech.ai.nlp.lveg.impl.DiagonalGaussianDistribution;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
+
 public class GaussianDistributionTest {
 	
 	@Test
@@ -25,17 +28,17 @@ public class GaussianDistributionTest {
 		assertFalse(gd0 == gd1);
 		assertTrue(gd0.equals(gd1));
 		
-		gd0.mus.add(2.0);
-		gd0.mus.add(3.0);
-		gd0.vars.add(4.0);
+		gd0.getMus().add(2.0);
+		gd0.getMus().add(3.0);
+		gd0.getVars().add(4.0);
 		
-		gd1.mus.add(2.0);
-		gd1.mus.add(3.0);
-		gd1.vars.add(4.0);
+		gd1.getMus().add(2.0);
+		gd1.getMus().add(3.0);
+		gd1.getVars().add(4.0);
 		
 		assertTrue(gd0.equals(gd1));
 		
-		gd1.mus.add(2.0);
+		gd1.getMus().add(2.0);
 		assertFalse(gd0.equals(gd1));
 	}
 	

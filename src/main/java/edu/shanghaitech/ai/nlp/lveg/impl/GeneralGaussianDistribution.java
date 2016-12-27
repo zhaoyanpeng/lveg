@@ -1,4 +1,6 @@
-package edu.shanghaitech.ai.nlp.lveg;
+package edu.shanghaitech.ai.nlp.lveg.impl;
+
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 
 public class GeneralGaussianDistribution extends GaussianDistribution {
 	/**

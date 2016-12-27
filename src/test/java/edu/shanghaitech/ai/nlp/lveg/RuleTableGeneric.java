@@ -5,6 +5,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import edu.shanghaitech.ai.nlp.lveg.impl.DiagonalGaussianMixture;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
+
 /**
  * Map grammar rules to their counts. {@link #isCompatible(Object)} must 
  * work well since it is the key. This kind of implementation does not 

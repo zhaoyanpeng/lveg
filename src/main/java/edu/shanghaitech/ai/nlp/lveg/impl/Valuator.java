@@ -1,9 +1,14 @@
-package edu.shanghaitech.ai.nlp.lveg;
+package edu.shanghaitech.ai.nlp.lveg.impl;
 
 import java.util.List;
 
 import edu.berkeley.nlp.syntax.Tree;
-import edu.shanghaitech.ai.nlp.lveg.Inferencer.Chart;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
+import edu.shanghaitech.ai.nlp.lveg.model.Inferencer;
+import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
+import edu.shanghaitech.ai.nlp.lveg.model.Parser;
+import edu.shanghaitech.ai.nlp.lveg.model.Inferencer.Chart;
+import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.syntax.State;
 
 public class Valuator<I, O> extends Parser<I, O> {
@@ -37,14 +42,14 @@ public class Valuator<I, O> extends Parser<I, O> {
 	
 	@Override
 	public synchronized Object call() {
-		if (sample == null) { return null; }
-		double ll = probability((Tree<State>) sample);
-		Meta<O> cache = new Meta(isample, ll);
+		if (task == null) { return null; }
+		double ll = probability((Tree<State>) task);
+		Meta<O> cache = new Meta(itask, ll);
 		synchronized (caches) {
 			caches.add(cache);
 			caches.notifyAll();
 		}
-		sample = null;
+		task = null;
 		return null;
 	}
 	

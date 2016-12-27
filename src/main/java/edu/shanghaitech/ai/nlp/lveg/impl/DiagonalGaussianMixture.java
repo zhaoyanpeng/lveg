@@ -1,8 +1,11 @@
-package edu.shanghaitech.ai.nlp.lveg;
+package edu.shanghaitech.ai.nlp.lveg.impl;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 
 /**
  * This one only differs from the GaussianMixture when in the need of creating the new specific instance.

@@ -1,4 +1,4 @@
-package edu.shanghaitech.ai.nlp.lveg;
+package edu.shanghaitech.ai.nlp.lveg.impl;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -9,6 +9,11 @@ import java.util.Map;
 import java.util.Set;
 
 import edu.berkeley.nlp.syntax.Tree;
+import edu.shanghaitech.ai.nlp.lveg.RuleTable;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.Unit;
+import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.optimization.Optimizer;
 import edu.shanghaitech.ai.nlp.syntax.State;
 import edu.shanghaitech.ai.nlp.util.Numberer;
@@ -18,70 +23,24 @@ import edu.shanghaitech.ai.nlp.util.Recorder;
  * @author Yanpeng Zhao
  *
  */
-public class LVeGGrammar extends Recorder implements Serializable {
+public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 650638115156791313L;
-	public int nTag;
-	protected Numberer numberer;
+
 	
-	protected RuleTable<?> unaryRuleTable;
-	protected RuleTable<?> binaryRuleTable;
-	
-	private List<GrammarRule>[] unaryRulesWithP;
-	private List<GrammarRule>[] unaryRulesWithC;
-	
-	private List<GrammarRule>[] binaryRulesWithP;
-	private List<GrammarRule>[] binaryRulesWithLC;
-	private List<GrammarRule>[] binaryRulesWithRC;
-	
-	
-	/**
-	 * For any nonterminals A \neq B \neq C, p(A->B) is computed as 
-	 * p(A->B) + \sum_{C} p(A->C) \times p(C->B), in which p(A->B) 
-	 * is zero if A->B does not exist, and the resulting new rules 
-	 * are added to the unary rule set. Fields containing 'sum' are
-	 * dedicated to the general CYK algorithm, and are dedicated to
-	 * to the Viterbi algorithm if they contain 'Max'. However, the
-	 * point is how to define the maximum between two MoGs.
-	 */
-	private Set<GrammarRule> chainSumUnaryRules;
-	private List<GrammarRule>[] chainSumUnaryRulesWithP;
-	private List<GrammarRule>[] chainSumUnaryRulesWithC;
-	
-	/**
-	 * Needed when we want to find a rule and access its statistics.
-	 * we first construct a rule, which is used as the key, and use 
-	 * the key to find the real rule that contains more information.
-	 */
-	private Map<GrammarRule, GrammarRule> unaryRuleMap;
-	private Map<GrammarRule, GrammarRule> binaryRuleMap;
-	
-	private Optimizer optimizer;
-	
-	
-	public LVeGGrammar(LVeGGrammar oldGrammar, Numberer numberer, int nTag) {
+	public SimpleLVeGGrammar(Numberer numberer, int nTag) {
 		this.unaryRuleTable  = new RuleTable<UnaryGrammarRule>(UnaryGrammarRule.class);
 		this.binaryRuleTable = new RuleTable<BinaryGrammarRule>(BinaryGrammarRule.class);
 		this.unaryRuleMap  = new HashMap<GrammarRule, GrammarRule>();
 		this.binaryRuleMap = new HashMap<GrammarRule, GrammarRule>();
-//		this.optimizer = new Optimizer(LVeGLearner.random);
-//		this.optimizer = new ParallelOptimizer(LVeGLearner.random);
-		
 		if (numberer == null) {
 			this.numberer = null;
 			this.nTag = nTag;
 		} else {
 			this.numberer = numberer;
 			this.nTag = numberer.size();
-		}
-		
-		
-		if (oldGrammar != null) {
-			// TODO
-		} else {
-			// TODO
 		}
 		initialize();
 	}
@@ -121,7 +80,7 @@ public class LVeGGrammar extends Recorder implements Serializable {
 	}
 	
 	
-	protected void addBinaryRule(BinaryGrammarRule rule) {
+	public void addBinaryRule(BinaryGrammarRule rule) {
 		if (binaryRulesWithP[rule.lhs].contains(rule)) { return; }
 		binaryRulesWithP[rule.lhs].add(rule);
 		binaryRulesWithLC[rule.lchild].add(rule);
@@ -131,30 +90,12 @@ public class LVeGGrammar extends Recorder implements Serializable {
 	}
 	
 	
-	protected void addUnaryRule(UnaryGrammarRule rule) {
+	public void addUnaryRule(UnaryGrammarRule rule) {
 		if (unaryRulesWithP[rule.lhs].contains(rule)) { return; }
 		unaryRulesWithP[rule.lhs].add(rule);
 		unaryRulesWithC[rule.rhs].add(rule);
 		unaryRuleMap.put(rule, rule);
 		optimizer.addRule(rule);
-	}
-	
-	
-	public void setOptimizer(Optimizer optimizer) {
-		this.optimizer = optimizer;
-	}
-	
-	
-	/**
-	 * Apply stochastic gradient descent.
-	 */
-	public void applyGradientDescent(List<Double> scoreOfST) {
-		optimizer.applyGradientDescent(scoreOfST);
-	}
-	
-	
-	public void evalGradients(List<Double> scoreOfST) {
-		optimizer.evalGradients(scoreOfST);
 	}
 	
 	
@@ -268,118 +209,11 @@ public class LVeGGrammar extends Recorder implements Serializable {
 		}
 		logger.trace("# of new rules: " + count + " \t# of all rules: " + total + "\n");
 	}
-	
-	
-	public GaussianMixture getBinaryRuleWeight(short idParent, short idlChild, short idrChild) {
-		GrammarRule rule = getBinaryRule(idParent, idlChild, idrChild);
-		if (rule != null) {
-			return rule.getWeight();
-		}
-//		logger.warn("Binary Rule NOT Found: [P: " + idParent + ", LC: " + idlChild + ", RC: " + idrChild + "]\n");
-		return null;
-	}
-	
-	
-	public GaussianMixture getUnaryRuleWeight(short idParent, short idChild, byte type) {
-		GrammarRule rule = getUnaryRule(idParent, idChild, type);
-		if (rule != null) {
-			return rule.getWeight();
-		}
-//		logger.warn("Unary Rule NOT Found: [P: " + idParent + ", C: " + idChild + ", TYPE: " + type + "]\n");
-		return null;
-	}
-	
-	
-	public void addCount(short idParent, short idlChild, short idrChild, Map<String, GaussianMixture> count, short isample, boolean withTree) {
-		GrammarRule rule = getBinaryRule(idParent, idlChild, idrChild);
-		addCount(rule, count, isample, withTree);
-	}
-	
-	
-	public Map<Short, List<Map<String, GaussianMixture>>> getCount(short idParent, short idlChild, short idrChild, boolean withTree) {
-		GrammarRule rule = getBinaryRule(idParent, idlChild, idrChild);
-		return getCount(rule, withTree);
-	}
-	
-	
-	public void addCount(short idParent, short idChild, byte type, Map<String, GaussianMixture> count, short isample, boolean withTree) {
-		GrammarRule rule = getUnaryRule(idParent, idChild, type);
-		addCount(rule, count, isample, withTree);
-	}
-	
-	
-	public Map<Short, List<Map<String, GaussianMixture>>> getCount(short idParent, short idChild, byte type, boolean withTree) {
-		GrammarRule rule = getUnaryRule(idParent, idChild, type);
-		return getCount(rule, withTree);
-	}
-	
-	
-	public void addCount(GrammarRule rule, Map<String, GaussianMixture> count, short isample, boolean withTree) {
-		optimizer.addCount(rule, count, isample, withTree);
-	}
-	
-	
-	public Map<Short, List<Map<String, GaussianMixture>>> getCount(GrammarRule rule, boolean withTree) {
-		return optimizer.getCount(rule, withTree);
-	}
-	
-	
-	public GrammarRule getBinaryRule(short idParent, short idlChild, short idrChild) {
-		GrammarRule rule = new BinaryGrammarRule(idParent, idlChild, idrChild);
-		return binaryRuleMap.get(rule);
-	}
-	
-	
-	public GrammarRule getUnaryRule(short idParent, short idChild, byte type) {
-		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
-		return unaryRuleMap.get(rule);
-	}
-	
-	
-	public Map<GrammarRule, GrammarRule> getBinaryRuleMap() {
-		return binaryRuleMap;
-	}
-	
-	
-	public Map<GrammarRule, GrammarRule> getUnaryRuleMap() {
-		return unaryRuleMap;
-	}
-	
-	
-	public List<GrammarRule> getChainSumUnaryRulesWithC(int idTag) {
-		return chainSumUnaryRulesWithC[idTag];
-	}
-	
-	
-	public List<GrammarRule> getChainSumUnaryRulesWithP(int idTag) {
-		return chainSumUnaryRulesWithP[idTag];
-	}
-	
-	
-	public List<GrammarRule> getBinaryRuleWithRC(int idTag) {
-		return binaryRulesWithRC[idTag];
-	}
-	
-	
-	public List<GrammarRule> getBinaryRuleWithLC(int idTag) {
-		return binaryRulesWithLC[idTag];
-	}
-	
-	
-	public List<GrammarRule> getBinaryRuleWithP(int idTag) {
-		return binaryRulesWithP[idTag];
-	}
-	
-	
-	public List<GrammarRule> getUnaryRuleWithP(int idTag) {
-		return unaryRulesWithP[idTag];
-	}
-	
-	
-	public List<GrammarRule> getUnaryRuleWithC(int idTag) {
-		return unaryRulesWithC[idTag];
-	}
 
+	
+	
+
+	
 
 	@Override
 	public String toString() {

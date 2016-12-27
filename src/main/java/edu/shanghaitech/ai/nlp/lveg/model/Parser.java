@@ -1,8 +1,9 @@
-package edu.shanghaitech.ai.nlp.lveg;
+package edu.shanghaitech.ai.nlp.lveg.model;
 
 import java.util.PriorityQueue;
 
-import edu.shanghaitech.ai.nlp.lveg.Inferencer.Chart;
+import edu.shanghaitech.ai.nlp.lveg.model.Inferencer.Chart;
+import edu.shanghaitech.ai.nlp.util.Executor;
 import edu.shanghaitech.ai.nlp.util.Recorder;
 
 public abstract class Parser<I, O> extends Recorder implements Executor<I, O> {
@@ -16,9 +17,9 @@ public abstract class Parser<I, O> extends Recorder implements Executor<I, O> {
 	protected boolean reuse;
 	protected boolean parallel;
 	
-	protected int isample;
+	protected I task;
+	protected int itask;
 	protected Chart chart;
-	protected I sample;
 	protected PriorityQueue<Meta<O>> caches;
 	
 	@Override
@@ -28,9 +29,9 @@ public abstract class Parser<I, O> extends Recorder implements Executor<I, O> {
 	}
 	
 	@Override
-	public void setNextSample(int isample, I sample) {
-		this.sample = sample;
-		this.isample = isample;
+	public void setNextTask(int itask, I task) {
+		this.task = task;
+		this.itask = itask;
 	}
 	
 }

@@ -1,4 +1,4 @@
-package edu.shanghaitech.ai.nlp.lveg;
+package edu.shanghaitech.ai.nlp.lveg.model;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
+import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
 import edu.shanghaitech.ai.nlp.lveg.LearnerConfig.Params;
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
 import edu.shanghaitech.ai.nlp.util.Recorder;
@@ -445,7 +446,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 	/**
 	 * Set the outside score of the root node to 1.
 	 */
-	protected void marginalizeToOne() {
+	public void marginalizeToOne() {
 		if (ncomponent <= 0) {
 			System.err.println("Fatal error when marginalize the MoG to one.\n" + toString());
 			System.exit(0);
@@ -841,26 +842,6 @@ public class GaussianMixture extends Recorder implements Serializable {
 	
 	
 	/**
-	 * Get the bias term of the mixture of gaussians.
-	 * 
-	 * @return
-	 */
-	public double getBias() {
-		return bias;
-	}
-
-
-	/**
-	 * Set the bias term of the mixture of gaussians.
-	 * 
-	 * @param bias constant in double
-	 */
-	public void setBias(double bias) {
-		this.bias = bias;
-	}
-	
-	
-	/**
 	 * Memory clean.
 	 */
 	public void clear() {
@@ -880,6 +861,46 @@ public class GaussianMixture extends Recorder implements Serializable {
 	}
 	
 	
+	public double getBias() {
+		return bias;
+	}
+	
+
+	public void setBias(double bias) {
+		this.bias = bias;
+	}
+	
+	
+	public int getNcomponent() {
+		return ncomponent;
+	}
+
+
+	public void setNcomponent(int ncomponent) {
+		this.ncomponent = ncomponent;
+	}
+	
+	
+	public List<Double> getWeights() {
+		return weights;
+	}
+
+
+	public void setWeights(List<Double> weights) {
+		this.weights = weights;
+	}
+	
+
+	public List<Map<String, Set<GaussianDistribution>>> getMixture() {
+		return mixture;
+	}
+
+
+	public void setMixture(List<Map<String, Set<GaussianDistribution>>> mixture) {
+		this.mixture = mixture;
+	}
+
+
 	public String toString(boolean simple, int nfirst) {
 		if (simple) {
 			StringBuffer sb = new StringBuffer();
@@ -898,4 +919,5 @@ public class GaussianMixture extends Recorder implements Serializable {
 		return "GM [bias=" + bias + ", ncomponent=" + ncomponent + ", weights=" + 
 				MethodUtil.double2str(weights, LVeGLearner.precision, -1, true, true) + ", mixture=" + mixture + "]";
 	}
+	
 }

@@ -14,8 +14,10 @@ import edu.berkeley.nlp.PCFGLA.Corpus;
 import edu.berkeley.nlp.PCFGLA.Corpus.TreeBankType;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.lveg.ObjectFileManager.CorpusFile;
+import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGLexicon;
 import edu.shanghaitech.ai.nlp.optimization.ParallelOptimizer.ParallelMode;
 import edu.shanghaitech.ai.nlp.util.Numberer;
+import edu.shanghaitech.ai.nlp.util.Option;
 import edu.shanghaitech.ai.nlp.util.Recorder;
 
 public class LearnerConfig extends Recorder {

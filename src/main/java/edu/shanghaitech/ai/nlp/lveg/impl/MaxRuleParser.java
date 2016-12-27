@@ -1,9 +1,15 @@
-package edu.shanghaitech.ai.nlp.lveg;
+package edu.shanghaitech.ai.nlp.lveg.impl;
 
 import java.util.List;
 
 import edu.berkeley.nlp.syntax.Tree;
-import edu.shanghaitech.ai.nlp.lveg.Inferencer.Chart;
+import edu.shanghaitech.ai.nlp.lveg.StateTreeList;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
+import edu.shanghaitech.ai.nlp.lveg.model.Inferencer;
+import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
+import edu.shanghaitech.ai.nlp.lveg.model.Parser;
+import edu.shanghaitech.ai.nlp.lveg.model.Inferencer.Chart;
+import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.syntax.State;
 
 public class MaxRuleParser<I, O> extends Parser<I, O> {
@@ -30,14 +36,14 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 
 	@Override
 	public synchronized Object call() throws Exception {
-		if (sample == null) { return null; }
-		Tree<String> tree = parse((Tree<State>) sample);
-		Meta<O> cache = new Meta(isample, tree);
+		if (task == null) { return null; }
+		Tree<String> tree = parse((Tree<State>) task);
+		Meta<O> cache = new Meta(itask, tree);
 		synchronized (caches) {
 			caches.add(cache);
 			caches.notifyAll();
 		}
-		sample = null;
+		task = null;
 		return null;
 	}
 	

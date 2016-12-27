@@ -1,4 +1,4 @@
-package edu.shanghaitech.ai.nlp.lveg;
+package edu.shanghaitech.ai.nlp.util;
 
 import java.io.Serializable;
 import java.util.Comparator;
@@ -8,8 +8,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import edu.shanghaitech.ai.nlp.lveg.Executor.Meta;
-import edu.shanghaitech.ai.nlp.util.Recorder;
+import edu.shanghaitech.ai.nlp.util.Executor.Meta;
 
 public class ThreadPool extends Recorder implements Serializable {
 	/**
@@ -47,12 +46,12 @@ public class ThreadPool extends Recorder implements Serializable {
 	}
 	
 	
-	public void execute(Object sample) {
+	public void execute(Object task) {
 		synchronized (scores) {
 			while (true) {
 				for (int i = 0; i < nthread; i++) {
 					if (submits[i] == null || submits[i].isDone()) {
-						executors[i].setNextSample(lastSubmission++, sample);
+						executors[i].setNextTask(lastSubmission++, task);
 						// logger.trace("\n--->last-submission: " + lastSubmission + "\n"); // DEBUG
 						submits[i] = pool.submit(executors[i]);
 						return;
@@ -108,7 +107,7 @@ public class ThreadPool extends Recorder implements Serializable {
 	}
 	
 	
-	protected void reset() {
+	public void reset() {
 		lastReturn = -1;
 		lastSubmission = 0;
 		scores.clear();

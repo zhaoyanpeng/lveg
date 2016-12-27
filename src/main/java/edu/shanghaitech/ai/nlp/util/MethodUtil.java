@@ -28,17 +28,17 @@ import javax.imageio.ImageIO;
 
 import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.ui.TreeJPanel;
-import edu.shanghaitech.ai.nlp.lveg.GaussianMixture;
-import edu.shanghaitech.ai.nlp.lveg.GrammarRule;
-import edu.shanghaitech.ai.nlp.lveg.Inferencer.Cell;
-import edu.shanghaitech.ai.nlp.lveg.Inferencer.Chart;
-import edu.shanghaitech.ai.nlp.lveg.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
-import edu.shanghaitech.ai.nlp.lveg.LVeGLexicon;
 import edu.shanghaitech.ai.nlp.lveg.LearnerConfig.Options;
+import edu.shanghaitech.ai.nlp.lveg.impl.UnaryGrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
+import edu.shanghaitech.ai.nlp.lveg.model.Inferencer.Cell;
+import edu.shanghaitech.ai.nlp.lveg.model.Inferencer.Chart;
+import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.lveg.StateTreeList;
-import edu.shanghaitech.ai.nlp.lveg.UnaryGrammarRule;
 import edu.shanghaitech.ai.nlp.syntax.State;
 
 /**
@@ -399,7 +399,7 @@ public class MethodUtil extends Recorder {
 		
 		for (GrammarRule rule : rules) {
 			UnaryGrammarRule r = (UnaryGrammarRule) rule;
-			int id = startWithC ? r.getLhs() : r.getRhs(), repeat;
+			int id = startWithC ? r.lhs : r.rhs, repeat;
 			if ((repeat = checkUnaryRuleCircle(id, visited, startWithC)) > 0) {
 				return repeat;
 			}

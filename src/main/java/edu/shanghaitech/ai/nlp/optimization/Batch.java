@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import edu.shanghaitech.ai.nlp.lveg.GaussianMixture;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 
 public class Batch implements Serializable {
 	/**

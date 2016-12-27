@@ -1,4 +1,4 @@
-package edu.shanghaitech.ai.nlp.lveg;
+package edu.shanghaitech.ai.nlp.lveg.impl;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -7,6 +7,11 @@ import java.util.Map;
 import java.util.Set;
 
 import edu.berkeley.nlp.syntax.Tree;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.Inferencer;
+import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
+import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
 import edu.shanghaitech.ai.nlp.syntax.State;
 
 /**
@@ -44,7 +49,7 @@ public class LVeGInferencer extends Inferencer {
 	 * @param tree the parse tree
 	 * @return
 	 */
-	protected static void insideScoreWithTree(Tree<State> tree) {
+	public static void insideScoreWithTree(Tree<State> tree) {
 		if (tree.isLeaf()) { return; }
 		List<Tree<State>> children = tree.getChildren();
 		for (Tree<State> child : children) {

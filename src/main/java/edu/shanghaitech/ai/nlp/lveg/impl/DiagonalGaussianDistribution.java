@@ -1,6 +1,8 @@
-package edu.shanghaitech.ai.nlp.lveg;
+package edu.shanghaitech.ai.nlp.lveg.impl;
 
 import java.util.List;
+
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 
 /**
  * Diagonal Gaussian distribution.

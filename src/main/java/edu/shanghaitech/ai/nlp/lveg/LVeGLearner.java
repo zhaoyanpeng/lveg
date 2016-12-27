@@ -9,7 +9,16 @@ import java.util.Map;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
 import edu.shanghaitech.ai.nlp.util.Numberer;
+import edu.shanghaitech.ai.nlp.util.OptionParser;
+import edu.shanghaitech.ai.nlp.util.ThreadPool;
 import edu.shanghaitech.ai.nlp.lveg.ObjectFileManager.GrammarFile;
+import edu.shanghaitech.ai.nlp.lveg.impl.LVeGParser;
+import edu.shanghaitech.ai.nlp.lveg.impl.MaxRuleParser;
+import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGGrammar;
+import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGLexicon;
+import edu.shanghaitech.ai.nlp.lveg.impl.Valuator;
+import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
+import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
 import edu.shanghaitech.ai.nlp.optimization.Optimizer;
 import edu.shanghaitech.ai.nlp.optimization.ParallelOptimizer;
 import edu.shanghaitech.ai.nlp.syntax.State;
@@ -77,7 +86,7 @@ public class LVeGLearner extends LearnerConfig {
 		
 		Numberer numberer = wrapper.getGlobalNumberer(KEY_TAG_SET);
 		
-		grammar = new LVeGGrammar(null, numberer, -1);
+		grammar = new SimpleLVeGGrammar(numberer, -1);
 		lexicon = new SimpleLVeGLexicon();
 		Valuator<?, ?> valuator = new Valuator<Tree<State>, Double>(grammar, lexicon, true);
 		mvaluator = new ThreadPool(valuator, opts.nthreadeval);

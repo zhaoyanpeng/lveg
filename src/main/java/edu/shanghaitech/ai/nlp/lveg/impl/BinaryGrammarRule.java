@@ -1,7 +1,14 @@
-package edu.shanghaitech.ai.nlp.lveg;
+package edu.shanghaitech.ai.nlp.lveg.impl;
 
 import java.util.Map;
 import java.util.Set;
+
+import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.Unit;
+
 import java.util.HashMap;
 import java.util.HashSet;
 
@@ -17,8 +24,8 @@ public class BinaryGrammarRule extends GrammarRule implements Comparable<Object>
 	/**
 	 * the IDs of the two right-hand side nonterminals
 	 */
-	protected short lchild;
-	protected short rchild;
+	public short lchild;
+	public short rchild;
 	
 	
 	public BinaryGrammarRule() {}
@@ -81,26 +88,6 @@ public class BinaryGrammarRule extends GrammarRule implements Comparable<Object>
 		BinaryGrammarRule rule = new BinaryGrammarRule(lhs, lchild, rchild);
 		rule.weight = weight.copy(true);
 		return rule;
-	}
-	
-
-	public short getLchild() {
-		return lchild;
-	}
-
-
-	public void setLchild(short lchild) {
-		this.lchild = lchild;
-	}
-
-
-	public short getRchild() {
-		return rchild;
-	}
-
-
-	public void setRchild(short rchild) {
-		this.rchild = rchild;
 	}
 
 

@@ -9,11 +9,11 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.Test;
 
-import edu.shanghaitech.ai.nlp.lveg.Parser;
-import edu.shanghaitech.ai.nlp.lveg.ThreadPool;
-import edu.shanghaitech.ai.nlp.lveg.Valuator;
-import edu.shanghaitech.ai.nlp.lveg.Inferencer.Chart;
+import edu.shanghaitech.ai.nlp.lveg.impl.Valuator;
+import edu.shanghaitech.ai.nlp.lveg.model.Parser;
+import edu.shanghaitech.ai.nlp.lveg.model.Inferencer.Chart;
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
+import edu.shanghaitech.ai.nlp.util.ThreadPool;
 
 public class ParallelOptimizerTest {
 	
@@ -72,13 +72,13 @@ public class ParallelOptimizerTest {
 			
 //			staticPrint(idx, isample); // 0: uncomment to test static method accessing
 			
-			Meta<O> cache = new Meta(isample, ll);
+			Meta<O> cache = new Meta(itask, ll);
 			
 			synchronized (muppet) {
 				
 //				staticPrint(idx, isample); // 1: uncomment to test static method accessing
 				
-				muppet.nonStaticPrint(idx, isample);
+				muppet.nonStaticPrint(idx, itask);
 				muppet.notifyAll();
 			}
 			
@@ -89,7 +89,7 @@ public class ParallelOptimizerTest {
 				caches.add(cache);
 				caches.notifyAll();
 			}
-			sample = null;
+			task = null;
 			return null;
 		}
 		

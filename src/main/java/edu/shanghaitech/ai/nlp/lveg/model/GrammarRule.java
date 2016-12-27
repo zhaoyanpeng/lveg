@@ -1,4 +1,4 @@
-package edu.shanghaitech.ai.nlp.lveg;
+package edu.shanghaitech.ai.nlp.lveg.model;
 
 import java.io.Serializable;
 
@@ -19,10 +19,9 @@ public abstract class GrammarRule implements Serializable {
 	/**
 	 * the ID of the left-hand side nonterminal
 	 */
-	protected short lhs;
-	protected byte type;
-
-	protected GaussianMixture weight;
+	public short lhs;
+	public byte type;
+	public GaussianMixture weight;
 	
 	
 	public GrammarRule() {

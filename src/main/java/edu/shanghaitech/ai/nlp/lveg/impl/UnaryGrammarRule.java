@@ -1,9 +1,15 @@
-package edu.shanghaitech.ai.nlp.lveg;
+package edu.shanghaitech.ai.nlp.lveg.impl;
 
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+
+import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.Unit;
 
 
 /**
@@ -18,7 +24,7 @@ public class UnaryGrammarRule extends GrammarRule implements Comparable<Object> 
 	/**
 	 * the ID of the right-hand side nonterminal
 	 */
-	protected short rhs;
+	public short rhs;
 	
 	
 	public UnaryGrammarRule() {
@@ -98,16 +104,6 @@ public class UnaryGrammarRule extends GrammarRule implements Comparable<Object> 
 		rule.weight = weight.copy(true);
 		rule.type = type;
 		return rule;
-	}
-	
-	
-	public short getRhs() {
-		return rhs;
-	}
-
-
-	public void setRhs(short rhs) {
-		this.rhs = rhs;
 	}
 
 

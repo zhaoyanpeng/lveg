@@ -1,4 +1,4 @@
-package edu.shanghaitech.ai.nlp.lveg;
+package edu.shanghaitech.ai.nlp.lveg.model;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
+import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
 import edu.shanghaitech.ai.nlp.lveg.LearnerConfig.Params;
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
 import edu.shanghaitech.ai.nlp.util.Recorder;
@@ -179,6 +180,36 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	}
 	
 	
+	public short getDim() {
+		return dim;
+	}
+
+
+	public void setDim(short dim) {
+		this.dim = dim;
+	}
+
+
+	public List<Double> getVars() {
+		return vars;
+	}
+
+
+	public void setVars(List<Double> vars) {
+		this.vars = vars;
+	}
+
+
+	public List<Double> getMus() {
+		return mus;
+	}
+
+
+	public void setMus(List<Double> mus) {
+		this.mus = mus;
+	}
+
+
 	/**
 	 * Memory clean.
 	 */

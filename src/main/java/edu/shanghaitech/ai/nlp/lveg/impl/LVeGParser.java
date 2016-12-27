@@ -1,11 +1,16 @@
-package edu.shanghaitech.ai.nlp.lveg;
+package edu.shanghaitech.ai.nlp.lveg.impl;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import edu.berkeley.nlp.syntax.Tree;
-import edu.shanghaitech.ai.nlp.lveg.Inferencer.Cell;
-import edu.shanghaitech.ai.nlp.lveg.Inferencer.Chart;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
+import edu.shanghaitech.ai.nlp.lveg.model.Inferencer;
+import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
+import edu.shanghaitech.ai.nlp.lveg.model.Parser;
+import edu.shanghaitech.ai.nlp.lveg.model.Inferencer.Cell;
+import edu.shanghaitech.ai.nlp.lveg.model.Inferencer.Chart;
+import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.syntax.State;
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
 
@@ -37,29 +42,29 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 	
 	@Override
 	public synchronized Object call() throws Exception {
-		if (sample == null) { return null; }
-		Tree<State> asample = (Tree<State>) sample;
+		if (task == null) { return null; }
+		Tree<State> sample = (Tree<State>) task;
 		List<Double> scores = new ArrayList<Double>(2);
-		double scoreT = doInsideOutsideWithTree(asample); 
-		double scoreS = doInsideOutside(asample); 
+		double scoreT = doInsideOutsideWithTree(sample); 
+		double scoreS = doInsideOutside(sample); 
 		scores.add(scoreT);
 		scores.add(scoreS);
 //		logger.trace("\no---id=" + Thread.currentThread().getId() + ", isample=" + isample + " " + 
 //				MethodUtil.double2str(scores, 3, -1, false, true) + " comes...\n"); // DEBUG
 		synchronized (inferencer) {
 //			logger.trace("\ni---id=" + Thread.currentThread().getId() + ", isample=" + isample + " enters...\n"); // DEBUG
-			inferencer.evalRuleCountWithTree(asample, (short) 0);
-			inferencer.evalRuleCount(asample, chart, (short) 0);
+			inferencer.evalRuleCountWithTree(sample, (short) 0);
+			inferencer.evalRuleCount(sample, chart, (short) 0);
 			inferencer.evalGradients(scores);
 //			logger.trace("\ni---id=" + Thread.currentThread().getId() + ", isample=" + isample + " " + 
 //					MethodUtil.double2str(scores, 3, -1, false, true) + " leaves...\n"); // DEBUG
 		}
-		Meta<O> cache = new Meta(isample, scores);
+		Meta<O> cache = new Meta(itask, scores);
 		synchronized (caches) {
 			caches.add(cache);
 			caches.notifyAll();
 		}
-		sample = null;
+		task = null;
 		return null;
 	}
 

@@ -11,7 +11,12 @@ import java.util.Set;
 
 import org.junit.Test;
 
-import edu.shanghaitech.ai.nlp.lveg.GrammarRule.Unit;
+import edu.shanghaitech.ai.nlp.lveg.impl.DiagonalGaussianDistribution;
+import edu.shanghaitech.ai.nlp.lveg.impl.DiagonalGaussianMixture;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.Unit;
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
 
 public class GaussianMixtureTest {
@@ -118,7 +123,7 @@ public class GaussianMixtureTest {
 		System.out.println("gd0: " + gd0.hashCode() + "\ngd1: " + gd1.hashCode() + "\ngd2: " + gd2.hashCode());
 		System.out.println("----------------------------");
 		
-		gd0.dim = n;
+		gd0.setDim(n);
 		System.out.println("set0---" + set0);
 		System.out.println("set1---" + set1);
 		
@@ -168,7 +173,7 @@ public class GaussianMixtureTest {
 		System.out.println("InScore uc--" + gm3);
 		
 		System.out.println("---deep copy---");
-		cgm0.mixture.remove(0);
+		cgm0.getMixture().remove(0);
 		System.out.println(gm3);
 		
 		System.out.println("---shallow copy---");
@@ -227,7 +232,7 @@ public class GaussianMixtureTest {
 		int n = 1500;
 		List<Double> weights = new ArrayList<Double>();
 		MethodUtil.randomInitList(weights, Double.class, n, 10, false, true);
-		gm0.weights = weights;
+		gm0.setWeights(weights);
 		
 		System.out.println("n = " + n);
 		long start = System.currentTimeMillis();

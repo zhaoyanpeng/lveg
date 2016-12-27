@@ -1,4 +1,6 @@
-package edu.shanghaitech.ai.nlp.lveg;
+package edu.shanghaitech.ai.nlp.lveg.impl;
+
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 
 public class GeneralGaussianMixture extends GaussianMixture {
 	/**
