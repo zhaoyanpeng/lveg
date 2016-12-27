@@ -5,6 +5,7 @@ target/
 classes/
 berkeley/
 .settings/
+implementation_notes.txt
 .classpath
 .project
 .log
