@@ -2,11 +2,9 @@ package edu.shanghaitech.ai.nlp.lveg.model;
 
 import java.io.Serializable;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import edu.berkeley.nlp.syntax.Tree;
-import edu.shanghaitech.ai.nlp.lveg.StateTreeList;
+import edu.shanghaitech.ai.nlp.data.StateTreeList;
 import edu.shanghaitech.ai.nlp.syntax.State;
 import edu.shanghaitech.ai.nlp.util.Indexer;
 
@@ -20,25 +18,20 @@ public abstract class LVeGLexicon extends LVeGGrammar implements Serializable {
 	 */
 	private static final long serialVersionUID = 255983044651602165L;
 	public static final String TOKEN_UNKNOWN = "UNK";
-	protected transient String lastWord;
 	protected transient String lastSignature;
+	protected transient String lastWord;
 	protected transient int lastPosition;
-	
-	
 	/**
 	 * Different modes for unknown words. See {@link #SimpleLVeGLexicon()}.
 	 */
 	protected int unknownLevel;
 	
-	
 	/**
-	 * Initialize the remaining stuff after obtaining the vocabulary.
+	 * Assume that rare words have been replaced by their signature.
 	 * 
-	 * @param trees set of parse trees
-	 * @param nTag  the number of the pos-es
+	 * @param trees a set of trees
 	 */
-	public abstract void postInitialize(StateTreeList trees, int nTag);
-	
+	public void postInitialize(StateTreeList trees){}
 	
 	/**
 	 * Get the unary rules that contain the word specified by the index (by reference).
@@ -46,34 +39,28 @@ public abstract class LVeGLexicon extends LVeGGrammar implements Serializable {
 	 * @param wordIdx id of the word
 	 * @return
 	 */
-	public abstract List<GrammarRule> getRulesWithWord(int wordIdx);
-	
+	public abstract List<GrammarRule> getRulesWithWord(State word);
 	
 	/**
-	 * @param state a node
+	 * @param state a leaf representing the word
 	 * @param idTag the id of the tag
-	 * @return
 	 */
-	public abstract GaussianMixture score(State state, short idTag);
-	
+	public abstract GaussianMixture score(State state, short itag);
 	
 	/**
-	 * @param trees
+	 * @param trees a set of trees to be labeled
 	 */
 	public abstract void labelTrees(StateTreeList trees);
 	
-	
 	/**
-	 * @param word a terminal node
-	 * @return
+	 * @param word a leaf node
 	 */
 	protected abstract boolean isKnown(String word);
 	
-	
 	/**
-	 * Initialize word index.
+	 * Initializing word index, which is also called labeling trees.
 	 * 
-	 * @param trees
+	 * @param trees a set of trees to be labeled
 	 */
 	public void labelTrees(Indexer<String> wordIndexer, StateTreeList trees) {
 		for (Tree<State> tree : trees) {
@@ -84,7 +71,6 @@ public abstract class LVeGLexicon extends LVeGGrammar implements Serializable {
 			}
 		}
 	}
-	
 	
 	/**
 	 * Sort of different from the Berkeley's implementation. It returns the 
@@ -110,7 +96,6 @@ public abstract class LVeGLexicon extends LVeGGrammar implements Serializable {
 			return signature;
 		}
 	}
-	
 	
 	/**
 	 * Get the signature of the word.

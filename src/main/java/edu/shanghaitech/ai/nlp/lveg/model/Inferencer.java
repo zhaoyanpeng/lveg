@@ -55,12 +55,11 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	public static void insideScore(Chart chart, List<State> sentence, int nword) {
 		int x0, y0, x1, y1, c0, c1, c2;
 		GaussianMixture pinScore, linScore, rinScore, ruleScore;
-		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBinaryRuleMap();
+		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBRuleMap();
 		
 		for (int i = 0; i < nword; i++) {
 			int iCell = Chart.idx(i, nword);
-			int wordIdx = sentence.get(i).wordIdx; 
-			List<GrammarRule> rules = lexicon.getRulesWithWord(wordIdx);
+			List<GrammarRule> rules = lexicon.getRulesWithWord(sentence.get(i));
 			// preterminals
 			for (GrammarRule rule : rules) {
 				chart.addInsideScore(rule.lhs, iCell, rule.getWeight().copy(true), (short) 0);
@@ -120,7 +119,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	public static void outsideScore(Chart chart, List<State> sentence, int nword) {
 		int x0, y0, x1, y1, c0, c1, c2;
 		GaussianMixture poutScore, linScore, rinScore, loutScore, routScore, ruleScore;
-		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBinaryRuleMap();
+		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBRuleMap();
 		
 		for (int ilayer = nword - 1; ilayer >= 0; ilayer--) {
 			for (int left = 0; left < nword - ilayer; left++) {
@@ -212,7 +211,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 		// have to process ROOT node specifically
 		if (idx == 0 && (set = chart.keySet(idx, false, (short) (LENGTH_UCHAIN + 1))) != null) {
 			for (Short idTag : set) { // can only contain ROOT
-				rules = grammar.getUnaryRuleWithP(idTag);
+				rules = grammar.getURuleWithP(idTag);
 				Iterator<GrammarRule> iterator = rules.iterator(); // see set ROOT's outside score
 				poutScore = chart.getOutsideScore(idTag, idx, (short) (LENGTH_UCHAIN + 1)); // 1
 				while (iterator.hasNext()) { // CHECK
@@ -224,7 +223,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 		}
 		while(level < LENGTH_UCHAIN && (set = chart.keySet(idx, false, level)) != null) {
 			for (Short idTag : set) {
-				rules = grammar.getUnaryRuleWithP(idTag);
+				rules = grammar.getURuleWithP(idTag);
 				Iterator<GrammarRule> iterator = rules.iterator();
 				poutScore = chart.getOutsideScore(idTag, idx, level);
 				while (iterator.hasNext()) {
@@ -245,7 +244,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 		GaussianMixture pinScore, cinScore;
 		while (level < LENGTH_UCHAIN && (set = chart.keySet(idx, true, level)) != null) {
 			for (Short idTag : set) {
-				rules = grammar.getUnaryRuleWithC(idTag); // ROOT is excluded
+				rules = grammar.getURuleWithC(idTag); // ROOT is excluded
 				Iterator<GrammarRule> iterator = rules.iterator();
 				cinScore = chart.getInsideScore(idTag, idx, level);
 				while (iterator.hasNext()) {
@@ -261,7 +260,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 		// have to process ROOT node specifically
 		if (idx == 0 && (set = chart.keySet(idx, true, LENGTH_UCHAIN)) != null) {
 			for (Short idTag : set) { // the maximum inside level below ROOT
-				rules = grammar.getUnaryRuleWithC(idTag);
+				rules = grammar.getURuleWithC(idTag);
 				Iterator<GrammarRule> iterator = rules.iterator();
 				cinScore = chart.getInsideScore(idTag, idx, LENGTH_UCHAIN);
 				while (iterator.hasNext()) {

@@ -7,7 +7,6 @@ import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
-import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.Unit;
 
 import java.util.HashMap;
 import java.util.HashSet;

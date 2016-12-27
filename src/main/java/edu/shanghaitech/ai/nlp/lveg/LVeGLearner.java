@@ -11,11 +11,13 @@ import edu.shanghaitech.ai.nlp.util.MethodUtil;
 import edu.shanghaitech.ai.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.util.OptionParser;
 import edu.shanghaitech.ai.nlp.util.ThreadPool;
-import edu.shanghaitech.ai.nlp.lveg.ObjectFileManager.GrammarFile;
+import edu.shanghaitech.ai.nlp.data.StateTreeList;
+import edu.shanghaitech.ai.nlp.data.ObjectFileManager.GrammarFile;
 import edu.shanghaitech.ai.nlp.lveg.impl.LVeGParser;
 import edu.shanghaitech.ai.nlp.lveg.impl.MaxRuleParser;
 import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGLexicon;
+import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGLexiconOld;
 import edu.shanghaitech.ai.nlp.lveg.impl.Valuator;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
@@ -87,7 +89,7 @@ public class LVeGLearner extends LearnerConfig {
 		Numberer numberer = wrapper.getGlobalNumberer(KEY_TAG_SET);
 		
 		grammar = new SimpleLVeGGrammar(numberer, -1);
-		lexicon = new SimpleLVeGLexicon();
+		lexicon = new SimpleLVeGLexiconOld(numberer, -1);
 		Valuator<?, ?> valuator = new Valuator<Tree<State>, Double>(grammar, lexicon, true);
 		mvaluator = new ThreadPool(valuator, opts.nthreadeval);
 				
@@ -125,8 +127,11 @@ public class LVeGLearner extends LearnerConfig {
 				} // a global tree
 			}
 			logger.trace("\n--->Going through the training set is over...");
-			grammar.postInitialize(0.0);
-			lexicon.postInitialize(trainTrees, numberer.size());
+			grammar.postInitialize();
+			
+//			lexicon.postInitialize();
+			lexicon.postInitialize(trainTrees);
+			
 			logger.trace("post-initializing is over.\n");
 			lexicon.labelTrees(trainTrees);
 			lexicon.labelTrees(testTrees);
@@ -221,8 +226,7 @@ public class LVeGLearner extends LearnerConfig {
 		// relative error could be negative
 		} while(++cnt < opts.nepoch);
 		
-		logger.trace("Convergence Path [train]: " + trllist + "\n");
-		logger.trace("Convergence Path [ dev ]: " + dellist + "\n");
+		finals(trllist, dellist);
 	}
 	
 	public static void serialInBatch(Numberer numberer, double prell) throws Exception {
@@ -289,8 +293,46 @@ public class LVeGLearner extends LearnerConfig {
 		// relative error could be negative
 		} while(++cnt < opts.nepoch);
 		
+		finals(trllist, dellist);
+	}
+	
+	
+	public static void finals(List<Double> trllist, List<Double> dellist) {
+		long beginTime, endTime;
 		logger.trace("Convergence Path [train]: " + trllist + "\n");
 		logger.trace("Convergence Path [ dev ]: " + dellist + "\n");
+		
+		logger.trace("\n----------training is over----------\n");
+		
+		logger.info("\n-------saving grammar file...");
+		GrammarFile gfile = new GrammarFile(grammar, lexicon);
+		String filename = opts.datadir + opts.outGrammar + "_final.gr";
+		if (gfile.save(filename)) {
+			logger.info("to \'" + filename + "\' successfully.\n");
+		} else {
+			logger.info("to \'" + filename + "\' unsuccessfully.\n");
+		}
+		
+		logger.trace("------->evaluating on the training dataset...");
+		beginTime = System.currentTimeMillis();
+		double ll = calculateLL(opts, mvaluator, trainTrees, true);
+		endTime = System.currentTimeMillis();
+		logger.trace("ll is "+ ll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");
+		trainTrees.reset();
+		
+		logger.trace("------->evaluating on the valuation dataset...");
+		beginTime = System.currentTimeMillis();
+		ll = calculateLL(opts, mvaluator, devTrees, false);
+		endTime = System.currentTimeMillis();
+		logger.trace("ll is "+ ll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");
+		devTrees.reset();
+		
+		logger.trace("------->evaluating on the test dataset...");
+		beginTime = System.currentTimeMillis();
+		ll = calculateLL(opts, mvaluator, testTrees, false);
+		endTime = System.currentTimeMillis();
+		logger.trace("ll is "+ ll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");
+		testTrees.reset();
 	}
 	
 	
@@ -344,7 +386,7 @@ public class LVeGLearner extends LearnerConfig {
 		if (opts.evalontrain) {
 			logger.trace("\n-------ll of the training data after " + (isample / opts.batchsize) + " batches in epoch " + cnt + " is... ");
 			beginTime = System.currentTimeMillis();
-			trll = calculateLL(opts, grammar, mvaluator, trainTrees);
+			trll = calculateLL(opts, mvaluator, trainTrees, true);
 			endTime = System.currentTimeMillis();
 			logger.trace("------->" + trll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");
 			trainTrees.reset();
@@ -353,7 +395,7 @@ public class LVeGLearner extends LearnerConfig {
 		if (opts.evalondev) {
 			logger.trace("\n-------ll of the dev data after " + (isample / opts.batchsize) + " batches in epoch " + cnt + " is... ");
 			beginTime = System.currentTimeMillis();
-			dell = calculateLL(opts, grammar, mvaluator, devTrees);
+			dell = calculateLL(opts, mvaluator, devTrees, false);
 			endTime = System.currentTimeMillis();
 			logger.trace("------->" + dell + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");
 			devTrees.reset();
@@ -368,7 +410,11 @@ public class LVeGLearner extends LearnerConfig {
 	}
 	
 	
-	public static double calculateLL(Options opts, LVeGGrammar grammar, ThreadPool valuator, StateTreeList stateTreeList) {
+	/**
+	 * We have to evaluate the grammar on only a fraction of training data because the evaluation is quite time-consumed. But it is the 
+	 * evaluation on the whole validation dataset or the whole test dataset that can tells whether your trained model is good or bad.
+	 */
+	public static double calculateLL(Options opts, ThreadPool valuator, StateTreeList stateTreeList, boolean istrain) {
 		int nUnparsable = 0, cnt = 0;
 		double ll = 0, sumll = 0;
 		for (Tree<State> tree : stateTreeList) {
@@ -378,7 +424,7 @@ public class LVeGLearner extends LearnerConfig {
 			if (opts.firstk > 0) {
 				if (++cnt > opts.firstk) { break; } // DEBUG
 			}
-			if (opts.evalfraction > 0) {
+			if (istrain && opts.evalfraction > 0) {
 				if (random.nextDouble() > opts.evalfraction) { continue; }
 			}
 			valuator.execute(tree);

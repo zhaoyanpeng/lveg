@@ -74,10 +74,10 @@ public class LVeGInferencer extends Inferencer {
 				short idChild = child.getId();
 				
 				if (idParent != 0) {
-					ruleScore = grammar.getUnaryRuleWeight(idParent, idChild, GrammarRule.LRURULE);
+					ruleScore = grammar.getURuleWeight(idParent, idChild, GrammarRule.LRURULE);
 					pinScore = ruleScore.mulForInsideOutside(cinScore, GrammarRule.Unit.UC, true);
 				} else { // root, inside score of the root node is a constant in double
-					ruleScore = grammar.getUnaryRuleWeight(idParent, idChild, GrammarRule.RHSPACE);
+					ruleScore = grammar.getURuleWeight(idParent, idChild, GrammarRule.RHSPACE);
 					pinScore = ruleScore.mulForInsideOutside(cinScore, GrammarRule.Unit.C, true);
 				}
 				parent.setInsideScore(pinScore);
@@ -92,7 +92,7 @@ public class LVeGInferencer extends Inferencer {
 				
 				linScore = lchild.getInsideScore();
 				rinScore = rchild.getInsideScore();
-				ruleScore = grammar.getBinaryRuleWeight(idParent, idlChild, idrChild);
+				ruleScore = grammar.getBRuleWeight(idParent, idlChild, idrChild);
 				
 				pinScore = ruleScore.mulForInsideOutside(linScore, GrammarRule.Unit.LC, true);
 				pinScore = pinScore.mulForInsideOutside(rinScore, GrammarRule.Unit.RC, false);
@@ -132,9 +132,9 @@ public class LVeGInferencer extends Inferencer {
 				short idChild = child.getId();
 				
 				if (idParent != 0) {
-					ruleScore = grammar.getUnaryRuleWeight(idParent, idChild, GrammarRule.LRURULE);
+					ruleScore = grammar.getURuleWeight(idParent, idChild, GrammarRule.LRURULE);
 				} else { // root
-					ruleScore = grammar.getUnaryRuleWeight(idParent, idChild, GrammarRule.RHSPACE);
+					ruleScore = grammar.getURuleWeight(idParent, idChild, GrammarRule.RHSPACE);
 				}
 				// rule: p(root->nonterminal) does not contain "P" part, so no removing occurs when
 				// the current parent node is the root node
@@ -152,7 +152,7 @@ public class LVeGInferencer extends Inferencer {
 				
 				linScore = lchild.getInsideScore();
 				rinScore = rchild.getInsideScore();
-				ruleScore = grammar.getBinaryRuleWeight(idParent, idlChild, idrChild);
+				ruleScore = grammar.getBRuleWeight(idParent, idlChild, idrChild);
 				
 				loutScore = ruleScore.mulForInsideOutside(poutScore, GrammarRule.Unit.P, true);
 				loutScore = loutScore.mulForInsideOutside(rinScore, GrammarRule.Unit.RC, false);
@@ -179,7 +179,7 @@ public class LVeGInferencer extends Inferencer {
 		List<State> sentence = tree.getYield();
 		int x0, x1, y0, y1, c0, c1, c2, nword = sentence.size();
 		GaussianMixture outScore, linScore, rinScore;
-		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBinaryRuleMap();
+		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBRuleMap();
 		
 		for (int ilayer = nword - 1; ilayer >= 0; ilayer--) {
 			for (int left = 0; left < nword - ilayer; left++) {
@@ -293,7 +293,7 @@ public class LVeGInferencer extends Inferencer {
 		// have to process ROOT node specifically
 		if (idx == 0 && (set = chart.keySet(idx, false, (short) (LENGTH_UCHAIN + 1))) != null) {
 			for (Short idTag : set) { // can only contain ROOT
-				rules = grammar.getUnaryRuleWithP(idTag);
+				rules = grammar.getURuleWithP(idTag);
 				Iterator<GrammarRule> iterator = rules.iterator(); // see set ROOT's outside score
 				outScore = chart.getOutsideScore(idTag, idx, (short) (LENGTH_UCHAIN + 1)); // 1
 				while (iterator.hasNext()) {
@@ -308,7 +308,7 @@ public class LVeGInferencer extends Inferencer {
 			}
 		}
 		// general unary grammar rules
-		Map<GrammarRule, GrammarRule> uRuleMap = grammar.getUnaryRuleMap();
+		Map<GrammarRule, GrammarRule> uRuleMap = grammar.getURuleMap();
 		for (Map.Entry<GrammarRule, GrammarRule> rmap : uRuleMap.entrySet()) {
 			UnaryGrammarRule rule = (UnaryGrammarRule) rmap.getValue();
 			if (rule.type == GrammarRule.RHSPACE) { continue; }
@@ -321,7 +321,7 @@ public class LVeGInferencer extends Inferencer {
 		}
 		// have to process unary rules containing LEXICONS specifically
 		if (word != null) {
-			rules = lexicon.getRulesWithWord(word.wordIdx);
+			rules = lexicon.getRulesWithWord(word);
 			for (GrammarRule rule : rules) {
 //				if (chart.containsKey(rule.lhs, idx, true, (short) 0) && chart.containsKey(rule.lhs, idx, false)) {
 //					cinScore = chart.getInsideScore(rule.lhs, idx, (short) 0);

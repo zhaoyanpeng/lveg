@@ -2,7 +2,6 @@ package edu.shanghaitech.ai.nlp.lveg.impl;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
 import edu.berkeley.nlp.PCFGLA.Corpus;
@@ -16,22 +15,27 @@ import edu.shanghaitech.ai.nlp.util.Indexer;
 import edu.shanghaitech.ai.nlp.util.Numberer;
 
 /**
+ * TODO find the difference from SimpleLVeGLexicon. They have different outputs with 
+ * the only difference in time when the rules are created and initialized.
+ * 
  * @author Yanpeng Zhao
  *
  */
-public class SimpleLVeGLexicon extends LVeGLexicon {
+public class SimpleLVeGLexiconOld extends LVeGLexicon {
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = -1066429113106930585L;
-	protected int nword;
-	
+	public IndexMap[] wordIndexMap;
 	public Indexer<String> wordIndexer;
+	protected int nword;
+	protected int[] wordCounter;
+	
+	protected GaussianMixture[][] counts;  // tag-word
+	protected UnaryGrammarRule[][] urules; // tag-word
 	
 	
-	public SimpleLVeGLexicon() {
-		this.uRuleTable = new RuleTable<UnaryGrammarRule>(UnaryGrammarRule.class);
-		this.uRuleMap = new HashMap<GrammarRule, GrammarRule>();
+	public SimpleLVeGLexiconOld(Numberer numberer, int ntag) {
 		this.wordIndexer = new Indexer<String>();
 		this.lastWord = TOKEN_UNKNOWN;
 		this.lastPosition = -1;
@@ -41,11 +45,6 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 				Corpus.myTreebank == Corpus.TreeBankType.BROWN) {
 			this.unknownLevel = 4;
 		}
-	}
-	
-	
-	public SimpleLVeGLexicon(Numberer numberer, int ntag) {
-		this();
 		if (numberer == null) {
 			this.numberer = null;
 			this.ntag = ntag;
@@ -53,39 +52,50 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 			this.numberer = numberer;
 			this.ntag = numberer.size();
 		}
-		initialize();
 	}
 	
 	
 	@Override
-	protected void initialize() {
-		this.uRulesWithP = new List[ntag];
-		for (int i = 0; i < ntag; i++) {
-			uRulesWithP[i] = new ArrayList<GrammarRule>();
-		}
-	}
-	
-	
-	@Override
-	public void postInitialize() {
+	public void postInitialize(StateTreeList trees) {
 		this.nword = wordIndexer.size();
-		this.uRulesWithC = new List[nword];
-		for (int i = 0; i < nword; i++) {
-			uRulesWithC[i] = new ArrayList<GrammarRule>(5);
+		this.counts = new GaussianMixture[ntag][];
+		this.urules = new UnaryGrammarRule[ntag][];
+		this.wordIndexMap = new IndexMap[ntag];
+		this.wordCounter = new int[nword];
+		for (int i = 0; i < ntag; i++) {
+			wordIndexMap[i] = new IndexMap(nword);
 		}
-		for (GrammarRule rule : uRuleTable.keySet()) {
-			addURule((UnaryGrammarRule) rule);
+		
+		for (Tree<State> tree : trees) {	
+			List<State> words = tree.getTerminalYield();
+			List<State> tags = tree.getPreTerminalYield();
+			
+			for (int i = 0; i < words.size(); i++) {
+				int wordIdx = wordIndexer.indexOf(words.get(i).getName());
+				if (wordIdx < 0) { 
+					System.err.println("Word \"" + words.get(i).getName() + "\" NOT Found.");
+					continue; 
+				}
+				wordCounter[wordIdx]++;
+				wordIndexMap[tags.get(i).getId()].add(wordIdx);
+			}
 		}
-	}
-
-
-	@Override
-	public void addURule(UnaryGrammarRule rule) {
-		if (uRulesWithP[rule.lhs].contains(rule)) { return; }
-		uRulesWithP[rule.lhs].add(rule);
-		uRulesWithC[rule.rhs].add(rule);
-		uRuleMap.put(rule, rule);
-		optimizer.addRule(rule);
+		
+		for (short i = 0; i < ntag; i++) {
+			int nmap = wordIndexMap[i].size();
+			counts[i] = new GaussianMixture[nmap];
+			urules[i] = new UnaryGrammarRule[nmap];
+			for (short j = 0; j < nmap; j++) {
+				int wordIdx = wordIndexMap[i].get(j);
+				int frequency = wordIndexMap[i].frequency(wordIdx);
+				
+				counts[i][j] = new DiagonalGaussianMixture();
+				urules[i][j] = new UnaryGrammarRule(i, (short) wordIdx, GrammarRule.LHSPACE);
+				urules[i][j].getWeight().setBias(frequency);
+				
+				optimizer.addRule(urules[i][j]);
+			}
+		}
 	}
 	
 	
@@ -97,48 +107,42 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 
 	@Override
 	public void tallyStateTree(Tree<State> tree) {
-		List<State> words = tree.getTerminalYield();
-		List<State> tags = tree.getPreTerminalYield();
-		for (int i = 0; i < words.size(); i++) {
-			State word = words.get(i);
+		List<State> words = tree.getYield();
+		for (State word : words) {
 			String name = word.getName();
-			wordIndexer.add(name); // generate word index
-			int wordIdx = wordIndexer.indexOf(name);
-			word.wordIdx = wordIdx;
-			short tagIdx = tags.get(i).getId();
-			GrammarRule rule = new UnaryGrammarRule((short) tagIdx, wordIdx, GrammarRule.LHSPACE);
-			uRuleTable.addCount(rule, 1.0);
+			wordIndexer.add(name);
 		}
 	}
 	
 	
 	@Override
 	public List<GrammarRule> getRulesWithWord(State word) {
-		// map the word to its real index
 		int wordIdx = word.wordIdx;
-		if (wordIdx < 0) {
-			wordIdx = wordIndexer.indexOf(word.getName());
-			word.wordIdx = wordIdx;
+		List<GrammarRule> list = new ArrayList<GrammarRule>();
+		for (short i = 0; i < ntag; i++) {
+			int ruleIdx = wordIndexMap[i].indexOf(wordIdx);
+			if (ruleIdx >= 0) {
+				list.add(urules[i][ruleIdx]);
+			}
 		}
-		return uRulesWithC[wordIdx];
+		return list;
 	}
-	
+
 
 	@Override
-	public GaussianMixture score(State word, short itag) {
+	public GaussianMixture score(State word, short idTag) {
 		// map the word to its real index
 		int wordIdx = word.wordIdx;
 		if (wordIdx < 0) {
 			wordIdx = wordIndexer.indexOf(word.getName());
 			word.wordIdx = wordIdx;
 		}
-		
-		GrammarRule rule = getURule(itag, wordIdx, GrammarRule.LHSPACE);
-		if (rule != null) {
-			return rule.getWeight();
+		int ruleIdx = wordIndexMap[idTag].indexOf(wordIdx); 
+		if (ruleIdx == -1) {
+			System.err.println("Unknown word: " + word.getName());
+			return null;
 		}
-//		logger.warn("Unary Rule NOT Found: [P: " + idParent + ", C: " + idChild + ", TYPE: " + type + "]\n");
-		return null;
+		return urules[idTag][ruleIdx].getWeight();
 	}                                           
 	
 	
@@ -146,7 +150,7 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 	protected boolean isKnown(String word) {
 		return wordIndexer.indexOf(word) != -1;
 	}
-	
+
 	
 	public String toString(Numberer numberer) {
 		String word = null;
@@ -167,16 +171,17 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 		sb.append("---Unary Rules---\n");
 		for (int i = 0; i < ntag; i++) {
 			count = 0;
-			List<GrammarRule> rules = uRulesWithP[i];
-			sb.append("Tag " + i + "\t[" + numberer.object(i) + "] has " + rules.size() + " rules\n" );
-			for (GrammarRule rule : rules) {
-				sb.append(rule + "\t" + rule.getWeight().getBias());
+			int nmap = wordIndexMap[i].size();
+			sb.append("Tag " + i + "\t[" + numberer.object(i) + "] has " + nmap + " rules\n" );
+			for (int j = 0; j < nmap; j++) {
+				sb.append(urules[i][j] + "\t" + urules[i][j].getWeight().getBias());
 				if (++count % ncol == 0) {
 					sb.append("\n");
 				}
 			}
 			sb.append("\n");
 		}
+		
 		return sb.toString();
 	}
 
@@ -195,6 +200,7 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 		private List<Integer> from;
 		private List<Integer> frequency;
 		
+		
 		public IndexMap(int n) {
 			this.count = 0;
 			this.to = new ArrayList<Integer>(n);
@@ -207,6 +213,7 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 				frequency.add(0);
 			}
 		}
+		
 		
 		/**
 		 * @param i word index
@@ -221,6 +228,7 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 			frequency.set(i, frequency.get(i) + 1);
 		}
 		
+		
 		/**
 		 * @param i word index
 		 * @return  frequency of the rule with i as the child
@@ -229,6 +237,7 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 			if (i < 0 || i > to.size()) { return -1; }
 			return frequency.get(i);
 		}
+		
 		
 		/**
 		 * @param i mapping index
@@ -239,14 +248,17 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 			return from.get(i);
 		}
 		
+		
 		public int indexOf(int i) {
 			if (i < 0 || i > to.size()) { return -1; }
 			return to.get(i);
 		}
 		
+		
 		public int size() {
 			return this.count;
 		}
+		
 		
 		public IndexMap copy() {
 			IndexMap map = new IndexMap(to.size());
@@ -258,11 +270,27 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 			return map;
 		}
 		
+		
 		public void clear() {
 			this.count = 0;
 			this.to.clear();
 			this.from.clear();
 		}
+	}
+
+
+	@Override
+	protected void initialize() {
+	}
+
+
+	@Override
+	public void postInitialize() {
+	}
+
+
+	@Override
+	public void addURule(UnaryGrammarRule rule) {
 	}
 	
 }

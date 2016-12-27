@@ -28,6 +28,7 @@ import javax.imageio.ImageIO;
 
 import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.ui.TreeJPanel;
+import edu.shanghaitech.ai.nlp.data.StateTreeList;
 import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
 import edu.shanghaitech.ai.nlp.lveg.LearnerConfig.Options;
 import edu.shanghaitech.ai.nlp.lveg.impl.UnaryGrammarRule;
@@ -38,7 +39,6 @@ import edu.shanghaitech.ai.nlp.lveg.model.Inferencer.Cell;
 import edu.shanghaitech.ai.nlp.lveg.model.Inferencer.Chart;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.util.Numberer;
-import edu.shanghaitech.ai.nlp.lveg.StateTreeList;
 import edu.shanghaitech.ai.nlp.syntax.State;
 
 /**
@@ -86,7 +86,7 @@ public class MethodUtil extends Recorder {
 		int count = 0, ncol = 1;
 		StringBuffer sb = new StringBuffer();
 		sb.append("\n---Chain Unary Rules---\n");
-		for (int i = 0; i < grammar.nTag; i++ ) {
+		for (int i = 0; i < grammar.ntag; i++ ) {
 			System.out.println("Tag: " + i);
 			List<GrammarRule> rules = grammar.getChainSumUnaryRulesWithP(i);
 			for (GrammarRule rule : rules) {
@@ -173,7 +173,7 @@ public class MethodUtil extends Recorder {
 				short idChild = child.getId();
 				
 				byte type = idParent == 0 ? GrammarRule.RHSPACE : GrammarRule.LRURULE;
-				ruleScore = grammar.getUnaryRuleWeight(idParent, idChild, type);
+				ruleScore = grammar.getURuleWeight(idParent, idChild, type);
 				logger.trace("Unary\trule: [" + idParent + ", " + idChild + "] " + ruleScore + "\n"); // DEBUG
 				break;
 			}
@@ -184,7 +184,7 @@ public class MethodUtil extends Recorder {
 				short idlChild = lchild.getId();
 				short idrChild = rchild.getId();
 
-				ruleScore = grammar.getBinaryRuleWeight(idParent, idlChild, idrChild);
+				ruleScore = grammar.getBRuleWeight(idParent, idlChild, idrChild);
 				logger.trace("Binary\trule: [" + idParent + ", " + idlChild + ", " + idrChild + "] " + ruleScore + "\n"); // DEBUG
 				break;
 			}
@@ -369,7 +369,7 @@ public class MethodUtil extends Recorder {
 		grammar = agrammar;
 		lexicon = alexicon;
 		boolean found = false;
-		for (int i = 0; i < grammar.nTag; i++) {
+		for (int i = 0; i < grammar.ntag; i++) {
 			int repeated = 0;
 			Set<Integer> visited = new LinkedHashSet<Integer>();
 			// System.out.println("Tag " + i + "\t");
@@ -392,9 +392,9 @@ public class MethodUtil extends Recorder {
 		}
 		List<GrammarRule> rules;
 		if (startWithC) {
-			rules = grammar.getUnaryRuleWithC(index);
+			rules = grammar.getURuleWithC(index);
 		} else {
-			rules = grammar.getUnaryRuleWithP(index);
+			rules = grammar.getURuleWithP(index);
 		}
 		
 		for (GrammarRule rule : rules) {

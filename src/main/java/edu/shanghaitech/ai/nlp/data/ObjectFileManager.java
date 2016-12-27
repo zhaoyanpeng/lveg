@@ -1,4 +1,4 @@
-package edu.shanghaitech.ai.nlp.lveg;
+package edu.shanghaitech.ai.nlp.data;
 
 import java.io.File;
 import java.io.FileInputStream;

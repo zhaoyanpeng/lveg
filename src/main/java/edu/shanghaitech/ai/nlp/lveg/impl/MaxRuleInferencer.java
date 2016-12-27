@@ -11,8 +11,6 @@ import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.Inferencer;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
-import edu.shanghaitech.ai.nlp.lveg.model.Inferencer.ChainUrule;
-import edu.shanghaitech.ai.nlp.lveg.model.Inferencer.Chart;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.syntax.State;
 
@@ -47,12 +45,12 @@ public class MaxRuleInferencer extends Inferencer {
 		int x0, y0, x1, y1, c0, c1, c2;
 		double lcount, rcount, maxcnt, newcnt;
 		GaussianMixture linScore, rinScore, outScore, cinScore;
-		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBinaryRuleMap();
+		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBRuleMap();
 		// lexicons
 		for (int i = 0; i < nword; i++) {
 			State word = sentence.get(i);
 			int iCell = Chart.idx(i, nword);
-			List<GrammarRule> rules = lexicon.getRulesWithWord(word.wordIdx);
+			List<GrammarRule> rules = lexicon.getRulesWithWord(word);
 			for (GrammarRule rule : rules) {
 				if (chart.containsKey(rule.lhs, iCell, false)) {
 					cinScore = lexicon.score(word, rule.lhs);
@@ -118,7 +116,7 @@ public class MaxRuleInferencer extends Inferencer {
 		for (short mkey : mkeyLevel0) {
 			if ((cinScore = chart.getInsideScore(mkey, idx, (short) 0)) == null) { continue; }
 			if ((count = chart.getMaxRuleCount(mkey, idx, (short) 0)) == Double.NEGATIVE_INFINITY) { continue; }
-			rules = grammar.getUnaryRuleWithC(mkey);
+			rules = grammar.getURuleWithC(mkey);
 			Iterator<GrammarRule> iterator = rules.iterator();
 			while (iterator.hasNext()) {
 				UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
@@ -145,8 +143,8 @@ public class MaxRuleInferencer extends Inferencer {
 						continue;
 					}
 					for (Short mid : ikeyLevel1) {
-						if ((w0 = grammar.getUnaryRuleWeight(mid, ikey, GrammarRule.LRURULE)) == null ||
-								(w1 = grammar.getUnaryRuleWeight(okey, mid, GrammarRule.LRURULE)) == null) {
+						if ((w0 = grammar.getURuleWeight(mid, ikey, GrammarRule.LRURULE)) == null ||
+								(w1 = grammar.getURuleWeight(okey, mid, GrammarRule.LRURULE)) == null) {
 							continue;
 						}
 						newcnt = count + cinScore.marginalize(true) + w0.marginalize(true) + 
@@ -161,7 +159,7 @@ public class MaxRuleInferencer extends Inferencer {
 		}
 		// ROOT
 		if (idx == 0 && (outScore = chart.getOutsideScore(ROOT, idx)) != null) {
-			rules = grammar.getUnaryRuleWithP(ROOT); // outside score should be 1
+			rules = grammar.getURuleWithP(ROOT); // outside score should be 1
 			Iterator<GrammarRule> iterator = rules.iterator();
 			while (iterator.hasNext()) { // CHECK need to check again
 				UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();

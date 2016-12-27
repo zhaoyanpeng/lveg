@@ -49,25 +49,25 @@ public class LVeGGrammarTest {
 	
 	@Test
 	public void testLVeGGrammar() {
-		grammar.addUnaryRule((UnaryGrammarRule) r0);
-		grammar.addUnaryRule((UnaryGrammarRule) r1);
-		grammar.addUnaryRule((UnaryGrammarRule) r2);
-		grammar.addUnaryRule((UnaryGrammarRule) r3);
-		grammar.addUnaryRule((UnaryGrammarRule) r4);
-		grammar.addUnaryRule(r5);
-		grammar.addUnaryRule(r6);
-		grammar.addUnaryRule(r7);
-		grammar.addUnaryRule(r8);
-		grammar.addUnaryRule(r9);
-		grammar.addUnaryRule(r10);
-		grammar.addUnaryRule(r11);
-		grammar.addUnaryRule(r12);
-		grammar.addUnaryRule(r13);
-		grammar.addUnaryRule(r14);
-		grammar.addUnaryRule(r15);
-		// addUnaryRule() test
-		grammar.addUnaryRule(r15);
-		grammar.addUnaryRule(r25);
+		grammar.addURule((UnaryGrammarRule) r0);
+		grammar.addURule((UnaryGrammarRule) r1);
+		grammar.addURule((UnaryGrammarRule) r2);
+		grammar.addURule((UnaryGrammarRule) r3);
+		grammar.addURule((UnaryGrammarRule) r4);
+		grammar.addURule(r5);
+		grammar.addURule(r6);
+		grammar.addURule(r7);
+		grammar.addURule(r8);
+		grammar.addURule(r9);
+		grammar.addURule(r10);
+		grammar.addURule(r11);
+		grammar.addURule(r12);
+		grammar.addURule(r13);
+		grammar.addURule(r14);
+		grammar.addURule(r15);
+		// addURule() test
+		grammar.addURule(r15);
+		grammar.addURule(r25);
 		
 		/*
 		for (int i = 0; i < nTag; i++) {

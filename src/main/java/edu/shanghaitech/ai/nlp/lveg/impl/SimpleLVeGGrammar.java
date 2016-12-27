@@ -6,18 +6,13 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import edu.berkeley.nlp.syntax.Tree;
-import edu.shanghaitech.ai.nlp.lveg.RuleTable;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
-import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.Unit;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
-import edu.shanghaitech.ai.nlp.optimization.Optimizer;
 import edu.shanghaitech.ai.nlp.syntax.State;
 import edu.shanghaitech.ai.nlp.util.Numberer;
-import edu.shanghaitech.ai.nlp.util.Recorder;
 
 /**
  * @author Yanpeng Zhao
@@ -30,32 +25,32 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 	private static final long serialVersionUID = 650638115156791313L;
 
 	
-	public SimpleLVeGGrammar(Numberer numberer, int nTag) {
+	public SimpleLVeGGrammar(Numberer numberer, int ntag) {
 		this.uRuleTable = new RuleTable<UnaryGrammarRule>(UnaryGrammarRule.class);
 		this.bRuleTable = new RuleTable<BinaryGrammarRule>(BinaryGrammarRule.class);
 		this.uRuleMap = new HashMap<GrammarRule, GrammarRule>();
 		this.bRuleMap = new HashMap<GrammarRule, GrammarRule>();
 		if (numberer == null) {
 			this.numberer = null;
-			this.nTag = nTag;
+			this.ntag = ntag;
 		} else {
 			this.numberer = numberer;
-			this.nTag = numberer.size();
+			this.ntag = numberer.size();
 		}
 		initialize();
 	}
 	
 	
 	protected void initialize() {
-		this.uRulesWithP = new List[nTag];
-		this.uRulesWithC = new List[nTag];
-		this.bRulesWithP  = new List[nTag];
-		this.bRulesWithLC = new List[nTag];
-		this.bRulesWithRC = new List[nTag];
+		this.uRulesWithP = new List[ntag];
+		this.uRulesWithC = new List[ntag];
+		this.bRulesWithP  = new List[ntag];
+		this.bRulesWithLC = new List[ntag];
+		this.bRulesWithRC = new List[ntag];
 		this.chainSumUnaryRules = new HashSet<GrammarRule>();
-		this.chainSumUnaryRulesWithP = new List[nTag];
-		this.chainSumUnaryRulesWithC = new List[nTag];
-		for (int i = 0; i < nTag; i++) {
+		this.chainSumUnaryRulesWithP = new List[ntag];
+		this.chainSumUnaryRulesWithC = new List[ntag];
+		for (int i = 0; i < ntag; i++) {
 			uRulesWithP[i] = new ArrayList<GrammarRule>();
 			uRulesWithC[i] = new ArrayList<GrammarRule>();
 			bRulesWithP[i]  = new ArrayList<GrammarRule>();
@@ -67,18 +62,18 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 	}
 	
 	
-	public void postInitialize(double randomness) {
+	public void postInitialize() {
 		for (GrammarRule rule : uRuleTable.keySet()) {
-			addUnaryRule((UnaryGrammarRule) rule);
+			addURule((UnaryGrammarRule) rule);
 		}
 		for (GrammarRule rule : bRuleTable.keySet()) {
-			addBinaryRule((BinaryGrammarRule) rule);
+			addBRule((BinaryGrammarRule) rule);
 		}
 //		computeChainUnaryRule();
 	}
 	
 	
-	public void addBinaryRule(BinaryGrammarRule rule) {
+	public void addBRule(BinaryGrammarRule rule) {
 		if (bRulesWithP[rule.lhs].contains(rule)) { return; }
 		bRulesWithP[rule.lhs].add(rule);
 		bRulesWithLC[rule.lchild].add(rule);
@@ -88,7 +83,7 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 	}
 	
 	
-	public void addUnaryRule(UnaryGrammarRule rule) {
+	public void addURule(UnaryGrammarRule rule) {
 		if (uRulesWithP[rule.lhs].contains(rule)) { return; }
 		uRulesWithP[rule.lhs].add(rule);
 		uRulesWithC[rule.rhs].add(rule);
@@ -148,8 +143,8 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 		short count = 0, total = 0;
 		
 		// rules of the from X->ROOT(0) are not allowed
-		for (short iparent = 0; iparent < nTag; iparent++) {
-			for (short ichild = 1; ichild < nTag; ichild++) {
+		for (short iparent = 0; iparent < ntag; iparent++) {
+			for (short ichild = 1; ichild < ntag; ichild++) {
 				if (iparent == ichild) { continue; }
 				boolean found = false;
 				int cnt = 0;
@@ -203,7 +198,7 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 		// TODO a temporary implementation, it may weaken the unary rules of length 1.
 		for (GrammarRule rule : chainSumUnaryRules) {
 			if (!uRuleMap.containsKey(rule)) { count++; continue; }
-			addUnaryRule((UnaryGrammarRule) rule);
+			addURule((UnaryGrammarRule) rule);
 		}
 		logger.trace("# of new rules: " + count + " \t# of all rules: " + total + "\n");
 	}
@@ -217,7 +212,7 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 	public String toString() {
 		int count = 0, ncol = 1;
 		StringBuffer sb = new StringBuffer();
-		sb.append("Grammar [nTag=" + nTag + "]\n");
+		sb.append("Grammar [nTag=" + ntag + "]\n");
 		
 		sb.append("---Unary Grammar Rules. Total: " + uRuleTable.size() + "\n");
 		for (GrammarRule rule : uRuleTable.keySet()) {

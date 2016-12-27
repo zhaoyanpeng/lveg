@@ -1,4 +1,4 @@
-package edu.shanghaitech.ai.nlp.lveg;
+package edu.shanghaitech.ai.nlp.data;
 
 import java.io.Serializable;
 import java.util.AbstractCollection;
@@ -21,9 +21,7 @@ public class StateTreeList extends AbstractCollection<Tree<State>> implements Se
 	 * 
 	 */
 	private static final long serialVersionUID = 6424710107698526446L;
-
-	private final static short ZERO = 0;
-	
+	private final static short ID_WORD = -1;
 	private List<Tree<State>> trees;
 	
 	
@@ -191,7 +189,7 @@ public class StateTreeList extends AbstractCollection<Tree<State>> implements Se
 	}
 	
 	
-	protected void reset() {
+	public void reset() {
 		for (Tree<State> tree : trees) {
 			reset(tree);
 		}
@@ -247,7 +245,7 @@ public class StateTreeList extends AbstractCollection<Tree<State>> implements Se
 	 */
 	private static Tree<State> stringTreeToStateTree(Tree<String> tree, Numberer numberer, int from, int to) {
 		if (tree.isLeaf()) {
-			State state = new State(tree.getLabel().intern(), (short) -1, (short) from, (short) to);
+			State state = new State(tree.getLabel().intern(), (short) ID_WORD, (short) from, (short) to);
 			return new Tree<State>(state);
 		}
 		/* numberer is initialized here */
