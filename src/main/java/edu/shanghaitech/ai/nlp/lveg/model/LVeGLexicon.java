@@ -6,9 +6,9 @@ import java.util.Map;
 import java.util.Set;
 
 import edu.berkeley.nlp.syntax.Tree;
-import edu.berkeley.nlp.util.Indexer;
 import edu.shanghaitech.ai.nlp.lveg.StateTreeList;
 import edu.shanghaitech.ai.nlp.syntax.State;
+import edu.shanghaitech.ai.nlp.util.Indexer;
 
 /**
  * @author Yanpeng Zhao

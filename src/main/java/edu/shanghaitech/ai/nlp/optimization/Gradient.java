@@ -25,11 +25,6 @@ public class Gradient extends Recorder implements Serializable {
 	 * which is equally saying that the batch size is always 1.
 	 */
 	protected static final short MAX_BATCH_SIZE = 1;
-	/*
-	protected static short maxsample = Optimizer.maxsample;
-	protected static short batchsize = Optimizer.batchsize;
-	protected static Random rnd = Optimizer.rnd;
-	*/
 	protected boolean updated;
 	protected boolean cumulative;
 	protected List<Double> wgrads;
@@ -40,11 +35,6 @@ public class Gradient extends Recorder implements Serializable {
 	
 	
 	public Gradient(GrammarRule rule, Random random, short msample, short bsize) {
-		/*
-		rnd = random;
-		batchsize = bsize;
-		maxsample = msample;
-		*/
 		initialize(rule);
 	}
 	

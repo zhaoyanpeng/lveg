@@ -24,7 +24,7 @@ public class UnaryGrammarRule extends GrammarRule implements Comparable<Object> 
 	/**
 	 * the ID of the right-hand side nonterminal
 	 */
-	public short rhs;
+	public int rhs;
 	
 	
 	public UnaryGrammarRule() {
@@ -39,7 +39,7 @@ public class UnaryGrammarRule extends GrammarRule implements Comparable<Object> 
 	 * @param rhs  id of the tag on the right hand side 
 	 * 
 	 */
-	public UnaryGrammarRule(short lhs, short rhs) {
+	public UnaryGrammarRule(short lhs, int rhs) {
 		this.lhs = lhs;
 		this.rhs = rhs;
 		this.type = LRURULE;
@@ -47,7 +47,7 @@ public class UnaryGrammarRule extends GrammarRule implements Comparable<Object> 
 	}
 	
 	
-	public UnaryGrammarRule(short lhs, short rhs, byte type) {
+	public UnaryGrammarRule(short lhs, int rhs, byte type) {
 		this.lhs = lhs;
 		this.rhs = rhs;
 		this.type = type;
@@ -55,7 +55,7 @@ public class UnaryGrammarRule extends GrammarRule implements Comparable<Object> 
 	}
 	
 	
-	public UnaryGrammarRule(short lhs, short rhs, byte type, GaussianMixture weight) {
+	public UnaryGrammarRule(short lhs, int rhs, byte type, GaussianMixture weight) {
 		this.lhs = lhs;
 		this.rhs = rhs;
 		this.type = type;

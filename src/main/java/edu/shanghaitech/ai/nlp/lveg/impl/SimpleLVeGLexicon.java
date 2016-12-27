@@ -2,16 +2,18 @@ package edu.shanghaitech.ai.nlp.lveg.impl;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import edu.berkeley.nlp.PCFGLA.Corpus;
 import edu.berkeley.nlp.syntax.Tree;
-import edu.berkeley.nlp.util.Indexer;
+import edu.shanghaitech.ai.nlp.lveg.RuleTable;
 import edu.shanghaitech.ai.nlp.lveg.StateTreeList;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
 import edu.shanghaitech.ai.nlp.syntax.State;
+import edu.shanghaitech.ai.nlp.util.Indexer;
 import edu.shanghaitech.ai.nlp.util.Numberer;
 
 /**
@@ -35,6 +37,8 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 	
 	
 	public SimpleLVeGLexicon() {
+		this.uRuleTable = new RuleTable<UnaryGrammarRule>(UnaryGrammarRule.class);
+		this.uRuleMap = new HashMap<GrammarRule, GrammarRule>();
 		this.wordIndexer = new Indexer<String>();
 		this.lastWord = TOKEN_UNKNOWN;
 		this.lastPosition = -1;
@@ -44,6 +48,33 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 				Corpus.myTreebank == Corpus.TreeBankType.BROWN) {
 			this.unknownLevel = 4;
 		}
+	}
+	
+	
+	protected void initialize() {
+		this.uRulesWithP = new List[nTag];
+		this.uRulesWithC = new List[nTag];
+		for (int i = 0; i < nTag; i++) {
+			uRulesWithP[i] = new ArrayList<GrammarRule>();
+			uRulesWithC[i] = new ArrayList<GrammarRule>();
+		}
+	}
+	
+	
+	@Override
+	public void postInitialize(double randomness) {
+		// TODO Auto-generated method stub
+		
+	}
+
+
+	@Override
+	public void addUnaryRule(UnaryGrammarRule rule) {
+		if (uRulesWithP[rule.lhs].contains(rule)) { return; }
+		uRulesWithP[rule.lhs].add(rule);
+		uRulesWithC[rule.rhs].add(rule);
+		uRuleMap.put(rule, rule);
+		optimizer.addRule(rule);
 	}
 	
 	
@@ -59,7 +90,6 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 		this.urules = new UnaryGrammarRule[nTag][];
 		this.wordIndexMap = new IndexMap[nTag];
 		this.wordCounter = new int[nWord];
-		
 		for (int i = 0; i < nTag; i++) {
 			wordIndexMap[i] = new IndexMap(nWord);
 		}
@@ -88,7 +118,7 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 				int frequency = wordIndexMap[i].frequency(wordIdx);
 				
 				counts[i][j] = new DiagonalGaussianMixture();
-				urules[i][j] = new UnaryGrammarRule(i, (short) wordIdx, GrammarRule.LHSPACE);
+				urules[i][j] = new UnaryGrammarRule(i, wordIdx, GrammarRule.LHSPACE);
 				urules[i][j].getWeight().setBias(frequency);
 				
 				optimizer.addRule(urules[i][j]);
@@ -105,7 +135,19 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 
 	@Override
 	public void tallyStateTree(Tree<State> tree) {
-		List<State> words = tree.getYield();
+		List<State> words = tree.getTerminalYield();
+//		List<State> tags = tree.getPreTerminalYield();
+//		for (int i = 0; i < words.size(); i++) {
+//			State word = words.get(i);
+//			String name = word.getName();
+//			wordIndexer.add(name); // generate word index
+//			int wordIdx = wordIndexer.indexOf(name);
+//			word.wordIdx = wordIdx;
+//			short tagIdx = tags.get(i).getId();
+//			GrammarRule rule = new UnaryGrammarRule((short) tagIdx, wordIdx, GrammarRule.LHSPACE);
+//			uRuleTable.addCount(rule, 1.0);
+//		}
+		
 		for (State word : words) {
 			String name = word.getName();
 			wordIndexer.add(name);
@@ -265,13 +307,6 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 			this.to.clear();
 			this.from.clear();
 		}
-	}
-
-
-	@Override
-	public void postInitialize(double randomness) {
-		// TODO Auto-generated method stub
-		
 	}
 	
 }

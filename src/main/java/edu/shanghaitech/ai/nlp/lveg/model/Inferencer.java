@@ -218,7 +218,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				while (iterator.hasNext()) { // CHECK
 					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
 					coutScore = rule.weight.mulForInsideOutside(poutScore, rmKey, true);
-					chart.addOutsideScore(rule.rhs, idx, coutScore, level);
+					chart.addOutsideScore((short) rule.rhs, idx, coutScore, level);
 				}
 			}
 		}
@@ -230,7 +230,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				while (iterator.hasNext()) {
 					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
 					coutScore = rule.weight.mulForInsideOutside(poutScore, rmKey, true);
-					chart.addOutsideScore(rule.rhs, idx, coutScore, (short) (level + 1));
+					chart.addOutsideScore((short) rule.rhs, idx, coutScore, (short) (level + 1));
 				}
 			}
 			level++;

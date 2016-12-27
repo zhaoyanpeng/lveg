@@ -21,15 +21,15 @@ public abstract class LVeGGrammar extends Recorder implements Serializable {
 	private static final long serialVersionUID = 5874243553526905936L;
 	protected Optimizer optimizer;
 	
-	protected RuleTable<?> unaryRuleTable;
-	protected RuleTable<?> binaryRuleTable;
+	protected RuleTable<?> uRuleTable;
+	protected RuleTable<?> bRuleTable;
 	
-	protected List<GrammarRule>[] unaryRulesWithP;
-	protected List<GrammarRule>[] unaryRulesWithC;
+	protected List<GrammarRule>[] uRulesWithP;
+	protected List<GrammarRule>[] uRulesWithC;
 	
-	protected List<GrammarRule>[] binaryRulesWithP;
-	protected List<GrammarRule>[] binaryRulesWithLC;
-	protected List<GrammarRule>[] binaryRulesWithRC;
+	protected List<GrammarRule>[] bRulesWithP;
+	protected List<GrammarRule>[] bRulesWithLC;
+	protected List<GrammarRule>[] bRulesWithRC;
 	
 	public int nTag;
 	public Numberer numberer;
@@ -40,8 +40,9 @@ public abstract class LVeGGrammar extends Recorder implements Serializable {
 	 * we first construct a rule, which is used as the key, and use 
 	 * the key to find the real rule that contains more information.
 	 */
-	protected Map<GrammarRule, GrammarRule> unaryRuleMap;
-	protected Map<GrammarRule, GrammarRule> binaryRuleMap;
+	protected Map<GrammarRule, GrammarRule> uRuleMap;
+	protected Map<GrammarRule, GrammarRule> bRuleMap;
+	
 	
 	/**
 	 * For any nonterminals A \neq B \neq C, p(A->B) is computed as 
@@ -79,23 +80,23 @@ public abstract class LVeGGrammar extends Recorder implements Serializable {
 	
 	public GrammarRule getBinaryRule(short idParent, short idlChild, short idrChild) {
 		GrammarRule rule = new BinaryGrammarRule(idParent, idlChild, idrChild);
-		return binaryRuleMap.get(rule);
+		return bRuleMap.get(rule);
 	}
 	
 	
-	public GrammarRule getUnaryRule(short idParent, short idChild, byte type) {
+	public GrammarRule getUnaryRule(short idParent, int idChild, byte type) {
 		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
-		return unaryRuleMap.get(rule);
+		return uRuleMap.get(rule);
 	}
 	
 	
 	public Map<GrammarRule, GrammarRule> getBinaryRuleMap() {
-		return binaryRuleMap;
+		return bRuleMap;
 	}
 	
 	
 	public Map<GrammarRule, GrammarRule> getUnaryRuleMap() {
-		return unaryRuleMap;
+		return uRuleMap;
 	}
 	
 	
@@ -110,52 +111,35 @@ public abstract class LVeGGrammar extends Recorder implements Serializable {
 	
 	
 	public List<GrammarRule> getBinaryRuleWithRC(int idTag) {
-		return binaryRulesWithRC[idTag];
+		return bRulesWithRC[idTag];
 	}
 	
 	
 	public List<GrammarRule> getBinaryRuleWithLC(int idTag) {
-		return binaryRulesWithLC[idTag];
+		return bRulesWithLC[idTag];
 	}
 	
 	
 	public List<GrammarRule> getBinaryRuleWithP(int idTag) {
-		return binaryRulesWithP[idTag];
+		return bRulesWithP[idTag];
 	}
 	
 	
 	public List<GrammarRule> getUnaryRuleWithP(int idTag) {
-		return unaryRulesWithP[idTag];
+		return uRulesWithP[idTag];
 	}
 	
 	
 	public List<GrammarRule> getUnaryRuleWithC(int idTag) {
-		return unaryRulesWithC[idTag];
+		return uRulesWithC[idTag];
 	}
 	
-	public void addBinaryRule(BinaryGrammarRule rule) {
-		if (binaryRulesWithP[rule.lhs].contains(rule)) { return; }
-		binaryRulesWithP[rule.lhs].add(rule);
-		binaryRulesWithLC[rule.lchild].add(rule);
-		binaryRulesWithRC[rule.rchild].add(rule);
-		binaryRuleMap.put(rule, rule);
-		optimizer.addRule(rule);
-	}
+	protected abstract void initialize(); 
 	
+	public void addBinaryRule(BinaryGrammarRule rule) {}
 	
-	public void addUnaryRule(UnaryGrammarRule rule) {
-		if (unaryRulesWithP[rule.lhs].contains(rule)) { return; }
-		unaryRulesWithP[rule.lhs].add(rule);
-		unaryRulesWithC[rule.rhs].add(rule);
-		unaryRuleMap.put(rule, rule);
-		optimizer.addRule(rule);
-	}
+	public abstract void addUnaryRule(UnaryGrammarRule rule);	
 	
-	/**
-	 * Tally (go through) the rules existing in the parse tree.
-	 * 
-	 * @param tree a parse tree
-	 */
 	public abstract void tallyStateTree(Tree<State> tree);
 	
 	public abstract void postInitialize(double randomness);
@@ -172,16 +156,12 @@ public abstract class LVeGGrammar extends Recorder implements Serializable {
 		return getCount(rule, withTree);
 	}
 	
-	
-	
-	
-	
-	public void addCount(short idParent, short idChild, byte type, Map<String, GaussianMixture> count, short isample, boolean withTree) {
+	public void addCount(short idParent, int idChild, Map<String, GaussianMixture> count, byte type, short isample, boolean withTree) {
 		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
 		addCount(rule, count, isample, withTree);
 	}
 	
-	public Map<Short, List<Map<String, GaussianMixture>>> getCount(short idParent, short idChild, byte type, boolean withTree) {
+	public Map<Short, List<Map<String, GaussianMixture>>> getCount(short idParent, int idChild, byte type, boolean withTree) {
 		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
 		return getCount(rule, withTree);
 	}

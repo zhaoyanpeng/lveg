@@ -165,8 +165,8 @@ public class MaxRuleInferencer extends Inferencer {
 			Iterator<GrammarRule> iterator = rules.iterator();
 			while (iterator.hasNext()) { // CHECK need to check again
 				UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
-				if ((cinScore = chart.getInsideScore(rule.rhs, idx)) == null ||
-						(count = chart.getMaxRuleCount(rule.rhs, idx)) == Double.NEGATIVE_INFINITY ||
+				if ((cinScore = chart.getInsideScore((short) rule.rhs, idx)) == null ||
+						(count = chart.getMaxRuleCount((short) rule.rhs, idx)) == Double.NEGATIVE_INFINITY ||
 						(maxcnt = chart.getMaxRuleCount(ROOT, idx)) > count) {
 					continue;
 				}

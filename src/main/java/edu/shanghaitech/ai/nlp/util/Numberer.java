@@ -106,6 +106,10 @@ public class Numberer implements Serializable {
 		this.locked = true;
 	}
 	
+	public void unlock() {
+		this.locked = false;
+	}
+	
 	public int size() {
 		return count;
 	}

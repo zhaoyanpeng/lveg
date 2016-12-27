@@ -31,10 +31,10 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 
 	
 	public SimpleLVeGGrammar(Numberer numberer, int nTag) {
-		this.unaryRuleTable  = new RuleTable<UnaryGrammarRule>(UnaryGrammarRule.class);
-		this.binaryRuleTable = new RuleTable<BinaryGrammarRule>(BinaryGrammarRule.class);
-		this.unaryRuleMap  = new HashMap<GrammarRule, GrammarRule>();
-		this.binaryRuleMap = new HashMap<GrammarRule, GrammarRule>();
+		this.uRuleTable = new RuleTable<UnaryGrammarRule>(UnaryGrammarRule.class);
+		this.bRuleTable = new RuleTable<BinaryGrammarRule>(BinaryGrammarRule.class);
+		this.uRuleMap = new HashMap<GrammarRule, GrammarRule>();
+		this.bRuleMap = new HashMap<GrammarRule, GrammarRule>();
 		if (numberer == null) {
 			this.numberer = null;
 			this.nTag = nTag;
@@ -46,23 +46,21 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 	}
 	
 	
-	@SuppressWarnings("unchecked")
-	private void initialize() {
-		this.unaryRulesWithP = new List[nTag];
-		this.unaryRulesWithC = new List[nTag];
-		this.binaryRulesWithP  = new List[nTag];
-		this.binaryRulesWithLC = new List[nTag];
-		this.binaryRulesWithRC = new List[nTag];
+	protected void initialize() {
+		this.uRulesWithP = new List[nTag];
+		this.uRulesWithC = new List[nTag];
+		this.bRulesWithP  = new List[nTag];
+		this.bRulesWithLC = new List[nTag];
+		this.bRulesWithRC = new List[nTag];
 		this.chainSumUnaryRules = new HashSet<GrammarRule>();
 		this.chainSumUnaryRulesWithP = new List[nTag];
 		this.chainSumUnaryRulesWithC = new List[nTag];
-		
 		for (int i = 0; i < nTag; i++) {
-			unaryRulesWithP[i] = new ArrayList<GrammarRule>();
-			unaryRulesWithC[i] = new ArrayList<GrammarRule>();
-			binaryRulesWithP[i]  = new ArrayList<GrammarRule>();
-			binaryRulesWithLC[i] = new ArrayList<GrammarRule>();
-			binaryRulesWithRC[i] = new ArrayList<GrammarRule>();
+			uRulesWithP[i] = new ArrayList<GrammarRule>();
+			uRulesWithC[i] = new ArrayList<GrammarRule>();
+			bRulesWithP[i]  = new ArrayList<GrammarRule>();
+			bRulesWithLC[i] = new ArrayList<GrammarRule>();
+			bRulesWithRC[i] = new ArrayList<GrammarRule>();
 			chainSumUnaryRulesWithP[i] = new ArrayList<GrammarRule>();
 			chainSumUnaryRulesWithC[i] = new ArrayList<GrammarRule>();
 		}
@@ -70,10 +68,10 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 	
 	
 	public void postInitialize(double randomness) {
-		for (GrammarRule rule : unaryRuleTable.keySet()) {
+		for (GrammarRule rule : uRuleTable.keySet()) {
 			addUnaryRule((UnaryGrammarRule) rule);
 		}
-		for (GrammarRule rule : binaryRuleTable.keySet()) {
+		for (GrammarRule rule : bRuleTable.keySet()) {
 			addBinaryRule((BinaryGrammarRule) rule);
 		}
 //		computeChainUnaryRule();
@@ -81,20 +79,20 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 	
 	
 	public void addBinaryRule(BinaryGrammarRule rule) {
-		if (binaryRulesWithP[rule.lhs].contains(rule)) { return; }
-		binaryRulesWithP[rule.lhs].add(rule);
-		binaryRulesWithLC[rule.lchild].add(rule);
-		binaryRulesWithRC[rule.rchild].add(rule);
-		binaryRuleMap.put(rule, rule);
+		if (bRulesWithP[rule.lhs].contains(rule)) { return; }
+		bRulesWithP[rule.lhs].add(rule);
+		bRulesWithLC[rule.lchild].add(rule);
+		bRulesWithRC[rule.rchild].add(rule);
+		bRuleMap.put(rule, rule);
 		optimizer.addRule(rule);
 	}
 	
 	
 	public void addUnaryRule(UnaryGrammarRule rule) {
-		if (unaryRulesWithP[rule.lhs].contains(rule)) { return; }
-		unaryRulesWithP[rule.lhs].add(rule);
-		unaryRulesWithC[rule.rhs].add(rule);
-		unaryRuleMap.put(rule, rule);
+		if (uRulesWithP[rule.lhs].contains(rule)) { return; }
+		uRulesWithP[rule.lhs].add(rule);
+		uRulesWithC[rule.rhs].add(rule);
+		uRuleMap.put(rule, rule);
 		optimizer.addRule(rule);
 	}
 	
@@ -120,14 +118,14 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 			} else { // the root node
 				rule = new UnaryGrammarRule(idParent, idChild, GrammarRule.RHSPACE);
 			}
-			unaryRuleTable.addCount(rule, 1.0);
+			uRuleTable.addCount(rule, 1.0);
 			break;
 		}
 		case 2: {
 			short idLeftChild = children.get(0).getLabel().getId();
 			short idRightChild = children.get(1).getLabel().getId();
 			BinaryGrammarRule rule = new BinaryGrammarRule(idParent, idLeftChild, idRightChild, true);
-			binaryRuleTable.addCount(rule, 1.0);
+			bRuleTable.addCount(rule, 1.0);
 			break;
 		}
 		default:
@@ -169,7 +167,7 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 				UnaryGrammarRule uruleSum = new UnaryGrammarRule(iparent, ichild, type, weightSum);
 				GaussianMixture pruleWeight = null, cruleWeight = null, aruleWeight = null;
 				
-				for (GrammarRule prule : unaryRulesWithP[iparent]) {
+				for (GrammarRule prule : uRulesWithP[iparent]) {
 					UnaryGrammarRule uprule = (UnaryGrammarRule) prule;
 					pruleWeight = uprule.getWeight(); // one-order chain rule
 					if (uprule.rhs == ichild) {
@@ -177,7 +175,7 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 						found = true;
 						cnt++;
 					} else { // two-order chain rule
-						for (GrammarRule crule : unaryRulesWithC[ichild]) {
+						for (GrammarRule crule : uRulesWithC[ichild]) {
 							UnaryGrammarRule ucrule = (UnaryGrammarRule) crule;
 							if (ucrule.lhs != uprule.rhs) { continue; }
 							cruleWeight = ucrule.getWeight();
@@ -204,7 +202,7 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 		}
 		// TODO a temporary implementation, it may weaken the unary rules of length 1.
 		for (GrammarRule rule : chainSumUnaryRules) {
-			if (!unaryRuleMap.containsKey(rule)) { count++; continue; }
+			if (!uRuleMap.containsKey(rule)) { count++; continue; }
 			addUnaryRule((UnaryGrammarRule) rule);
 		}
 		logger.trace("# of new rules: " + count + " \t# of all rules: " + total + "\n");
@@ -221,18 +219,18 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 		StringBuffer sb = new StringBuffer();
 		sb.append("Grammar [nTag=" + nTag + "]\n");
 		
-		sb.append("---Unary Grammar Rules. Total: " + unaryRuleTable.size() + "\n");
-		for (GrammarRule rule : unaryRuleTable.keySet()) {
-			sb.append(rule + "\t" + unaryRuleTable.getCount(rule).getBias());
+		sb.append("---Unary Grammar Rules. Total: " + uRuleTable.size() + "\n");
+		for (GrammarRule rule : uRuleTable.keySet()) {
+			sb.append(rule + "\t" + uRuleTable.getCount(rule).getBias());
 			if (++count % ncol == 0) {
 				sb.append("\n");
 			}
 		}
 		
 		sb.append("\n");
-		sb.append("---Binary Grammar Rules. Total: " + binaryRuleTable.size() + "\n");
-		for (GrammarRule rule : binaryRuleTable.keySet()) {
-			sb.append(rule + "\t" + binaryRuleTable.getCount(rule).getBias());
+		sb.append("---Binary Grammar Rules. Total: " + bRuleTable.size() + "\n");
+		for (GrammarRule rule : bRuleTable.keySet()) {
+			sb.append(rule + "\t" + bRuleTable.getCount(rule).getBias());
 			if (++count % ncol == 0) {
 				sb.append("\n");
 			}

@@ -22,11 +22,6 @@ public class SimpleMinimizer extends Recorder implements Serializable {
 	 * 
 	 */
 	private static final long serialVersionUID = -4030933989131874669L;
-	/*
-	protected static short maxsample = Optimizer.maxsample;
-	protected static short batchsize = Optimizer.batchsize;
-	protected static Random rnd = Optimizer.rnd;
-	*/
 	protected Map<String, List<Double>> truths;
 	protected Map<String, List<Double>> sample;
 	protected Map<String, List<Double>> ggrads;
@@ -62,11 +57,6 @@ public class SimpleMinimizer extends Recorder implements Serializable {
 	
 	public SimpleMinimizer(Random random, short msample, short bsize) {
 		this();
-		/*
-		rnd = random;
-		batchsize = bsize;
-		maxsample = msample;
-		*/
 	}
 	
 	
