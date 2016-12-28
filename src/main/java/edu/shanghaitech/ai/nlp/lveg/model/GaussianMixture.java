@@ -65,7 +65,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * Initialize the fields by default.
 	 */
 	protected void initialize() {
-		MethodUtil.randomInitList(weights, Double.class, ncomponent, LVeGLearner.maxrandom, false, true);
+		MethodUtil.randomInitList(weights, Double.class, ncomponent, LVeGLearner.maxrandom, LVeGLearner.nratio, false, true);
 		for (int i = 0; i < ncomponent; i++) {
 			Map<String, Set<GaussianDistribution>> component = 
 					new HashMap<String, Set<GaussianDistribution>>();

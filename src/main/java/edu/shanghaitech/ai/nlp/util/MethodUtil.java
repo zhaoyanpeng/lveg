@@ -617,12 +617,13 @@ public class MethodUtil extends Recorder {
 	 * @param nonzero  zero inclusive (false) or exclusive (true)
 	 * @param negative allow the negative (true) or not allow (false)
 	 */
-	public static <T> void randomInitList(List<T> list, Class<T> type, int length, int maxint, boolean nonzero, boolean negative) {
+	public static <T> void randomInitList(List<T> list, Class<T> type, int length, 
+			int maxint, double ratio, boolean nonzero, boolean negative) {
 		Double obj = new Double(0);
 		for (int i = 0; i < length; i++) {
 			double tmp = random.nextDouble() * maxint;
 			if (nonzero) { while (tmp == 0.0) { tmp = random.nextDouble() * maxint; } }
-			if (negative && tmp < 0.5) { tmp = 0 - tmp; }
+			if (negative && tmp < ratio) { tmp = 0 - tmp; }
 			list.add(type.isInstance(obj) ? type.cast(tmp) : type.cast((int) tmp));
 		}
 	}

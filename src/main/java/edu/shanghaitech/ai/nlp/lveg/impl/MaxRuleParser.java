@@ -22,14 +22,16 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 	
 	private MaxRuleParser(MaxRuleParser<?, ?> parser) {
 		this.inferencer = parser.inferencer;
-		this.chart = parser.reuse ? new Chart(MAX_SENTENCE_LEN, true) : null;
+		this.maxLenParsing = parser.maxLenParsing;
+		this.chart = parser.reuse ? new Chart(maxLenParsing, true) : null;
 		this.reuse = parser.reuse;
 	}
 	
 	
-	public MaxRuleParser(LVeGGrammar grammar, LVeGLexicon lexicon, boolean reuse) {
+	public MaxRuleParser(LVeGGrammar grammar, LVeGLexicon lexicon, short maxLenParsing, boolean reuse) {
+		this.maxLenParsing = maxLenParsing;
 		this.inferencer = new MaxRuleInferencer(grammar, lexicon);
-		this.chart = reuse ? new Chart(MAX_SENTENCE_LEN, true) : null;
+		this.chart = reuse ? new Chart(maxLenParsing, true) : null;
 		this.reuse = reuse;
 	}
 	

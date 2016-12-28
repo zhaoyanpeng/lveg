@@ -231,7 +231,7 @@ public class GaussianMixtureTest {
 		
 		int n = 1500;
 		List<Double> weights = new ArrayList<Double>();
-		MethodUtil.randomInitList(weights, Double.class, n, 10, false, true);
+		MethodUtil.randomInitList(weights, Double.class, n, 10, 0.5, false, true);
 		gm0.setWeights(weights);
 		
 		System.out.println("n = " + n);

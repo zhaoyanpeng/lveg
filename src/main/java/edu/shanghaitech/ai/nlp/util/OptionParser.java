@@ -59,14 +59,14 @@ public class OptionParser extends Recorder {
 	}
 	
 	private void usage() {
-		System.out.println();
+		System.err.println(); // cannot use logger since it has not been initialized
 		for (Option option : options.values()) {
-			System.out.printf("%-30s%s", option.name(), option.usage());
-			if (option.required()) { System.out.printf(" [required]"); }
-			System.out.println();
+			System.err.printf("%-30s%s", option.name(), option.usage());
+			if (option.required()) { System.err.printf(" [required]"); }
+			System.err.println();
 		}
-		System.out.printf("%-30shelp message\n", "-h");
-		System.out.println();
+		System.err.printf("%-30shelp message\n", "-h");
+		System.err.println();
 		System.exit(2);
 	}
 	

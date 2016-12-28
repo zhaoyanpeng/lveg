@@ -4,7 +4,6 @@ import java.util.List;
 
 import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
-import edu.shanghaitech.ai.nlp.lveg.model.Inferencer;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
 import edu.shanghaitech.ai.nlp.lveg.model.Parser;
 import edu.shanghaitech.ai.nlp.lveg.model.Inferencer.Chart;
@@ -21,14 +20,16 @@ public class Valuator<I, O> extends Parser<I, O> {
 	
 	private Valuator(Valuator<?, ?> valuator) {
 		this.inferencer = valuator.inferencer;
-		this.chart = valuator.reuse ? new Chart(MAX_SENTENCE_LEN, false) : null;
+		this.maxLenParsing = valuator.maxLenParsing;
+		this.chart = valuator.reuse ? new Chart(maxLenParsing, false) : null;
 		this.reuse = valuator.reuse;
 	}
 	
 	
-	public Valuator(LVeGGrammar grammar, LVeGLexicon lexicon, boolean reuse) {
+	public Valuator(LVeGGrammar grammar, LVeGLexicon lexicon, short maxLenParsing, boolean reuse) {
+		this.maxLenParsing = maxLenParsing;
 		this.inferencer = new LVeGInferencer(grammar, lexicon);
-		this.chart = reuse ? new Chart(MAX_SENTENCE_LEN, false) : null;
+		this.chart = reuse ? new Chart(maxLenParsing, false) : null;
 		this.reuse = reuse;
 	}
 

@@ -25,11 +25,11 @@ public class MethodUtilTest {
 		MethodUtil.printArray(arrayDouble);
 		
 		List<Integer> listInt = new ArrayList<Integer>();
-		MethodUtil.randomInitList(listInt, Integer.class, 5, maxint, false, true);
+		MethodUtil.randomInitList(listInt, Integer.class, 5, maxint, 0.5, false, true);
 		MethodUtil.printList(listInt);
 		
 		List<Double> listDouble = new ArrayList<Double>();
-		MethodUtil.randomInitList(listDouble, Double.class, 5, 1, false, true);
+		MethodUtil.randomInitList(listDouble, Double.class, 5, 1, 0.5, false, true);
 		MethodUtil.printList(listDouble);
 		
 		int[] arrayint = new int[5];
@@ -53,7 +53,7 @@ public class MethodUtilTest {
 //	@Test
 	public void testShuffle() {
 		List<Integer> listInt = new ArrayList<Integer>();
-		MethodUtil.randomInitList(listInt, Integer.class, 5, 2, false, true);
+		MethodUtil.randomInitList(listInt, Integer.class, 5, 2, 0.5, false, true);
 		System.out.println("---shuffle test---");
 		System.out.println(listInt);
 		Collections.shuffle(listInt, new Random(0));

@@ -11,7 +11,7 @@ public abstract class Parser<I, O> extends Recorder implements Executor<I, O> {
 	 * 
 	 */
 	private static final long serialVersionUID = -7112164011234304607L;
-	protected static final short MAX_SENTENCE_LEN = 12;
+	protected short maxLenParsing = 120;
 	
 	protected int idx;
 	protected boolean reuse;

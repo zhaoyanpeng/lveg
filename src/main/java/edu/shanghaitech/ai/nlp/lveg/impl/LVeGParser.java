@@ -26,14 +26,16 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 	
 	private LVeGParser(LVeGParser<?, ?> parser) {
 		this.inferencer = parser.inferencer;
-		this.chart = parser.reuse ? new Chart(MAX_SENTENCE_LEN, false) : null;
+		this.maxLenParsing = parser.maxLenParsing;
+		this.chart = parser.reuse ? new Chart(maxLenParsing, false) : null;
 		this.reuse = parser.reuse;
 	}
 	
 	
-	public LVeGParser(LVeGGrammar grammar, LVeGLexicon lexicon, boolean reuse) {
+	public LVeGParser(LVeGGrammar grammar, LVeGLexicon lexicon, short maxLenParsing, boolean reuse) {
+		this.maxLenParsing = maxLenParsing;
 		this.inferencer = new LVeGInferencer(grammar, lexicon);
-		this.chart = reuse ? new Chart(MAX_SENTENCE_LEN, false) : null;
+		this.chart = reuse ? new Chart(maxLenParsing, false) : null;
 		this.reuse = reuse;
 	}
 	

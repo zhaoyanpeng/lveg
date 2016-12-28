@@ -16,6 +16,7 @@ import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.data.StateTreeList;
 import edu.shanghaitech.ai.nlp.data.ObjectFileManager.CorpusFile;
 import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGLexicon;
+import edu.shanghaitech.ai.nlp.lveg.model.Parser;
 import edu.shanghaitech.ai.nlp.optimization.ParallelOptimizer.ParallelMode;
 import edu.shanghaitech.ai.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.util.Option;
@@ -31,6 +32,7 @@ public class LearnerConfig extends Recorder {
 	protected final static String ID_DEV = "dev";
 	
 	public final static String KEY_TAG_SET = "tag";
+	public static double nratio;
 	
 	public static short dim;
 	public static short ncomponent;
@@ -67,21 +69,21 @@ public class LearnerConfig extends Recorder {
 	
 	public static class Options {
 		/* corpus section begins */
-		@Option(name = "-datadir", required = true, usage = "absolute path pointing to the data directory (default: null)")
+		@Option(name = "-datadir", required = true, usage = "absolute path to the data directory (default: null)")
 		public String datadir = null;
-		@Option(name = "-train", required = true, usage = "path to the training data (default: null)")
+		@Option(name = "-train", required = true, usage = "name of the training data (default: null)")
 		public String train = null;
-		@Option(name = "-test", usage = "path to the test data (default: null")
+		@Option(name = "-test", usage = "name of the test data (default: null")
 		public String test = null;
-		@Option(name = "-dev", usage = "path to the development data (default: null)")
+		@Option(name = "-dev", usage = "name of the dev data (default: null)")
 		public String dev = null;
-		@Option(name = "-inCorpus", usage = "input object file of the training, development, and test data (default: null" )
+		@Option(name = "-inCorpus", usage = "input: object file of the training/development/test data, and the tag set (default: null)" )
 		public String inCorpus = null;
-		@Option(name = "-outCorpus", usage = "output object file of the training, development, and test data (default: null" )
+		@Option(name = "-outCorpus", usage = "output: object file of the training/development/test data, and the tag set (default: null)" )
 		public String outCorpus = null;
-		@Option(name = "-saveCorpus", usage = "save corpus (true) or not (false) (default: false)")
+		@Option(name = "-saveCorpus", usage = "save corpus to the object file (true) or not (false) (default: false)")
 		public boolean saveCorpus = false;
-		@Option(name = "-loadCorpus", usage = "load corpus (true) or not (false) (default: false)")
+		@Option(name = "-loadCorpus", usage = "load corpus from the object file(true) or not (false) (default: false)")
 		public boolean loadCorpus = false;
 		/* corpus section ends */
 		
@@ -90,7 +92,7 @@ public class LearnerConfig extends Recorder {
 		public double lr = 0.02;
 		@Option(name = "-reg", usage = "using regularization (true) or not (false) (default: true)")
 		public boolean reg = true;
-		@Option(name = "-clip", usage = "clip the gradients (true) or not (false) (default: true)")
+		@Option(name = "-clip", usage = "clipping the gradients (true) or not (false) (default: true)")
 		public boolean clip = true;
 		@Option(name = "-absmax", usage = "threshold for clipping gradients (default: 5.0)")
 		public double absmax = 5.0;
@@ -103,74 +105,78 @@ public class LearnerConfig extends Recorder {
 		/* optimization-parameter section ends*/
 		
 		/* grammar-data section begins */
-		@Option(name = "-inGrammar", usage = "input object file of the grammar (default: null)")
+		@Option(name = "-inGrammar", usage = "input: object file of the grammar and lexicon (default: null)")
 		public String inGrammar = null;
-		@Option(name = "-outGrammar", usage = "output object file of the grammar (default: null)")
+		@Option(name = "-outGrammar", usage = "output: object file of the grammar (default: null)")
 		public String outGrammar = null;
-		@Option(name = "-saveGrammar", usage = "save grammar (true) or not (false) (default: false)")
+		@Option(name = "-saveGrammar", usage = "save grammar to the object file (true) or not (false) (default: false)")
 		public boolean saveGrammar = false;
-		@Option(name = "-loadGrammar", usage = "load grammar (true) or not (false) (default: false)")
+		@Option(name = "-loadGrammar", usage = "load grammar from the object file (true) or not (false) (default: false)")
 		public boolean loadGrammar = false;
 		/* grammar-data section ends */
 		
 		/* parallel configurations section begins */
-		@Option(name = "-nthreadgrad", usage = "# of threads for computing gradients (default: half number of the available cores)")
-		public short ntheadgrad = 1;
-		@Option(name = "-nthreadeval", usage = "# of threads for evaluating the grammar (default: half number of the available cores)")
-		public short nthreadeval = 1;
-		@Option(name = "-nthreadbatch", usage = "# of threads for minibatch training (default: half number of the available cores)")
-		public short nthreadbatch = 1;
-		@Option(name = "-parallelgrad", usage = "parallize the gradient computation (true) or not (false) (default: true)")
-		public boolean parallelgrad = true;
-		@Option(name = "-parallelbatch", usage = "parallize the minibatch training (true) or not (false) (default: false)")
-		public boolean parallelbatch = true;
-		@Option(name = "-parallelmode", usage = "the mode of parallelizing gradient evaluation (default: THREAD_POOL")
-		public ParallelMode parallelmode = ParallelMode.THREAD_POOL;
+		@Option(name = "-ntbatch", usage = "# of threads for minibatch training (default: 1)")
+		public short ntbatch = 1;
+		@Option(name = "-ntgrad", usage = "# of threads for gradient calculation (default: 1)")
+		public short ntgrad = 1;
+		@Option(name = "-nteval", usage = "# of threads for grammar evaluation (default: 1)")
+		public short nteval = 1;
+		@Option(name = "-pbatch", usage = "parallizing training in the minibatch (true) or not (false) (default: false)")
+		public boolean pbatch = true;
+		@Option(name = "-pgrad", usage = "parallizeing gradient calculation (true) or not (false) (default: true)")
+		public boolean pgrad = true;
+		@Option(name = "-pmode", usage = "parallel mode of gradient evaluation: INVOKE_ALL, COMPLETION_SERVICE, CUSTOMIZED_BLOCK, FORK_JOIN, THREAD_POOL (default: THREAD_POOL")
+		public ParallelMode pmode = ParallelMode.THREAD_POOL;
 		@Option(name = "-pverbose", usage = "silent (false) the parallel optimizer or not (true) (default: true)")
 		public boolean pverbose = true;
 		/* parallel-configurations section ends */
 		
 		/* training configurations section begins */
-		@Option(name = "-batchsize", usage = "# of the samples in a batch (default: 128)")
-		public short batchsize = 128;
-		@Option(name = "-maxsample", usage = "sampling times when approximating gradients (default: 3)")
-		public short maxsample = 3;
-		@Option(name = "-nepoch", usage = "# of epoches (default: 10)")
+		@Option(name = "-bsize", usage = "# of the samples in a batch (default: 128)")
+		public short bsize = 128;
+		@Option(name = "-nepoch", usage = "# of epoches for training (default: 10)")
 		public int nepoch = 10;
+		@Option(name = "-maxsample", usage = "maximum sampling time when approximating gradients (default: 3)")
+		public short maxsample = 3;
+		@Option(name = "-maxLenParsing", usage = "which is used to initialize the size of the chart used in CYK and [inside, outside] score calculation (default: 120)")
+		public short maxLenParsing = 120;
 		@Option(name = "-relativediff", usage = "maximum relative difference between the neighboring iterations (default: 1e-6)")
 		public double relativerror = 1e-6;
+		@Option(name = "-maxramdom", usage = "maximum random double (int) value when initializing MoGul parameters (Default: 1)")
+		public short maxrandom = 1;
+		@Option(name = "-nratio", usage = "fraction of negative values when initializing MoGul parameters (Default: 0.5)")
+		public double nratio = 0.5;
 		@Option(name = "-ncomponent", usage = "# of gaussian components (default: 2)")
 		public short ncomponent = 2;
 		@Option(name = "-dim", usage = "dimension of the gaussian (default: 2)")
 		public short dim = 2;
-		@Option(name = "-maxramdom", usage = "maximum random value in initializing MoGul parameters (Default: 1)")
-		public short maxrandom = 1;
 		/* training-configurations section ends */
 		
 		/* evaluation section begins */
-		@Option(name = "-evalfraction", usage = "fraction of the training data on which the grammar evaluation is conducted (default: 0.2)")
-		public double evalfraction = 0.2;
-		@Option(name = "-onlyLength", usage = "train or eval on only the sentences of length less than or equal to the specific length, no such constraints if it is negative (default: 50)")
-		public int onlyLength = 50;
-		@Option(name = "-firstk", usage = "evaluate the grammar on the only first k samples, no such constraints if it is negative (default: 200)")
-		public int firstk = 200;
-		@Option(name = "-evalondev", usage = "evaluate the grammar on the dev-data (true) or not (false) (default: false)")
-		public boolean evalondev = true;
-		@Option(name = "-evalontrain", usage = "evaluate the grammar on the train-data (true) or not (false) (default: true)")
-		public boolean evalontrain = true;
+		@Option(name = "-eratio", usage = "fraction of the training data on which the grammar evaluation is conducted, no such constraints if it is negative (default: 0.2)")
+		public double eratio = 0.2;
+		@Option(name = "-eonlylen", usage = "training or evaluating on only the sentences of length less than or equal to the specific length, no such constraints if it is negative (default: 50)")
+		public short eonlylen = 50;
+		@Option(name = "-efirstk", usage = "evaluating the grammar on the only first k samples, no such constraints if it is negative (default: 200)")
+		public short efirstk = 200;
+		@Option(name = "-eondev", usage = "evaluating the grammar on the dev data (true) or not (false) (default: false)")
+		public boolean eondev = true;
+		@Option(name = "-eontrain", usage = "evaluating the grammar on the train data (true) or not (false) (default: true)")
+		public boolean eontrain = true;
 		/* evaluation section ends */
 		
 		/* logger configurations section begins */
-		@Option(name = "-logType", usage = "console (false) or file (true) (default: true)")
-		public boolean logType = false;
-		@Option(name = "-logFile", usage = "log file name (default: log/log)")
-		public String logFile = "log/log";
+		@Option(name = "-logtype", usage = "console (false) or file (true) (default: true)")
+		public boolean logtype = false;
+		@Option(name = "-logfile", usage = "log file name (default: log/log)")
+		public String logfile = "log/log";
 		@Option(name = "-nbatch", usage = "# of batchs after which the grammar evaluation is conducted (default: 1)")
 		public short nbatch = 1;
 		@Option(name = "-precision", usage = "precision of the output decimals (default: 3)")
 		public int precision = 3;
-		@Option(name = "-randomSeed", usage = "Seed for random number generator (Default: 111)")
-		public int randomSeed = 111;
+		@Option(name = "-rndomseed", usage = "seed for random number generator (default: 0)")
+		public int rndomseed = 111;
 		/* logger-configurations section ends */
 		
 		/* file prefix section begins */
@@ -235,19 +241,20 @@ public class LearnerConfig extends Recorder {
 		if (opts.outGrammar == null) {
 			throw new IllegalArgumentException("Output file is required.");
 		}
-		if (opts.logType) {
-			logger = logUtil.getFileLogger(opts.logFile);
+		if (opts.logtype) {
+			logger = logUtil.getFileLogger(opts.logfile);
 		} else {
 			logger = logUtil.getConsoleLogger();
 		}
 		
-		logger.info("Random number generator seeded at " + opts.randomSeed + ".\n");
+		logger.info("Random number generator seeded at " + opts.rndomseed + ".\n");
 		
 		dim = opts.dim;
+		nratio = opts.nratio;
 		precision = opts.precision;
 		maxrandom = opts.maxrandom;
+		randomseed = opts.rndomseed;
 		ncomponent = opts.ncomponent;
-		randomseed = opts.randomSeed;
 		random = new Random(randomseed);
 		Params.config(opts);
 	}
