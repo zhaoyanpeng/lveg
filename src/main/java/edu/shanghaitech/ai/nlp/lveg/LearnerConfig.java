@@ -16,7 +16,6 @@ import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.data.StateTreeList;
 import edu.shanghaitech.ai.nlp.data.ObjectFileManager.CorpusFile;
 import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGLexicon;
-import edu.shanghaitech.ai.nlp.lveg.model.Parser;
 import edu.shanghaitech.ai.nlp.optimization.ParallelOptimizer.ParallelMode;
 import edu.shanghaitech.ai.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.util.Option;
@@ -73,7 +72,7 @@ public class LearnerConfig extends Recorder {
 		public String datadir = null;
 		@Option(name = "-train", required = true, usage = "name of the training data (default: null)")
 		public String train = null;
-		@Option(name = "-test", usage = "name of the test data (default: null")
+		@Option(name = "-test", usage = "name of the test data (default: null)")
 		public String test = null;
 		@Option(name = "-dev", usage = "name of the dev data (default: null)")
 		public String dev = null;
@@ -126,7 +125,7 @@ public class LearnerConfig extends Recorder {
 		public boolean pbatch = true;
 		@Option(name = "-pgrad", usage = "parallizeing gradient calculation (true) or not (false) (default: true)")
 		public boolean pgrad = true;
-		@Option(name = "-pmode", usage = "parallel mode of gradient evaluation: INVOKE_ALL, COMPLETION_SERVICE, CUSTOMIZED_BLOCK, FORK_JOIN, THREAD_POOL (default: THREAD_POOL")
+		@Option(name = "-pmode", usage = "parallel mode of gradient evaluation: INVOKE_ALL, COMPLETION_SERVICE, CUSTOMIZED_BLOCK, FORK_JOIN, THREAD_POOL (default: THREAD_POOL)")
 		public ParallelMode pmode = ParallelMode.THREAD_POOL;
 		@Option(name = "-pverbose", usage = "silent (false) the parallel optimizer or not (true) (default: true)")
 		public boolean pverbose = true;
@@ -180,7 +179,7 @@ public class LearnerConfig extends Recorder {
 		/* logger-configurations section ends */
 		
 		/* file prefix section begins */
-		@Option(name = "-imagePrefix", usage = "prefix of the image of the parse tree obtained from max rule parser (default: maxrule")
+		@Option(name = "-imagePrefix", usage = "prefix of the image of the parse tree obtained from max rule parser (default: maxrule)")
 		public String imagePrefix = "log/maxrule";
 		/* file prefix section ends */
 		

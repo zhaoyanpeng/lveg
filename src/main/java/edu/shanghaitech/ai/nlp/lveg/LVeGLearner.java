@@ -214,7 +214,7 @@ public class LVeGLearner extends LearnerConfig {
 					idx = 0;
 					
 					if ((isample % (opts.bsize * opts.nbatch)) == 0) {
-						peep(isample, cnt, numberer, trllist, dellist);
+						peep(isample, cnt, numberer, trllist, dellist, false);
 						prell = trllist.get(trllist.size() - 1);
 					}
 					nfailed = 0;
@@ -282,7 +282,7 @@ public class LVeGLearner extends LearnerConfig {
 					idx = 0;
 					
 					if ((isample % (opts.bsize * opts.nbatch)) == 0) {
-						peep(isample, cnt, numberer, trllist, dellist);
+						peep(isample, cnt, numberer, trllist, dellist, false);
 						prell = trllist.get(trllist.size() - 1);
 					}
 					batchstart = System.currentTimeMillis();
@@ -356,7 +356,7 @@ public class LVeGLearner extends LearnerConfig {
 		
 		// likelihood of the data set
 		logger.trace("\n----------log-likelihood in epoch is under evaluation----------\n");
-		peep(isample, cnt, numberer, trllist, dellist);
+		peep(isample, cnt, numberer, trllist, dellist, true);
 		logger.trace("\n----------          log-likelihood in epoch          ----------\n");
 		
 		// we shall clear the inside and outside score in each state 
@@ -368,7 +368,7 @@ public class LVeGLearner extends LearnerConfig {
 	}
 	
 	
-	public static void peep(int isample, int cnt, Numberer numberer, List<Double> trllist, List<Double> dellist) throws Exception {
+	public static void peep(int isample, int cnt, Numberer numberer, List<Double> trllist, List<Double> dellist, boolean ends) throws Exception {
 		long beginTime, endTime;
 		double trll = 0, dell = 0;
 		// save the intermediate grammars
@@ -401,8 +401,8 @@ public class LVeGLearner extends LearnerConfig {
 			devTrees.reset();
 		}
 		// visualize the parse tree
+		String filename = ends ? treeFile + "_" + cnt : treeFile + "_" + cnt + "_" + (isample / (opts.bsize * opts.nbatch));
 		Tree<String> parseTree = mrParser.parse(globalTree);
-		String filename = treeFile + "_" + cnt + "_" + (isample / (opts.bsize * opts.nbatch));
 		MethodUtil.saveTree2image(null, filename, parseTree, numberer);
 		// store the log score
 		trllist.add(trll);
