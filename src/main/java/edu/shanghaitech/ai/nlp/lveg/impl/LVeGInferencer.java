@@ -175,7 +175,7 @@ public class LVeGInferencer extends Inferencer {
 	}
 	
 	
-	protected void evalRuleCount(Tree<State> tree, Chart chart, short isample) {
+	protected void evalRuleCount(Tree<State> tree, Chart chart, short isample, boolean prune) {
 		List<State> sentence = tree.getYield();
 		int x0, x1, y0, y1, c0, c1, c2, nword = sentence.size();
 		GaussianMixture outScore, linScore, rinScore;
@@ -188,11 +188,11 @@ public class LVeGInferencer extends Inferencer {
 				c2 = Chart.idx(left, nword - ilayer);
 				
 				// general unary grammar rules
-				evalUnaryRuleCount(chart, c2, isample, null);
+				evalUnaryRuleCount(chart, c2, isample, null, prune);
 				
 				// unary grammar rules containing lexicons
 				if (x0 == y1) {
-					evalUnaryRuleCount(chart, c2, isample, sentence.get(x0));
+					evalUnaryRuleCount(chart, c2, isample, sentence.get(x0), prune);
 					continue; // not necessary, think about it...
 				}
 				
@@ -286,7 +286,7 @@ public class LVeGInferencer extends Inferencer {
 		}
 	}
 	
-	private void evalUnaryRuleCount(Chart chart, int idx, short isample, State word) {
+	private void evalUnaryRuleCount(Chart chart, int idx, short isample, State word, boolean prune) {
 		Set<Short> set;
 		List<GrammarRule> rules;
 		GaussianMixture outScore, cinScore;
@@ -314,9 +314,9 @@ public class LVeGInferencer extends Inferencer {
 			if (rule.type == GrammarRule.RHSPACE) { continue; }
 			if (!chart.containsKey(rule.lhs, idx, false) || !chart.containsKey((short) rule.rhs, idx, true)) { continue; }
 			Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>();
-			mergeUnaryRuleCount(chart, idx, rule, scores, (short) 0, (short) (0)); // O_{0}(X) I_{0}(Y)
-			mergeUnaryRuleCount(chart, idx, rule, scores, (short) 0, (short) (1)); // O_{0}(X) I_{1}(Y)
-			mergeUnaryRuleCount(chart, idx, rule, scores, (short) 1, (short) (0)); // O_{1}(X) I_{0}(Y)
+			mergeUnaryRuleCount(chart, idx, rule, scores, (short) 0, (short) (0), prune); // O_{0}(X) I_{0}(Y)
+			mergeUnaryRuleCount(chart, idx, rule, scores, (short) 0, (short) (1), prune); // O_{0}(X) I_{1}(Y)
+			mergeUnaryRuleCount(chart, idx, rule, scores, (short) 1, (short) (0), prune); // O_{1}(X) I_{0}(Y)
 			if (!scores.isEmpty()) { grammar.addCount(rule.lhs, rule.rhs, scores, GrammarRule.LRURULE, isample, false); }
 		}
 		// have to process unary rules containing LEXICONS specifically
@@ -337,14 +337,14 @@ public class LVeGInferencer extends Inferencer {
 		}
 	}
 	
-	private void mergeUnaryRuleCount(
-			Chart chart, int idx, UnaryGrammarRule rule, Map<String, GaussianMixture> scores, short olevel, short ilevel) {
+	private void mergeUnaryRuleCount(Chart chart, int idx, UnaryGrammarRule rule, 
+			Map<String, GaussianMixture> scores, short olevel, short ilevel, boolean prune) {
 		if (chart.containsKey(rule.lhs, idx, false, olevel) && chart.containsKey((short) rule.rhs, idx, true, ilevel)) {
 			GaussianMixture cinScore = chart.getInsideScore((short) rule.rhs, idx, ilevel);
 			GaussianMixture outScore = chart.getOutsideScore((short) rule.lhs, idx, olevel);
 			if (scores.get(GrammarRule.Unit.P) != null) {
-				scores.get(GrammarRule.Unit.P).add(outScore);
-				scores.get(GrammarRule.Unit.UC).add(cinScore);
+				scores.get(GrammarRule.Unit.P).add(outScore, prune);
+				scores.get(GrammarRule.Unit.UC).add(cinScore, prune);
 			} else { // new memory space
 				scores.put(GrammarRule.Unit.P, outScore.copy(true));
 				scores.put(GrammarRule.Unit.UC, cinScore.copy(true));

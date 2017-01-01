@@ -90,7 +90,7 @@ public class LVeGLearner extends LearnerConfig {
 		
 		grammar = new SimpleLVeGGrammar(numberer, -1);
 		lexicon = new SimpleLVeGLexiconOld(numberer, -1);
-		Valuator<?, ?> valuator = new Valuator<Tree<State>, Double>(grammar, lexicon, opts.maxLenParsing, true);
+		Valuator<?, ?> valuator = new Valuator<Tree<State>, Double>(grammar, lexicon, opts.maxLenParsing, opts.reuse, opts.prune);
 		mvaluator = new ThreadPool(valuator, opts.nteval);
 				
 		if (opts.loadGrammar && opts.inGrammar != null) {
@@ -102,7 +102,7 @@ public class LVeGLearner extends LearnerConfig {
 			lexicon.labelTrees(testTrees); // no need to label the data if we load it from the object file
 			lexicon.labelTrees(devTrees); // no need to ... if ...
 			Optimizer.config(random, opts.maxsample, opts.bsize); // FIXME no errors, just alert you...
-			valuator = new Valuator<Tree<State>, Double>(grammar, lexicon, opts.maxLenParsing, true);			
+			valuator = new Valuator<Tree<State>, Double>(grammar, lexicon, opts.maxLenParsing, opts.reuse, opts.prune);			
 			mvaluator = new ThreadPool(valuator, opts.nteval);
 			
 			for (Tree<State> tree : trainTrees) {
@@ -145,8 +145,8 @@ public class LVeGLearner extends LearnerConfig {
 		long endTime = System.currentTimeMillis();
 		logger.trace("------->" + ll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");	
 		*/
-		lvegParser = new LVeGParser<Tree<State>, List<Double>>(grammar, lexicon, opts.maxLenParsing, true);
-		mrParser = new MaxRuleParser<Tree<State>, Tree<String>>(grammar, lexicon, opts.maxLenParsing, true);
+		lvegParser = new LVeGParser<Tree<State>, List<Double>>(grammar, lexicon, opts.maxLenParsing, opts.reuse, opts.prune);
+		mrParser = new MaxRuleParser<Tree<State>, Tree<String>>(grammar, lexicon, opts.maxLenParsing, opts.reuse, opts.prune);
 		trainer = new ThreadPool(lvegParser, opts.ntbatch);
 		
 		MethodUtil.saveTree2image(globalTree, filename, null, numberer);

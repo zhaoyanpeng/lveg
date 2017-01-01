@@ -1,4 +1,3 @@
--h,
 -datadir, E:/SourceCode/ParsersData/wsj/,
 -train, wsj_s2-21_tree,
 -test, wsj_s23_tree,
@@ -21,7 +20,6 @@
 -saveGrammar, false,
 -loadGrammar, false,
 
-
 -ntbatch, 6,
 -ntgrad, 6,
 -nteval, 6,
@@ -30,6 +28,8 @@
 -pmode, THREAD_POOL,
 -pverbose, true,
 
+-reuse, true,
+-prune, true,
 -bsize, 30,
 -nepoch, 10,
 -maxsample, 3,

@@ -3,10 +3,12 @@ package edu.shanghaitech.ai.nlp.lveg;
 import static org.junit.Assert.*;
 
 import java.util.ArrayList;
+import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.Set;
 
 import org.junit.Test;
@@ -16,6 +18,7 @@ import edu.shanghaitech.ai.nlp.lveg.impl.DiagonalGaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture.Component;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.Unit;
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
 
@@ -163,7 +166,66 @@ public class GaussianMixtureTest {
 	}
 	
 	
-	//@Test 
+	@Test
+	public void testPriorityQueue() {
+		GaussianMixture gmc = gm2.copy(true);
+		System.out.println("gmc---" + gmc);
+		
+		System.out.println("addmap-gmc---" + gmc);
+		Map<String, Set<GaussianDistribution>> map = new HashMap<String, Set<GaussianDistribution>>();
+		Set<GaussianDistribution> list0 = new HashSet<GaussianDistribution>();
+		list0.add(new DiagonalGaussianDistribution(LVeGLearner.dim));
+		map.put(Unit.P, list0);
+		gmc.add(0.0, map);
+		
+		PriorityQueue<Component> components = gmc.components();
+		System.out.println("after adding-" + components.size());
+		for (Component com : components) {
+			System.out.println(com);
+		}
+//		while(!components.isEmpty()) {
+//			System.out.println(components.poll());
+//		}
+
+		
+		Component comp = gmc.getComponent((short) 1);
+		System.out.println("get the 1st component---" + comp);
+		
+		comp.setWeight(-100);
+		System.out.println("after setting the 1st mixing weight---" + comp);
+		for (Component com : components) {
+			System.out.println(com);
+		}
+//		while(!components.isEmpty()) {
+//			System.out.println(components.poll());
+//		}
+		
+//		components = gmc.sort();
+//		while(!components.isEmpty()) {
+//			System.out.println(components.poll());
+//		}		
+		
+		
+		
+		
+		
+		
+		
+/*		
+		int cnt = 0;
+		for (Component com : components) {
+			if (com.getWeight() > 0) {
+				components.remove(com);
+			}
+			System.out.println("# " + ++cnt);
+			// ConcurrentModificationException
+		}
+*/		
+	}
+	
+	
+	
+//	@Test 
 	public void testMultiplyForInsideScore() {
 		GaussianMixture cgm0 = gm0.copy(true);
 		GaussianMixture cgm2 = gm2.copy(true);
@@ -173,7 +235,7 @@ public class GaussianMixtureTest {
 		System.out.println("InScore uc--" + gm3);
 		
 		System.out.println("---deep copy---");
-		cgm0.getMixture().remove(0);
+//		cgm0.getMixture().remove(0);
 		System.out.println(gm3);
 		
 		System.out.println("---shallow copy---");
@@ -185,7 +247,7 @@ public class GaussianMixtureTest {
 	}
 	
 	
-	//@Test
+//	@Test
 	public void testMultiply() {
 		
 		GaussianMixture gm3 = gm0.multiply(gm1);
@@ -225,14 +287,14 @@ public class GaussianMixtureTest {
 	}
 	
 	
-	@Test
+//	@Test
 	public void testCast() {
 		System.out.println("---Efficiency Comparison---");
 		
 		int n = 1500;
 		List<Double> weights = new ArrayList<Double>();
-		MethodUtil.randomInitList(weights, Double.class, n, 10, 0.5, false, true);
-		gm0.setWeights(weights);
+		MethodUtil.randomInitList(LVeGLearner.random, weights, Double.class, n, 10, 0.5, false, true);
+//		gm0.setWeights(weights);
 		
 		System.out.println("n = " + n);
 		long start = System.currentTimeMillis();

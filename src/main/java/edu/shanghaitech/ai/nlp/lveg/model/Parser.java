@@ -14,6 +14,7 @@ public abstract class Parser<I, O> extends Recorder implements Executor<I, O> {
 	protected short maxLenParsing = 120;
 	
 	protected int idx;
+	protected boolean prune;
 	protected boolean reuse;
 	protected boolean parallel;
 	

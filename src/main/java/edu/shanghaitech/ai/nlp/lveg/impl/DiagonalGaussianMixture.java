@@ -36,8 +36,9 @@ public class DiagonalGaussianMixture extends GaussianMixture {
 			short ncomponent, List<Double> weights, List<Map<String, Set<GaussianDistribution>>> mixture) {
 		super();
 		this.ncomponent = ncomponent;
-		this.weights = weights;
-		this.mixture = mixture;
+		for (int i = 0; i < weights.size(); i++) {
+			this.components.add(new Component((short) i, weights.get(i), mixture.get(i)));
+		}
 	}
 
 	

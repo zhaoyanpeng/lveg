@@ -90,15 +90,15 @@ public class RuleTable<T> implements Serializable {
 	}
 
 	
-	public void addCount(GrammarRule key, GaussianMixture increment) {
+	public void addCount(GrammarRule key, GaussianMixture increment, boolean prune) {
 		GaussianMixture count = getCount(key);
 		if (count == null) {
 			GaussianMixture gm = new DiagonalGaussianMixture();
-			gm.add(increment);
+			gm.add(increment, prune);
 			setCount(key, gm);
 			return;
 		}
-		count.add(increment);
+		count.add(increment, prune);
 	}
 	
 	
@@ -112,9 +112,9 @@ public class RuleTable<T> implements Serializable {
 		for (GrammarRule rule : table.keySet()) {
 			// copy key by reference, when only the count (value) varies
 			if (!deep) {
-				ruleTable.addCount(rule, null);
+				ruleTable.addCount(rule, null, false);
 			} else {
-				ruleTable.addCount(rule.copy(), table.get(rule).copy(true));
+				ruleTable.addCount(rule.copy(), table.get(rule).copy(true), false);
 			}
 		}
 		return ruleTable;

@@ -20,13 +20,12 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	 * 
 	 */
 	private static final long serialVersionUID = 3449371510125004187L;
-	public static LVeGLexicon lexicon;
-	public static LVeGGrammar grammar;
-	
-	protected static ChainUrule chainurule;
-	
 	protected final static short ROOT = 0;
 	protected final static short LENGTH_UCHAIN = 2;
+	protected static ChainUrule chainurule;
+	
+	public static LVeGLexicon lexicon;
+	public static LVeGGrammar grammar;
 	
 	public enum ChainUrule {
 		ALL_POSSIBLE_PATH, PRE_COMPUTE_CHAIN, NOT_PRE_ADD_INTER, NOT_PRE_NOT_INTER, DEFAULT,
@@ -52,7 +51,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	 * @param tree  in which only the sentence is used
 	 * @param nword # of words in the sentence
 	 */
-	public static void insideScore(Chart chart, List<State> sentence, int nword) {
+	public static void insideScore(Chart chart, List<State> sentence, int nword, boolean prune) {
 		int x0, y0, x1, y1, c0, c1, c2;
 		GaussianMixture pinScore, linScore, rinScore, ruleScore;
 		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBRuleMap();
@@ -62,12 +61,12 @@ public abstract class Inferencer extends Recorder implements Serializable {
 			List<GrammarRule> rules = lexicon.getRulesWithWord(sentence.get(i));
 			// preterminals
 			for (GrammarRule rule : rules) {
-				chart.addInsideScore(rule.lhs, iCell, rule.getWeight().copy(true), (short) 0);
+				chart.addInsideScore(rule.lhs, iCell, rule.getWeight().copy(true), (short) 0, prune);
 			}
 			// DEBUG unary grammar rules
 //			logger.trace("Cell [" + i + ", " + (i + 0) + "]="+ iCell + "\t is being estimated. # " );
 //			long start = System.currentTimeMillis();
-			insideScoreForUnaryRule(chart, iCell, chainurule);
+			insideScoreForUnaryRule(chart, iCell, chainurule, prune);
 //			long ttime = System.currentTimeMillis() - start;
 //			logger.trace("\tafter chain unary\t" + chart.size(iCell, true) + "\ttime: " + ttime / 1000 + "\n");
 		}		
@@ -94,14 +93,14 @@ public abstract class Inferencer extends Recorder implements Serializable {
 							
 							pinScore = ruleScore.mulForInsideOutside(linScore, GrammarRule.Unit.LC, true);
 							pinScore = pinScore.mulForInsideOutside(rinScore, GrammarRule.Unit.RC, false);
-							chart.addInsideScore(rule.lhs, c2, pinScore, (short) 0);
+							chart.addInsideScore(rule.lhs, c2, pinScore, (short) 0, prune);
 						}
 					}
 				}
 				// DEBUG unary grammar rules
 //				logger.trace("Cell [" + left + ", " + (left + ilayer) + "]="+ c2 + "\t is being estimated. # ");
 //				long start = System.currentTimeMillis();
-				insideScoreForUnaryRule(chart, c2, chainurule);
+				insideScoreForUnaryRule(chart, c2, chainurule, prune);
 //				long ttime = System.currentTimeMillis() - start;
 //				logger.trace("\tafter chain unary\t" + chart.size(c2, true) + "\ttime: " + ttime / 1000 + "\n");
 			}
@@ -116,7 +115,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	 * @param tree  in which only the sentence is used.
 	 * @param nword # of words in the sentence
 	 */
-	public static void outsideScore(Chart chart, List<State> sentence, int nword) {
+	public static void outsideScore(Chart chart, List<State> sentence, int nword, boolean prune) {
 		int x0, y0, x1, y1, c0, c1, c2;
 		GaussianMixture poutScore, linScore, rinScore, loutScore, routScore, ruleScore;
 		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBRuleMap();
@@ -142,7 +141,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 							
 							loutScore = ruleScore.mulForInsideOutside(poutScore, GrammarRule.Unit.P, true);
 							loutScore = loutScore.mulForInsideOutside(rinScore, GrammarRule.Unit.RC, false);
-							chart.addOutsideScore(rule.lchild, c2, loutScore, (short) 0);
+							chart.addOutsideScore(rule.lchild, c2, loutScore, (short) 0, prune);
 						}
 					}
 				}
@@ -165,24 +164,24 @@ public abstract class Inferencer extends Recorder implements Serializable {
 							
 							routScore = ruleScore.mulForInsideOutside(poutScore, GrammarRule.Unit.P, true);
 							routScore = routScore.mulForInsideOutside(linScore, GrammarRule.Unit.LC, false);
-							chart.addOutsideScore(rule.rchild, c2, routScore, (short) 0);
+							chart.addOutsideScore(rule.rchild, c2, routScore, (short) 0, prune);
 						}
 					}
 				}
 				// DEBUG unary grammar rules
 //				logger.trace("Cell [" + left + ", " + (left + ilayer) + "]="+ c2 + "\t is being estimated. # ");
 //				long start = System.currentTimeMillis();
-				outsideScoreForUnaryRule(chart, c2, chainurule);
+				outsideScoreForUnaryRule(chart, c2, chainurule, prune);
 //				long ttime = System.currentTimeMillis() - start;
 //				logger.trace("\tafter chain unary\t" + chart.size(c2, false) + "\ttime: " + ttime / 1000 + "\n");
 			}
 		}
 	}
 	
-	private static void outsideScoreForUnaryRule(Chart chart, int idx, ChainUrule identifier) {
+	private static void outsideScoreForUnaryRule(Chart chart, int idx, ChainUrule identifier, boolean prune) {
 		switch (identifier) {
 		case DEFAULT: {
-			outsideScoreForUnaryRuleDefault(chart, idx);
+			outsideScoreForUnaryRuleDefault(chart, idx, prune);
 			break;
 		}
 		default:
@@ -191,10 +190,10 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	}
 	
 	
-	private static void insideScoreForUnaryRule(Chart chart, int idx, ChainUrule identifier) {
+	private static void insideScoreForUnaryRule(Chart chart, int idx, ChainUrule identifier, boolean prune) {
 		switch (identifier) {
 		case DEFAULT: {
-			insideScoreForUnaryRuleDefault(chart, idx);
+			insideScoreForUnaryRuleDefault(chart, idx, prune);
 			break;
 		}
 		default:
@@ -202,7 +201,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 		}
 	}
 	
-	private static void outsideScoreForUnaryRuleDefault(Chart chart, int idx) {
+	private static void outsideScoreForUnaryRuleDefault(Chart chart, int idx, boolean prune) {
 		Set<Short> set;
 		short level = 0;
 		List<GrammarRule> rules;
@@ -217,7 +216,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				while (iterator.hasNext()) { // CHECK
 					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
 					coutScore = rule.weight.mulForInsideOutside(poutScore, rmKey, true);
-					chart.addOutsideScore((short) rule.rhs, idx, coutScore, level);
+					chart.addOutsideScore((short) rule.rhs, idx, coutScore, level, prune);
 				}
 			}
 		}
@@ -229,14 +228,14 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				while (iterator.hasNext()) {
 					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
 					coutScore = rule.weight.mulForInsideOutside(poutScore, rmKey, true);
-					chart.addOutsideScore((short) rule.rhs, idx, coutScore, (short) (level + 1));
+					chart.addOutsideScore((short) rule.rhs, idx, coutScore, (short) (level + 1), prune);
 				}
 			}
 			level++;
 		}
 	}
 	
-	private static void insideScoreForUnaryRuleDefault(Chart chart, int idx) {
+	private static void insideScoreForUnaryRuleDefault(Chart chart, int idx, boolean prune) {
 		String rmKey;
 		Set<Short> set;
 		short level = 0;
@@ -252,7 +251,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 					if (idx != 0 && rule.type == GrammarRule.RHSPACE) { continue; } // ROOT is allowed
 					rmKey = rule.type == GrammarRule.RHSPACE ? GrammarRule.Unit.C : GrammarRule.Unit.UC;
 					pinScore = rule.weight.mulForInsideOutside(cinScore, rmKey, true);
-					chart.addInsideScore(rule.lhs, idx, pinScore, (short) (level + 1));
+					chart.addInsideScore(rule.lhs, idx, pinScore, (short) (level + 1), prune);
 				}
 			}
 			level++;
@@ -267,7 +266,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
 					if (rule.type != GrammarRule.RHSPACE) { continue; } 
 					pinScore = rule.weight.mulForInsideOutside(cinScore, GrammarRule.Unit.C, true);
-					chart.addInsideScore(rule.lhs, idx, pinScore, (short) (LENGTH_UCHAIN + 1));
+					chart.addInsideScore(rule.lhs, idx, pinScore, (short) (LENGTH_UCHAIN + 1), prune);
 				}
 			}
 		}
@@ -279,7 +278,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	public static void setRootOutsideScore(Chart chart) {
 		GaussianMixture gm = new DiagonalGaussianMixture((short) 1);
 		gm.marginalizeToOne();
-		chart.addOutsideScore((short) 0, Chart.idx(0, 1), gm, (short) (LENGTH_UCHAIN + 1));
+		chart.addOutsideScore((short) 0, Chart.idx(0, 1), gm, (short) (LENGTH_UCHAIN + 1), false);
 	}
 	
 	/**
@@ -412,8 +411,8 @@ public abstract class Inferencer extends Recorder implements Serializable {
 			return inside ? ichart.get(idx).containsKey(key) : ochart.get(idx).containsKey(key);
 		}
 		
-		public void addInsideScore(short key, int idx, GaussianMixture gm, short level) {
-			ichart.get(idx).addScore(key, gm, level);
+		public void addInsideScore(short key, int idx, GaussianMixture gm, short level, boolean prune) {
+			ichart.get(idx).addScore(key, gm, level, prune);
 		}
 		
 		public GaussianMixture getInsideScore(short key, int idx, short level) {
@@ -424,8 +423,8 @@ public abstract class Inferencer extends Recorder implements Serializable {
 			return ichart.get(idx).getScore(key);
 		}
 		
-		public void addOutsideScore(short key, int idx, GaussianMixture gm, short level) {
-			ochart.get(idx).addScore(key, gm, level);
+		public void addOutsideScore(short key, int idx, GaussianMixture gm, short level, boolean prune) {
+			ochart.get(idx).addScore(key, gm, level, prune);
 		}
 		
 		public GaussianMixture getOutsideScore(short key, int idx, short level) {
@@ -439,15 +438,15 @@ public abstract class Inferencer extends Recorder implements Serializable {
 		/**
 		 * @deprecated
 		 */
-		public void addInsideScore(short key, int idx, GaussianMixture gm) {
-			ichart.get(idx).addScore(key, gm);
+		public void addInsideScore(short key, int idx, GaussianMixture gm, boolean prune) {
+			ichart.get(idx).addScore(key, gm, prune);
 		}
 		
 		/**
 		 * @deprecated
 		 */
-		public void addOutsideScore(short key, int idx, GaussianMixture gm) {
-			ochart.get(idx).addScore(key, gm);
+		public void addOutsideScore(short key, int idx, GaussianMixture gm, boolean prune) {
+			ochart.get(idx).addScore(key, gm, prune);
 		}
 		
 		public void clear(int n) {
@@ -588,7 +587,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 			return split == null ? -1 : split;
 		}
 		
-		protected void addScore(short key, GaussianMixture gm, short level) {
+		protected void addScore(short key, GaussianMixture gm, short level, boolean prune) {
 			Map<Short, GaussianMixture> lscore = scores.get(level);
 			if (lscore == null) {
 				lscore = new HashMap<Short, GaussianMixture>();
@@ -598,14 +597,14 @@ public abstract class Inferencer extends Recorder implements Serializable {
 			if (agm == null) {
 				lscore.put(key, gm);
 			} else {
-				agm.add(gm);
+				agm.add(gm, prune);
 			}
-			addScore(key, gm);
+			addScore(key, gm, prune);
 		}
 		
-		private void addScore(short key, GaussianMixture gm) {
+		private void addScore(short key, GaussianMixture gm, boolean prune) {
 			if (containsKey(key)) { 
-				totals.get(key).add(gm);
+				totals.get(key).add(gm, prune);
 			} else {
 				// it should own its own memory space, so that the score in a 
 				// specific level could not be modified through the reference

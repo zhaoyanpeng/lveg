@@ -32,11 +32,12 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 	}
 	
 	
-	public LVeGParser(LVeGGrammar grammar, LVeGLexicon lexicon, short maxLenParsing, boolean reuse) {
+	public LVeGParser(LVeGGrammar grammar, LVeGLexicon lexicon, short maxLenParsing, boolean reuse, boolean prune) {
 		this.maxLenParsing = maxLenParsing;
 		this.inferencer = new LVeGInferencer(grammar, lexicon);
 		this.chart = reuse ? new Chart(maxLenParsing, false) : null;
 		this.reuse = reuse;
+		this.prune = prune;
 	}
 	
 	
@@ -54,7 +55,7 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 		synchronized (inferencer) {
 //			logger.trace("\ni---id=" + Thread.currentThread().getId() + ", isample=" + isample + " enters...\n"); // DEBUG
 			inferencer.evalRuleCountWithTree(sample, (short) 0);
-			inferencer.evalRuleCount(sample, chart, (short) 0);
+			inferencer.evalRuleCount(sample, chart, (short) 0, prune);
 			inferencer.evalGradients(scores);
 //			logger.trace("\ni---id=" + Thread.currentThread().getId() + ", isample=" + isample + " " + 
 //					MethodUtil.double2str(scores, 3, -1, false, true) + " leaves...\n"); // DEBUG
@@ -82,7 +83,7 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 //		logger.trace("\nOutside scores with the sentence...\n\n"); // DEBUG
 //		MethodUtil.debugChart(Chart.getChart(false), (short) 2); // DEBUG
 		
-		inferencer.evalRuleCount(tree, chart, isample);
+		inferencer.evalRuleCount(tree, chart, isample, prune);
 		
 //		logger.trace("\nCheck rule count with the sentence...\n"); // DEBUG
 //		MethodUtil.debugCount(inferencer.grammar, inferencer.lexicon, tree, chart); // DEBUG
@@ -120,12 +121,12 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 			chart = new Chart(nword, false);
 		}
 //		logger.trace("\nInside score...\n"); // DEBUG
-		LVeGInferencer.insideScore(chart, sentence, nword);
+		LVeGInferencer.insideScore(chart, sentence, nword, prune);
 //		MethodUtil.debugChart(Chart.iGetChart(), (short) 2); // DEBUG
 
 //		logger.trace("\nOutside score...\n"); // DEBUG
 		LVeGInferencer.setRootOutsideScore(chart);
-		LVeGInferencer.outsideScore(chart, sentence, nword);
+		LVeGInferencer.outsideScore(chart, sentence, nword, prune);
 //		MethodUtil.debugChart(Chart.oGetChart(), (short) 2); // DEBUG
 		
 		GaussianMixture score = chart.getInsideScore((short) 0, Chart.idx(0, 1));

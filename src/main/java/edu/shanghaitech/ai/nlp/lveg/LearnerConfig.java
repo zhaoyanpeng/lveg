@@ -31,15 +31,15 @@ public class LearnerConfig extends Recorder {
 	protected final static String ID_DEV = "dev";
 	
 	public final static String KEY_TAG_SET = "tag";
-	public static double nratio;
+	public static double nratio = 0.5;
 	
-	public static short dim;
-	public static short ncomponent;
-	public static short maxrandom;
-	public static short maxlength;
-	public static int randomseed;
-	public static int precision;
-	public static Random random;
+	public static short dim = 2;
+	public static short ncomponent = 2;
+	public static short maxrandom = 1;
+	public static short maxlength = 7;
+	public static int randomseed = 0;
+	public static int precision = 3;
+	public static Random random = new Random(randomseed);
 
 	public static class Params {
 		public static double lr;
@@ -132,6 +132,10 @@ public class LearnerConfig extends Recorder {
 		/* parallel-configurations section ends */
 		
 		/* training configurations section begins */
+		@Option(name = "-reuse", usage = "whether reuse the chart for CYK and inside-outside score (true) or not (false) (default: true)")
+		public boolean reuse = true;
+		@Option(name = "-prune", usage = "avoid adding trivial components if the mixing weights are equal to zero (default: false)")
+		public boolean prune = false;
 		@Option(name = "-bsize", usage = "# of the samples in a batch (default: 128)")
 		public short bsize = 128;
 		@Option(name = "-nepoch", usage = "# of epoches for training (default: 10)")

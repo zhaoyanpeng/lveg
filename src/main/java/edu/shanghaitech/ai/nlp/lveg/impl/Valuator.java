@@ -26,11 +26,12 @@ public class Valuator<I, O> extends Parser<I, O> {
 	}
 	
 	
-	public Valuator(LVeGGrammar grammar, LVeGLexicon lexicon, short maxLenParsing, boolean reuse) {
+	public Valuator(LVeGGrammar grammar, LVeGLexicon lexicon, short maxLenParsing, boolean reuse, boolean prune) {
 		this.maxLenParsing = maxLenParsing;
 		this.inferencer = new LVeGInferencer(grammar, lexicon);
 		this.chart = reuse ? new Chart(maxLenParsing, false) : null;
 		this.reuse = reuse;
+		this.prune = prune;
 	}
 
 	
@@ -99,7 +100,7 @@ public class Valuator<I, O> extends Parser<I, O> {
 			if (chart != null) { chart.clear(-1); }
 			chart = new Chart(nword, false);
 		}
-		LVeGInferencer.insideScore(chart, sentence, nword);
+		LVeGInferencer.insideScore(chart, sentence, nword, prune);
 		GaussianMixture gm = chart.getInsideScore((short) 0, Chart.idx(0, 1));
 		double score = gm.eval(null, true);
 		return score;

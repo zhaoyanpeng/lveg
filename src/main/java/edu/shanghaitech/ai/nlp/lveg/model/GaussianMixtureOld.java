@@ -2,12 +2,10 @@ package edu.shanghaitech.ai.nlp.lveg.model;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.PriorityQueue;
 import java.util.Random;
 import java.util.Set;
 
@@ -17,19 +15,20 @@ import edu.shanghaitech.ai.nlp.util.MethodUtil;
 import edu.shanghaitech.ai.nlp.util.Recorder;
 
 /**
+ * Variable declaration rules: mixture (mixture of gaussians), component (component of the GM), 
+ * gaussians (details of the component), gaussian (portion of the component), gausses (list of  
+ * GD of the portion), gauss (GD).</p>
+ * 
+ * TODO Implement the comparison operation between GMs.
  * 
  * @author Yanpeng Zhao
  *
  */
-public class GaussianMixture extends Recorder implements Serializable {
+public class GaussianMixtureOld extends Recorder implements Serializable {
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = -822680841484765529L;
-	private static final double LOG_ZERO = -1.0e10;
-	private static final double EXP_ZERO = -Math.log(-LOG_ZERO);
-	protected PriorityQueue<Component> components;
-	
 	/**
 	 * Not sure if it is necessary.
 	 * 
@@ -38,10 +37,27 @@ public class GaussianMixture extends Recorder implements Serializable {
 	protected double bias;
 	protected int ncomponent;
 	
-	public GaussianMixture() {
+	/**
+	 * The weights need to be positive. We use the exponential function to ensure 
+	 * the positiveness, thus the real weight should be read as Math.exp(weight).
+	 */
+	protected List<Double> weights;
+	
+	/**
+	 * The set of Gaussian components. Each component consists of one or more 
+	 * independent Gaussian distributions mapped by keys. Keys: P (parent); C 
+	 * (child); LC (left child); RC (right child); UC (unary child)
+	 * 
+	 * TODO but why did I use the Set for the portion of MoG? To ease the comparison?
+	 */
+	protected List<Map<String, Set<GaussianDistribution>>> mixture;
+	
+	
+	public GaussianMixtureOld() {
 		this.bias = 0;
 		this.ncomponent = 0;
-		this.components = new PriorityQueue<Component>(wcomparator);
+		this.weights = new ArrayList<Double>();
+		this.mixture = new ArrayList<Map<String, Set<GaussianDistribution>>>();
 	}
 	
 	
@@ -49,45 +65,14 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * Initialize the fields by default.
 	 */
 	protected void initialize() {
-		short maximum = LVeGLearner.maxrandom;
+		MethodUtil.randomInitList(LVeGLearner.random, weights, Double.class, ncomponent, LVeGLearner.maxrandom, LVeGLearner.nratio, false, true);
 		for (int i = 0; i < ncomponent; i++) {
-			double weight = LVeGLearner.random.nextDouble();
-			while (weight == 0.0) { weight = LVeGLearner.random.nextDouble(); }
-			weight = weight < LVeGLearner.nratio ? -weight * maximum : weight * maximum;
-			Map<String, Set<GaussianDistribution>> multivnd = new HashMap<String, Set<GaussianDistribution>>();
-			components.add(new Component((short) i, weight, multivnd));
+			Map<String, Set<GaussianDistribution>> component = 
+					new HashMap<String, Set<GaussianDistribution>>();
+			mixture.add(component);
 		}
 	}
-	
-	
-	/**
-	 * Remove the trivial components.
-	 */
-	public void delTrivia() {
-		if (ncomponent == 0) { return; }
-		PriorityQueue<Component> sorted = sort();
-		double maxw = sorted.peek().weight;
-		for (Component comp : components) {
-			if (comp.weight > LOG_ZERO && (comp.weight - maxw) > EXP_ZERO) { 
-				continue; 
-			}
-			sorted.remove(comp);
-			ncomponent--;
-		}
-		components.clear();
-		components = sorted;
-	}
-	
-	
-	/**
-	 * @return the sorted components by the mixing weight in case when you modified the mixing weights of some components.
-	 */
-	public PriorityQueue<Component> sort() {
-		PriorityQueue<Component> sorted = new PriorityQueue<Component>(wcomparator);
-		sorted.addAll(components);
-		return sorted;
-	}
-	
+
 
 	/**
 	 * Add the bias.
@@ -104,23 +89,11 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * 
 	 * @param gm mixture of gaussians
 	 */
-	public void add(GaussianMixture gm, boolean prune) {
+	public void add(GaussianMixtureOld gm) {
 		// TODO bias += gm.bias;
-		if (prune && components.size() > 0) {
-			double maxw = components.peek().weight;
-			for (Component comp : gm.components) {
-				if (comp.weight > LOG_ZERO && (comp.weight - maxw) > EXP_ZERO) {
-					ncomponent++;
-					components.add(comp);
-					maxw = components.peek().weight;
-				} else {
-					comp.clear();
-				}
-			}
-		} else {
-			ncomponent += gm.ncomponent;
-			components.addAll(gm.components);
-		}
+		ncomponent += gm.ncomponent;
+		weights.addAll(gm.weights);
+		mixture.addAll(gm.mixture);
 	}
 	
 	
@@ -131,8 +104,9 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * @param component a component of the mixture of gaussians
 	 */
 	public void add(double weight, Map<String, Set<GaussianDistribution>> component) {
-		components.add(new Component((short) ncomponent, weight, component));
 		ncomponent++;
+		weights.add(weight);
+		mixture.add(component);
 	}
 	
 	
@@ -143,11 +117,9 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * @param gaussians  a set of gaussian distributions
 	 */
 	public void add(int iComponent, Map<String, Set<GaussianDistribution>> gaussians) {
-		Component comp = null;
-		if ((comp = getComponent((short) iComponent)) != null) {
-			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : gaussians.entrySet()) {
-				add(comp.multivnd, gaussian.getKey(), gaussian.getValue());
-			}
+		Map<String, Set<GaussianDistribution>> component = mixture.get(iComponent);
+		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : gaussians.entrySet()) {
+			add(component, gaussian.getKey(), gaussian.getValue());
 		}
 	}
 	
@@ -160,10 +132,8 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * @param value      which is added to the specific portion of a component
 	 */
 	public void add(int iComponent, String key, Set<GaussianDistribution> gausses) {
-		Component comp = null;
-		if ((comp = getComponent((short) iComponent)) != null) {
-			add(comp.multivnd, key, gausses);
-		}
+		Map<String, Set<GaussianDistribution>> component = mixture.get(iComponent);
+		add(component, key, gausses);	
 	}
 	
 	
@@ -207,20 +177,6 @@ public class GaussianMixture extends Recorder implements Serializable {
 			gausses.addAll(value);
 		}
 	}
-	
-	
-	/**
-	 * @param iComponent index of the component
-	 * @return
-	 */
-	public Component getComponent(short iComponent) {
-		for (Component comp : components) {
-			if (comp.id == iComponent) {
-				return comp;
-			}
-		}
-		return null;
-	}
 
 	
 	/**
@@ -229,7 +185,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * @param deep boolean value, indicating deep (true) or shallow (false) copy
 	 * @return
 	 */
-	public GaussianMixture copy(boolean deep) { return null; }
+	public GaussianMixtureOld copy(boolean deep) { return null; }
 	
 	
 	/**
@@ -238,13 +194,14 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * @param des  a placeholder of MoG
 	 * @param deep boolean value, indicating deep (true) or shallow (false) copy
 	 */
-	protected void copy(GaussianMixture des, boolean deep) {
+	protected void copy(GaussianMixtureOld des, boolean deep) {
 		des.ncomponent = ncomponent;
-		for (Component comp : components) {
+		des.weights.addAll(weights);
+		for (Map<String, Set<GaussianDistribution>> component : mixture) {
 			if (deep) {
-				des.components.add(new Component(comp.id, comp.weight, copy(comp.multivnd)));
+				des.mixture.add(copy(component));
 			} else {
-				des.components.add(comp);
+				des.mixture.add(component);
 			}
 		}
 	}
@@ -287,7 +244,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * @param keys pairs of (old-key, new-key)
 	 * @return
 	 */
-	public GaussianMixture replaceKeys(Map<String, String> keys) { return null; }
+	public GaussianMixtureOld replaceKeys(Map<String, String> keys) { return null; }
 	
 	
 	/**
@@ -296,19 +253,20 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * @param des  a placeholder of MoG
 	 * @param keys pairs of (old-key, new-key)
 	 */
-	protected void replaceKeys(GaussianMixture des, Map<String, String> keys) {
-		for (Component comp : components) {
-			Map<String, Set<GaussianDistribution>> multivnd = 
+	protected void replaceKeys(GaussianMixtureOld des, Map<String, String> keys) {
+		des.weights.addAll(weights);
+		for (Map<String, Set<GaussianDistribution>> component : mixture) {
+			Map<String, Set<GaussianDistribution>> acomponent = 
 					new HashMap<String, Set<GaussianDistribution>>();
-			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : comp.multivnd.entrySet()) {
+			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
 				String key = gaussian.getKey();
 				if (keys.containsKey(key)) {
-					add(multivnd, keys.get(key), gaussian.getValue());
+					add(acomponent, keys.get(key), gaussian.getValue());
 				} else {
-					add(multivnd, key, gaussian.getValue());
+					add(acomponent, key, gaussian.getValue());
 				}
 			}
-			des.components.add(new Component((short) des.ncomponent, comp.weight, multivnd));
+			des.mixture.add(acomponent);
 			des.ncomponent++;
 		}
 	}
@@ -322,7 +280,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * @param newkey the new key
 	 * @return
 	 */
-	public GaussianMixture replaceAllKeys(String newkey) { return null; }
+	public GaussianMixtureOld replaceAllKeys(String newkey) { return null; }
 	
 	
 	/**
@@ -331,16 +289,17 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * @param des    a placeholder of MoG
 	 * @param newkey the new key
 	 */
-	protected void replaceAllKeys(GaussianMixture des, String newkey) {
-		for (Component comp : components) {
-			Map<String, Set<GaussianDistribution>> multivnd = 
+	protected void replaceAllKeys(GaussianMixtureOld des, String newkey) {
+		des.weights.addAll(weights);
+		for (Map<String, Set<GaussianDistribution>> component : mixture) {
+			Map<String, Set<GaussianDistribution>> acomponent = 
 					new HashMap<String, Set<GaussianDistribution>>();
 			Set<GaussianDistribution> gausses = new HashSet<GaussianDistribution>();
-			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : comp.multivnd.entrySet()) {
+			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
 				gausses.addAll(gaussian.getValue());
 			}
-			multivnd.put(newkey, gausses);
-			des.components.add(new Component((short) des.ncomponent, comp.weight, multivnd));
+			acomponent.put(newkey, gausses);
+			des.mixture.add(acomponent);
 			des.ncomponent++;
 		}
 	}
@@ -358,13 +317,14 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * @return 
 	 * 
 	 */
-	public GaussianMixture mulForInsideOutside(GaussianMixture gm, String key, boolean deep) {
-		GaussianMixture amixture = this.copy(deep);
+	public GaussianMixtureOld mulForInsideOutside(GaussianMixtureOld gm, String key, boolean deep) {
+		GaussianMixtureOld amixture = this.copy(deep);
 		double logsum = gm.marginalize(true);
-		for (Component comp : amixture.components) {
+		for (int i = 0; i < ncomponent; i++) {
 			// CHECK Math.log(Math.exp(a) * b)
-			comp.weight += logsum;
-			comp.multivnd.remove(key);
+			double weight = amixture.weights.get(i) + logsum;
+			amixture.weights.set(i, weight);
+			amixture.mixture.get(i).remove(key);
 		}
 		return amixture;
 	}
@@ -380,12 +340,12 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * @param copy  using copy or reference
 	 * @return
 	 */	
-	public static GaussianMixture mulAndMarginalize(GaussianMixture gm0, GaussianMixture gm1, 
+	public static GaussianMixtureOld mulAndMarginalize(GaussianMixtureOld gm0, GaussianMixtureOld gm1, 
 			Map<String, String> keys0, Map<String, String> keys1) {
 		if (gm0 == null || gm1 == null) { return null; }
 		gm0 = gm0.replaceKeys(keys0);
 		gm1 = gm1.replaceKeys(keys1);
-		GaussianMixture gm = gm0.multiply(gm1);
+		GaussianMixtureOld gm = gm0.multiply(gm1);
 		
 		Set<String> keys = new HashSet<String>();
 		for (Map.Entry<String, String> map : keys0.entrySet()) {
@@ -406,7 +366,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * @param multiplier the other mixture of gaussians
 	 * @return    
 	 */
-	public GaussianMixture multiply(GaussianMixture multiplier) { return null; }
+	public GaussianMixtureOld multiply(GaussianMixtureOld multiplier) { return null; }
 	
 	
 	/**
@@ -415,14 +375,16 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * @param des        a placeholder of MoG
 	 * @param multiplier the other mixture of gaussians
 	 */
-	protected void multiply(GaussianMixture des, GaussianMixture multiplier) {
-		for (Component comp0 : components) {
-			for (Component comp1 : multiplier.components) {
-				Map<String, Set<GaussianDistribution>> multivnd = 
-						multiply(comp0.multivnd, comp1.multivnd);
+	protected void multiply(GaussianMixtureOld des, GaussianMixtureOld multiplier) {
+		for (int i = 0; i < ncomponent; i++) {
+			for (int j = 0; j < multiplier.ncomponent; j++) {
+				Map<String, Set<GaussianDistribution>> component = 
+						multiply(mixture.get(i), multiplier.mixture.get(j));
+				des.mixture.add(component);
 				// CHECK Math.log(Math.exp(a) * Math.exp(b))
-				double weight = comp0.weight + comp1.weight;
-				des.components.add(new Component((short) des.ncomponent, weight, multivnd));
+				double weight = weights.get(i) + multiplier.weights.get(j);
+				des.weights.add(weight);
+				
 				des.ncomponent++;
 			}
 		}
@@ -458,17 +420,12 @@ public class GaussianMixture extends Recorder implements Serializable {
 	public double marginalize(boolean logarithm) {
 		if (logarithm) {
 			double logval = Double.NEGATIVE_INFINITY;
-			for (Component comp : components) {
-				logval = MethodUtil.logAdd(logval, comp.weight);
+			for (int i = 0; i < weights.size(); i++) {
+				logval = MethodUtil.logAdd(logval, weights.get(i));
 			}
 			return logval;
-		} else {
-			double value = 0;
-			for (Component comp : components) {
-				value += Math.exp(comp.weight);
-			}
-			return value;
 		}
+		return MethodUtil.sum(weights, true);
 	}
 	
 	
@@ -478,9 +435,9 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * @param keys which map to the portions, to be marginalized, of the mixture of gaussians
 	 */
 	public void marginalize(Set<String> keys) {
-		for (Component comp : components) {
+		for (Map<String, Set<GaussianDistribution>> gaussian : mixture) {
 			for (String key : keys) {
-				comp.multivnd.remove(key);
+				gaussian.remove(key);
 			}
 		}
 	}
@@ -502,14 +459,13 @@ public class GaussianMixture extends Recorder implements Serializable {
 		}
 		*/
 		for (int i = 1; i < ncomponent; i++) {
-			Component comp = components.poll();
-			comp.clear();
+			mixture.remove(i);
+			weights.remove(i);
 		}
 		ncomponent = 1;
 		// CHECK Math.exp(0)
-		Component comp = components.peek();
-		comp.clear();
-		comp.weight = 0;
+		weights.set(0, 0.0);
+		mixture.get(0).clear();
 	}
 	
 	
@@ -520,17 +476,20 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * @param gm mixture of gaussians
 	 * @return
 	 */
-	public static GaussianMixture merge(GaussianMixture gm) {
-		GaussianMixture amixture = new GaussianMixture();
-		for (Component comp : gm.components) {
-			int idx = amixture.contains(comp.multivnd);
+	public static GaussianMixtureOld merge(GaussianMixtureOld gm) {
+		GaussianMixtureOld amixture = new GaussianMixtureOld();
+		Map<String, Set<GaussianDistribution>> component;
+		for (int i = 0; i < gm.ncomponent; i++) {
+			component = gm.mixture.get(i);
+			int idx = amixture.contains(component);
 			if (idx < 0) {
-				amixture.components.add(new Component((short) amixture.ncomponent, comp.weight, comp.multivnd));
+				amixture.weights.add(gm.weights.get(i));
+				amixture.mixture.add(gm.mixture.get(i));
 				amixture.ncomponent++;
 			} else {
-				Component acomp = amixture.getComponent((short) idx);
 				// CHECK Math.log(Math.exp(a) + Math.exp(b))
-				acomp.weight = MethodUtil.logAdd(acomp.weight, comp.weight);
+				double weight = MethodUtil.logAdd(amixture.weights.get(idx), gm.weights.get(i));
+				amixture.weights.set(idx, weight);
 			}
 		}
 		return amixture;
@@ -545,9 +504,9 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * @return
 	 */
 	public int contains(Map<String, Set<GaussianDistribution>> component) {
-		for (Component comp : components) {
-			if (isEqual(component, comp.multivnd)) {
-				return comp.id;
+		for (int i = 0; i < ncomponent; i++) {
+			if (isEqual(component, mixture.get(i))) {
+				return i;
 			}
 		}
 		return -1;
@@ -626,14 +585,18 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 */
 	public double evalInsideOutside(List<Double> sample, boolean normal) {
 		double ret = 0.0, value;
-		for (Component comp : components) {
+		for (int i = 0; i < ncomponent; i++) {
+			Map<String, Set<GaussianDistribution>> component = mixture.get(i);
 			value = 1.0;
-			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : comp.multivnd.entrySet()) {
+			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
 				for (GaussianDistribution gd : gaussian.getValue()) {
 					value *= gd.eval(sample, normal);
+					if (value < 0) {
+						logger.trace("\n---eval inside outside---\n" + this + "\n");
+					}
 				}
 			}
-			ret += Math.exp(comp.weight) * value;
+			ret += Math.exp(weights.get(i)) * value;
 		}
 		return ret;
 	}
@@ -642,7 +605,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 	/**
 	 * Eval the MoG using the given sample. Pay attention to the second parameter.
 	 * 
-	 * @param sample the sample, should be null
+	 * @param sample the sample
 	 * @param normal whether the sample is from N(0, 1) (true) or not (false); 
 	 * 		   when the sample is null, normal is used to indicate the return value in logarithm (true) or decimal (false)
 	 * @return
@@ -651,19 +614,17 @@ public class GaussianMixture extends Recorder implements Serializable {
 		if (sample == null) { return eval(normal); }
 		
 		double ret = 0.0, value;
-		for (Component comp : components) {
+		for (int i = 0; i < ncomponent; i++) {
+			// TODO This is not correct. Because every component contains the same variables but with different parameters.
+			Map<String, Set<GaussianDistribution>> component = mixture.get(i);
 			value = 1.0;
-			// TODO This is not correct because every component contains the same variables but with different parameters.
-			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : comp.multivnd.entrySet()) {
+			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
 				List<Double> slice = sample.get(gaussian.getKey());
 				for (GaussianDistribution gd : gaussian.getValue()) {
 					value *= gd.eval(slice, normal);
-					if (value < 0) {
-						logger.error("\n---derivate the mixting weight---\n" + this + "\n");
-					}
 				}
 			}
-			ret += Math.exp(comp.weight) * value;
+			ret += Math.exp(weights.get(i)) * value;
 		}
 		return ret;
 	}
@@ -676,8 +637,8 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * @return
 	 */
 	private double eval(boolean logarithm) {
-		for (Component comp : components) {
-			if (comp.multivnd.size() > 0) {
+		for (int i = 0; i < ncomponent; i++) {
+			if (mixture.get(i).size() > 0) {
 				logger.error("You are not supposed to call this method if the MoG contains multivnd.\n");
 				return -0.0;
 			}
@@ -693,15 +654,15 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * @param icomponent index of the component
 	 * @return
 	 */
-	public double derivateMixingWeight(Map<String, List<Double>> sample, int iComponent, boolean normal) {
+	public double derivateMixingWeight(Map<String, List<Double>> sample, int icomponent, boolean normal) {
 		double value = 1.0;
-		Component comp = getComponent((short) iComponent);
-		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : comp.multivnd.entrySet()) {
+		Map<String, Set<GaussianDistribution>> component = mixture.get(icomponent);
+		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
 			List<Double> slice = sample.get(gaussian.getKey());
 			for (GaussianDistribution gd : gaussian.getValue()) {
 				value *= gd.eval(slice, normal);
 				if (value < 0) {
-					logger.error("\n---derivate the mixting weight---\n" + this + "\n");
+					logger.trace("\n---derivate the mixting weight---\n" + this + "\n");
 				}
 			}
 		}
@@ -721,19 +682,19 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * @param normal     whether the sample is from N(0, 1) (true) or not (false)
 	 */
 	public void derivative(
-			boolean cumulative, int iComponent, double factor, 
+			boolean cumulative, int icomponent, double factor, 
 			Map<String, List<Double>> sample, Map<String, List<Double>> ggrads, List<Double> wgrads, boolean normal) {
-		if (!cumulative && iComponent == 0) { // CHECK stupid if...else...
+		if (!cumulative && icomponent == 0) { // CHECK stupid if...else...
 			wgrads.clear();
 			for (int i = 0; i < ncomponent; i++) {
 				wgrads.add(0.0);
 			}
 		}
-		Component comp = getComponent((short) iComponent);
-		double weight = Math.exp(comp.weight);
+		double weight = Math.exp(weights.get(icomponent));
 		double penalty = Params.reg ? (Params.l1 ? Params.wdecay * weight : Params.wdecay * Math.pow(weight, 2)) : 0.0;
-		double dMixingW = factor * weight * derivateMixingWeight(sample, iComponent, normal);
-		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : comp.multivnd.entrySet()) {
+		double dMixingW = factor * weight * derivateMixingWeight(sample, icomponent, normal);
+		Map<String, Set<GaussianDistribution>> component = mixture.get(icomponent);
+		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
 			List<Double> slice = sample.get(gaussian.getKey());
 			List<Double> grads = ggrads.get(gaussian.getKey());
 			for (GaussianDistribution gd : gaussian.getValue()) {
@@ -742,7 +703,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 			}
 		}
 		dMixingW += penalty;
-		wgrads.set(iComponent, wgrads.get(iComponent) + dMixingW);
+		wgrads.set(icomponent, wgrads.get(icomponent) + dMixingW);
 	}
 	
 	
@@ -753,17 +714,18 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * @param ggrads     gradients of the parameters of gaussians
 	 * @param wgrads     gradients of the mixing weights of MoG
 	 */
-	public void update(int iComponent, Map<String, List<Double>> ggrads, List<Double> wgrads, int nsample) {
-		Component comp = getComponent((short) iComponent);
-		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : comp.multivnd.entrySet()) {
+	public void update(int icomponent, Map<String, List<Double>> ggrads, List<Double> wgrads, int nsample) {
+		Map<String, Set<GaussianDistribution>> component = mixture.get(icomponent);
+		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
 			List<Double> grads = ggrads.get(gaussian.getKey());
 			for (GaussianDistribution gd : gaussian.getValue()) {
 				gd.update(grads, nsample);
 			}
 		}
-		double wgrad = wgrads.get(iComponent) / nsample;
+		double wgrad = wgrads.get(icomponent) / nsample;
 		wgrad = Params.clip ? (Math.abs(wgrad) > Params.absmax ? Params.absmax * Math.signum(wgrad) : wgrad) : wgrad;
-		comp.weight -= Params.lr * wgrad;
+		double weight = weights.get(icomponent) - Params.lr * wgrad;
+		weights.set(icomponent, weight);
 	}
 	
 	
@@ -774,9 +736,10 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 */
 	public List<Map<String, List<Double>>> zeroslike() {
 		List<Map<String, List<Double>>> grads = new ArrayList<Map<String, List<Double>>>(ncomponent);
-		for (Component comp : components) {
-			Map<String, List<Double>> gcomp = new HashMap<String, List<Double>>(comp.multivnd.size(), 1);
-			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : comp.multivnd.entrySet()) {
+		for (int i = 0; i < ncomponent; i++) {
+			Map<String, Set<GaussianDistribution>> component = mixture.get(i);
+			Map<String, List<Double>> gcomp = new HashMap<String, List<Double>>(component.size(), 1);
+			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
 				if (gaussian.getValue().size() > 1) { logger.error("Invalid rule weight.\n"); }
 				for (GaussianDistribution gd : gaussian.getValue()) {
 					List<Double> grad = new ArrayList<Double>(gd.dim * 2);
@@ -795,12 +758,12 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * @param icomponent 0 by default, since all components are of the same dimension
 	 * @return
 	 */
-	public List<HashMap<String, List<Double>>> zeroslike(int iComponent) {
-		Component comp = getComponent((short) iComponent);
+	public List<HashMap<String, List<Double>>> zeroslike(int icomponent) {
+		Map<String, Set<GaussianDistribution>> component = mixture.get(icomponent);
 		List<HashMap<String, List<Double>>> holder = new ArrayList<HashMap<String, List<Double>>>(2);
-		HashMap<String, List<Double>> sample = new HashMap<String, List<Double>>(comp.multivnd.size(), 1);
-		HashMap<String, List<Double>> truths = new HashMap<String, List<Double>>(comp.multivnd.size(), 1);
-		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : comp.multivnd.entrySet()) {
+		HashMap<String, List<Double>> sample = new HashMap<String, List<Double>>(component.size(), 1);
+		HashMap<String, List<Double>> truths = new HashMap<String, List<Double>>(component.size(), 1);
+		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
 			if (gaussian.getValue().size() > 1) { logger.error("Invalid rule weight.\n"); }
 			for (GaussianDistribution gd : gaussian.getValue()) {
 				sample.put(gaussian.getKey(), new ArrayList<Double>(gd.dim));
@@ -821,9 +784,9 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * @param truths     the placeholder
 	 * @param rnd        random
 	 */
-	public void sample(int iComponent, Map<String, List<Double>> sample, Map<String, List<Double>> truths, Random rnd) {
-		Component comp = getComponent((short) iComponent);
-		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : comp.multivnd.entrySet()) {
+	public void sample(int icomponent, Map<String, List<Double>> sample, Map<String, List<Double>> truths, Random rnd) {
+		Map<String, Set<GaussianDistribution>> component = mixture.get(icomponent);
+		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
 			 List<Double> slice = sample.get(gaussian.getKey());
 			 List<Double> truth = truths.get(gaussian.getKey());
 			 if (gaussian.getValue().size() > 1) { logger.error("Invalid rule weight.\n"); }
@@ -841,9 +804,9 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * @param sample     the sample from N(0, 1)
 	 * @param truths     the placeholder
 	 */
-	public void restoreSample(int iComponent, Map<String, List<Double>> sample, Map<String, List<Double>> truths) {
-		Component comp = getComponent((short) iComponent);
-		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : comp.multivnd.entrySet()) {
+	public void restoreSample(int icomponent, Map<String, List<Double>> sample, Map<String, List<Double>> truths) {
+		Map<String, Set<GaussianDistribution>> component = mixture.get(icomponent);
+		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
 			List<Double> slice = sample.get(gaussian.getKey());
 			List<Double> truth = truths.get(gaussian.getKey());
 			for (GaussianDistribution gd : gaussian.getValue()) {
@@ -854,15 +817,17 @@ public class GaussianMixture extends Recorder implements Serializable {
 	}
 	
 	
-	public int dim(int iComponent, String key) {
-		Component comp = null;
-		if ((comp = getComponent((short) iComponent)) != null) {
-			Set<GaussianDistribution> gausses = comp.multivnd.get(key);
-			for (GaussianDistribution gd : gausses) {
-				return gd.dim;
-			}
+	public int dim(int icomponent, String key) {
+		Set<GaussianDistribution> gausses = mixture.get(icomponent).get(key);
+		for (GaussianDistribution gd : gausses) {
+			return gd.dim;
 		}
 		return -1;
+	}
+	
+	
+	public int size(int icomponent) {
+		return mixture.get(icomponent).size();
 	}
 	
 	
@@ -871,44 +836,8 @@ public class GaussianMixture extends Recorder implements Serializable {
 	}
 	
 	
-	public PriorityQueue<Component> components() {
-		return components;
-	}
-	
-	public int size(int iComponent) {
-		Component comp = null;
-		if ((comp = getComponent((short) iComponent)) != null) {
-			return comp.multivnd.size();
-		}
-		return -1;
-	}
-	
-	
-	public double getWeight(int iComponent) {
-		Component comp = null;
-		if ((comp = getComponent((short) iComponent)) != null) {
-			return Math.exp(comp.weight);
-		}
-		return 0.0;
-	}
-	
-	
-	public List<Double> getWeights() {
-		List<Double> weights = new ArrayList<Double>(ncomponent);
-		for (Component comp : components) {
-			weights.add(comp.weight);
-		}
-		return weights;
-	}
-	
-	
-	public List<Map<String, Set<GaussianDistribution>>> getMixture() {
-		List<Map<String, Set<GaussianDistribution>>> mixture = 
-				new ArrayList<Map<String, Set<GaussianDistribution>>>(ncomponent);
-		for (Component comp : components) {
-			mixture.add(comp.multivnd);
-		}
-		return mixture;
+	public double getWeight(int icomponent) {
+		return Math.exp(weights.get(icomponent));
 	}
 	
 	
@@ -918,10 +847,17 @@ public class GaussianMixture extends Recorder implements Serializable {
 	public void clear() {
 		this.bias = 0.0;
 		this.ncomponent = 0;
-		for (Component comp : components) {
-			comp.clear();
+		this.weights.clear();
+		for (Map<String, Set<GaussianDistribution>> component : mixture) {
+			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : component.entrySet()) {
+				for (GaussianDistribution gd : gaussian.getValue()) {
+					gd.clear();
+				}
+				gaussian.getValue().clear();
+			}
+			component.clear();
 		}
-		this.components.clear();
+		this.mixture.clear();
 	}
 	
 	
@@ -934,12 +870,42 @@ public class GaussianMixture extends Recorder implements Serializable {
 		this.bias = bias;
 	}
 	
+	
+	public int getNcomponent() {
+		return ncomponent;
+	}
+
+
+	public void setNcomponent(int ncomponent) {
+		this.ncomponent = ncomponent;
+	}
+	
+	
+	public List<Double> getWeights() {
+		return weights;
+	}
+
+
+	public void setWeights(List<Double> weights) {
+		this.weights = weights;
+	}
+	
+
+	public List<Map<String, Set<GaussianDistribution>>> getMixture() {
+		return mixture;
+	}
+
+
+	public void setMixture(List<Map<String, Set<GaussianDistribution>>> mixture) {
+		this.mixture = mixture;
+	}
+
 
 	public String toString(boolean simple, int nfirst) {
 		if (simple) {
 			StringBuffer sb = new StringBuffer();
 			sb.append("GM [ncomponent=" + ncomponent + ", weights=" + 
-					MethodUtil.double2str(getWeights(), LVeGLearner.precision, nfirst, true, true));
+					MethodUtil.double2str(weights, LVeGLearner.precision, nfirst, true, true));
 			sb.append("]");
 			return sb.toString();
 		} else {
@@ -951,55 +917,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 	@Override
 	public String toString() {
 		return "GM [bias=" + bias + ", ncomponent=" + ncomponent + ", weights=" + 
-				MethodUtil.double2str(getWeights(), LVeGLearner.precision, -1, false, true) + ", mixture=" + getMixture() + "]";
-	}
-	
-	
-	protected static Comparator<Component> wcomparator = new Comparator<Component>() {
-		@Override
-		public int compare(Component o1, Component o2) {
-			double diff = o1.weight - o2.weight;
-			return diff > 0 ? -1 : (diff < 0 ? 1 : 0);
-		}
-	};
-	public static class Component {
-		protected short id;
-		protected double weight;
-		Map<String, Set<GaussianDistribution>> multivnd; // Multivariate Normal Distribution
-		
-		public Component(short id, double weight, Map<String, Set<GaussianDistribution>> multivnd) {
-			this.id = id;
-			this.weight = weight;
-			this.multivnd = multivnd;
-		}
-		
-		public void setWeight(double weight) {
-			this.weight = weight;
-		}
-		
-		public double getWeight() {
-			return weight;
-		}
-		
-		public void clear() {
-			id = -1;
-			weight = 0;
-			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : multivnd.entrySet()) {
-				Set<GaussianDistribution> value = null;
-				if ((value = gaussian.getValue()) != null) {
-					for (GaussianDistribution gd : value) {
-						if (gd != null) { gd.clear(); }
-					}
-					value.clear();
-				}
-			}
-			multivnd.clear();
-		}
-		
-		@Override
-		public String toString() {
-			return "GM [id=" + id + ", weight=" + String.format( "%." + LVeGLearner.precision + "f", weight) + ", multivnd=" + multivnd + "]";
-		}
+				MethodUtil.double2str(weights, LVeGLearner.precision, -1, true, true) + ", mixture=" + mixture + "]";
 	}
 	
 }

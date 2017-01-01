@@ -136,7 +136,7 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 	/**
 	 * Compute the two-order unary chain.
 	 */
-	protected void computeChainUnaryRule() {
+	protected void computeChainUnaryRule(boolean prune) {
 		Map<String, String> keys0 = new HashMap<String, String>();
 		Map<String, String> keys1 = new HashMap<String, String>();
 		keys1.put(GrammarRule.Unit.P, GrammarRule.Unit.RM);
@@ -166,7 +166,7 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 					UnaryGrammarRule uprule = (UnaryGrammarRule) prule;
 					pruleWeight = uprule.getWeight(); // one-order chain rule
 					if (uprule.rhs == ichild) {
-						weightSum.add(pruleWeight.copy(true));
+						weightSum.add(pruleWeight.copy(true), prune);
 						found = true;
 						cnt++;
 					} else { // two-order chain rule
@@ -176,7 +176,7 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 							cruleWeight = ucrule.getWeight();
 							aruleWeight = GaussianMixture.mulAndMarginalize(pruleWeight, cruleWeight, keys0, keys1);
 							if (iparent == 0) { aruleWeight = aruleWeight.replaceAllKeys(GrammarRule.Unit.C); }
-							weightSum.add(aruleWeight);
+							weightSum.add(aruleWeight, prune);
 							found = true;
 							cnt++;
 						}
@@ -202,10 +202,6 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 		}
 		logger.trace("# of new rules: " + count + " \t# of all rules: " + total + "\n");
 	}
-
-	
-	
-
 	
 
 	@Override
