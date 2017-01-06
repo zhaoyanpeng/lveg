@@ -161,19 +161,15 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	 * 
 	 * @param grads gradients
 	 */
-	protected void update(List<Double> grads, int nsample) {
+	protected void update(List<Double> grads) {
 		if (grads.size() == 0) { 
 //			logger.warn("No need to update because no gradients could be applied.");
 			return; 
 		}
-		double mgrad, vgrad, mu, var;
+		double mu, var;
 		for (int i = 0; i < dim; i++) {
-			mgrad = grads.get(i * 2) / nsample;
-			mgrad = Params.clip ? (Math.abs(mgrad) > Params.absmax ? Params.absmax * Math.signum(mgrad) : mgrad) : mgrad;
-			vgrad = grads.get(i * 2 + 1) / nsample;
-			vgrad = Params.clip ? (Math.abs(vgrad) > Params.absmax ? Params.absmax * Math.signum(vgrad) : vgrad) : vgrad;
-			mu = mus.get(i) - Params.lr * mgrad;
-			var = vars.get(i) - Params.lr * vgrad;
+			mu = mus.get(i) + grads.get(i * 2);
+			var = vars.get(i) + grads.get(i * 2 + 1);
 			mus.set(i, mu);
 			vars.set(i, var);
 		}

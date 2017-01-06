@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import edu.berkeley.nlp.PCFGLA.TreeAnnotations;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
 import edu.shanghaitech.ai.nlp.util.Numberer;
@@ -19,6 +20,7 @@ import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGLexicon;
 import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGLexiconOld;
 import edu.shanghaitech.ai.nlp.lveg.impl.Valuator;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
 import edu.shanghaitech.ai.nlp.optimization.Optimizer;
@@ -92,6 +94,10 @@ public class LVeGLearner extends LearnerConfig {
 		lexicon = new SimpleLVeGLexiconOld(numberer, -1);
 		Valuator<?, ?> valuator = new Valuator<Tree<State>, Double>(grammar, lexicon, opts.maxLenParsing, opts.reuse, opts.prune);
 		mvaluator = new ThreadPool(valuator, opts.nteval);
+		
+		/* to ease the parameters tuning */
+		GaussianMixture.config(opts.expzero);
+		Optimizer.config(opts.choice, random, opts.maxsample, opts.bsize, opts.minmw); // FIXME no errors, just alert you...
 				
 		if (opts.loadGrammar && opts.inGrammar != null) {
 			logger.trace("--->Loading grammars from \'" + opts.datadir + opts.inGrammar + "\'...\n");
@@ -101,10 +107,8 @@ public class LVeGLearner extends LearnerConfig {
 			lexicon.labelTrees(trainTrees); // FIXME no errors, just alert you to pay attention to it 
 			lexicon.labelTrees(testTrees); // no need to label the data if we load it from the object file
 			lexicon.labelTrees(devTrees); // no need to ... if ...
-			Optimizer.config(random, opts.maxsample, opts.bsize); // FIXME no errors, just alert you...
 			valuator = new Valuator<Tree<State>, Double>(grammar, lexicon, opts.maxLenParsing, opts.reuse, opts.prune);			
 			mvaluator = new ThreadPool(valuator, opts.nteval);
-			
 			for (Tree<State> tree : trainTrees) {
 				if (tree.getYield().size() == 6) {
 					globalTree = tree.shallowClone();
@@ -112,10 +116,8 @@ public class LVeGLearner extends LearnerConfig {
 				} // a global tree
 			}
 		} else {
-			Optimizer goptimizer = new ParallelOptimizer(LVeGLearner.random, opts.maxsample, 
-					opts.bsize, opts.ntgrad, opts.pgrad, opts.pmode, opts.pverbose);
-			Optimizer loptimizer = new ParallelOptimizer(LVeGLearner.random, opts.maxsample, 
-					opts.bsize, opts.ntgrad, opts.pgrad, opts.pmode, opts.pverbose);
+			Optimizer goptimizer = new ParallelOptimizer(opts.ntgrad, opts.pgrad, opts.pmode, opts.pverbose);
+			Optimizer loptimizer = new ParallelOptimizer(opts.ntgrad, opts.pgrad, opts.pmode, opts.pverbose);
 			grammar.setOptimizer(goptimizer);
 			lexicon.setOptimizer(loptimizer);
 			
@@ -149,9 +151,17 @@ public class LVeGLearner extends LearnerConfig {
 		mrParser = new MaxRuleParser<Tree<State>, Tree<String>>(grammar, lexicon, opts.maxLenParsing, opts.reuse, opts.prune);
 		trainer = new ThreadPool(lvegParser, opts.ntbatch);
 		
-		MethodUtil.saveTree2image(globalTree, filename, null, numberer);
+		/* State tree to String tree */
+		Tree<String> stringTree = StateTreeList.stateTreeToStringTree(globalTree, numberer);
+		MethodUtil.saveTree2image(null, filename, stringTree, numberer);
+		stringTree = TreeAnnotations.unAnnotateTree(stringTree, false);
+		MethodUtil.saveTree2image(null, filename + "_ua", stringTree, numberer);
+		
 		Tree<String> parseTree = mrParser.parse(globalTree);
 		MethodUtil.saveTree2image(null, treeFile + "_ini", parseTree, numberer);
+		stringTree = TreeAnnotations.unAnnotateTree(stringTree, false);
+		MethodUtil.saveTree2image(null, treeFile + "_ini_ua", parseTree, numberer);
+		
 		
 		logger.info("\n---SGD CONFIG---\n[parallel: batch-" + opts.pbatch + ", grad-" + opts.pgrad +"] " + Params.toString(false) + "\n");
 		
@@ -404,6 +414,8 @@ public class LVeGLearner extends LearnerConfig {
 		String filename = ends ? treeFile + "_" + cnt : treeFile + "_" + cnt + "_" + (isample / (opts.bsize * opts.nbatch));
 		Tree<String> parseTree = mrParser.parse(globalTree);
 		MethodUtil.saveTree2image(null, filename, parseTree, numberer);
+		parseTree = TreeAnnotations.unAnnotateTree(parseTree, false);
+		MethodUtil.saveTree2image(null, filename + "_ua", parseTree, numberer);
 		// store the log score
 		trllist.add(trll);
 		dellist.add(dell);

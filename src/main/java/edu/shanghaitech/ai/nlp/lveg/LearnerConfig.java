@@ -16,6 +16,7 @@ import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.data.StateTreeList;
 import edu.shanghaitech.ai.nlp.data.ObjectFileManager.CorpusFile;
 import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGLexicon;
+import edu.shanghaitech.ai.nlp.optimization.Optimizer.OptChoice;
 import edu.shanghaitech.ai.nlp.optimization.ParallelOptimizer.ParallelMode;
 import edu.shanghaitech.ai.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.util.Option;
@@ -67,8 +68,9 @@ public class LearnerConfig extends Recorder {
 		}
 		
 		public static String toString(boolean placeholder) {
-			return "Params [lr = " + lr + ", reg = " + reg + ", clip = " + clip + ", absmax = " + 
-					absmax + ", wdecay = " + wdecay + ", lambda = " + lambda + ", l1 = " + l1 + "]";
+			return "Params [lr = " + lr + ", reg = " + reg + ", clip = " + clip + ", absmax = " + absmax + 
+					", wdecay = " + wdecay + ", lambda = " + lambda + ", l1 = " + l1 + ", lambda1 = " + 
+					lambda1 + ", lambda2 = " + lambda2 + ", epsilon = " + epsilon + "]";
 		}
 	}
 	
@@ -105,8 +107,14 @@ public class LearnerConfig extends Recorder {
 		public double wdecay = 0.02;
 		@Option(name = "-l1", usage = "using l1 regularization (true) or l2 regularization (false) (default: true)")
 		public boolean l1 = true;
+		@Option(name = "-minmw", usage = "minimum mixing weight (default: 1e-6)")
+		public double minmw = 1e-6;
+		@Option(name = "-expzero", usage = "relative magnitude calculated as a / b = exp(log(a) - log(b)) (default: 1e-6)")
+		public double expzero = 1e-6;
 		@Option(name = "-epsilon", usage = "a small constant to avoid the division by zero (default: 1e-8)")
 		public double epsilon = 1e-8;
+		@Option(name = "-choice", usage = "optimization method (default: ADAM)")
+		public OptChoice choice = OptChoice.ADAM;
 		@Option(name = "-lambda", usage = "momentum used in the gradient update (default: 0.9)")
 		public double lambda = 0.9;
 		@Option(name = "-lambda1", usage = "1st. order momentum (default: 0.9)")

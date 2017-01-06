@@ -27,7 +27,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 */
 	private static final long serialVersionUID = -822680841484765529L;
 	private static final double LOG_ZERO = -1.0e10;
-	private static final double EXP_ZERO = -Math.log(-LOG_ZERO);
+	private static double EXP_ZERO = /*-Math.log(-LOG_ZERO)*/Math.log(1e-6);
 	protected PriorityQueue<Component> components;
 	
 	/**
@@ -51,12 +51,20 @@ public class GaussianMixture extends Recorder implements Serializable {
 	protected void initialize() {
 		short maximum = LVeGLearner.maxrandom;
 		for (int i = 0; i < ncomponent; i++) {
-			double weight = LVeGLearner.random.nextDouble();
-			while (weight == 0.0) { weight = LVeGLearner.random.nextDouble(); }
-			weight = weight < LVeGLearner.nratio ? -weight * maximum : weight * maximum;
+			double weight = (LVeGLearner.random.nextDouble() - LVeGLearner.nratio) * maximum;
 			Map<String, Set<GaussianDistribution>> multivnd = new HashMap<String, Set<GaussianDistribution>>();
 			components.add(new Component((short) i, weight, multivnd));
 		}
+	}
+	
+	
+	/**
+	 * To facilitate the parameter tuning.
+	 * 
+	 * @param expzero
+	 */
+	public static void config(double expzero) {
+		EXP_ZERO = expzero;
 	}
 	
 	
@@ -114,7 +122,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 					components.add(comp);
 					maxw = components.peek().weight;
 				} else {
-					comp.clear();
+//					comp.clear(); // CHECK find what influence this line can cause on parsers.
 				}
 			}
 		} else {
@@ -720,8 +728,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * @param wgrads     gradients of the mixing weights of MoG
 	 * @param normal     whether the sample is from N(0, 1) (true) or not (false)
 	 */
-	public void derivative(
-			boolean cumulative, int iComponent, double factor, 
+	public void derivative(boolean cumulative, int iComponent, double factor, 
 			Map<String, List<Double>> sample, Map<String, List<Double>> ggrads, List<Double> wgrads, boolean normal) {
 		if (!cumulative && iComponent == 0) { // CHECK stupid if...else...
 			wgrads.clear();
@@ -752,18 +759,18 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * @param icomponent index of the component of MoG
 	 * @param ggrads     gradients of the parameters of gaussians
 	 * @param wgrads     gradients of the mixing weights of MoG
+	 * @param minexp     minimum exponent representing the exponential mixing weight
 	 */
-	public void update(int iComponent, Map<String, List<Double>> ggrads, List<Double> wgrads, int nsample) {
+	public void update(int iComponent, Map<String, List<Double>> ggrads, List<Double> wgrads, double minexp) {
 		Component comp = getComponent((short) iComponent);
 		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : comp.multivnd.entrySet()) {
 			List<Double> grads = ggrads.get(gaussian.getKey());
 			for (GaussianDistribution gd : gaussian.getValue()) {
-				gd.update(grads, nsample);
+				gd.update(grads);
 			}
 		}
-		double wgrad = wgrads.get(iComponent) / nsample;
-		wgrad = Params.clip ? (Math.abs(wgrad) > Params.absmax ? Params.absmax * Math.signum(wgrad) : wgrad) : wgrad;
-		comp.weight -= Params.lr * wgrad;
+		comp.weight += wgrads.get(iComponent);
+		comp.weight = comp.weight < minexp ? minexp : comp.weight;
 	}
 	
 	
@@ -780,6 +787,9 @@ public class GaussianMixture extends Recorder implements Serializable {
 				if (gaussian.getValue().size() > 1) { logger.error("Invalid rule weight.\n"); }
 				for (GaussianDistribution gd : gaussian.getValue()) {
 					List<Double> grad = new ArrayList<Double>(gd.dim * 2);
+					for (int i = 0; i < gd.dim * 2; i++) {
+						grad.add(0.0); // preallocate memo
+					}
 					gcomp.put(gaussian.getKey(), grad);
 				}
 			}

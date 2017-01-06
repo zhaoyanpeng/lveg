@@ -69,12 +69,8 @@ public class ParallelOptimizer extends Optimizer {
 	}
 	
 	
-	public ParallelOptimizer(Random random, short msample, short bsize, 
-			short nthread, boolean parall, ParallelMode mode, boolean verbose) {
+	public ParallelOptimizer(short nthread, boolean parall, ParallelMode mode, boolean verbose) {
 		this();
-		rnd = random;
-		batchsize = bsize;
-		maxsample = msample;
 		this.mode = mode;
 		this.verbose = verbose;
 		this.nthread = nthread;

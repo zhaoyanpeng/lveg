@@ -39,19 +39,23 @@ public class Gradient extends Recorder implements Serializable {
 	
 	
 	public Gradient(GrammarRule rule, Random random, short msample, short bsize) {
-		initialize(rule);
+		GaussianMixture ruleW = rule.getWeight();
+		initialize(ruleW);
 		this.cntUpdate = 0;
-		this.partition = /*Optimizer.batchsize * */Optimizer.maxsample;
+		this.partition = Optimizer.batchsize * Optimizer.maxsample;
 		// TODO use lazy initialization?
-		this.wgrads1 = new ArrayList<Double>(wgrads.size());
-		this.wgrads2 = new ArrayList<Double>(wgrads.size());
+		this.wgrads1 = new ArrayList<Double>(ruleW.ncomponent());
+		this.wgrads2 = new ArrayList<Double>(ruleW.ncomponent());
 		this.ggrads1 = rule.getWeight().zeroslike();
 		this.ggrads2 = rule.getWeight().zeroslike();
+		for (int i = 0; i < ruleW.ncomponent(); i++) {
+			wgrads1.add(0.0);
+			wgrads2.add(0.0);
+		}
 	}
 	
 	
-	private void initialize(GrammarRule rule) {
-		GaussianMixture ruleW = rule.getWeight();
+	private void initialize(GaussianMixture ruleW) {
 		this.ggrads = ruleW.zeroslike();
 		this.wgrads = new ArrayList<Double>(ruleW.ncomponent());
 		List<HashMap<String, List<Double>>> holder = ruleW.zeroslike(0); 
@@ -68,7 +72,7 @@ public class Gradient extends Recorder implements Serializable {
 		update(Optimizer.choice);
 		GaussianMixture ruleW = rule.getWeight();
 		for (int icomponent = 0; icomponent < ruleW.ncomponent(); icomponent++) {
-			ruleW.update(icomponent, ggrads.get(icomponent), wgrads, Optimizer.maxsample/*maxsample * batchsize*/);
+			ruleW.update(icomponent, ggrads.get(icomponent), wgrads, Optimizer.minexp);
 		}
 		reset();
 		return true;

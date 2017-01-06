@@ -19,7 +19,7 @@ public abstract class Optimizer extends Recorder implements Serializable {
 	 * 
 	 */
 	private static final long serialVersionUID = -6185772433718644490L;
-	protected enum OptChoice {
+	public enum OptChoice {
 		NORMALIZED, SGD, ADAGRAD, RMSPROP, ADADELTA, ADAM
 	}
 	/**
@@ -36,6 +36,7 @@ public abstract class Optimizer extends Recorder implements Serializable {
 	protected static Random rnd;
 	protected static short maxsample = 2;
 	protected static short batchsize = 1;
+	protected static double minexp = Math.log(1e-6);
 	protected static OptChoice choice = OptChoice.ADAM;
 	
 	/**
@@ -103,10 +104,12 @@ public abstract class Optimizer extends Recorder implements Serializable {
 	 * @param msample
 	 * @param bsize
 	 */
-	public static void config(Random random, short msample, short bsize) {
+	public static void config(OptChoice achoice, Random random, short msample, short bsize, double minweight) {
+		choice = achoice;
 		rnd = random;
 		batchsize = bsize;
 		maxsample = msample;
+		minexp = Math.log(minweight);
 	}
 	
 	

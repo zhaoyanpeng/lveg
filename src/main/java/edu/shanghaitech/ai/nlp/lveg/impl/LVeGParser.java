@@ -50,6 +50,7 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 		double scoreS = doInsideOutside(sample); 
 		scores.add(scoreT);
 		scores.add(scoreS);
+		scores.add((double) sample.getTerminalYield().size());
 //		logger.trace("\no---id=" + Thread.currentThread().getId() + ", isample=" + isample + " " + 
 //				MethodUtil.double2str(scores, 3, -1, false, true) + " comes...\n"); // DEBUG
 		synchronized (inferencer) {

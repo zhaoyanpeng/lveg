@@ -181,7 +181,7 @@ public class SimpleMinimizer extends Recorder implements Serializable {
 				removed = true; // CHECK avoid impossible remove
 			}
 			if (updated) {
-				ruleW.update(icomponent, ggrads, wgrads, Optimizer.maxsample);
+				ruleW.update(icomponent, ggrads, wgrads, Optimizer.minexp);
 			}
 		}
 	}
