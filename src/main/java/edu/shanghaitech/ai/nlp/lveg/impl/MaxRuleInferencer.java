@@ -137,6 +137,7 @@ public class MaxRuleInferencer extends Inferencer {
 			for (Short ikey : ikeyLevel0) {
 				if ((count = chart.getMaxRuleCount(ikey, idx, (short) 0)) == Double.NEGATIVE_INFINITY) { continue; }
 				for (Short okey : okeyLevel0) {
+					if (ikey == okey) { continue; } // nonsense
 					if ((maxcnt = chart.getMaxRuleCount(okey, idx)) > count) { continue; }
 					if ((cinScore = chart.getInsideScore(ikey, idx, (short) 0)) == null || 
 							(outScore = chart.getOutsideScore(okey, idx, (short) 0)) == null) {
