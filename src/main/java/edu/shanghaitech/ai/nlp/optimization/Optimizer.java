@@ -19,6 +19,9 @@ public abstract class Optimizer extends Recorder implements Serializable {
 	 * 
 	 */
 	private static final long serialVersionUID = -6185772433718644490L;
+	protected enum OptChoice {
+		NORMALIZED, SGD, ADAGRAD, RMSPROP, ADADELTA, ADAM
+	}
 	/**
 	 * Pseudo counts of grammar rules given the parse tree (countWithT) or the sentence (countWithS).
 	 */
@@ -33,7 +36,7 @@ public abstract class Optimizer extends Recorder implements Serializable {
 	protected static Random rnd;
 	protected static short maxsample = 2;
 	protected static short batchsize = 1;
-	
+	protected static OptChoice choice = OptChoice.ADAM;
 	
 	/**
 	 * @param scoreSandT the parse tree score (odd index) and the sentence score (even index)

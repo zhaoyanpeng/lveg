@@ -7,8 +7,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import edu.shanghaitech.ai.nlp.lveg.LearnerConfig.Params;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+import edu.shanghaitech.ai.nlp.optimization.Optimizer.OptChoice;
 import edu.shanghaitech.ai.nlp.util.Recorder;
 
 /**
@@ -27,8 +29,10 @@ public class Gradient extends Recorder implements Serializable {
 	protected static final short MAX_BATCH_SIZE = 1;
 	protected boolean updated;
 	protected boolean cumulative;
-	protected List<Double> wgrads;
-	protected List<Map<String, List<Double>>> ggrads;
+	protected double cntUpdate;
+	protected double partition;
+	protected List<Double> wgrads, wgrads1, wgrads2;
+	protected List<Map<String, List<Double>>> ggrads, ggrads1, ggrads2;
 	
 	protected Map<String, List<Double>> truths;
 	protected Map<String, List<Double>> sample;
@@ -36,6 +40,13 @@ public class Gradient extends Recorder implements Serializable {
 	
 	public Gradient(GrammarRule rule, Random random, short msample, short bsize) {
 		initialize(rule);
+		this.cntUpdate = 0;
+		this.partition = /*Optimizer.batchsize * */Optimizer.maxsample;
+		// TODO use lazy initialization?
+		this.wgrads1 = new ArrayList<Double>(wgrads.size());
+		this.wgrads2 = new ArrayList<Double>(wgrads.size());
+		this.ggrads1 = rule.getWeight().zeroslike();
+		this.ggrads2 = rule.getWeight().zeroslike();
 	}
 	
 	
@@ -53,6 +64,8 @@ public class Gradient extends Recorder implements Serializable {
 	
 	protected boolean apply(GrammarRule rule) {
 		if (!updated) { return false; } // no need to update because no gradients could be applied
+		cntUpdate++; // count of gradient update
+		update(Optimizer.choice);
 		GaussianMixture ruleW = rule.getWeight();
 		for (int icomponent = 0; icomponent < ruleW.ncomponent(); icomponent++) {
 			ruleW.update(icomponent, ggrads.get(icomponent), wgrads, Optimizer.maxsample/*maxsample * batchsize*/);
@@ -180,6 +193,218 @@ public class Gradient extends Recorder implements Serializable {
 		}
 		dRuleW = Math.exp(Math.log(countWithS) - scoreS) - Math.exp(Math.log(countWithT) - scoreT);
 		return dRuleW;
+	}
+
+	
+	private void update(OptChoice choice) {
+		switch (choice) {
+		case NORMALIZED: { 
+			normalize();
+			break;
+		}
+		case SGD: {
+			sgd();
+			break;
+		}
+		case ADAGRAD: {
+			adagrad();
+			break;
+		}
+		case RMSPROP: {
+			rmsprop();
+			break;
+		}
+		case ADADELTA: {
+			adadelta();
+			break;
+		}
+		case ADAM: {
+			adam();
+			break;
+		}
+		default: {
+			logger.error("unmatched optimization choice.\n");
+		}
+		}
+	}
+	
+	
+	private void normalize() {
+		double grad;
+		for (int k = 0; k < wgrads.size(); k++) { // component k
+			Map<String, List<Double>> gcomp = ggrads.get(k);
+			for (Map.Entry<String, List<Double>> grads : gcomp.entrySet()) {
+				List<Double> grads0 = grads.getValue();
+				for (int d = 0; d < grads0.size(); d++) { // dimension d
+					grad = Params.lr * Math.signum(grads0.get(d)) / partition;
+					grad = clip(grad);
+					grads0.set(d, grad);
+				}
+			}
+			grad = Params.lr * Math.signum(wgrads.get(k)) / partition;
+			grad = clip(grad);
+			wgrads.set(k, grad);
+		}
+	}
+	
+	
+	private void sgd() {
+		double g1st, grad;
+		for (int k = 0; k < wgrads.size(); k++) { // component k
+			Map<String, List<Double>> gcomp = ggrads.get(k);
+			Map<String, List<Double>> gcomp1 = ggrads1.get(k);
+			for (Map.Entry<String, List<Double>> grads : gcomp.entrySet()) {
+				List<Double> grads0 = grads.getValue();
+				List<Double> grads1 = gcomp1.get(grads.getKey());
+				for (int d = 0; d < grads0.size(); d++) { // dimension d
+					grad = grads0.get(d) / partition;
+					g1st = Params.lambda * grads1.get(d) - Params.lr * grad;
+					grads1.set(d, g1st);
+					grad = g1st;
+					grad = clip(grad);
+					grads0.set(d, grad);
+				}
+			}
+			grad = wgrads.get(k) / partition;
+			g1st = Params.lambda * wgrads1.get(k) - Params.lr * grad;
+			wgrads1.set(k, g1st);
+			grad = g1st;
+			grad = clip(grad);
+			wgrads.set(k, grad);
+		}
+	}
+	
+	
+	private void adagrad() {
+		double g2nd, grad;
+		for (int k = 0; k < wgrads.size(); k++) { // component k
+			Map<String, List<Double>> gcomp = ggrads.get(k);
+			Map<String, List<Double>> gcomp2 = ggrads2.get(k);
+			for (Map.Entry<String, List<Double>> grads : gcomp.entrySet()) {
+				List<Double> grads0 = grads.getValue();
+				List<Double> grads2 = gcomp2.get(grads.getKey());
+				for (int d = 0; d < grads0.size(); d++) { // dimension d
+					grad = grads0.get(d) / partition;
+					g2nd = grads2.get(d) + grad * grad;
+					grads2.set(d, g2nd);
+					grad = -Params.lr * grad / Math.sqrt(g2nd+ Params.epsilon);
+					grad = clip(grad);
+					grads0.set(d, grad);
+				}
+			}
+			grad = wgrads.get(k) / partition;
+			g2nd = wgrads2.get(k) + grad * grad;
+			wgrads2.set(k, g2nd);
+			grad = -Params.lr * grad / Math.sqrt(g2nd + Params.epsilon);
+			grad = clip(grad);
+			wgrads.set(k, grad);
+		}
+	}
+	
+	
+	private void rmsprop() {
+		double g2nd, grad;
+		for (int k = 0; k < wgrads.size(); k++) { // component k
+			Map<String, List<Double>> gcomp = ggrads.get(k);
+			Map<String, List<Double>> gcomp2 = ggrads2.get(k);
+			for (Map.Entry<String, List<Double>> grads : gcomp.entrySet()) {
+				List<Double> grads0 = grads.getValue();
+				List<Double> grads2 = gcomp2.get(grads.getKey());
+				for (int d = 0; d < grads0.size(); d++) { // dimension d
+					grad = grads0.get(d) / partition;
+					g2nd = Params.lambda * grads2.get(d) + (1 - Params.lambda) * grad * grad;
+					grads2.set(d, g2nd);
+					grad = -Params.lr * grad / Math.sqrt(g2nd + Params.epsilon);
+					grad = clip(grad);
+					grads0.set(d, grad);
+				}
+			}
+			grad = wgrads.get(k) / partition;
+			g2nd = Params.lambda * wgrads2.get(k) + (1 - Params.lambda) * grad * grad;
+			wgrads2.set(k, g2nd);
+			grad = -Params.lr * grad / (Math.sqrt(g2nd) + Params.epsilon);
+			grad = clip(grad);
+			wgrads.set(k, grad);
+		}
+	}
+	
+	
+	private void adadelta() {
+		double v2nd, g2nd, grad;
+		for (int k = 0; k < wgrads.size(); k++) { // component k
+			Map<String, List<Double>> gcomp = ggrads.get(k);
+			Map<String, List<Double>> gcomp1 = ggrads1.get(k);
+			Map<String, List<Double>> gcomp2 = ggrads2.get(k);
+			for (Map.Entry<String, List<Double>> grads : gcomp.entrySet()) {
+				List<Double> grads0 = grads.getValue();
+				List<Double> grads1 = gcomp1.get(grads.getKey());
+				List<Double> grads2 = gcomp2.get(grads.getKey());
+				for (int d = 0; d < grads0.size(); d++) { // dimension d
+					grad = grads0.get(d) / partition;
+					v2nd = grads1.get(d);
+					g2nd = Params.lambda * grads2.get(d) + (1 - Params.lambda) * grad * grad;
+					grad = - Math.sqrt(v2nd + Params.epsilon) * grad / Math.sqrt(g2nd + Params.epsilon);
+					grad = clip(grad);
+					v2nd = Params.lambda * v2nd + (1 - Params.lambda) * grad * grad;
+					grads1.set(d, v2nd);
+					grads2.set(d, g2nd);
+					grads0.set(d, grad);
+				}
+			}
+			grad = wgrads.get(k) / partition;
+			v2nd = wgrads1.get(k);
+			g2nd = Params.lambda * wgrads2.get(k) + (1 - Params.lambda) * grad * grad;
+			grad = - Math.sqrt(v2nd + Params.epsilon) * grad / Math.sqrt(g2nd + Params.epsilon);
+			grad = clip(grad);
+			v2nd = Params.lambda * v2nd + (1 - Params.lambda) * grad * grad;
+			wgrads1.set(k, v2nd);
+			wgrads2.set(k, g2nd);
+			wgrads.set(k, grad);
+		}
+	}
+	
+	
+	private void adam() {
+		double g1st, g2nd, grad;
+		double ldecay1 = 1 - Math.pow(Params.lambda1, cntUpdate);
+		double ldecay2 = 1 - Math.pow(Params.lambda2, cntUpdate);
+		for (int k = 0; k < wgrads.size(); k++) { // component k
+			Map<String, List<Double>> gcomp = ggrads.get(k);
+			Map<String, List<Double>> gcomp1 = ggrads1.get(k);
+			Map<String, List<Double>> gcomp2 = ggrads2.get(k);
+			for (Map.Entry<String, List<Double>> grads : gcomp.entrySet()) {
+				List<Double> grads0 = grads.getValue();
+				List<Double> grads1 = gcomp1.get(grads.getKey());
+				List<Double> grads2 = gcomp2.get(grads.getKey());
+				for (int d = 0; d < grads0.size(); d++) { // dimension d
+					grad = grads0.get(d) / partition;
+					g1st = Params.lambda1 * grads1.get(d) + (1 - Params.lambda1) * grad;
+					g2nd = Params.lambda2 * grads2.get(d) + (1 - Params.lambda2) * grad * grad;
+					grads1.set(d, g1st);
+					grads2.set(d, g2nd);
+					g1st /= ldecay1;
+					g2nd /= ldecay2;
+					grad = -Params.lr * g1st / (Math.sqrt(g2nd) + Params.epsilon);
+					grad = clip(grad);
+					grads0.set(d, grad);
+				}
+			}
+			grad = wgrads.get(k) / partition;
+			g1st = Params.lambda1 * wgrads1.get(k) + (1 - Params.lambda1) * grad;
+			g2nd = Params.lambda2 * wgrads2.get(k) + (1 - Params.lambda2) * grad * grad;
+			wgrads1.set(k, g1st);
+			wgrads2.set(k, g2nd);
+			g1st /= ldecay1;
+			g2nd /= ldecay2;
+			grad = -Params.lr * g1st / (Math.sqrt(g2nd) + Params.epsilon);
+			grad = clip(grad);
+			wgrads.set(k, grad);
+		}
+	}
+	
+	
+	private static double clip(double grad) {
+		return Params.clip ? (Math.abs(grad) > Params.absmax ? Params.absmax * Math.signum(grad) : grad) : grad;
 	}
 	
 }

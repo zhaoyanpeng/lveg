@@ -12,8 +12,10 @@
 -clip, true,
 -absmax, 5.0,
 -wdecay, 0.02,
--momentum, 0.9,
 -l1, true,
+-lambda, 0.9,
+-lambda1, 0.9,
+-lambda2, 0.9,
 
 -inGrammar, lvegrammar_1_0.gr,
 -outGrammar, lvegrammar,

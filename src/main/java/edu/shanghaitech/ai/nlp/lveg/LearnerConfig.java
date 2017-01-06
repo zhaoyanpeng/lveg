@@ -48,7 +48,10 @@ public class LearnerConfig extends Recorder {
 		public static boolean clip;
 		public static double absmax;
 		public static double wdecay;
-		public static double momentum;
+		public static double lambda;
+		public static double lambda1;
+		public static double lambda2;
+		public static double epsilon;
 		
 		public static void config(Options opts) {
 			lr = opts.lr;
@@ -57,12 +60,15 @@ public class LearnerConfig extends Recorder {
 			clip = opts.clip;
 			absmax = opts.absmax;
 			wdecay = opts.wdecay;
-			momentum = opts.momentum;
+			lambda = opts.lambda;
+			lambda1 = opts.lambda1;
+			lambda2 = opts.lambda2;
+			epsilon = opts.epsilon;
 		}
 		
 		public static String toString(boolean placeholder) {
 			return "Params [lr = " + lr + ", reg = " + reg + ", clip = " + clip + ", absmax = " + 
-					absmax + ", wdecay = " + wdecay + ", momentum = " + momentum + ", l1 = " + l1 + "]";
+					absmax + ", wdecay = " + wdecay + ", lambda = " + lambda + ", l1 = " + l1 + "]";
 		}
 	}
 	
@@ -97,10 +103,16 @@ public class LearnerConfig extends Recorder {
 		public double absmax = 5.0;
 		@Option(name = "-wdecay", usage = "weight decay rate (default: 0.02)")
 		public double wdecay = 0.02;
-		@Option(name = "-momentum", usage = "momentum used in the gradient update (default: 0.9)")
-		public double momentum = 0.9;
 		@Option(name = "-l1", usage = "using l1 regularization (true) or l2 regularization (false) (default: true)")
 		public boolean l1 = true;
+		@Option(name = "-epsilon", usage = "a small constant to avoid the division by zero (default: 1e-8)")
+		public double epsilon = 1e-8;
+		@Option(name = "-lambda", usage = "momentum used in the gradient update (default: 0.9)")
+		public double lambda = 0.9;
+		@Option(name = "-lambda1", usage = "1st. order momentum (default: 0.9)")
+		public double lambda1 = 0.9;
+		@Option(name = "-lambda2", usage = "2nd. order momentum (default: 0.9)")
+		public double lambda2 = 0.9;
 		/* optimization-parameter section ends*/
 		
 		/* grammar-data section begins */
