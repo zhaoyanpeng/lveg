@@ -19,7 +19,7 @@
 -choice, RMSPROP,
 -lambda, 0.9,
 -lambda1, 0.9,
--lambda2, 0.9,
+-lambda2, 0.99,
 
 -inGrammar, lvegrammar_1_0.gr,
 -outGrammar, lvegrammar,
@@ -58,4 +58,4 @@
 -precision, 3,
 -rndomseed, 0,
 
--imagePrefix, log/maxrule
+-imagePrefix, log/copy_clear_maxrule

@@ -107,12 +107,12 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 			chart = new Chart(nword, true);
 		}
 //		logger.trace("\nInside score...\n"); // DEBUG
-		inferencer.insideScore(chart, sentence, nword, prune);
+		Inferencer.insideScore(chart, sentence, nword, prune);
 //		MethodUtil.debugChart(Chart.iGetChart(), (short) 2); // DEBUG
 
 //		logger.trace("\nOutside score...\n"); // DEBUG
-		inferencer.setRootOutsideScore(chart);
-		inferencer.outsideScore(chart, sentence, nword, prune);
+		Inferencer.setRootOutsideScore(chart);
+		Inferencer.outsideScore(chart, sentence, nword, prune);
 //		MethodUtil.debugChart(Chart.oGetChart(), (short) 2); // DEBUG
 		
 		return chart;

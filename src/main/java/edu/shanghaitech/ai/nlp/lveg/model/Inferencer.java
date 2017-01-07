@@ -604,7 +604,15 @@ public abstract class Inferencer extends Recorder implements Serializable {
 		
 		private void addScore(short key, GaussianMixture gm, boolean prune) {
 			if (containsKey(key)) { 
+				// gm is passed into this method by addScore(short, GaussianMixture, short, boolean),
+				// before that it has been added into Cell.scores, and is filtered when 
+				// GaussianMixture.add(GaussianMixture, boolean) is called. Here gm may be filtered
+				// again by calling totals.get(key).add(...), in which some components of gm may be 
+				// cleared through the reference and further modify Cell.scores. The safe practice is
+				// copying gm and adding into Cell.totals, but that results in unnecessary memory
+				// overhead, so I choose not to clear the filtered component in GaussianMixture.add()
 				totals.get(key).add(gm, prune);
+				/*totals.get(key).add(gm.copy(true), prune);*/
 			} else {
 				// it should own its own memory space, so that the score in a 
 				// specific level could not be modified through the reference

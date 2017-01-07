@@ -122,7 +122,9 @@ public class GaussianMixture extends Recorder implements Serializable {
 					components.add(comp);
 					maxw = components.peek().weight;
 				} else {
-//					comp.clear(); // CHECK find what influence this line can cause on parsers.
+					/*comp.clear();*/ 
+					// CHECK find what influence this line can cause on parsers.
+					// DONE  see comments in Inferencer.Cell.addScore(...).
 				}
 			}
 		} else {
