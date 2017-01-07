@@ -113,7 +113,7 @@ public class LearnerConfig extends Recorder {
 		public double expzero = 1e-6;
 		@Option(name = "-epsilon", usage = "a small constant to avoid the division by zero (default: 1e-8)")
 		public double epsilon = 1e-8;
-		@Option(name = "-choice", usage = "optimization method (default: ADAM)")
+		@Option(name = "-choice", usage = "optimization methods: NORMALIZED, SGD, ADAGRAD, RMSPROP, ADADELTA, ADAM (default: ADAM)")
 		public OptChoice choice = OptChoice.ADAM;
 		@Option(name = "-lambda", usage = "momentum used in the gradient update (default: 0.9)")
 		public double lambda = 0.9;
@@ -190,7 +190,7 @@ public class LearnerConfig extends Recorder {
 		/* evaluation section ends */
 		
 		/* logger configurations section begins */
-		@Option(name = "-logtype", usage = "console (false) or file (true) (default: true)")
+		@Option(name = "-logtype", usage = "console (false) or file and console (true) (default: true)")
 		public boolean logtype = false;
 		@Option(name = "-logfile", usage = "log file name (default: log/log)")
 		public String logfile = "log/log";
@@ -203,8 +203,8 @@ public class LearnerConfig extends Recorder {
 		/* logger-configurations section ends */
 		
 		/* file prefix section begins */
-		@Option(name = "-imagePrefix", usage = "prefix of the image of the parse tree obtained from max rule parser (default: maxrule)")
-		public String imagePrefix = "log/maxrule";
+		@Option(name = "-imgprefix", usage = "prefix of the image of the parse tree obtained from max rule parser (default: maxrule)")
+		public String imgprefix = "log/maxrule";
 		/* file prefix section ends */
 		
 		
@@ -265,7 +265,7 @@ public class LearnerConfig extends Recorder {
 			throw new IllegalArgumentException("Output file is required.");
 		}
 		if (opts.logtype) {
-			logger = logUtil.getFileLogger(opts.logfile);
+			logger = logUtil.getBothLogger(opts.logfile);
 		} else {
 			logger = logUtil.getConsoleLogger();
 		}

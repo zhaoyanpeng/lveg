@@ -7,27 +7,43 @@ public class LogUtilTest extends Recorder {
 
 	@Test
 	public void testLogUtils() {
-		String logFile = "log/unittest"; 
+		String logFile = "log/0_logger_test"; 
 		/* get console logger before the file logger */
-		Logger logger0 = logUtil.getConsoleLogger();
+		
+//		Logger logger0 = logUtil.getConsoleLogger();
 		Logger logger1 = logUtil.getFileLogger(logFile);
+		Logger logger0 = logUtil.getConsoleLogger();
 		
-		logger1.fatal("File Fatal 1");
+		logger1.fatal("File Fatal 1\n");
 		
-		logger0.trace("Trace");
-		logger0.debug("Debug");
-		logger0.info("Info");
-		logger0.warn("Warn");
-		logger0.error("Error");
-		logger0.fatal("Fatal");
+		logger0.trace("Trace\n");
+		logger0.debug("Debug\n");
+		logger0.info("Info\n");
+		logger0.warn("Warn\n");
+		logger0.error("Error\n");
+		logger0.fatal("Fatal\n");
 		
-		logger1.trace("Trace");
-		logger1.debug("Debug");
-		logger1.info("Info");
-		logger1.warn("Warn");
-		logger1.error("Error");
-		logger1.fatal("Fatal");
+		logger1.trace("Trace\n");
+		logger1.debug("Debug\n");
+		logger1.info("Info\n");
+		logger1.warn("Warn\n");
+		logger1.error("Error\n");
+		logger1.fatal("Fatal\n");
 		
-		logger0.fatal("File Fatal 1");
+		logger0.fatal("File Fatal 1\n");
+		
+	}
+	
+//	@Test
+	public void testBothLogger() {
+		String logfile = "log/0_logger_test"; 
+		Logger logger0 = logUtil.getBothLogger(logfile);
+		
+		logger0.trace("Trace\n");
+		logger0.debug("Debug\n");
+		logger0.info("Info\n");
+		logger0.warn("Warn\n");
+		logger0.error("Error\n");
+		logger0.fatal("Fatal\n");
 	}
 }

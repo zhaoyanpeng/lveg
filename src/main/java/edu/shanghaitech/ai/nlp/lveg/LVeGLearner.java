@@ -85,8 +85,8 @@ public class LVeGLearner extends LearnerConfig {
 		devTrees = trees.get(ID_DEV);
 		
 		double ll = Double.NEGATIVE_INFINITY;
-		String filename = opts.imagePrefix + "_gd";
-		treeFile = opts.imagePrefix + "_tr";
+		String filename = opts.imgprefix + "_gd";
+		treeFile = opts.imgprefix + "_tr";
 		
 		Numberer numberer = wrapper.getGlobalNumberer(KEY_TAG_SET);
 		

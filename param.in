@@ -37,7 +37,7 @@
 -reuse, true,
 -prune, true,
 -bsize, 30,
--nepoch, 10,
+-nepoch, 20,
 -maxsample, 3,
 -maxLenParsing, 120,
 -relativediff, 1e-6,
@@ -52,10 +52,10 @@
 -eontrain, true,
 -eondev, false,
 
--logtype, false,
--logfile, log/log_log_log,
+-logtype, true,
+-logfile, log/0_log_log,
 -nbatch, 1,
 -precision, 3,
 -rndomseed, 0,
 
--imagePrefix, log/copy_clear_maxrule
+-imgprefix, log/copy_clear_maxrule

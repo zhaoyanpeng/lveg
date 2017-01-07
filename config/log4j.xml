@@ -33,7 +33,7 @@
     </logger>
     
     <root>
-    	<level value="off" />
+    	<level value="TRACE" />
     	<appender-ref ref="FILE" />
     	<appender-ref ref="CONSOLE" />
     </root>      

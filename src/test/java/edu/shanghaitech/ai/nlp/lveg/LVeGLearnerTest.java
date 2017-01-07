@@ -31,7 +31,6 @@ public class LVeGLearnerTest extends Recorder {
 		}
 	}
 	
-	
 //	@Test
 	public void testLocally() {
 		String[] args = null;

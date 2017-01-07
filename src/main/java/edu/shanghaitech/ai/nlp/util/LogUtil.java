@@ -24,6 +24,7 @@ public class LogUtil implements Serializable {
 	
 	private static Logger logCons = null;
 	private static Logger logFile = null;
+	private static Logger logBoth = null;
 	
 	private final static String KEY = "log.name";
 	private final static String LOGGER_XML = "config/log4j.xml";
@@ -32,6 +33,7 @@ public class LogUtil implements Serializable {
 	private LogUtil() {
 		logFile = Logger.getLogger("FILE");
 		logCons = Logger.getLogger("CONSOLE");
+		logBoth = Logger.getRootLogger();
 	}
 	
 
@@ -40,6 +42,13 @@ public class LogUtil implements Serializable {
 			instance = new LogUtil();
 		}
 		return instance;
+	}
+	
+	
+	public Logger getBothLogger(String log) {
+		System.setProperty(KEY, log);
+		DOMConfigurator.configure(LOGGER_XML);
+		return logBoth;
 	}
 	
 	
