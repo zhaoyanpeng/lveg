@@ -2,14 +2,19 @@ package edu.shanghaitech.ai.nlp.lveg.impl;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import edu.berkeley.nlp.PCFGLA.Corpus;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.data.StateTreeList;
+import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.Unit;
 import edu.shanghaitech.ai.nlp.syntax.State;
 import edu.shanghaitech.ai.nlp.util.Indexer;
 import edu.shanghaitech.ai.nlp.util.Numberer;
@@ -130,20 +135,30 @@ public class SimpleLVeGLexiconOld extends LVeGLexicon {
 
 
 	@Override
-	public GaussianMixture score(State word, short idTag) {
+	public GaussianMixture score(State word, short itag) {
 		// map the word to its real index
 		int wordIdx = word.wordIdx;
-		if (wordIdx < 0) {
-			wordIdx = wordIndexer.indexOf(word.getName());
+		String signature = "(X)", name = word.getName();
+		if (wordIdx < 0) { // the unlabeled word
+			wordIdx = wordIndexer.indexOf(name);
 			word.wordIdx = wordIdx;
 		}
-		int ruleIdx = wordIndexMap[idTag].indexOf(wordIdx); 
-		if (ruleIdx == -1) {
-			System.err.println("Unknown word: " + word.getName());
-			return null;
+		if (wordIdx == -1) { // the rare word
+			signature = getSignature(name, word.from);
+			wordIdx = wordIndexer.indexOf(signature);
+			word.wordIdx = wordIdx;
 		}
-		return urules[idTag][ruleIdx].getWeight();
-	}                                           
+		if (wordIdx == -1) { // the unknown word
+			System.err.println("unknown word signature [tag = " + itag + ", word = " + name + ", sig = " +  signature + "]");
+			return rndWeight(1e-5);
+		}
+		int ruleIdx = wordIndexMap[itag].indexOf(wordIdx); 
+		if (ruleIdx == -1) { // the unknown rule
+			System.err.println("unknown lexicon rule [tag = " + itag + ", word = " + name + ", sig = " +  signature + "]");
+			return rndWeight(Double.NEGATIVE_INFINITY);
+		}
+		return urules[itag][ruleIdx].getWeight();
+	}      
 	
 	
 	@Override

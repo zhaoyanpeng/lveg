@@ -32,7 +32,11 @@ public class LearnerConfig extends Recorder {
 	protected final static String ID_DEV = "dev";
 	
 	public final static String KEY_TAG_SET = "tag";
+	public static double minmw = 1e-6;
 	public static double nratio = 0.5;
+	
+	public static short cntdrop = 0;
+	public static double bestscore = Double.NEGATIVE_INFINITY;
 	
 	public static short dim = 2;
 	public static short ncomponent = 2;
@@ -132,6 +136,8 @@ public class LearnerConfig extends Recorder {
 		public boolean saveGrammar = false;
 		@Option(name = "-loadGrammar", usage = "load grammar from the object file (true) or not (false) (default: false)")
 		public boolean loadGrammar = false;
+		@Option(name = "-nbatchSave", usage = "# of batches after which the grammar is saved (default: 20")
+		public short nbatchSave = 20;
 		/* grammar-data section ends */
 		
 		/* parallel configurations section begins */
@@ -164,6 +170,8 @@ public class LearnerConfig extends Recorder {
 		public short maxsample = 3;
 		@Option(name = "-maxLenParsing", usage = "which is used to initialize the size of the chart used in CYK and [inside, outside] score calculation (default: 120)")
 		public short maxLenParsing = 120;
+		@Option(name = "-nAllowedDrop", usage = "# of allowed iterations in which the validation likelihood drops (default: 6)")
+		public short nAllowedDrop = 6;
 		@Option(name = "-relativediff", usage = "maximum relative difference between the neighboring iterations (default: 1e-6)")
 		public double relativerror = 1e-6;
 		@Option(name = "-maxramdom", usage = "maximum random double (int) value when initializing MoGul parameters (Default: 1)")
@@ -273,6 +281,7 @@ public class LearnerConfig extends Recorder {
 		logger.info("Random number generator seeded at " + opts.rndomseed + ".\n");
 		
 		dim = opts.dim;
+		minmw = opts.minmw;
 		nratio = opts.nratio;
 		precision = opts.precision;
 		maxrandom = opts.maxrandom;
@@ -303,9 +312,9 @@ public class LearnerConfig extends Recorder {
 				logger.info("Adding development set to the training data.\n");
 				trainString.addAll(devString);
 			}
-			trainTrees = stringTreeToStateTree(trainString, numberer, opts);
-			testTrees = stringTreeToStateTree(testString, numberer, opts);
-			devTrees = stringTreeToStateTree(devString, numberer, opts);
+			trainTrees = stringTreeToStateTree(trainString, numberer, opts, true);
+			testTrees = stringTreeToStateTree(testString, numberer, opts, false);
+			devTrees = stringTreeToStateTree(devString, numberer, opts, false);
 
 		}
 		trees.put(ID_TRAIN, trainTrees);
@@ -337,7 +346,8 @@ public class LearnerConfig extends Recorder {
 		return data;
 	}
 	
-	protected static StateTreeList stringTreeToStateTree(List<Tree<String>> stringTrees, Numberer numberer, Options opts) {
+	protected static StateTreeList stringTreeToStateTree(List<Tree<String>> stringTrees, 
+			Numberer numberer, Options opts, boolean replaceRareWords) {
 		if (opts.lowercase) {
 			System.out.println("Lowercasing the treebank.");
 			Corpus.lowercaseWords(stringTrees);
@@ -345,8 +355,8 @@ public class LearnerConfig extends Recorder {
 		logger.trace("--->There are " + stringTrees.size() + " trees in the corpus.\n");
 		StateTreeList stateTreeList = new StateTreeList(stringTrees, numberer);
 		debugNumbererTag(numberer, opts); // DEBUG
-		if (opts.simpleLexicon) {
-			System.out.println("Replacing words appearing less than 5 times with their signature.");
+		if (replaceRareWords) {
+			System.out.println("Replacing words appearing less than 20 times with their signature.");
 			LVeGCorpus.replaceRareWords(stateTreeList, new SimpleLVeGLexicon(), opts.rareThreshold);
 		}
 		return stateTreeList;

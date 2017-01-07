@@ -105,39 +105,24 @@ public class LVeGLearner extends LearnerConfig {
 			grammar = gfile.getGrammar();
 			lexicon = gfile.getLexicon();
 			lexicon.labelTrees(trainTrees); // FIXME no errors, just alert you to pay attention to it 
-			lexicon.labelTrees(testTrees); // no need to label the data if we load it from the object file
-			lexicon.labelTrees(devTrees); // no need to ... if ...
 			valuator = new Valuator<Tree<State>, Double>(grammar, lexicon, opts.maxLenParsing, opts.reuse, opts.prune);			
 			mvaluator = new ThreadPool(valuator, opts.nteval);
-			for (Tree<State> tree : trainTrees) {
-				if (tree.getYield().size() == 6) {
-					globalTree = tree.shallowClone();
-					break;
-				} // a global tree
-			}
 		} else {
 			Optimizer goptimizer = new ParallelOptimizer(opts.ntgrad, opts.pgrad, opts.pmode, opts.pverbose);
 			Optimizer loptimizer = new ParallelOptimizer(opts.ntgrad, opts.pgrad, opts.pmode, opts.pverbose);
 			grammar.setOptimizer(goptimizer);
 			lexicon.setOptimizer(loptimizer);
-			
 			for (Tree<State> tree : trainTrees) {
 				lexicon.tallyStateTree(tree);
 				grammar.tallyStateTree(tree);
-				if (tree.getYield().size() == 6) {
-					globalTree = tree.shallowClone();
-				} // a global tree
 			}
 			logger.trace("\n--->Going through the training set is over...");
 			grammar.postInitialize();
 			
 //			lexicon.postInitialize();
 			lexicon.postInitialize(trainTrees);
-			
 			logger.trace("post-initializing is over.\n");
-			lexicon.labelTrees(trainTrees);
-			lexicon.labelTrees(testTrees);
-			lexicon.labelTrees(devTrees);
+			lexicon.labelTrees(trainTrees); // FIXME no errors, just alert you to pay attention to it 
 		}
 		/*
 		// initial likelihood of the training set
@@ -151,6 +136,13 @@ public class LVeGLearner extends LearnerConfig {
 		mrParser = new MaxRuleParser<Tree<State>, Tree<String>>(grammar, lexicon, opts.maxLenParsing, opts.reuse, opts.prune);
 		trainer = new ThreadPool(lvegParser, opts.ntbatch);
 		
+		// set a global tree for debugging
+		for (Tree<State> tree : trainTrees) {
+			if (tree.getYield().size() == 6) {
+				globalTree = tree.shallowClone();
+				// break;
+			}
+		}
 		/* State tree to String tree */
 		Tree<String> stringTree = StateTreeList.stateTreeToStringTree(globalTree, numberer);
 		MethodUtil.saveTree2image(null, filename, stringTree, numberer);
@@ -180,6 +172,7 @@ public class LVeGLearner extends LearnerConfig {
 		int cnt = 0;
 		do {			
 			logger.trace("\n\n-------epoch " + cnt + " begins-------\n\n");
+			boolean exit = false;
 			short isample = 0, idx = 0, nfailed = 0;
 			long beginTime, endTime, startTime = System.currentTimeMillis();
 			long batchstart = System.currentTimeMillis(), batchend;
@@ -224,19 +217,26 @@ public class LVeGLearner extends LearnerConfig {
 					idx = 0;
 					
 					if ((isample % (opts.bsize * opts.nbatch)) == 0) {
-						peep(isample, cnt, numberer, trllist, dellist, false);
-						prell = trllist.get(trllist.size() - 1);
+						exit = peep(isample, cnt, numberer, trllist, dellist, false);
+						if (exit) { break; }
 					}
 					nfailed = 0;
 					batchstart = System.currentTimeMillis();
 				}
 			}
-			ends(idx, isample, cnt, startTime, scoresOfST, numberer, trllist, dellist);
-			
-		// relative error could be negative
+			if (exit) { // 
+				logger.info("\n---exiting since the log likelihood are not increasing any more.\n");
+				break;
+			} else {
+				exit = ends(idx, isample, cnt, startTime, scoresOfST, numberer, trllist, dellist);
+				if (exit) { 
+					logger.info("\n---exiting since the log likelihood are not increasing any more.\n");
+					break; 
+				}
+			}
 		} while(++cnt < opts.nepoch);
 		
-		finals(trllist, dellist);
+		finals(trllist, dellist, true); // better finalize it in a specialized test class
 	}
 	
 	public static void serialInBatch(Numberer numberer, double prell) throws Exception {
@@ -246,6 +246,7 @@ public class LVeGLearner extends LearnerConfig {
 		int cnt = 0;
 		do {			
 			logger.trace("\n\n-------epoch " + cnt + " begins-------\n\n");
+			boolean exit = false;
 			short isample = 0, idx = 0;
 			long beginTime, endTime, startTime = System.currentTimeMillis();
 			long batchstart = System.currentTimeMillis(), batchend;
@@ -253,6 +254,8 @@ public class LVeGLearner extends LearnerConfig {
 				if (opts.eonlylen > 0) {
 					if (tree.getYield().size() > opts.eonlylen) { continue; }
 				}
+				
+				// if (isample < 3) { isample++; continue; } // DEBUG to test grammar loading
 				
 				logger.trace("---Sample " + isample + "...\t");
 				beginTime = System.currentTimeMillis();
@@ -292,22 +295,29 @@ public class LVeGLearner extends LearnerConfig {
 					idx = 0;
 					
 					if ((isample % (opts.bsize * opts.nbatch)) == 0) {
-						peep(isample, cnt, numberer, trllist, dellist, false);
-						prell = trllist.get(trllist.size() - 1);
+						exit = peep(isample, cnt, numberer, trllist, dellist, false);
+						if (exit) { break; }
 					}
 					batchstart = System.currentTimeMillis();
 				}
 			}
-			ends(idx, isample, cnt, startTime, scoresOfST, numberer, trllist, dellist);
-			
-		// relative error could be negative
+			if (exit) { // 
+				logger.info("\n---exiting since the log likelihood are not increasing any more.\n");
+				break;
+			} else {
+				exit = ends(idx, isample, cnt, startTime, scoresOfST, numberer, trllist, dellist);
+				if (exit) { 
+					logger.info("\n---exiting since the log likelihood are not increasing any more.\n");
+					break; 
+				}
+			}
 		} while(++cnt < opts.nepoch);
 		
-		finals(trllist, dellist);
+		finals(trllist, dellist, true); // better finalize it in a specialized test class
 	}
 	
 	
-	public static void finals(List<Double> trllist, List<Double> dellist) {
+	public static void finals(List<Double> trllist, List<Double> dellist, boolean exit) {
 		long beginTime, endTime;
 		logger.trace("Convergence Path [train]: " + trllist + "\n");
 		logger.trace("Convergence Path [ dev ]: " + dellist + "\n");
@@ -322,6 +332,10 @@ public class LVeGLearner extends LearnerConfig {
 		} else {
 			logger.info("to \'" + filename + "\' unsuccessfully.\n");
 		}
+		
+		// since the final grammar may not be the best grammar, the evaluations below are not 
+		// so helpful for analyzing results.
+		if (exit) { return; }
 		
 		logger.trace("------->evaluating on the training dataset...");
 		beginTime = System.currentTimeMillis();
@@ -346,7 +360,7 @@ public class LVeGLearner extends LearnerConfig {
 	}
 	
 	
-	public static void ends(int idx, int isample, int cnt, long startTime, List<Double> scoresOfST, 
+	public static boolean ends(int idx, int isample, int cnt, long startTime, List<Double> scoresOfST, 
 			Numberer numberer, List<Double> trllist, List<Double> dellist) throws Exception {
 		// if not a multiple of batchsize
 		long beginTime, endTime;
@@ -366,7 +380,7 @@ public class LVeGLearner extends LearnerConfig {
 		
 		// likelihood of the data set
 		logger.trace("\n----------log-likelihood in epoch is under evaluation----------\n");
-		peep(isample, cnt, numberer, trllist, dellist, true);
+		boolean exit = peep(isample, cnt, numberer, trllist, dellist, true);
 		logger.trace("\n----------          log-likelihood in epoch          ----------\n");
 		
 		// we shall clear the inside and outside score in each state 
@@ -375,26 +389,17 @@ public class LVeGLearner extends LearnerConfig {
 		trainTrees.shuffle(random);
 		
 		logger.trace("\n----------           epoch " + cnt + " ends          ----------\n");
+		return exit;
 	}
 	
 	
-	public static void peep(int isample, int cnt, Numberer numberer, List<Double> trllist, List<Double> dellist, boolean ends) throws Exception {
+	public static boolean peep(int isample, int cnt, Numberer numberer, List<Double> trllist, List<Double> dellist, boolean ends) throws Exception {
 		long beginTime, endTime;
 		double trll = 0, dell = 0;
-		// save the intermediate grammars
-		if (opts.saveGrammar && opts.outGrammar != null) {
-			logger.info("\n-------saving grammar file...");
-			GrammarFile gfile = new GrammarFile(grammar, lexicon);
-			String filename = opts.datadir + opts.outGrammar + "_" + (isample / opts.bsize) + "_" + cnt + ".gr";
-			if (gfile.save(filename)) {
-				logger.info("to \'" + filename + "\' successfully.");
-			} else {
-				logger.info("to \'" + filename + "\' unsuccessfully.");
-			}
-		}
+		int ibatch = (isample / opts.bsize);
 		// likelihood of the training set
 		if (opts.eontrain) {
-			logger.trace("\n-------ll of the training data after " + (isample / opts.bsize) + " batches in epoch " + cnt + " is... ");
+			logger.trace("\n-------ll of the training data after " + ibatch + " batches in epoch " + cnt + " is... ");
 			beginTime = System.currentTimeMillis();
 			trll = calculateLL(opts, mvaluator, trainTrees, true);
 			endTime = System.currentTimeMillis();
@@ -403,7 +408,7 @@ public class LVeGLearner extends LearnerConfig {
 		}
 		
 		if (opts.eondev) {
-			logger.trace("\n-------ll of the dev data after " + (isample / opts.bsize) + " batches in epoch " + cnt + " is... ");
+			logger.trace("\n-------ll of the dev data after " + ibatch + " batches in epoch " + cnt + " is... ");
 			beginTime = System.currentTimeMillis();
 			dell = calculateLL(opts, mvaluator, devTrees, false);
 			endTime = System.currentTimeMillis();
@@ -411,14 +416,45 @@ public class LVeGLearner extends LearnerConfig {
 			devTrees.reset();
 		}
 		// visualize the parse tree
-		String filename = ends ? treeFile + "_" + cnt : treeFile + "_" + cnt + "_" + (isample / (opts.bsize * opts.nbatch));
+		String filename = ends ? treeFile + "_" + cnt : treeFile + "_" + cnt + "_" + ibatch;
 		Tree<String> parseTree = mrParser.parse(globalTree);
 		MethodUtil.saveTree2image(null, filename, parseTree, numberer);
 		parseTree = TreeAnnotations.unAnnotateTree(parseTree, false);
 		MethodUtil.saveTree2image(null, filename + "_ua", parseTree, numberer);
+		// check dropping count
+		boolean exit = false, save = false;
+		if (trll > bestscore) {
+			bestscore = trll;
+			cntdrop = 0;
+			save = true;
+		} else {
+			cntdrop++;
+			exit = cntdrop >= opts.nAllowedDrop;
+		}
 		// store the log score
 		trllist.add(trll);
 		dellist.add(dell);
+		// save the intermediate grammars
+		GrammarFile gfile = new GrammarFile(grammar, lexicon);
+		if (save) { // always save the best grammar to the same file
+			filename = opts.datadir + opts.outGrammar + "_best" + ".gr";
+			if (gfile.save(filename)) { 
+				logger.info("\n------->the best grammar [cnt = " + cnt + ", ibatch = " + ibatch + "]\n");
+			}
+		}
+		// save the grammar at the end of each epoch or after every # of batches
+		save = (opts.saveGrammar && ((ibatch % opts.nbatchSave) == 0) && opts.outGrammar != null);
+		if (ends || save) {
+			logger.info("\n-------saving grammar file...");
+			filename = (ends ? opts.datadir + opts.outGrammar + "_" + cnt + ".gr" 
+					: opts.datadir + opts.outGrammar + "_" + cnt + "_" + ibatch + ".gr");
+			if (gfile.save(filename)) {
+				logger.info("to \'" + filename + "\' successfully.");
+			} else {
+				logger.info("to \'" + filename + "\' unsuccessfully.");
+			}
+		}
+		return exit;
 	}
 	
 	
@@ -461,7 +497,7 @@ public class LVeGLearner extends LearnerConfig {
 			}
 		}
 		valuator.reset();
-		logger.trace("\n[in calculating log likelihood " + nUnparsable + " unparsable sample(s) of " + stateTreeList.size() + " training samples]\n");
+		logger.trace("\n[in calculating log likelihood " + nUnparsable + " unparsable sample(s) of " + stateTreeList.size() + " samples]\n");
 		return sumll;
 	}
 	

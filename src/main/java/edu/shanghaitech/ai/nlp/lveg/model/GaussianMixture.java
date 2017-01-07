@@ -896,12 +896,27 @@ public class GaussianMixture extends Recorder implements Serializable {
 	}
 	
 	
+	public void setWeight(int iComponent, double weight) {
+		Component comp = null;
+		if ((comp = getComponent((short) iComponent)) != null) {
+			comp.setWeight(weight);
+		}
+	}
+	
+	
 	public double getWeight(int iComponent) {
 		Component comp = null;
 		if ((comp = getComponent((short) iComponent)) != null) {
 			return Math.exp(comp.weight);
 		}
 		return 0.0;
+	}
+	
+	
+	public void setWeights(double weight) {
+		for (Component comp : components) {
+			comp.setWeight(weight);
+		}
 	}
 	
 	
@@ -966,7 +981,8 @@ public class GaussianMixture extends Recorder implements Serializable {
 				MethodUtil.double2str(getWeights(), LVeGLearner.precision, -1, false, true) + ", mixture=" + getMixture() + "]";
 	}
 	
-	
+	/*
+	// http://stackoverflow.com/questions/17804704/notserializableexception-on-anonymous-class
 	protected static Comparator<Component> wcomparator = new Comparator<Component>() {
 		@Override
 		public int compare(Component o1, Component o2) {
@@ -974,7 +990,24 @@ public class GaussianMixture extends Recorder implements Serializable {
 			return diff > 0 ? -1 : (diff < 0 ? 1 : 0);
 		}
 	};
-	public static class Component {
+	*/
+	protected static Comparator<Component> wcomparator = new PriorityComparator<Component>();
+	protected static class PriorityComparator<T> implements Comparator<T>, Serializable {
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -8813462045781155697L;
+		@Override
+		public int compare(T o1, T o2) {
+			double diff = ((Component) o1).weight - ((Component) o2).weight;
+			return diff > 0 ? -1 : (diff < 0 ? 1 : 0);
+		}
+	}
+	public static class Component implements Serializable {
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -1211997783170967017L;
 		protected short id;
 		protected double weight;
 		Map<String, Set<GaussianDistribution>> multivnd; // Multivariate Normal Distribution

@@ -8,6 +8,7 @@ import java.util.List;
 import edu.berkeley.nlp.PCFGLA.Corpus;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.data.StateTreeList;
+import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
@@ -128,17 +129,26 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 	public GaussianMixture score(State word, short itag) {
 		// map the word to its real index
 		int wordIdx = word.wordIdx;
-		if (wordIdx < 0) {
-			wordIdx = wordIndexer.indexOf(word.getName());
+		String signature = "(X)", name = word.getName();
+		if (wordIdx < 0) { // the unlabeled word
+			wordIdx = wordIndexer.indexOf(name);
 			word.wordIdx = wordIdx;
 		}
-		
-		GrammarRule rule = getURule(itag, wordIdx, GrammarRule.LHSPACE);
-		if (rule != null) {
-			return rule.getWeight();
+		if (wordIdx == -1) { // the rare word
+			signature = getSignature(name, word.from);
+			wordIdx = wordIndexer.indexOf(signature);
+			word.wordIdx = wordIdx;
 		}
-//		logger.warn("Unary Rule NOT Found: [P: " + idParent + ", C: " + idChild + ", TYPE: " + type + "]\n");
-		return null;
+		if (wordIdx == -1) { // the unknown word
+			System.err.println("unknown word signature [tag = " + itag + ", word = " + name + ", sig = " +  signature + "]");
+			return rndWeight(LVeGLearner.minmw);
+		}
+		GrammarRule rule = getURule(itag, wordIdx, GrammarRule.LHSPACE);
+		if (rule == null) {
+			System.err.println("unknown lexicon rule [tag = " + itag + ", word = " + name + ", sig = " +  signature + "]");
+			return rndWeight(Double.NEGATIVE_INFINITY);
+		}
+		return rule.getWeight();
 	}                                           
 	
 	
