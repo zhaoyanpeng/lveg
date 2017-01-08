@@ -45,6 +45,7 @@ public class LearnerConfig extends Recorder {
 	public static int randomseed = 0;
 	public static int precision = 3;
 	public static Random random = new Random(randomseed);
+	public static Random rnd4shuffle = new Random(11);
 
 	public static class Params {
 		public static double lr;

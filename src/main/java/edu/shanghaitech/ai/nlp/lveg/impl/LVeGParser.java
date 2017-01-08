@@ -45,20 +45,20 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 	public synchronized Object call() throws Exception {
 		if (task == null) { return null; }
 		Tree<State> sample = (Tree<State>) task;
-		List<Double> scores = new ArrayList<Double>(2);
+		List<Double> scores = new ArrayList<Double>(3);
 		double scoreT = doInsideOutsideWithTree(sample); 
 		double scoreS = doInsideOutside(sample); 
 		scores.add(scoreT);
 		scores.add(scoreS);
-		scores.add((double) sample.getTerminalYield().size());
-//		logger.trace("\no---id=" + Thread.currentThread().getId() + ", isample=" + isample + " " + 
+//		scores.add((double) sample.getTerminalYield().size());
+//		logger.trace("\no---id=" + Thread.currentThread().getId() + ", itask=" + itask + " " + 
 //				MethodUtil.double2str(scores, 3, -1, false, true) + " comes...\n"); // DEBUG
 		synchronized (inferencer) {
-//			logger.trace("\ni---id=" + Thread.currentThread().getId() + ", isample=" + isample + " enters...\n"); // DEBUG
+//			logger.trace("\ni---id=" + Thread.currentThread().getId() + ", itask=" + itask + " enters...\n"); // DEBUG
 			inferencer.evalRuleCountWithTree(sample, (short) 0);
 			inferencer.evalRuleCount(sample, chart, (short) 0, prune);
 			inferencer.evalGradients(scores);
-//			logger.trace("\ni---id=" + Thread.currentThread().getId() + ", isample=" + isample + " " + 
+//			logger.trace("\ni---id=" + Thread.currentThread().getId() + ", itask=" + itask + " " + 
 //					MethodUtil.double2str(scores, 3, -1, false, true) + " leaves...\n"); // DEBUG
 		}
 		Meta<O> cache = new Meta(itask, scores);

@@ -177,5 +177,11 @@ public abstract class LVeGGrammar extends Recorder implements Serializable {
 	public Set<GrammarRule> getRuleSet() {
 		return optimizer.getRuleSet();
 	}
+	
+	public void shutdown() {
+		if (optimizer != null) {
+			optimizer.shutdown();
+		}
+	}
 
 }

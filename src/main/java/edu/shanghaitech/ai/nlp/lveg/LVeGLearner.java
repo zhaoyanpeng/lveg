@@ -162,11 +162,30 @@ public class LVeGLearner extends LearnerConfig {
 		} else {
 			serialInBatch(numberer, ll);
 		}
+		// kill threads
+		grammar.shutdown();
+		lexicon.shutdown();
+		trainer.shutdown();
+		mvaluator.shutdown();
+	}
+	
+	
+	protected static void join(short nfailed) {
+		while (!trainer.isDone()) {
+			while (trainer.hasNext()) {
+				List<Double> score = (List<Double>) trainer.getNext();
+				if (score == null) {
+					nfailed++;
+				} else {
+					logger.trace("\n~~~score: " + MethodUtil.double2str(score, precision, -1, false, true) + "\n");
+				}
+			}
+		}
 	}
 	
 	
 	public static void parallelInBatch(Numberer numberer, double prell) throws Exception {
-		List<Double> scoresOfST = new ArrayList<Double>(2);
+		List<Double> scoresOfST = new ArrayList<Double>(3);
 		List<Double> trllist = new ArrayList<Double>();
 		List<Double> dellist = new ArrayList<Double>();
 		int cnt = 0;
@@ -181,7 +200,7 @@ public class LVeGLearner extends LearnerConfig {
 					if (tree.getYield().size() > opts.eonlylen) { continue; }
 				}
 				trainer.execute(tree);
-				while (trainer.hasNext()) {
+				while (trainer.hasNext()) { // not really block the main thread
 					List<Double> score = (List<Double>) trainer.getNext();
 					if (score == null) {
 						nfailed++;
@@ -192,17 +211,8 @@ public class LVeGLearner extends LearnerConfig {
 				
 				isample++;
 				if (++idx % opts.bsize == 0) {
-					while (!trainer.isDone()) {
-						while (trainer.hasNext()) {
-							List<Double> score = (List<Double>) trainer.getNext();
-							if (score == null) {
-								nfailed++;
-							} else {
-								logger.trace("\n~~~score: " + MethodUtil.double2str(score, precision, -1, false, true) + "\n");
-							}
-						}
-					}
-					trainer.reset();
+					join(nfailed); // block the main thread until get all the feedbacks of submitted tasks
+					trainer.reset();  // after the whole batch
 					batchend = System.currentTimeMillis();
 					
 					// apply gradient descent
@@ -224,6 +234,8 @@ public class LVeGLearner extends LearnerConfig {
 					batchstart = System.currentTimeMillis();
 				}
 			}
+			join(nfailed); // if the last batch has not been joined
+			trainer.reset();
 			if (exit) { // 
 				logger.info("\n---exiting since the log likelihood are not increasing any more.\n");
 				break;
@@ -239,20 +251,23 @@ public class LVeGLearner extends LearnerConfig {
 		finals(trllist, dellist, true); // better finalize it in a specialized test class
 	}
 	
+	
 	public static void serialInBatch(Numberer numberer, double prell) throws Exception {
-		List<Double> scoresOfST = new ArrayList<Double>(2);
+		List<Double> scoresOfST = new ArrayList<Double>(3);
 		List<Double> trllist = new ArrayList<Double>();
 		List<Double> dellist = new ArrayList<Double>();
 		int cnt = 0;
 		do {			
 			logger.trace("\n\n-------epoch " + cnt + " begins-------\n\n");
+			double length = 0;
 			boolean exit = false;
 			short isample = 0, idx = 0;
 			long beginTime, endTime, startTime = System.currentTimeMillis();
 			long batchstart = System.currentTimeMillis(), batchend;
 			for (Tree<State> tree : trainTrees) {
+				length = tree.getYield().size(); 
 				if (opts.eonlylen > 0) {
-					if (tree.getYield().size() > opts.eonlylen) { continue; }
+					if (length > opts.eonlylen) { continue; }
 				}
 				
 				// if (isample < 3) { isample++; continue; } // DEBUG to test grammar loading
@@ -268,6 +283,7 @@ public class LVeGLearner extends LearnerConfig {
 				
 				scoresOfST.add(scoreT);
 				scoresOfST.add(scoreS);
+				scoresOfST.add(length);
 				
 				logger.trace("scores: " + MethodUtil.double2str(scoresOfST, precision, -1, false, true) + "\teval gradients... ");
 				beginTime = System.currentTimeMillis();
@@ -302,12 +318,12 @@ public class LVeGLearner extends LearnerConfig {
 				}
 			}
 			if (exit) { // 
-				logger.info("\n---exiting since the log likelihood are not increasing any more.\n");
+				logger.info("\n---[I] exiting since the log likelihood are not increasing any more.\n");
 				break;
 			} else {
 				exit = ends(idx, isample, cnt, startTime, scoresOfST, numberer, trllist, dellist);
 				if (exit) { 
-					logger.info("\n---exiting since the log likelihood are not increasing any more.\n");
+					logger.info("\n[O]---exiting since the log likelihood are not increasing any more.\n");
 					break; 
 				}
 			}
@@ -315,6 +331,8 @@ public class LVeGLearner extends LearnerConfig {
 		
 		finals(trllist, dellist, true); // better finalize it in a specialized test class
 	}
+	
+	
 	
 	
 	public static void finals(List<Double> trllist, List<Double> dellist, boolean exit) {
@@ -360,6 +378,8 @@ public class LVeGLearner extends LearnerConfig {
 	}
 	
 	
+	
+	
 	public static boolean ends(int idx, int isample, int cnt, long startTime, List<Double> scoresOfST, 
 			Numberer numberer, List<Double> trllist, List<Double> dellist) throws Exception {
 		// if not a multiple of batchsize
@@ -381,16 +401,17 @@ public class LVeGLearner extends LearnerConfig {
 		// likelihood of the data set
 		logger.trace("\n----------log-likelihood in epoch is under evaluation----------\n");
 		boolean exit = peep(isample, cnt, numberer, trllist, dellist, true);
-		logger.trace("\n----------          log-likelihood in epoch          ----------\n");
+		logger.trace("\n------------------------evaluation over------------------------\n");
 		
 		// we shall clear the inside and outside score in each state 
 		// of the parse tree after the training on a sample 
 		trainTrees.reset();
-		trainTrees.shuffle(random);
-		
-		logger.trace("\n----------           epoch " + cnt + " ends          ----------\n");
+		trainTrees.shuffle(rnd4shuffle);
+		logger.trace("\n-------epoch " + String.format("%1$3s", cnt) + " ends  -------\n");
 		return exit;
 	}
+	
+	
 	
 	
 	public static boolean peep(int isample, int cnt, Numberer numberer, List<Double> trllist, List<Double> dellist, boolean ends) throws Exception {
@@ -429,7 +450,7 @@ public class LVeGLearner extends LearnerConfig {
 			save = true;
 		} else {
 			cntdrop++;
-			exit = cntdrop >= opts.nAllowedDrop;
+			exit = (cntdrop >= opts.nAllowedDrop);
 		}
 		// store the log score
 		trllist.add(trll);
@@ -456,6 +477,8 @@ public class LVeGLearner extends LearnerConfig {
 		}
 		return exit;
 	}
+	
+	
 	
 	
 	/**

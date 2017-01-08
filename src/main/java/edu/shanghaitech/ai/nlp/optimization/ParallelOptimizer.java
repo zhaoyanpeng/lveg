@@ -212,6 +212,8 @@ public class ParallelOptimizer extends Optimizer {
 		if (mpool == null) {
 			SubOptimizer<?, ?> subOptimizer = new SubOptimizer<Resource, Boolean>();
 			mpool = new ThreadPool(subOptimizer, nthread);
+		} else {
+			mpool.reset();
 		}
 		int nchanged = 0, nskipped = 0, nfailed = 0;
 		for (GrammarRule rule : ruleSet) {
@@ -355,7 +357,9 @@ public class ParallelOptimizer extends Optimizer {
 			cntWithT.clear();
 			cntWithS.clear();
 		}
-		logger.trace("nchanged=" + nchanged + " of " + ruleSet.size() + "(" + nskipped + ")" + "...");
+		if (verbose) {
+			logger.trace("nchanged=" + nchanged + " of " + ruleSet.size() + "(" + nskipped + ")" + "...");
+		}
 	}
 	
 	
@@ -381,6 +385,7 @@ public class ParallelOptimizer extends Optimizer {
 	}
 	
 	
+	@Override
 	public void shutdown() {
 		if (pool != null) {
 			try {
@@ -394,7 +399,6 @@ public class ParallelOptimizer extends Optimizer {
 			mpool.shutdown();
 		}
 	}
-	
 	
 	
 	/**

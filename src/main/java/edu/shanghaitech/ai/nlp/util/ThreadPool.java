@@ -96,6 +96,7 @@ public class ThreadPool extends Recorder implements Serializable {
 	
 	
 	public void shutdown() {
+		reset();
 		if (pool != null) {
 			try {
 				pool.shutdown();
