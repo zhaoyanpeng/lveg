@@ -92,8 +92,6 @@ public class LVeGLearner extends LearnerConfig {
 		
 		grammar = new SimpleLVeGGrammar(numberer, -1);
 		lexicon = new SimpleLVeGLexiconOld(numberer, -1);
-		Valuator<?, ?> valuator = new Valuator<Tree<State>, Double>(grammar, lexicon, opts.maxLenParsing, opts.reuse, opts.prune);
-		mvaluator = new ThreadPool(valuator, opts.nteval);
 		
 		/* to ease the parameters tuning */
 		GaussianMixture.config(opts.expzero);
@@ -105,8 +103,6 @@ public class LVeGLearner extends LearnerConfig {
 			grammar = gfile.getGrammar();
 			lexicon = gfile.getLexicon();
 			lexicon.labelTrees(trainTrees); // FIXME no errors, just alert you to pay attention to it 
-			valuator = new Valuator<Tree<State>, Double>(grammar, lexicon, opts.maxLenParsing, opts.reuse, opts.prune);			
-			mvaluator = new ThreadPool(valuator, opts.nteval);
 		} else {
 			Optimizer goptimizer = new ParallelOptimizer(opts.ntgrad, opts.pgrad, opts.pmode, opts.pverbose);
 			Optimizer loptimizer = new ParallelOptimizer(opts.ntgrad, opts.pgrad, opts.pmode, opts.pverbose);
@@ -124,18 +120,19 @@ public class LVeGLearner extends LearnerConfig {
 			logger.trace("post-initializing is over.\n");
 			lexicon.labelTrees(trainTrees); // FIXME no errors, just alert you to pay attention to it 
 		}
+		Valuator<?, ?> valuator = new Valuator<Tree<State>, Double>(grammar, lexicon, opts.maxLenParsing, opts.reuse, false);
+		lvegParser = new LVeGParser<Tree<State>, List<Double>>(grammar, lexicon, opts.maxLenParsing, opts.reuse, opts.prune);
+		mrParser = new MaxRuleParser<Tree<State>, Tree<String>>(grammar, lexicon, opts.maxLenParsing, opts.reuse, false);
+		mvaluator = new ThreadPool(valuator, opts.nteval);
+		trainer = new ThreadPool(lvegParser, opts.ntbatch);
 		/*
 		// initial likelihood of the training set
 		logger.trace("\n-------ll of the training data initially is... ");
 		long beginTime = System.currentTimeMillis();
 		ll = calculateLL(grammar, mvaluator, trainTrees);
 		long endTime = System.currentTimeMillis();
-		logger.trace("------->" + ll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");	
+		logger.trace("------->" + ll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");
 		*/
-		lvegParser = new LVeGParser<Tree<State>, List<Double>>(grammar, lexicon, opts.maxLenParsing, opts.reuse, opts.prune);
-		mrParser = new MaxRuleParser<Tree<State>, Tree<String>>(grammar, lexicon, opts.maxLenParsing, opts.reuse, opts.prune);
-		trainer = new ThreadPool(lvegParser, opts.ntbatch);
-		
 		// set a global tree for debugging
 		for (Tree<State> tree : trainTrees) {
 			if (tree.getYield().size() == 6) {

@@ -19,19 +19,16 @@ public class Valuator<I, O> extends Parser<I, O> {
 	
 	
 	private Valuator(Valuator<?, ?> valuator) {
+		super(valuator.maxLenParsing, valuator.reuse, valuator.prune);
 		this.inferencer = valuator.inferencer;
-		this.maxLenParsing = valuator.maxLenParsing;
 		this.chart = valuator.reuse ? new Chart(maxLenParsing, false) : null;
-		this.reuse = valuator.reuse;
 	}
 	
 	
 	public Valuator(LVeGGrammar grammar, LVeGLexicon lexicon, short maxLenParsing, boolean reuse, boolean prune) {
-		this.maxLenParsing = maxLenParsing;
+		super(maxLenParsing, reuse, prune);
 		this.inferencer = new LVeGInferencer(grammar, lexicon);
 		this.chart = reuse ? new Chart(maxLenParsing, false) : null;
-		this.reuse = reuse;
-		this.prune = prune;
 	}
 
 	

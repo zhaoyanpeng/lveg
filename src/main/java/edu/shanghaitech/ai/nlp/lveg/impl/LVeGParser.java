@@ -25,19 +25,16 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 	
 	
 	private LVeGParser(LVeGParser<?, ?> parser) {
+		super(parser.maxLenParsing, parser.reuse, parser.prune);
 		this.inferencer = parser.inferencer;
-		this.maxLenParsing = parser.maxLenParsing;
 		this.chart = parser.reuse ? new Chart(maxLenParsing, false) : null;
-		this.reuse = parser.reuse;
 	}
 	
 	
 	public LVeGParser(LVeGGrammar grammar, LVeGLexicon lexicon, short maxLenParsing, boolean reuse, boolean prune) {
-		this.maxLenParsing = maxLenParsing;
+		super(maxLenParsing, reuse, prune);
 		this.inferencer = new LVeGInferencer(grammar, lexicon);
 		this.chart = reuse ? new Chart(maxLenParsing, false) : null;
-		this.reuse = reuse;
-		this.prune = prune;
 	}
 	
 	
@@ -50,7 +47,7 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 		double scoreS = doInsideOutside(sample); 
 		scores.add(scoreT);
 		scores.add(scoreS);
-//		scores.add((double) sample.getTerminalYield().size());
+		scores.add((double) sample.getYield().size());
 //		logger.trace("\no---id=" + Thread.currentThread().getId() + ", itask=" + itask + " " + 
 //				MethodUtil.double2str(scores, 3, -1, false, true) + " comes...\n"); // DEBUG
 		synchronized (inferencer) {

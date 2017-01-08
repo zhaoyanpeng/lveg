@@ -48,12 +48,14 @@ public class ParallelOptimizerTest {
 		protected String name;
 		
 		private Puppet(Puppet<?, ?> puppet) {
+			super((short) 0, false, false);
 			this.muppet = puppet.muppet;
 			this.reuse = puppet.reuse;
 			this.name = puppet.name;
 		}
 		
 		public Puppet(String name) {
+			super((short) 0, false, false);
 			this.name = name;
 			this.muppet = new Muppet();
 		}

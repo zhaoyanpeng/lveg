@@ -23,6 +23,12 @@ public abstract class Parser<I, O> extends Recorder implements Executor<I, O> {
 	protected Chart chart;
 	protected PriorityQueue<Meta<O>> caches;
 	
+	protected Parser(short maxLenParsing, boolean reuse, boolean prune) {
+		this.maxLenParsing = maxLenParsing;
+		this.reuse = reuse;
+		this.prune = prune;
+	}
+	
 	@Override
 	public void setIdx(int idx, PriorityQueue<Meta<O>> caches) {
 		this.idx = idx;
