@@ -56,8 +56,15 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	 * Memory allocation and initialization.
 	 */
 	protected void initialize() {
-		MethodUtil.randomInitList(LVeGLearner.random, mus, Double.class, dim, LVeGLearner.maxrandom, LVeGLearner.nratio, false, true);
-		MethodUtil.randomInitList(LVeGLearner.random, vars, Double.class, dim, LVeGLearner.maxrandom, LVeGLearner.nratio, false, true);
+		short maximum = LVeGLearner.maxrandom;
+		for (int i = 0; i < dim; i++) {
+			double rndn = (LVeGLearner.random.nextDouble() - LVeGLearner.nratio) * maximum;
+			mus.add(rndn);
+		} // better initialize mu and var in the different loops
+		for (int i = 0; i < dim; i++) {
+			double rndn = (LVeGLearner.random.nextDouble() - LVeGLearner.nratio) * maximum;
+			vars.add(rndn);
+		}	
 	}
 	
 	

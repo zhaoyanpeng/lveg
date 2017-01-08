@@ -42,7 +42,7 @@ public class Gradient extends Recorder implements Serializable {
 		GaussianMixture ruleW = rule.getWeight();
 		initialize(ruleW);
 		this.cntUpdate = 0;
-		this.partition = /*Optimizer.batchsize **/ Optimizer.maxsample;
+		this.partition = Optimizer.batchsize * Optimizer.maxsample;
 		// TODO use lazy initialization?
 		this.wgrads1 = new ArrayList<Double>(ruleW.ncomponent());
 		this.wgrads2 = new ArrayList<Double>(ruleW.ncomponent());

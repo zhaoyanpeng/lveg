@@ -17,13 +17,13 @@
 -reg, true,
 -clip, true,
 -absmax, 5.0,
--wdecay, 0.02,
+-wdecay, 0.1,
 -l1, true,
--minmw, 1e-6,
+-minmw, 1e-3,
 -expzero, 1e-6,
 -epsilon, 1e-8,
--choice, SGD,
--lambda, 0.0,
+-choice, RMSPROP,
+-lambda, 0.9,
 -lambda1, 0.9,
 -lambda2, 0.99,
 
@@ -36,9 +36,9 @@
 -pverbose, false,
 
 -reuse, true,
--prune, false,
+-prune, true,
 -bsize, 30,
--nepoch, 20,
+-nepoch, 30,
 -maxsample, 3,
 -maxLenParsing, 120,
 -nAllowedDrop, 6,
@@ -55,9 +55,9 @@
 -eondev, false,
 
 -logtype, true,
--logfile, log/0_serial,
+-logfile, log/overfit_small_data,
 -nbatch, 1,
 -precision, 3,
 -rndomseed, 0,
 
--imgprefix, log/0_serial
+-imgprefix, log/img/os
