@@ -200,6 +200,8 @@ public class LearnerConfig extends Recorder {
 		public boolean eondev = true;
 		@Option(name = "-eontrain", usage = "evaluating the grammar on the train data (true) or not (false) (default: true)")
 		public boolean eontrain = true;
+		@Option(name = "-enbatchdev", usage = "# of batches after which the grammar is evaluated on the development dataset (default: 5)")
+		public short enbatchdev = 5;
 		/* evaluation section ends */
 		
 		/* logger configurations section begins */
@@ -375,9 +377,9 @@ public class LearnerConfig extends Recorder {
 	}
 	
 	protected static void debugNumbererTag(Numberer numberer, Options opts) {
-		if (opts.verbose || true) {
+		if (opts.verbose) {
 			for (int i = 0; i < numberer.size(); i++) {
-//				logger.trace("Tag " + i + "\t" +  (String) numberer.object(i) + "\n"); // DEBUG
+				logger.trace("Tag " + i + "\t" +  (String) numberer.object(i) + "\n");
 			}
 		}
 		logger.debug("There are " + numberer.size() + " observed tags.\n");

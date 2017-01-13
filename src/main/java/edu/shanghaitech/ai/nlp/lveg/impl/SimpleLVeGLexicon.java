@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import edu.berkeley.nlp.PCFGLA.Corpus;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.data.StateTreeList;
 import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
@@ -38,10 +37,6 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 		this.lastPosition = -1;
 		this.lastSignature = "";
 		this.unknownLevel = 5; // 5 is English specific
-		if ((Corpus.myTreebank != Corpus.TreeBankType.WSJ) ||
-				Corpus.myTreebank == Corpus.TreeBankType.BROWN) {
-			this.unknownLevel = 4;
-		}
 	}
 	
 	
@@ -129,7 +124,7 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 	public GaussianMixture score(State word, short itag) {
 		// map the word to its real index
 		int wordIdx = word.wordIdx;
-		String signature = "(X)", name = word.getName();
+		String signature = "(UNK)", name = word.getName();
 		if (wordIdx < 0) { // the unlabeled word
 			wordIdx = wordIndexer.indexOf(name);
 			word.wordIdx = wordIdx;
@@ -140,12 +135,12 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 			word.wordIdx = wordIdx;
 		}
 		if (wordIdx == -1) { // the unknown word
-			System.err.println("unknown word signature [tag = " + itag + ", word = " + name + ", sig = " +  signature + "]");
+			System.err.println("\nunknown word signature [tag = " + itag + ", word = " + name + ", sig = " +  signature + "]");
 			return rndWeight(LVeGLearner.minmw);
 		}
 		GrammarRule rule = getURule(itag, wordIdx, GrammarRule.LHSPACE);
 		if (rule == null) {
-			System.err.println("unknown lexicon rule [tag = " + itag + ", word = " + name + ", sig = " +  signature + "]");
+			System.err.println("\nunknown lexicon rule [tag = " + itag + ", word = " + name + ", sig = " +  signature + "]");
 			return rndWeight(Double.NEGATIVE_INFINITY);
 		}
 		return rule.getWeight();
@@ -158,7 +153,8 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 	}
 	
 	
-	public String toString(Numberer numberer) {
+	@Override
+	public String toString() {
 		String word = null;
 		int count = 0, ncol = 1;
 		StringBuffer sb = new StringBuffer();
@@ -172,7 +168,8 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 				sb.append("\n");
 			}
 		}
-
+		
+		int cnt = 0;
 		sb.append("\n");
 		sb.append("---Unary Rules---\n");
 		for (int i = 0; i < ntag; i++) {
@@ -185,8 +182,10 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 					sb.append("\n");
 				}
 			}
+			cnt += rules.size();
 			sb.append("\n");
 		}
+		sb.append("---Lexicon rules. Total: " + cnt + "\n");
 		return sb.toString();
 	}
 

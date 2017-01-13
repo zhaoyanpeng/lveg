@@ -18,7 +18,6 @@ import edu.shanghaitech.ai.nlp.lveg.impl.LVeGParser;
 import edu.shanghaitech.ai.nlp.lveg.impl.MaxRuleParser;
 import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGLexicon;
-import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGLexiconOld;
 import edu.shanghaitech.ai.nlp.lveg.impl.Valuator;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
@@ -89,7 +88,7 @@ public class LVeGLearner extends LearnerConfig {
 		Numberer numberer = wrapper.getGlobalNumberer(KEY_TAG_SET);
 		
 		grammar = new SimpleLVeGGrammar(numberer, -1);
-		lexicon = new SimpleLVeGLexiconOld(numberer, -1);
+		lexicon = new SimpleLVeGLexicon(numberer, -1);
 		
 		/* to ease the parameters tuning */
 		GaussianMixture.config(opts.expzero);
@@ -100,7 +99,6 @@ public class LVeGLearner extends LearnerConfig {
 			GrammarFile gfile = (GrammarFile) GrammarFile.load(subdatadir + opts.inGrammar);
 			grammar = gfile.getGrammar();
 			lexicon = gfile.getLexicon();
-			lexicon.labelTrees(trainTrees); // FIXME no errors, just alert you to pay attention to it 
 		} else {
 			Optimizer goptimizer = new ParallelOptimizer(opts.ntgrad, opts.pgrad, opts.pmode, opts.pverbose);
 			Optimizer loptimizer = new ParallelOptimizer(opts.ntgrad, opts.pgrad, opts.pmode, opts.pverbose);
@@ -112,12 +110,18 @@ public class LVeGLearner extends LearnerConfig {
 			}
 			logger.trace("\n--->Going through the training set is over...");
 			grammar.postInitialize();
-			
-//			lexicon.postInitialize();
-			lexicon.postInitialize(trainTrees);
+			lexicon.postInitialize();
 			logger.trace("post-initializing is over.\n");
-			lexicon.labelTrees(trainTrees); // FIXME no errors, just alert you to pay attention to it 
 		}
+		/*
+		logger.trace(grammar);
+		logger.trace(lexicon);
+		System.exit(0);
+		*/
+		lexicon.labelTrees(trainTrees); // FIXME no errors, just alert you to pay attention to it 
+		lexicon.labelTrees(testTrees); // save the search time cost by finding a specific tag-word
+		lexicon.labelTrees(devTrees); // pair in in Lexicon.score(...)
+		
 		Valuator<?, ?> valuator = new Valuator<Tree<State>, Double>(grammar, lexicon, opts.maxLenParsing, opts.reuse, false);
 		lvegParser = new LVeGParser<Tree<State>, List<Double>>(grammar, lexicon, opts.maxLenParsing, opts.reuse, opts.prune);
 		mrParser = new MaxRuleParser<Tree<State>, Tree<String>>(grammar, lexicon, opts.maxLenParsing, opts.reuse, false);
@@ -167,7 +171,7 @@ public class LVeGLearner extends LearnerConfig {
 	}
 	
 	
-	protected static void join(short nfailed) {
+	protected static void jointrainer(short nfailed) {
 		while (!trainer.isDone()) {
 			while (trainer.hasNext()) {
 				List<Double> score = (List<Double>) trainer.getNext();
@@ -208,7 +212,7 @@ public class LVeGLearner extends LearnerConfig {
 				
 				isample++;
 				if (++idx % opts.bsize == 0) {
-					join(nfailed); // block the main thread until get all the feedbacks of submitted tasks
+					jointrainer(nfailed); // block the main thread until get all the feedbacks of submitted tasks
 					trainer.reset();  // after the whole batch
 					batchend = System.currentTimeMillis();
 					
@@ -231,7 +235,7 @@ public class LVeGLearner extends LearnerConfig {
 					batchstart = System.currentTimeMillis();
 				}
 			}
-			join(nfailed); // if the last batch has not been joined
+			jointrainer(nfailed); // if the last batch has not been joined
 			trainer.reset();
 			if (exit) { // 
 				logger.info("\n---exiting since the log likelihood are not increasing any more.\n");
@@ -423,40 +427,40 @@ public class LVeGLearner extends LearnerConfig {
 			endTime = System.currentTimeMillis();
 			logger.trace("------->" + trll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");
 			trainTrees.reset();
+			trllist.add(trll);
 		}
 		
-		if (opts.eondev) {
+		// check dropping count according to the log likelihood on the development set
+		boolean exit = false, save = false;
+		if (opts.eondev && (ibatch % opts.enbatchdev) == 0) {
 			logger.trace("\n-------ll of the dev data after " + ibatch + " batches in epoch " + cnt + " is... ");
 			beginTime = System.currentTimeMillis();
 			dell = calculateLL(opts, mvaluator, devTrees, false);
 			endTime = System.currentTimeMillis();
 			logger.trace("------->" + dell + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");
 			devTrees.reset();
+			dellist.add(dell);
+			if (dell > bestscore) {
+				bestscore = dell;
+				cntdrop = 0;
+				save = true;
+			} else {
+				cntdrop++;
+				exit = (cntdrop >= opts.nAllowedDrop);
+			}
 		}
+		
 		// visualize the parse tree
 		String treename = ends ? treeFile + "_" + cnt : treeFile + "_" + cnt + "_" + ibatch;
 		Tree<String> parseTree = mrParser.parse(globalTree);
 		MethodUtil.saveTree2image(null, treename, parseTree, numberer);
 		parseTree = TreeAnnotations.unAnnotateTree(parseTree, false);
 		MethodUtil.saveTree2image(null, treename + "_ua", parseTree, numberer);
-		// check dropping count
-		boolean exit = false, save = false;
-		if (trll > bestscore) {
-			bestscore = trll;
-			cntdrop = 0;
-			save = true;
-		} else {
-			cntdrop++;
-			exit = (cntdrop >= opts.nAllowedDrop);
-		}
-		// store the log score
-		trllist.add(trll);
-		dellist.add(dell);
-		String filename = null;
+		
 		// save the intermediate grammars
 		GrammarFile gfile = new GrammarFile(grammar, lexicon);
 		if (save) { // always save the best grammar to the same file
-			filename = subdatadir + opts.outGrammar + "_best" + ".gr";
+			String filename = subdatadir + opts.outGrammar + "_best" + ".gr";
 			if (gfile.save(filename)) { 
 				logger.info("\n------->the best grammar [cnt = " + cnt + ", ibatch = " + ibatch + "]\n");
 			}
@@ -465,7 +469,7 @@ public class LVeGLearner extends LearnerConfig {
 		save = (opts.saveGrammar && ((ibatch % opts.nbatchSave) == 0) && opts.outGrammar != null);
 		if (ends || save) {
 			logger.info("\n-------saving grammar file...");
-			filename = (ends ? subdatadir + opts.outGrammar + "_" + cnt + ".gr" 
+			String filename = (ends ? subdatadir + opts.outGrammar + "_" + cnt + ".gr" 
 					: subdatadir + opts.outGrammar + "_" + cnt + "_" + ibatch + ".gr");
 			if (gfile.save(filename)) {
 				logger.info("to \'" + filename + "\' successfully.");

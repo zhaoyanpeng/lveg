@@ -2,8 +2,11 @@ package edu.shanghaitech.ai.nlp.lveg;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.TreeMap;
 
 import org.junit.Test;
 
@@ -30,6 +33,7 @@ public class LVeGLearnerTest extends Recorder {
 			e.printStackTrace();
 		}
 	}
+	
 	
 //	@Test
 	public void testLocally() {
@@ -78,5 +82,46 @@ public class LVeGLearnerTest extends Recorder {
 		logger.trace(summary + "\n");
 		logger.trace(summary.keySet() + "\n");
 		logger.trace(summary.values() + "\n");
+		
+		int nbin = 150;
+		Map<Integer, Integer> lens = new HashMap<Integer, Integer>();
+		for (Map.Entry<Integer, Integer> entry : summary.entrySet()) {
+			for (int i = 0; i < nbin ; i += 10) {
+				int len = entry.getKey();
+				if (len < i) {
+					if (lens.containsKey(i)) {
+						lens.put(i, lens.get(i) + entry.getValue());
+					} else {
+						lens.put(i, entry.getValue());
+					}
+				}
+			}
+		}
+		
+		KeyComparator bykey = new KeyComparator(lens);
+		TreeMap<Integer, Integer> sorted = new TreeMap<Integer, Integer>(bykey);
+		sorted.putAll(lens);
+		logger.trace(sorted.keySet() + "\n");
+		logger.trace(sorted.values() + "\n");
 	}
+	
+	
+	class KeyComparator implements Comparator<Integer> {
+	    Map<Integer, Integer> map;
+	    public KeyComparator(Map<Integer, Integer> map) {
+	        this.map = map;
+	    }
+		@Override
+		public int compare(Integer o1, Integer o2) {
+			return o1 - o2;
+		}
+	}
+	
+	
+	Comparator<Map.Entry<Integer, Integer>> keycomparator = new Comparator<Map.Entry<Integer, Integer>>() {
+		@Override
+		public int compare(Entry<Integer, Integer> o1, Entry<Integer, Integer> o2) {
+			return o1.getKey() - o2.getKey();
+		}
+	};
 }
