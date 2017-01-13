@@ -54,7 +54,7 @@
 -eontrain, true,
 -eondev, false,
 
--runtag, hello,
+-runtag, hello_new,
 -logroot, log/,
 -logtype, true,
 -nbatch, 1,

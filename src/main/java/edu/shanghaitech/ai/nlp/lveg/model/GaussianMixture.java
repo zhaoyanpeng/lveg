@@ -53,6 +53,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 		for (int i = 0; i < ncomponent; i++) {
 			double weight = (LVeGLearner.random.nextDouble() - LVeGLearner.nratio) * maximum;
 			Map<String, Set<GaussianDistribution>> multivnd = new HashMap<String, Set<GaussianDistribution>>();
+			weight = 0.5;
 			components.add(new Component((short) i, weight, multivnd));
 		}
 	}
