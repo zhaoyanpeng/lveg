@@ -547,6 +547,21 @@ public class MethodUtil extends Recorder {
 	
 	
 	/**
+	 * @param dir the dir that needs to be created
+	 * @return true if created successfully
+	 */
+	public static boolean mkdir(String dir) {
+		File file = new File(dir);
+		if (!file.exists()) {
+			if (file.mkdir() || file.mkdirs()) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	
+	/**
 	 * Return log(a + b) given log(a) and log(b).
 	 * 
 	 * @param x in logarithm

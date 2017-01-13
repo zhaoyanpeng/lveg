@@ -84,9 +84,7 @@ public class LVeGLearner extends LearnerConfig {
 		testTrees = trees.get(ID_TEST);
 		devTrees = trees.get(ID_DEV);
 		
-		double ll = Double.NEGATIVE_INFINITY;
-		String filename = opts.imgprefix + "_gd";
-		treeFile = opts.imgprefix + "_tr";
+		treeFile = sublogroot + opts.imgprefix;
 		
 		Numberer numberer = wrapper.getGlobalNumberer(KEY_TAG_SET);
 		
@@ -99,7 +97,7 @@ public class LVeGLearner extends LearnerConfig {
 				
 		if (opts.loadGrammar && opts.inGrammar != null) {
 			logger.trace("--->Loading grammars from \'" + opts.datadir + opts.inGrammar + "\'...\n");
-			GrammarFile gfile = (GrammarFile) GrammarFile.load(opts.datadir + opts.inGrammar);
+			GrammarFile gfile = (GrammarFile) GrammarFile.load(subdatadir + opts.inGrammar);
 			grammar = gfile.getGrammar();
 			lexicon = gfile.getLexicon();
 			lexicon.labelTrees(trainTrees); // FIXME no errors, just alert you to pay attention to it 
@@ -125,6 +123,7 @@ public class LVeGLearner extends LearnerConfig {
 		mrParser = new MaxRuleParser<Tree<State>, Tree<String>>(grammar, lexicon, opts.maxLenParsing, opts.reuse, false);
 		mvaluator = new ThreadPool(valuator, opts.nteval);
 		trainer = new ThreadPool(lvegParser, opts.ntbatch);
+		double ll = Double.NEGATIVE_INFINITY;
 		/*
 		// initial likelihood of the training set
 		logger.trace("\n-------ll of the training data initially is... ");
@@ -141,10 +140,11 @@ public class LVeGLearner extends LearnerConfig {
 			}
 		}
 		/* State tree to String tree */
+		String treename = treeFile + "_gd";
 		Tree<String> stringTree = StateTreeList.stateTreeToStringTree(globalTree, numberer);
-		MethodUtil.saveTree2image(null, filename, stringTree, numberer);
+		MethodUtil.saveTree2image(null, treename, stringTree, numberer);
 		stringTree = TreeAnnotations.unAnnotateTree(stringTree, false);
-		MethodUtil.saveTree2image(null, filename + "_ua", stringTree, numberer);
+		MethodUtil.saveTree2image(null, treename + "_ua", stringTree, numberer);
 		
 		Tree<String> parseTree = mrParser.parse(globalTree);
 		MethodUtil.saveTree2image(null, treeFile + "_ini", parseTree, numberer);
@@ -341,7 +341,7 @@ public class LVeGLearner extends LearnerConfig {
 		
 		logger.info("\n-------saving grammar file...");
 		GrammarFile gfile = new GrammarFile(grammar, lexicon);
-		String filename = opts.datadir + opts.outGrammar + "_final.gr";
+		String filename = subdatadir + opts.outGrammar + "_final.gr";
 		if (gfile.save(filename)) {
 			logger.info("to \'" + filename + "\' successfully.\n");
 		} else {
@@ -434,11 +434,11 @@ public class LVeGLearner extends LearnerConfig {
 			devTrees.reset();
 		}
 		// visualize the parse tree
-		String filename = ends ? treeFile + "_" + cnt : treeFile + "_" + cnt + "_" + ibatch;
+		String treename = ends ? treeFile + "_" + cnt : treeFile + "_" + cnt + "_" + ibatch;
 		Tree<String> parseTree = mrParser.parse(globalTree);
-		MethodUtil.saveTree2image(null, filename, parseTree, numberer);
+		MethodUtil.saveTree2image(null, treename, parseTree, numberer);
 		parseTree = TreeAnnotations.unAnnotateTree(parseTree, false);
-		MethodUtil.saveTree2image(null, filename + "_ua", parseTree, numberer);
+		MethodUtil.saveTree2image(null, treename + "_ua", parseTree, numberer);
 		// check dropping count
 		boolean exit = false, save = false;
 		if (trll > bestscore) {
@@ -452,10 +452,11 @@ public class LVeGLearner extends LearnerConfig {
 		// store the log score
 		trllist.add(trll);
 		dellist.add(dell);
+		String filename = null;
 		// save the intermediate grammars
 		GrammarFile gfile = new GrammarFile(grammar, lexicon);
 		if (save) { // always save the best grammar to the same file
-			filename = opts.datadir + opts.outGrammar + "_best" + ".gr";
+			filename = subdatadir + opts.outGrammar + "_best" + ".gr";
 			if (gfile.save(filename)) { 
 				logger.info("\n------->the best grammar [cnt = " + cnt + ", ibatch = " + ibatch + "]\n");
 			}
@@ -464,8 +465,8 @@ public class LVeGLearner extends LearnerConfig {
 		save = (opts.saveGrammar && ((ibatch % opts.nbatchSave) == 0) && opts.outGrammar != null);
 		if (ends || save) {
 			logger.info("\n-------saving grammar file...");
-			filename = (ends ? opts.datadir + opts.outGrammar + "_" + cnt + ".gr" 
-					: opts.datadir + opts.outGrammar + "_" + cnt + "_" + ibatch + ".gr");
+			filename = (ends ? subdatadir + opts.outGrammar + "_" + cnt + ".gr" 
+					: subdatadir + opts.outGrammar + "_" + cnt + "_" + ibatch + ".gr");
 			if (gfile.save(filename)) {
 				logger.info("to \'" + filename + "\' successfully.");
 			} else {

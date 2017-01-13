@@ -7,8 +7,8 @@
 -saveCorpus, false,
 -loadCorpus, true,
 
--inGrammar, lvegrammar_best.gr,
--outGrammar, lvegrammar,
+-inGrammar, lveg_best.gr,
+-outGrammar, lveg,
 -nbatchSave, 10,
 -saveGrammar, true,
 -loadGrammar, false,
@@ -54,10 +54,11 @@
 -eontrain, true,
 -eondev, false,
 
+-runtag, hello,
+-logroot, log/,
 -logtype, true,
--logfile, log/overfit_small_data,
 -nbatch, 1,
 -precision, 3,
 -rndomseed, 0,
 
--imgprefix, log/img/os
+-imgprefix, lveg

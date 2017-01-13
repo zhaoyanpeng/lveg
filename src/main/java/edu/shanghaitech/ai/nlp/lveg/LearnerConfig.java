@@ -18,6 +18,7 @@ import edu.shanghaitech.ai.nlp.data.ObjectFileManager.CorpusFile;
 import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGLexicon;
 import edu.shanghaitech.ai.nlp.optimization.Optimizer.OptChoice;
 import edu.shanghaitech.ai.nlp.optimization.ParallelOptimizer.ParallelMode;
+import edu.shanghaitech.ai.nlp.util.MethodUtil;
 import edu.shanghaitech.ai.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.util.Option;
 import edu.shanghaitech.ai.nlp.util.Recorder;
@@ -30,6 +31,9 @@ public class LearnerConfig extends Recorder {
 	protected final static String ID_TRAIN = "train";
 	protected final static String ID_TEST = "test";
 	protected final static String ID_DEV = "dev";
+	
+	protected static String subdatadir;
+	protected static String sublogroot;
 	
 	public final static String KEY_TAG_SET = "tag";
 	public static double minmw = 1e-6;
@@ -199,10 +203,12 @@ public class LearnerConfig extends Recorder {
 		/* evaluation section ends */
 		
 		/* logger configurations section begins */
+		@Option(name = "-runtag", usage = "the flag assigned to a run specially (default: lveg)")
+		public String runtag = "lveg";
 		@Option(name = "-logtype", usage = "console (false) or file and console (true) (default: true)")
 		public boolean logtype = false;
-		@Option(name = "-logfile", usage = "log file name (default: log/log)")
-		public String logfile = "log/log";
+		@Option(name = "-logroot", usage = "log file name (default: log/log)")
+		public String logroot = "log/";
 		@Option(name = "-nbatch", usage = "# of batchs after which the grammar evaluation is conducted (default: 1)")
 		public short nbatch = 1;
 		@Option(name = "-precision", usage = "precision of the output decimals (default: 3)")
@@ -213,7 +219,7 @@ public class LearnerConfig extends Recorder {
 		
 		/* file prefix section begins */
 		@Option(name = "-imgprefix", usage = "prefix of the image of the parse tree obtained from max rule parser (default: maxrule)")
-		public String imgprefix = "log/maxrule";
+		public String imgprefix = "lveg";
 		/* file prefix section ends */
 		
 		
@@ -273,8 +279,13 @@ public class LearnerConfig extends Recorder {
 		if (opts.outGrammar == null) {
 			throw new IllegalArgumentException("Output file is required.");
 		}
+		// make directories
+		subdatadir = opts.datadir + "/" + opts.runtag + "/";
+		sublogroot = opts.logroot + "/" + opts.runtag + "/";
+		MethodUtil.mkdir(sublogroot);
+		MethodUtil.mkdir(subdatadir);
 		if (opts.logtype) {
-			logger = logUtil.getBothLogger(opts.logfile);
+			logger = logUtil.getBothLogger(opts.logroot + "/" + opts.runtag);
 		} else {
 			logger = logUtil.getConsoleLogger();
 		}
