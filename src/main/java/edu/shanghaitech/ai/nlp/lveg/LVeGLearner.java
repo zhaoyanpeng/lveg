@@ -135,9 +135,11 @@ public class LVeGLearner extends LearnerConfig {
 		// initial likelihood of the training set
 		logger.trace("\n-------ll of the training data initially is... ");
 		long beginTime = System.currentTimeMillis();
-		ll = calculateLL(grammar, mvaluator, trainTrees);
+		// ll = parallelLL(opts, mvaluator, trainTrees, numberer, true);
+		ll = serialLL(opts, valuator, trainTrees, numberer, true);
 		long endTime = System.currentTimeMillis();
 		logger.trace("------->" + ll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");
+		System.exit(0);
 		*/
 		// set a global tree for debugging
 		for (Tree<State> tree : testTrees) {
@@ -534,7 +536,7 @@ public class LVeGLearner extends LearnerConfig {
 	public static double serialLL(Options opts, Valuator<?, ?> valuator, StateTreeList stateTreeList, Numberer numberer, boolean istrain) {
 		double ll = 0, sumll = 0;
 		int nUnparsable = 0, cnt = 0;
-		int maxlen = istrain ? opts.eonlylen : opts.eonlylen + 5;
+		int maxlen = istrain ? /*1*/opts.eonlylen : opts.eonlylen + 5;
 		for (Tree<State> tree : stateTreeList) {
 			if (opts.eonlylen > 0) {
 				if (tree.getYield().size() > maxlen) { continue; }
@@ -546,8 +548,10 @@ public class LVeGLearner extends LearnerConfig {
 				if (++cnt > opts.efirstk) { break; } // DEBUG
 			}
 //			Tree<String> stringTree = StateTreeList.stateTreeToStringTree(tree, numberer);
-//			logger.trace("\n" + cnt + "\t" + stringTree);
+//			logger.trace("\n" + cnt + "\t" + stringTree + "\n");
 			ll = valuator.probability(tree);
+//			logger.trace("\n" + cnt + "\t" + ll + "\n");
+//			System.exit(0);
 			if (Double.isInfinite(ll) || Double.isNaN(ll)) {
 				nUnparsable++;
 			} else {

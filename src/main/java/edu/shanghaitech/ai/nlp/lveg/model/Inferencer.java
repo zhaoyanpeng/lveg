@@ -665,11 +665,22 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				
 				for (Map.Entry<Short, GaussianMixture> score : totals.entrySet()) {
 					name = (String) grammar.numberer.object(score.getKey());
-					// sb.append(", " + name + "=" + score.getValue().toString(simple, nfirst));
-					sb.append(", " + name + ":nc=" + score.getValue().ncomponent);
+					sb.append(", " + name + "=" + score.getValue().toString(simple, nfirst));
+					// sb.append(", " + name + "(nc)=" + score.getValue().ncomponent);
 				}
 				
 				sb.append("]");
+				
+				sb.append("\n\n--- details in each level---\n");
+				for (Map.Entry<Short, Map<Short, GaussianMixture>> level : scores.entrySet()) {
+					sb.append("\n------>level " + level.getKey() + " ntag = " + level.getValue().size() + "\n");
+					for (Map.Entry<Short, GaussianMixture> detail : level.getValue().entrySet()) {
+						name = (String) grammar.numberer.object(detail.getKey());
+						sb.append("\nid=" + detail.getKey() + ", " + name + "=" + detail.getValue().toString(simple, nfirst));
+					}
+					sb.append("\n");
+				}
+				
 				return sb.toString();
 			} else {
 				return toString();

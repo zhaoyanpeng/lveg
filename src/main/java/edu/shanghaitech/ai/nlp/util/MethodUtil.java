@@ -254,28 +254,29 @@ public class MethodUtil extends Recorder {
 	}
 	
 	
-	public static void debugChart(List<Cell> chart, short nfirst) {
+	public static void debugChart(List<Cell> chart, short nfirst, int nword) {
+		int size = nword * (nword + 1) / 2;
 		if (chart != null) {
-			for (int i = 0; i < chart.size(); i++) {
+			for (int i = 0; i < size; i++) {
 				logger.debug(i + "\t" + chart.get(i).toString(true, nfirst) + "\n\n");
 			}
 		}
 	}
 	
 	
-	public static void debugTree(Tree<State> tree, boolean simple, short nfirst) {
+	public static void debugTree(Tree<State> tree, boolean simple, short nfirst, Numberer numberer) {
 		StringBuilder sb = new StringBuilder();
-		toString(tree, simple, nfirst, sb);
+		toString(tree, simple, nfirst, sb, numberer);
 		logger.debug(sb + "\n");
 	}	
 	
-	private static void toString(Tree<State> tree, boolean simple, short nfirst, StringBuilder sb) {
-		if (tree.isLeaf()) { sb.append("[" + tree.getLabel().wordIdx + "]"); return; }
+	private static void toString(Tree<State> tree, boolean simple, short nfirst, StringBuilder sb, Numberer numberer) {
+		if (tree.isLeaf()) { sb.append("[" + tree.getLabel().wordIdx + ", " + tree.getLabel().toString(numberer) + "]"); return; }
 		sb.append('(');
 		
 		State state = tree.getLabel();
 		if (state != null) {
-			sb.append(state);
+			sb.append(state.toString(numberer));
 			if (state.getInsideScore() != null) { 
 				sb.append(" iscore=" + state.getInsideScore().toString(simple, nfirst)); 
 			} else {
@@ -289,7 +290,7 @@ public class MethodUtil extends Recorder {
 		}
 		for (Tree<State> child : tree.getChildren()) {
 			sb.append(' ');
-			toString(child, simple, nfirst, sb);
+			toString(child, simple, nfirst, sb, numberer);
 		}
 		sb.append(')');
 	}

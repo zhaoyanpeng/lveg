@@ -88,11 +88,6 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 			System.err.println("Fatal Error: Sentence score is smaller than zero: " + scoreS);
 			return;
 		}
-		// we need to check if the rule is valid when evaluating the max rule count, and we need the null 
-		// to mark invalid rules. At the same time, we ask MaxRuleParser always to be in the context of 
-		// testing, but there is no null rule weight in this context, we have to reset the grammar context
-		// CHECK this is a fatal error in the multithreaded environment since the shared object can be 
-		// accessed by multiple threads simultaneously
 		inferencer.evalMaxRuleCount(chart, sentence, nword, scoreS);
 	}
 	
