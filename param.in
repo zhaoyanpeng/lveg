@@ -4,8 +4,8 @@
 -dev, wsj_s22_tree,
 -inCorpus, wsj_all.tree,
 -outCorpus, wsj_all.tree,
--saveCorpus, true,
--loadCorpus, false,
+-saveCorpus, false,
+-loadCorpus, true,
 
 -inGrammar, lveg_best.gr,
 -outGrammar, lveg,
@@ -37,7 +37,7 @@
 
 -reuse, true,
 -prune, true,
--bsize, 30,
+-bsize, 3,
 -nepoch, 30,
 -maxsample, 3,
 -maxLenParsing, 120,
@@ -53,7 +53,7 @@
 -efirstk, 200,
 -eontrain, true,
 -eondev, true,
--enbatchdev, 5,
+-enbatchdev, 1,
 
 -runtag, hello,
 -logroot, log/,

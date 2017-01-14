@@ -27,6 +27,8 @@ import edu.shanghaitech.ai.nlp.optimization.ParallelOptimizer;
 import edu.shanghaitech.ai.nlp.syntax.State;
 
 /**
+ * There is only one Grammar instance shared by trainer, lvegParser, maxRuleParser, and valuator.
+ * 
  * @author Yanpeng Zhao
  *
  */
@@ -43,6 +45,7 @@ public class LVeGLearner extends LearnerConfig {
 	protected static LVeGGrammar grammar;
 	protected static LVeGLexicon lexicon;
 	
+	protected static Valuator<?, ?> valuator;
 	protected static LVeGParser<?, ?> lvegParser;
 	protected static MaxRuleParser<?, ?> mrParser;
 	
@@ -122,9 +125,9 @@ public class LVeGLearner extends LearnerConfig {
 		lexicon.labelTrees(testTrees); // save the search time cost by finding a specific tag-word
 		lexicon.labelTrees(devTrees); // pair in in Lexicon.score(...)
 		
-		Valuator<?, ?> valuator = new Valuator<Tree<State>, Double>(grammar, lexicon, opts.maxLenParsing, opts.reuse, false);
 		lvegParser = new LVeGParser<Tree<State>, List<Double>>(grammar, lexicon, opts.maxLenParsing, opts.reuse, opts.prune);
 		mrParser = new MaxRuleParser<Tree<State>, Tree<String>>(grammar, lexicon, opts.maxLenParsing, opts.reuse, false);
+		valuator = new Valuator<Tree<State>, Double>(grammar, lexicon, opts.maxLenParsing, opts.reuse, false);
 		mvaluator = new ThreadPool(valuator, opts.nteval);
 		trainer = new ThreadPool(lvegParser, opts.ntbatch);
 		double ll = Double.NEGATIVE_INFINITY;
@@ -137,10 +140,10 @@ public class LVeGLearner extends LearnerConfig {
 		logger.trace("------->" + ll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");
 		*/
 		// set a global tree for debugging
-		for (Tree<State> tree : trainTrees) {
-			if (tree.getYield().size() == 6) {
+		for (Tree<State> tree : testTrees) {
+			if (tree.getYield().size() == opts.eonlylen) {
 				globalTree = tree.shallowClone();
-				// break;
+				break;
 			}
 		}
 		/* State tree to String tree */
@@ -249,7 +252,7 @@ public class LVeGLearner extends LearnerConfig {
 			}
 		} while(++cnt < opts.nepoch);
 		
-		finals(trllist, dellist, true); // better finalize it in a specialized test class
+		finals(trllist, dellist, numberer, true); // better finalize it in a specialized test class
 	}
 	
 	
@@ -330,13 +333,13 @@ public class LVeGLearner extends LearnerConfig {
 			}
 		} while(++cnt < opts.nepoch);
 		
-		finals(trllist, dellist, true); // better finalize it in a specialized test class
+		finals(trllist, dellist, numberer, true); // better finalize it in a specialized test class
 	}
 	
 	
 	
 	
-	public static void finals(List<Double> trllist, List<Double> dellist, boolean exit) {
+	public static void finals(List<Double> trllist, List<Double> dellist, Numberer numberer, boolean exit) {
 		long beginTime, endTime;
 		logger.trace("Convergence Path [train]: " + trllist + "\n");
 		logger.trace("Convergence Path [ dev ]: " + dellist + "\n");
@@ -358,21 +361,21 @@ public class LVeGLearner extends LearnerConfig {
 		
 		logger.trace("------->evaluating on the training dataset...");
 		beginTime = System.currentTimeMillis();
-		double ll = calculateLL(opts, mvaluator, trainTrees, true);
+		double ll = parallelLL(opts, mvaluator, trainTrees, numberer, true);
 		endTime = System.currentTimeMillis();
 		logger.trace("ll is "+ ll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");
 		trainTrees.reset();
 		
 		logger.trace("------->evaluating on the valuation dataset...");
 		beginTime = System.currentTimeMillis();
-		ll = calculateLL(opts, mvaluator, devTrees, false);
+		ll = parallelLL(opts, mvaluator, devTrees, numberer, false);
 		endTime = System.currentTimeMillis();
 		logger.trace("ll is "+ ll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");
 		devTrees.reset();
 		
 		logger.trace("------->evaluating on the test dataset...");
 		beginTime = System.currentTimeMillis();
-		ll = calculateLL(opts, mvaluator, testTrees, false);
+		ll = parallelLL(opts, mvaluator, testTrees, numberer, false);
 		endTime = System.currentTimeMillis();
 		logger.trace("ll is "+ ll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");
 		testTrees.reset();
@@ -423,7 +426,7 @@ public class LVeGLearner extends LearnerConfig {
 		if (opts.eontrain) {
 			logger.trace("\n-------ll of the training data after " + ibatch + " batches in epoch " + cnt + " is... ");
 			beginTime = System.currentTimeMillis();
-			trll = calculateLL(opts, mvaluator, trainTrees, true);
+			trll = parallelLL(opts, mvaluator, trainTrees, numberer, true);
 			endTime = System.currentTimeMillis();
 			logger.trace("------->" + trll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");
 			trainTrees.reset();
@@ -435,7 +438,8 @@ public class LVeGLearner extends LearnerConfig {
 		if (opts.eondev && (ibatch % opts.enbatchdev) == 0) {
 			logger.trace("\n-------ll of the dev data after " + ibatch + " batches in epoch " + cnt + " is... ");
 			beginTime = System.currentTimeMillis();
-			dell = calculateLL(opts, mvaluator, devTrees, false);
+			dell = parallelLL(opts, mvaluator, devTrees, numberer, false);
+			// dell = serialLL(opts, valuator, devTrees, numberer, false);
 			endTime = System.currentTimeMillis();
 			logger.trace("------->" + dell + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");
 			devTrees.reset();
@@ -481,25 +485,26 @@ public class LVeGLearner extends LearnerConfig {
 	}
 	
 	
-	
-	
 	/**
 	 * We have to evaluate the grammar on only a fraction of training data because the evaluation is quite time-consumed. But it is the 
 	 * evaluation on the whole validation dataset or the whole test dataset that can tells whether your trained model is good or bad.
 	 */
-	public static double calculateLL(Options opts, ThreadPool valuator, StateTreeList stateTreeList, boolean istrain) {
-		int nUnparsable = 0, cnt = 0;
+	public static double parallelLL(Options opts, ThreadPool valuator, StateTreeList stateTreeList, Numberer numberer, boolean istrain) {
 		double ll = 0, sumll = 0;
+		int nUnparsable = 0, cnt = 0;
+		int maxlen = istrain ? opts.eonlylen : opts.eonlylen + 5;
 		for (Tree<State> tree : stateTreeList) {
 			if (opts.eonlylen > 0) {
-				if (tree.getYield().size() > opts.eonlylen) { continue; }
-			}
-			if (opts.efirstk > 0) {
-				if (++cnt > opts.efirstk) { break; } // DEBUG
+				if (tree.getYield().size() > maxlen) { continue; }
 			}
 			if (istrain && opts.eratio > 0) {
 				if (random.nextDouble() > opts.eratio) { continue; }
 			}
+			if (opts.efirstk > 0) {
+				if (++cnt > opts.efirstk) { break; } // DEBUG
+			}
+//			Tree<String> stringTree = StateTreeList.stateTreeToStringTree(tree, numberer);
+//			logger.trace("\n" + cnt + "\t" + stringTree);
 			valuator.execute(tree);
 			while (valuator.hasNext()) {
 				ll = (double) valuator.getNext();
@@ -510,7 +515,6 @@ public class LVeGLearner extends LearnerConfig {
 				}
 			}
 		}
-		cnt = 0;
 		while (!valuator.isDone()) {
 			while (valuator.hasNext()) {
 				ll = (double) valuator.getNext();
@@ -522,7 +526,35 @@ public class LVeGLearner extends LearnerConfig {
 			}
 		}
 		valuator.reset();
-		logger.trace("\n[in calculating log likelihood " + nUnparsable + " unparsable sample(s) of " + stateTreeList.size() + " samples]\n");
+		logger.trace("\n[in calculating log likelihood " + nUnparsable + " unparsable sample(s) of " + stateTreeList.size() + "(" + cnt + ") samples]\n");
+		return sumll;
+	}
+	
+	
+	public static double serialLL(Options opts, Valuator<?, ?> valuator, StateTreeList stateTreeList, Numberer numberer, boolean istrain) {
+		double ll = 0, sumll = 0;
+		int nUnparsable = 0, cnt = 0;
+		int maxlen = istrain ? opts.eonlylen : opts.eonlylen + 5;
+		for (Tree<State> tree : stateTreeList) {
+			if (opts.eonlylen > 0) {
+				if (tree.getYield().size() > maxlen) { continue; }
+			}
+			if (istrain && opts.eratio > 0) {
+				if (random.nextDouble() > opts.eratio) { continue; }
+			}
+			if (opts.efirstk > 0) {
+				if (++cnt > opts.efirstk) { break; } // DEBUG
+			}
+//			Tree<String> stringTree = StateTreeList.stateTreeToStringTree(tree, numberer);
+//			logger.trace("\n" + cnt + "\t" + stringTree);
+			ll = valuator.probability(tree);
+			if (Double.isInfinite(ll) || Double.isNaN(ll)) {
+				nUnparsable++;
+			} else {
+				sumll += ll;
+			}
+		}
+		logger.trace("\n[in calculating log likelihood " + nUnparsable + " unparsable sample(s) of " + stateTreeList.size() + "(" + cnt + ") samples]\n");
 		return sumll;
 	}
 	

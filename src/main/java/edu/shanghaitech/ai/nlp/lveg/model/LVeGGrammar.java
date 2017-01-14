@@ -64,22 +64,43 @@ public abstract class LVeGGrammar extends Recorder implements Serializable {
 	
 	public void addBRule(BinaryGrammarRule rule) {}
 	
-	public GaussianMixture getBRuleWeight(short idParent, short idlChild, short idrChild) {
+	/**
+	 * @param idParent id of the left hand side of the binary rule
+	 * @param idlChild id of the left child in the binary rule
+	 * @param idrChild id of the right child in the binary rule
+	 * @param context  null can be returned (true) or not (false), which can be used to check if the given query rule is valid or not
+	 * @return
+	 */
+	public GaussianMixture getBRuleWeight(short idParent, short idlChild, short idrChild, boolean context) {
 		GrammarRule rule = getBRule(idParent, idlChild, idrChild);
 		if (rule != null) {
 			return rule.getWeight();
+		} 
+		if (!context) { 
+			// when calculating inside and outside scores, we do not want the rule weight to be null, so just set it to zero
+			// if the given query rule is not valid (never appears in the training set).
+			logger.warn("\nBinary Rule NOT Found: [P: " + idParent + ", LC: " + idlChild + ", RC: " + idrChild + "]\n");
+			GaussianMixture weight = GrammarRule.rndRuleWeight(GrammarRule.LRBRULE);
+			weight.setWeights(Double.NEGATIVE_INFINITY);
+			return weight;
+		} else { // 
+			return null;
 		}
-//		logger.warn("Binary Rule NOT Found: [P: " + idParent + ", LC: " + idlChild + ", RC: " + idrChild + "]\n");
-		return null;
 	}
 	
-	public GaussianMixture getURuleWeight(short idParent, short idChild, byte type) {
+	public GaussianMixture getURuleWeight(short idParent, short idChild, byte type, boolean context) {
 		GrammarRule rule = getURule(idParent, idChild, type);
 		if (rule != null) {
 			return rule.getWeight();
+		} 
+		if (!context) {
+			logger.warn("\nUnary Rule NOT Found: [P: " + idParent + ", UC: " + idChild + ", TYPE: " + type + "]\n");
+			GaussianMixture weight = GrammarRule.rndRuleWeight(type);
+			weight.setWeights(Double.NEGATIVE_INFINITY);
+			return weight;
+		} else {
+			return null;
 		}
-//		logger.warn("Unary Rule NOT Found: [P: " + idParent + ", C: " + idChild + ", TYPE: " + type + "]\n");
-		return null;
 	}
 
 	public GrammarRule getBRule(short idParent, short idlChild, short idrChild) {

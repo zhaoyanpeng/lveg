@@ -2,16 +2,11 @@ package edu.shanghaitech.ai.nlp.lveg.model;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
-import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
-import edu.shanghaitech.ai.nlp.lveg.LearnerConfig.Params;
-import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture.Component;
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
 import edu.shanghaitech.ai.nlp.util.Recorder;
 
@@ -59,12 +54,12 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 		short maximum = LVeGLearner.maxrandom;
 		for (int i = 0; i < dim; i++) {
 			double rndn = (LVeGLearner.random.nextDouble() - LVeGLearner.nratio) * maximum;
-			rndn = 0.5;
+			// rndn = 0.5;
 			mus.add(rndn);
 		} // better initialize mu and var in the different loops
 		for (int i = 0; i < dim; i++) {
 			double rndn = (LVeGLearner.random.nextDouble() - LVeGLearner.nratio) * maximum;
-			rndn = 0.5;
+			// rndn = 0.5;
 			vars.add(rndn);
 		}	
 	}

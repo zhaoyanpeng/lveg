@@ -67,6 +67,8 @@ public class ParallelOptimizerTest {
 		public void nonStaticPrint(int i, int isample) {
 			muppet.nonStaticPrint(i, isample);
 		}
+		
+		protected void setContext(boolean test) {}
 
 		@Override
 		public synchronized Object call() throws Exception {

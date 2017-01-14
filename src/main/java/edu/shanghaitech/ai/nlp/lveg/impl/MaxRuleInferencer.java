@@ -113,19 +113,21 @@ public class MaxRuleInferencer extends Inferencer {
 		GaussianMixture outScore, cinScore, w0, w1;
 		// chain unary rule of length 1
 		Set<Short> mkeyLevel0 = chart.keySetMaxRule(idx, (short) 0);
-		for (short mkey : mkeyLevel0) {
-			if ((cinScore = chart.getInsideScore(mkey, idx, (short) 0)) == null) { continue; }
-			if ((count = chart.getMaxRuleCount(mkey, idx, (short) 0)) == Double.NEGATIVE_INFINITY) { continue; }
-			rules = grammar.getURuleWithC(mkey);
-			Iterator<GrammarRule> iterator = rules.iterator();
-			while (iterator.hasNext()) {
-				UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
-				if (rule.type == GrammarRule.RHSPACE) { continue; } // ROOT in cell 0 is NOT allowed
-				if ((maxcnt = chart.getMaxRuleCount(rule.lhs, idx)) > count) { continue; }
-				if ((outScore = chart.getOutsideScore(rule.lhs, idx, (short) 0)) == null) { continue; }
-				newcnt = count + rule.weight.marginalize(true) + cinScore.marginalize(true) + outScore.marginalize(true) - scoreS;
-				if (newcnt > maxcnt) {
-					chart.addMaxRuleCount(rule.lhs, idx, newcnt, mkey, (short) -1, (short) 1);
+		if (mkeyLevel0 != null) {
+			for (short mkey : mkeyLevel0) {
+				if ((cinScore = chart.getInsideScore(mkey, idx, (short) 0)) == null) { continue; }
+				if ((count = chart.getMaxRuleCount(mkey, idx, (short) 0)) == Double.NEGATIVE_INFINITY) { continue; }
+				rules = grammar.getURuleWithC(mkey);
+				Iterator<GrammarRule> iterator = rules.iterator();
+				while (iterator.hasNext()) {
+					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
+					if (rule.type == GrammarRule.RHSPACE) { continue; } // ROOT in cell 0 is NOT allowed
+					if ((maxcnt = chart.getMaxRuleCount(rule.lhs, idx)) > count) { continue; }
+					if ((outScore = chart.getOutsideScore(rule.lhs, idx, (short) 0)) == null) { continue; }
+					newcnt = count + rule.weight.marginalize(true) + cinScore.marginalize(true) + outScore.marginalize(true) - scoreS;
+					if (newcnt > maxcnt) {
+						chart.addMaxRuleCount(rule.lhs, idx, newcnt, mkey, (short) -1, (short) 1);
+					}
 				}
 			}
 		}
@@ -144,8 +146,8 @@ public class MaxRuleInferencer extends Inferencer {
 						continue;
 					}
 					for (Short mid : ikeyLevel1) {
-						if ((w0 = grammar.getURuleWeight(mid, ikey, GrammarRule.LRURULE)) == null ||
-								(w1 = grammar.getURuleWeight(okey, mid, GrammarRule.LRURULE)) == null) {
+						if ((w0 = grammar.getURuleWeight(mid, ikey, GrammarRule.LRURULE, true)) == null ||
+								(w1 = grammar.getURuleWeight(okey, mid, GrammarRule.LRURULE, true)) == null) {
 							continue;
 						}
 						newcnt = count + cinScore.marginalize(true) + w0.marginalize(true) + 

@@ -4,6 +4,7 @@ import java.util.List;
 
 import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
+import edu.shanghaitech.ai.nlp.lveg.model.Inferencer;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
 import edu.shanghaitech.ai.nlp.lveg.model.Parser;
 import edu.shanghaitech.ai.nlp.lveg.model.Inferencer.Chart;
@@ -60,7 +61,7 @@ public class Valuator<I, O> extends Parser<I, O> {
 	 * @param tree the parse tree
 	 * @return
 	 */
-	protected double probability(Tree<State> tree) {
+	public double probability(Tree<State> tree) {
 		double jointdist = scoreTree(tree);
 		double partition = scoreSentence(tree);
 		double ll = jointdist - partition; // in logarithm
@@ -97,7 +98,7 @@ public class Valuator<I, O> extends Parser<I, O> {
 			if (chart != null) { chart.clear(-1); }
 			chart = new Chart(nword, false);
 		}
-		LVeGInferencer.insideScore(chart, sentence, nword, prune);
+		Inferencer.insideScore(chart, sentence, nword, prune);
 		GaussianMixture gm = chart.getInsideScore((short) 0, Chart.idx(0, 1));
 		double score = gm.eval(null, true);
 		return score;

@@ -131,10 +131,8 @@ public class State implements Serializable {
 			this.id = -1;
 			this.wordIdx = -1;
 			this.signIdx = -1;
-			resetScore();
-		} else {
-			resetScore();
-		}
+		} 
+		resetScore();
 	}
 	
 	

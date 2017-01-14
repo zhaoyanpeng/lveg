@@ -173,7 +173,7 @@ public class MethodUtil extends Recorder {
 				short idChild = child.getId();
 				
 				byte type = idParent == 0 ? GrammarRule.RHSPACE : GrammarRule.LRURULE;
-				ruleScore = grammar.getURuleWeight(idParent, idChild, type);
+				ruleScore = grammar.getURuleWeight(idParent, idChild, type, false);
 				logger.trace("Unary\trule: [" + idParent + ", " + idChild + "] " + ruleScore + "\n"); // DEBUG
 				break;
 			}
@@ -184,7 +184,7 @@ public class MethodUtil extends Recorder {
 				short idlChild = lchild.getId();
 				short idrChild = rchild.getId();
 
-				ruleScore = grammar.getBRuleWeight(idParent, idlChild, idrChild);
+				ruleScore = grammar.getBRuleWeight(idParent, idlChild, idrChild, false);
 				logger.trace("Binary\trule: [" + idParent + ", " + idlChild + ", " + idrChild + "] " + ruleScore + "\n"); // DEBUG
 				break;
 			}

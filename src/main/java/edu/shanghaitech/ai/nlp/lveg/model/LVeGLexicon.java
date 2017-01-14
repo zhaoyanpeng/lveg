@@ -1,16 +1,10 @@
 package edu.shanghaitech.ai.nlp.lveg.model;
 
 import java.io.Serializable;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.data.StateTreeList;
-import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
-import edu.shanghaitech.ai.nlp.lveg.impl.DiagonalGaussianDistribution;
-import edu.shanghaitech.ai.nlp.lveg.impl.DiagonalGaussianMixture;
-import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.Unit;
 import edu.shanghaitech.ai.nlp.syntax.State;
 import edu.shanghaitech.ai.nlp.util.Indexer;
 
@@ -76,21 +70,6 @@ public abstract class LVeGLexicon extends LVeGGrammar implements Serializable {
 				word.signIdx = -1;
 			}
 		}
-	}
-	
-	/**
-	 * @param mw the mixing weight in logarithm
-	 * @return   randomly initialized rule weight
-	 */
-	protected static GaussianMixture rndWeight(double mw) {
-		GaussianMixture weight = new DiagonalGaussianMixture(LVeGLearner.ncomponent);
-		for (int i = 0; i < LVeGLearner.ncomponent; i++) {
-			Set<GaussianDistribution> set = new HashSet<GaussianDistribution>();
-			set.add(new DiagonalGaussianDistribution(LVeGLearner.dim));
-			weight.add(i, Unit.P, set);
-		}
-		weight.setWeights(mw);
-		return weight;
 	}
 	
 	/**

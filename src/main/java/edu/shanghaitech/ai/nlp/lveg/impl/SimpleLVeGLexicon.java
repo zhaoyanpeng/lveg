@@ -102,7 +102,7 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 			int wordIdx = wordIndexer.indexOf(name);
 			word.wordIdx = wordIdx;
 			short tagIdx = tags.get(i).getId();
-			GrammarRule rule = new UnaryGrammarRule((short) tagIdx, wordIdx, GrammarRule.LHSPACE);
+			GrammarRule rule = new UnaryGrammarRule(tagIdx, wordIdx, GrammarRule.LHSPACE);
 			uRuleTable.addCount(rule, 1.0);
 		}
 	}
@@ -112,9 +112,18 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 	public List<GrammarRule> getRulesWithWord(State word) {
 		// map the word to its real index
 		int wordIdx = word.wordIdx;
-		if (wordIdx < 0) {
-			wordIdx = wordIndexer.indexOf(word.getName());
+		String signature = "(UNK)", name = word.getName();
+		if (wordIdx < 0) { // the unlabeled word
+			wordIdx = wordIndexer.indexOf(name);
 			word.wordIdx = wordIdx;
+		}
+		if (wordIdx == -1) { // the rare word
+			signature = getSignature(name, word.from);
+			wordIdx = wordIndexer.indexOf(signature);
+			word.wordIdx = wordIdx;
+		}
+		if (wordIdx == -1) { // CHECK
+			return new ArrayList<GrammarRule>(0);
 		}
 		return uRulesWithC[wordIdx];
 	}
@@ -135,13 +144,17 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 			word.wordIdx = wordIdx;
 		}
 		if (wordIdx == -1) { // the unknown word
-			System.err.println("\nunknown word signature [tag = " + itag + ", word = " + name + ", sig = " +  signature + "]");
-			return rndWeight(LVeGLearner.minmw);
+			logger.warn("\nUnknown Word Signature [P: " + itag + ", UC: " + wordIdx + ", word = " + name + ", sig = " +  signature + "]\n");
+			GaussianMixture weight = GrammarRule.rndRuleWeight(GrammarRule.LHSPACE);
+			weight.setWeights(LVeGLearner.minmw);
+			return weight;
 		}
 		GrammarRule rule = getURule(itag, wordIdx, GrammarRule.LHSPACE);
 		if (rule == null) {
-			System.err.println("\nunknown lexicon rule [tag = " + itag + ", word = " + name + ", sig = " +  signature + "]");
-			return rndWeight(Double.NEGATIVE_INFINITY);
+			logger.warn("\nUnknown Lexicon Rule [P: " + itag + ", UC: " + wordIdx + ", word = " + name + ", sig = " +  signature + "]\n");
+			GaussianMixture weight = GrammarRule.rndRuleWeight(GrammarRule.LHSPACE);
+			weight.setWeights(Double.NEGATIVE_INFINITY);
+			return weight;
 		}
 		return rule.getWeight();
 	}                                           
@@ -177,7 +190,7 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 			List<GrammarRule> rules = uRulesWithP[i];
 			sb.append("Tag " + i + "\t[" + numberer.object(i) + "] has " + rules.size() + " rules\n" );
 			for (GrammarRule rule : rules) {
-				sb.append(rule + "\t" + rule.getWeight().getBias());
+				sb.append(rule + "\t" + uRuleTable.getCount(rule).getBias());
 				if (++count % ncol == 0) {
 					sb.append("\n");
 				}

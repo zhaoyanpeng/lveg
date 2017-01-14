@@ -1,15 +1,7 @@
 package edu.shanghaitech.ai.nlp.lveg.impl;
 
-import java.util.Map;
-import java.util.Set;
-
-import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
-import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
-
-import java.util.HashMap;
-import java.util.HashSet;
 
 /**
  * @author Yanpeng Zhao
@@ -65,21 +57,7 @@ public class BinaryGrammarRule extends GrammarRule implements Comparable<Object>
 	
 	
 	private void initializeWeight() {
-		weight = new DiagonalGaussianMixture(LVeGLearner.ncomponent);
-		
-		for (int i = 0; i < LVeGLearner.ncomponent; i++) {
-			Map<String, Set<GaussianDistribution>> map = new HashMap<String, Set<GaussianDistribution>>();
-			Set<GaussianDistribution> set0 = new HashSet<GaussianDistribution>();
-			Set<GaussianDistribution> set1 = new HashSet<GaussianDistribution>();
-			Set<GaussianDistribution> set2 = new HashSet<GaussianDistribution>();
-			set0.add(new DiagonalGaussianDistribution(LVeGLearner.dim));
-			set1.add(new DiagonalGaussianDistribution(LVeGLearner.dim));
-			set2.add(new DiagonalGaussianDistribution(LVeGLearner.dim));
-			map.put(Unit.P, set0);
-			map.put(Unit.LC, set1);
-			map.put(Unit.RC, set2);
-			weight.add(i, map);
-		}
+		weight = rndRuleWeight(GrammarRule.LRBRULE);
 	}
 
 	

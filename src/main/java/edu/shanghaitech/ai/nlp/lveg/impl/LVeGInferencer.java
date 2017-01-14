@@ -74,10 +74,10 @@ public class LVeGInferencer extends Inferencer {
 				short idChild = child.getId();
 				
 				if (idParent != 0) {
-					ruleScore = grammar.getURuleWeight(idParent, idChild, GrammarRule.LRURULE);
+					ruleScore = grammar.getURuleWeight(idParent, idChild, GrammarRule.LRURULE, false);
 					pinScore = ruleScore.mulForInsideOutside(cinScore, GrammarRule.Unit.UC, true);
 				} else { // root, inside score of the root node is a constant in double
-					ruleScore = grammar.getURuleWeight(idParent, idChild, GrammarRule.RHSPACE);
+					ruleScore = grammar.getURuleWeight(idParent, idChild, GrammarRule.RHSPACE, false);
 					pinScore = ruleScore.mulForInsideOutside(cinScore, GrammarRule.Unit.C, true);
 				}
 				parent.setInsideScore(pinScore);
@@ -92,7 +92,7 @@ public class LVeGInferencer extends Inferencer {
 				
 				linScore = lchild.getInsideScore();
 				rinScore = rchild.getInsideScore();
-				ruleScore = grammar.getBRuleWeight(idParent, idlChild, idrChild);
+				ruleScore = grammar.getBRuleWeight(idParent, idlChild, idrChild, false);
 				
 				pinScore = ruleScore.mulForInsideOutside(linScore, GrammarRule.Unit.LC, true);
 				pinScore = pinScore.mulForInsideOutside(rinScore, GrammarRule.Unit.RC, false);
@@ -132,9 +132,9 @@ public class LVeGInferencer extends Inferencer {
 				short idChild = child.getId();
 				
 				if (idParent != 0) {
-					ruleScore = grammar.getURuleWeight(idParent, idChild, GrammarRule.LRURULE);
+					ruleScore = grammar.getURuleWeight(idParent, idChild, GrammarRule.LRURULE, false);
 				} else { // root
-					ruleScore = grammar.getURuleWeight(idParent, idChild, GrammarRule.RHSPACE);
+					ruleScore = grammar.getURuleWeight(idParent, idChild, GrammarRule.RHSPACE, false);
 				}
 				// rule: p(root->nonterminal) does not contain "P" part, so no removing occurs when
 				// the current parent node is the root node
@@ -152,7 +152,7 @@ public class LVeGInferencer extends Inferencer {
 				
 				linScore = lchild.getInsideScore();
 				rinScore = rchild.getInsideScore();
-				ruleScore = grammar.getBRuleWeight(idParent, idlChild, idrChild);
+				ruleScore = grammar.getBRuleWeight(idParent, idlChild, idrChild, false);
 				
 				loutScore = ruleScore.mulForInsideOutside(poutScore, GrammarRule.Unit.P, true);
 				loutScore = loutScore.mulForInsideOutside(rinScore, GrammarRule.Unit.RC, false);

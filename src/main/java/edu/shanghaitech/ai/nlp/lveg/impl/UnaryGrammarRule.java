@@ -1,12 +1,5 @@
 package edu.shanghaitech.ai.nlp.lveg.impl;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-
-import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
-import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
 
@@ -62,39 +55,8 @@ public class UnaryGrammarRule extends GrammarRule implements Comparable<Object> 
 	}
 	
 	
-	private void initializeWeight(int type) {
-		weight = new DiagonalGaussianMixture(LVeGLearner.ncomponent);
-		
-		switch (type) {
-		case RHSPACE: // rules for the root since it does not have subtypes
-			for (int i = 0; i < LVeGLearner.ncomponent; i++) {
-				Set<GaussianDistribution> set = new HashSet<GaussianDistribution>();
-				set.add(new DiagonalGaussianDistribution(LVeGLearner.dim));
-				weight.add(i, Unit.C, set);
-			}
-			break;
-		case LHSPACE: // rules in the preterminal layer (discarded)
-			for (int i = 0; i < LVeGLearner.ncomponent; i++) {
-				Set<GaussianDistribution> set = new HashSet<GaussianDistribution>();
-				set.add(new DiagonalGaussianDistribution(LVeGLearner.dim));
-				weight.add(i, Unit.P, set);
-			}
-			break;
-		case LRURULE: // general unary rules 
-			for (int i = 0; i < LVeGLearner.ncomponent; i++) {
-				Map<String, Set<GaussianDistribution>> map = new HashMap<String, Set<GaussianDistribution>>();
-				Set<GaussianDistribution> set0 = new HashSet<GaussianDistribution>();
-				Set<GaussianDistribution> set1 = new HashSet<GaussianDistribution>();
-				set0.add(new DiagonalGaussianDistribution(LVeGLearner.dim));
-				set1.add(new DiagonalGaussianDistribution(LVeGLearner.dim));
-				map.put(Unit.P, set0);
-				map.put(Unit.UC, set1);
-				weight.add(i, map);
-			}
-			break;
-		default:
-			System.err.println("Not consistent with any unary rule type.");
-		}
+	private void initializeWeight(byte type) {
+		weight = rndRuleWeight(type);
 	}
 	
 	

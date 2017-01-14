@@ -210,7 +210,7 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 		StringBuffer sb = new StringBuffer();
 		sb.append("Grammar [nTag=" + ntag + "]\n");
 		for (int i = 0; i < numberer.size(); i++) {
-			logger.trace("Tag " + i + "\t" +  (String) numberer.object(i) + "\n");
+			sb.append("Tag " + i + "\t" +  (String) numberer.object(i) + "\n");
 		}
 		
 		sb.append("---Unary Grammar Rules. Total: " + uRuleTable.size() + "\n");
