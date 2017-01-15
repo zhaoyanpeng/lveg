@@ -213,6 +213,10 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 		this.mus = mus;
 	}
 
+	
+	public boolean isValid() {
+		return (vars != null && mus != null && vars.size() == 0 && mus.size() == 0 && dim == 0);
+	}
 
 	/**
 	 * Memory clean.

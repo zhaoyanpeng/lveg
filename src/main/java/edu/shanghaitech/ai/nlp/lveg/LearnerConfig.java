@@ -363,14 +363,14 @@ public class LearnerConfig extends Recorder {
 	protected static StateTreeList stringTreeToStateTree(List<Tree<String>> stringTrees, 
 			Numberer numberer, Options opts, boolean replaceRareWords) {
 		if (opts.lowercase) {
-			System.out.println("Lowercasing the treebank.");
+			logger.trace("Lowercasing the treebank.\n");
 			Corpus.lowercaseWords(stringTrees);
 		}
 		logger.trace("--->There are " + stringTrees.size() + " trees in the corpus.\n");
 		StateTreeList stateTreeList = new StateTreeList(stringTrees, numberer);
 		debugNumbererTag(numberer, opts); // DEBUG
 		if (replaceRareWords) {
-			System.out.println("Replacing words appearing less than 20 times with their signature.");
+			logger.trace("Replacing words appearing less than 20 times with their signature.\n");
 			LVeGCorpus.replaceRareWords(stateTreeList, new SimpleLVeGLexicon(), opts.rareThreshold);
 		}
 		return stateTreeList;
@@ -382,7 +382,7 @@ public class LearnerConfig extends Recorder {
 				logger.trace("Tag " + i + "\t" +  (String) numberer.object(i) + "\n");
 			}
 		}
-		logger.debug("There are " + numberer.size() + " observed tags.\n");
+		logger.trace("There are " + numberer.size() + " observed tags.\n");
 	}
 	
 	public static String readFile(String path, Charset encoding) throws IOException {

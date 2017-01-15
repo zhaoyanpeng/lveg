@@ -940,6 +940,11 @@ public class GaussianMixture extends Recorder implements Serializable {
 	}
 	
 	
+	public boolean isValid() {
+		return (components != null && components.size() == 0 && ncomponent == 0);
+	}
+	
+	
 	/**
 	 * Memory clean.
 	 */
