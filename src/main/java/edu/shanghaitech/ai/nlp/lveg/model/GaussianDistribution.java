@@ -39,11 +39,11 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	protected List<Double> mus;
 	
 	
-	public GaussianDistribution() {
+	public GaussianDistribution(short ndimension) {
 		this.id = 0;
-		this.dim = 0;
-		this.mus = new ArrayList<Double>();
-		this.vars = new ArrayList<Double>();
+		this.dim = ndimension;
+		this.mus = new ArrayList<Double>(dim);
+		this.vars = new ArrayList<Double>(dim);
 	}
 	
 	
@@ -212,10 +212,17 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	public void setMus(List<Double> mus) {
 		this.mus = mus;
 	}
-
 	
-	public boolean isValid() {
-		return (vars != null && mus != null && vars.size() == 0 && mus.size() == 0 && dim == 0);
+	
+	public void destroy(short ndim) {
+		clear();
+		mus = null;
+		vars = null;
+	}
+	
+	
+	public boolean isValid(short ndim) {
+		return (vars != null && mus != null && dim == ndim && vars.size() == mus.size() && mus.size() == dim);
 	}
 
 	/**
@@ -223,8 +230,8 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	 */
 	public void clear() {
 		this.dim = 0;
-		this.mus.clear();
-		this.vars.clear();
+		if (mus != null) { mus.clear(); }
+		if (vars != null) { vars.clear(); }
 	}
 	
 	

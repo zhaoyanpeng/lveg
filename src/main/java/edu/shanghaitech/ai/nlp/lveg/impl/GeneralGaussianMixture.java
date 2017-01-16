@@ -3,6 +3,11 @@ package edu.shanghaitech.ai.nlp.lveg.impl;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 
 public class GeneralGaussianMixture extends GaussianMixture {
+	public GeneralGaussianMixture(short ncomponent) {
+		super(ncomponent);
+		// TODO Auto-generated constructor stub
+	}
+
 	/**
 	 * 
 	 */

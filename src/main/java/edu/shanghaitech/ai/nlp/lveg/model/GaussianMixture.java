@@ -38,10 +38,10 @@ public class GaussianMixture extends Recorder implements Serializable {
 	protected double bias;
 	protected int ncomponent;
 	
-	public GaussianMixture() {
+	public GaussianMixture(short ncomponent) {
 		this.bias = 0;
-		this.ncomponent = 0;
-		this.components = new PriorityQueue<Component>(wcomparator);
+		this.ncomponent = ncomponent;
+		this.components = new PriorityQueue<Component>(ncomponent + 1, wcomparator);
 	}
 	
 	
@@ -532,7 +532,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * @return
 	 */
 	public static GaussianMixture merge(GaussianMixture gm) {
-		GaussianMixture amixture = new GaussianMixture();
+		GaussianMixture amixture = new GaussianMixture((short) 0);
 		for (Component comp : gm.components) {
 			int idx = amixture.contains(comp.multivnd);
 			if (idx < 0) {
@@ -940,8 +940,14 @@ public class GaussianMixture extends Recorder implements Serializable {
 	}
 	
 	
-	public boolean isValid() {
-		return (components != null && components.size() == 0 && ncomponent == 0);
+	public boolean isValid(short ncomp) {
+		return (components != null && ncomponent == ncomp && components.size() == ncomponent);
+	}
+	
+	
+	public void destroy(short ncomp) {
+		clear();
+		components = null;
 	}
 	
 	
@@ -951,10 +957,12 @@ public class GaussianMixture extends Recorder implements Serializable {
 	public void clear() {
 		this.bias = 0.0;
 		this.ncomponent = 0;
-		for (Component comp : components) {
-			comp.clear();
+		if (components != null) {
+			for (Component comp : components) {
+				comp.clear();
+			}
+			this.components.clear();
 		}
-		this.components.clear();
 	}
 	
 	
@@ -1034,7 +1042,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 		
 		public void clear() {
 			id = -1;
-			weight = 0;
+			weight = Double.NEGATIVE_INFINITY;
 			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : multivnd.entrySet()) {
 				Set<GaussianDistribution> value = null;
 				if ((value = gaussian.getValue()) != null) {

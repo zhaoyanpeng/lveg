@@ -53,6 +53,8 @@
 -efirstk, 200,
 -eontrain, true,
 -eondev, true,
+-eonextradev, false,
+-eondevprune, false,
 -enbatchdev, 1,
 
 -runtag, hello,

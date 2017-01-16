@@ -240,12 +240,12 @@ public class Gradient extends Recorder implements Serializable {
 			for (Map.Entry<String, List<Double>> grads : gcomp.entrySet()) {
 				List<Double> grads0 = grads.getValue();
 				for (int d = 0; d < grads0.size(); d++) { // dimension d
-					grad = Params.lr * Math.signum(grads0.get(d)) / partition;
+					grad = -Params.lr * Math.signum(grads0.get(d)) / partition;
 					grad = clip(grad);
 					grads0.set(d, grad);
 				}
 			}
-			grad = Params.lr * Math.signum(wgrads.get(k)) / partition;
+			grad = -Params.lr * Math.signum(wgrads.get(k)) / partition;
 			grad = clip(grad);
 			wgrads.set(k, grad);
 		}

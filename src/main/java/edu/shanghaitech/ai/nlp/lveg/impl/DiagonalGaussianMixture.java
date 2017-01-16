@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 
@@ -21,24 +22,47 @@ public class DiagonalGaussianMixture extends GaussianMixture {
 
 
 	public DiagonalGaussianMixture() {
-		super();
+		super((short) 0);
 	}
 	
 	
 	public DiagonalGaussianMixture(short ncomponent) {
-		super();
-		this.ncomponent = ncomponent;
+		super(ncomponent);
 		initialize();
+	}
+	
+	
+	public DiagonalGaussianMixture(short ncomponent, boolean init) {
+		super(ncomponent);
+		if (init) { initialize(); }
 	}
 	
 	
 	public DiagonalGaussianMixture(
 			short ncomponent, List<Double> weights, List<Map<String, Set<GaussianDistribution>>> mixture) {
-		super();
+		this();
 		this.ncomponent = ncomponent;
 		for (int i = 0; i < weights.size(); i++) {
 			this.components.add(new Component((short) i, weights.get(i), mixture.get(i)));
 		}
+	}
+	
+	
+	public static DiagonalGaussianMixture instance(short ncomponent) {
+		GaussianMixture obj = null;
+		try {
+			obj = LVeGLearner.mogPool.borrowObject(ncomponent);
+		} catch (Exception e) {
+			// CHECK pool.invalidateObject(key, obj);
+			logger.error("---------Borrow GM " + e + "\n");
+			try {
+				LVeGLearner.mogPool.invalidateObject(ncomponent, obj);
+			} catch (Exception e1) {
+				logger.error("---------Borrow GM(invalidate) " + e + "\n");
+			}
+//			obj = new DiagonalGaussianMixture(ncomponent);
+		}
+		return (DiagonalGaussianMixture) obj;
 	}
 
 	

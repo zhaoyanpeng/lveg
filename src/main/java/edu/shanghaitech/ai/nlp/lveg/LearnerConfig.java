@@ -9,17 +9,24 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import org.apache.commons.pool2.impl.GenericKeyedObjectPoolConfig;
+
 import edu.berkeley.nlp.PCFGLA.Binarization;
 import edu.berkeley.nlp.PCFGLA.Corpus;
 import edu.berkeley.nlp.PCFGLA.Corpus.TreeBankType;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.data.StateTreeList;
 import edu.shanghaitech.ai.nlp.data.ObjectFileManager.CorpusFile;
+import edu.shanghaitech.ai.nlp.lveg.impl.GaussFactory;
+import edu.shanghaitech.ai.nlp.lveg.impl.MoGFactory;
 import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGLexicon;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.optimization.Optimizer.OptChoice;
 import edu.shanghaitech.ai.nlp.optimization.ParallelOptimizer.ParallelMode;
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
 import edu.shanghaitech.ai.nlp.util.Numberer;
+import edu.shanghaitech.ai.nlp.util.ObjectPool;
 import edu.shanghaitech.ai.nlp.util.Option;
 import edu.shanghaitech.ai.nlp.util.Recorder;
 
@@ -50,6 +57,9 @@ public class LearnerConfig extends Recorder {
 	public static int precision = 3;
 	public static Random random = new Random(randomseed);
 	public static Random rnd4shuffle = new Random(11);
+	
+	public static ObjectPool<Short, GaussianMixture> mogPool;
+	public static ObjectPool<Short, GaussianDistribution> gaussPool;
 
 	public static class Params {
 		public static double lr;
@@ -200,6 +210,10 @@ public class LearnerConfig extends Recorder {
 		public boolean eondev = true;
 		@Option(name = "-eontrain", usage = "evaluating the grammar on the train data (true) or not (false) (default: true)")
 		public boolean eontrain = true;
+		@Option (name = "-eonextradev", usage = "evaluating the grammar on the sentences of length less than or equal to [eonlylen + 5] (true) or not (false) (default: true)")
+		public boolean eonextradev = true;
+		@Option (name = "-eondevprune", usage = "applying pruning when evaluating the grammar (true) or not (false) (default: false)")
+		public boolean eondevprune = false;
 		@Option(name = "-enbatchdev", usage = "# of batches after which the grammar is evaluated on the development dataset (default: 5)")
 		public short enbatchdev = 5;
 		/* evaluation section ends */
@@ -303,6 +317,21 @@ public class LearnerConfig extends Recorder {
 		ncomponent = opts.ncomponent;
 		random = new Random(randomseed);
 		Params.config(opts);
+		
+		GenericKeyedObjectPoolConfig config = new GenericKeyedObjectPoolConfig();
+		config.setMaxTotalPerKey(Integer.MAX_VALUE);
+		config.setMaxTotal(Integer.MAX_VALUE);
+		
+//		config.setBlockWhenExhausted(true); // by default
+//		config.setMaxWaitMillis(250);
+//		config.setTestOnBorrow(true); // by default
+//		config.setTestOnCreate(true);
+//		config.setTestOnReturn(true);
+		
+		MoGFactory mfactory = new MoGFactory(opts.ncomponent, opts.maxrandom, opts.nratio, random);
+		GaussFactory gfactory = new GaussFactory(opts.dim, opts.maxrandom, opts.nratio, random);
+		mogPool = new ObjectPool<Short, GaussianMixture>(mfactory, config);
+		gaussPool = new ObjectPool<Short, GaussianDistribution>(gfactory, config);
 	}
 	
 	protected static  Map<String, StateTreeList> loadData(Numberer wrapper, Options opts) {

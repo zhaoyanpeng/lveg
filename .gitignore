@@ -1,6 +1,7 @@
 bin/
 log/
 libs/
+pool/
 target/
 classes/
 berkeley/

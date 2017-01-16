@@ -107,14 +107,24 @@ public class LVeGLearner extends LearnerConfig {
 			Optimizer loptimizer = new ParallelOptimizer(opts.ntgrad, opts.pgrad, opts.pmode, opts.pverbose);
 			grammar.setOptimizer(goptimizer);
 			lexicon.setOptimizer(loptimizer);
+			int cnt = 0;
+			logger.trace("--->Tallying trees...\n");
 			for (Tree<State> tree : trainTrees) {
+				//logger.trace(++cnt + "\n");
 				lexicon.tallyStateTree(tree);
 				grammar.tallyStateTree(tree);
+				
 			}
+//			System.out.println("mog : " + mogPool.getNumActive());
+//			System.out.println("gd  : " + gaussPool.getNumActive());
+			
 			logger.trace("\n--->Going through the training set is over...");
 			grammar.postInitialize();
 			lexicon.postInitialize();
 			logger.trace("post-initializing is over.\n");
+			
+//			System.out.println("mog : " + mogPool.getNumActive());
+//			System.out.println("gd  : " + gaussPool.getNumActive());
 		}
 		/*
 		logger.trace(grammar);
@@ -127,20 +137,19 @@ public class LVeGLearner extends LearnerConfig {
 		
 		lvegParser = new LVeGParser<Tree<State>, List<Double>>(grammar, lexicon, opts.maxLenParsing, opts.reuse, opts.prune);
 		mrParser = new MaxRuleParser<Tree<State>, Tree<String>>(grammar, lexicon, opts.maxLenParsing, opts.reuse, false);
-		valuator = new Valuator<Tree<State>, Double>(grammar, lexicon, opts.maxLenParsing, opts.reuse, false);
+		valuator = new Valuator<Tree<State>, Double>(grammar, lexicon, opts.maxLenParsing, opts.reuse, opts.eondevprune);
 		mvaluator = new ThreadPool(valuator, opts.nteval);
 		trainer = new ThreadPool(lvegParser, opts.ntbatch);
 		double ll = Double.NEGATIVE_INFINITY;
-		/*
+		
 		// initial likelihood of the training set
 		logger.trace("\n-------ll of the training data initially is... ");
 		long beginTime = System.currentTimeMillis();
-		// ll = parallelLL(opts, mvaluator, trainTrees, numberer, true);
-		ll = serialLL(opts, valuator, trainTrees, numberer, true);
+		ll = parallelLL(opts, mvaluator, trainTrees, numberer, true);
+		// ll = serialLL(opts, valuator, trainTrees, numberer, true);
 		long endTime = System.currentTimeMillis();
 		logger.trace("------->" + ll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");
-		System.exit(0);
-		*/
+		
 		// set a global tree for debugging
 		for (Tree<State> tree : testTrees) {
 			if (tree.getYield().size() == opts.eonlylen) {
@@ -494,7 +503,7 @@ public class LVeGLearner extends LearnerConfig {
 	public static double parallelLL(Options opts, ThreadPool valuator, StateTreeList stateTreeList, Numberer numberer, boolean istrain) {
 		double ll = 0, sumll = 0;
 		int nUnparsable = 0, cnt = 0;
-		int maxlen = istrain ? opts.eonlylen : opts.eonlylen + 5;
+		int maxlen = istrain ? opts.eonlylen : (opts.eonextradev ? opts.eonlylen + 5 : opts.eonlylen);
 		for (Tree<State> tree : stateTreeList) {
 			if (opts.eonlylen > 0) {
 				if (tree.getYield().size() > maxlen) { continue; }
@@ -536,7 +545,7 @@ public class LVeGLearner extends LearnerConfig {
 	public static double serialLL(Options opts, Valuator<?, ?> valuator, StateTreeList stateTreeList, Numberer numberer, boolean istrain) {
 		double ll = 0, sumll = 0;
 		int nUnparsable = 0, cnt = 0;
-		int maxlen = istrain ? /*1*/opts.eonlylen : opts.eonlylen + 5;
+		int maxlen = istrain ? /*1*/opts.eonlylen : (opts.eonextradev ? opts.eonlylen + 5 : opts.eonlylen);
 		for (Tree<State> tree : stateTreeList) {
 			if (opts.eonlylen > 0) {
 				if (tree.getYield().size() > maxlen) { continue; }

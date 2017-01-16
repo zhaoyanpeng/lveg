@@ -2,6 +2,7 @@ package edu.shanghaitech.ai.nlp.lveg.impl;
 
 import java.util.List;
 
+import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 
 /**
@@ -18,14 +19,37 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 
 
 	public DiagonalGaussianDistribution() {
-		super();
+		super((short) 0);
 	}
 	
 	
-	public DiagonalGaussianDistribution(short dim) {
-		super();
-		this.dim = dim;
+	public DiagonalGaussianDistribution(short ndimension) {
+		super(ndimension);
 		initialize();
+	}
+	
+	
+	public DiagonalGaussianDistribution(short ndimension, boolean init) {
+		super(ndimension);
+		if (init) { initialize(); }
+	}
+	
+	
+	public static DiagonalGaussianDistribution instance(short ndimension) {
+		GaussianDistribution obj = null;
+		try {
+			obj = LVeGLearner.gaussPool.borrowObject(ndimension);
+		} catch (Exception e) {
+			// CHECK pool.invalidateObject(key, obj);
+			logger.error("---------Borrow GD " + e + "\n");
+			try {
+				LVeGLearner.gaussPool.invalidateObject(ndimension, obj);
+			} catch (Exception e1) {
+				logger.error("---------Borrow GD(invalidate) " + e + "\n");
+			}
+//			obj = new DiagonalGaussianDistribution(ndimension);
+		}
+		return (DiagonalGaussianDistribution) obj;
 	}
 	
 	
