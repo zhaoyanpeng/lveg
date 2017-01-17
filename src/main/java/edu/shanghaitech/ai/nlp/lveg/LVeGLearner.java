@@ -19,6 +19,7 @@ import edu.shanghaitech.ai.nlp.lveg.impl.MaxRuleParser;
 import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGLexicon;
 import edu.shanghaitech.ai.nlp.lveg.impl.Valuator;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
@@ -94,7 +95,8 @@ public class LVeGLearner extends LearnerConfig {
 		lexicon = new SimpleLVeGLexicon(numberer, -1);
 		
 		/* to ease the parameters tuning */
-		GaussianMixture.config(opts.expzero);
+		GaussianMixture.config(opts.expzero, opts.maxrandom, opts.ncomponent, opts.nratio, random, mogPool);
+		GaussianDistribution.config(opts.maxmu, opts.maxvar, opts.dim, opts.nratio, random, gaussPool);
 		Optimizer.config(opts.choice, random, opts.maxsample, opts.bsize, opts.minmw); // FIXME no errors, just alert you...
 				
 		if (opts.loadGrammar && opts.inGrammar != null) {
@@ -110,21 +112,21 @@ public class LVeGLearner extends LearnerConfig {
 			int cnt = 0;
 			logger.trace("--->Tallying trees...\n");
 			for (Tree<State> tree : trainTrees) {
-				//logger.trace(++cnt + "\n");
+//				logger.trace(++cnt + "\n");
 				lexicon.tallyStateTree(tree);
 				grammar.tallyStateTree(tree);
 				
 			}
-//			System.out.println("mog : " + mogPool.getNumActive());
-//			System.out.println("gd  : " + gaussPool.getNumActive());
+			System.out.println("mog : " + mogPool.getNumActive());
+			System.out.println("gd  : " + gaussPool.getNumActive());
 			
 			logger.trace("\n--->Going through the training set is over...");
 			grammar.postInitialize();
 			lexicon.postInitialize();
 			logger.trace("post-initializing is over.\n");
 			
-//			System.out.println("mog : " + mogPool.getNumActive());
-//			System.out.println("gd  : " + gaussPool.getNumActive());
+			System.out.println("mog : " + mogPool.getNumActive());
+			System.out.println("gd  : " + gaussPool.getNumActive());
 		}
 		/*
 		logger.trace(grammar);

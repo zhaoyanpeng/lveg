@@ -14,6 +14,7 @@ import java.util.Set;
 import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
 import edu.shanghaitech.ai.nlp.lveg.LearnerConfig.Params;
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
+import edu.shanghaitech.ai.nlp.util.ObjectPool;
 import edu.shanghaitech.ai.nlp.util.Recorder;
 
 /**
@@ -29,6 +30,13 @@ public class GaussianMixture extends Recorder implements Serializable {
 	private static final double LOG_ZERO = -1.0e10;
 	private static double EXP_ZERO = /*-Math.log(-LOG_ZERO)*/Math.log(1e-6);
 	protected PriorityQueue<Component> components;
+	protected short key; // from the object pool (>=-1) or not (<-1)
+	
+	protected static short defMaxmw;
+	protected static short defNcomponent;
+	protected static double defNegRatio;
+	protected static ObjectPool<Short, GaussianMixture> defObjectPool;
+	protected static Random defRnd;
 	
 	/**
 	 * Not sure if it is necessary.
@@ -40,8 +48,9 @@ public class GaussianMixture extends Recorder implements Serializable {
 	
 	public GaussianMixture(short ncomponent) {
 		this.bias = 0;
+		this.key = -2;
 		this.ncomponent = ncomponent;
-		this.components = new PriorityQueue<Component>(ncomponent + 1, wcomparator);
+		this.components = new PriorityQueue<Component>(defNcomponent + 1, wcomparator);
 	}
 	
 	
@@ -49,9 +58,8 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * Initialize the fields by default.
 	 */
 	protected void initialize() {
-		short maximum = LVeGLearner.maxrandom;
 		for (int i = 0; i < ncomponent; i++) {
-			double weight = (LVeGLearner.random.nextDouble() - LVeGLearner.nratio) * maximum;
+			double weight = (defRnd.nextDouble() - defNegRatio) * defMaxmw;
 			Map<String, Set<GaussianDistribution>> multivnd = new HashMap<String, Set<GaussianDistribution>>();
 			 weight = 0.5 /*-0.69314718056*/ /*0*/; // mixing weight 0.5, 1, 2
 			components.add(new Component((short) i, weight, multivnd));
@@ -62,10 +70,24 @@ public class GaussianMixture extends Recorder implements Serializable {
 	/**
 	 * To facilitate the parameter tuning.
 	 * 
-	 * @param expzero
 	 */
-	public static void config(double expzero) {
+	public static void config(double expzero, short maxmw, short ncomponent, 
+			double negratio, Random rnd, ObjectPool<Short, GaussianMixture> pool) {
 		EXP_ZERO = expzero;
+		defRnd = rnd;
+		defMaxmw = maxmw;
+		defNegRatio = negratio;
+		defNcomponent = ncomponent;
+		defObjectPool = pool;
+	}
+	
+	
+	public static void returnObject(GaussianMixture obj) {
+		if (obj.key >= -1) {
+			defObjectPool.returnObject(obj.key, obj);
+		} else {
+			obj.clear();
+		}
 	}
 	
 	
@@ -532,7 +554,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * @return
 	 */
 	public static GaussianMixture merge(GaussianMixture gm) {
-		GaussianMixture amixture = new GaussianMixture((short) 0);
+		GaussianMixture amixture = new GaussianMixture((short) 0); // POOL
 		for (Component comp : gm.components) {
 			int idx = amixture.contains(comp.multivnd);
 			if (idx < 0) {
@@ -941,13 +963,18 @@ public class GaussianMixture extends Recorder implements Serializable {
 	
 	
 	public boolean isValid(short ncomp) {
-		return (components != null && ncomponent == ncomp && components.size() == ncomponent);
+		return (components != null && components.size() == ncomponent);
 	}
 	
 	
 	public void destroy(short ncomp) {
 		clear();
 		components = null;
+	}
+	
+	
+	public void clear(short ncomp) {
+		clear();
 	}
 	
 	
@@ -963,6 +990,16 @@ public class GaussianMixture extends Recorder implements Serializable {
 			}
 			this.components.clear();
 		}
+	}
+	
+	
+	public short getKey() {
+		return key;
+	}
+	
+	
+	public void setKey(short key) {
+		this.key = key;
 	}
 	
 	
@@ -1047,7 +1084,10 @@ public class GaussianMixture extends Recorder implements Serializable {
 				Set<GaussianDistribution> value = null;
 				if ((value = gaussian.getValue()) != null) {
 					for (GaussianDistribution gd : value) {
-						if (gd != null) { gd.clear(); }
+						if (gd != null) { 
+							gd.clear(); 
+//							GaussianDistribution.returnObject(gd); // POOL
+						}
 					}
 					value.clear();
 				}

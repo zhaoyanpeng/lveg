@@ -277,6 +277,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	 */
 	public static void setRootOutsideScore(Chart chart) {
 		GaussianMixture gm = new DiagonalGaussianMixture((short) 1);
+//		GaussianMixture gm = DiagonalGaussianMixture.borrowObject((short) 1); // POOL
 		gm.marginalizeToOne();
 		chart.addOutsideScore((short) 0, Chart.idx(0, 1), gm, (short) (LENGTH_UCHAIN + 1), false);
 	}
@@ -633,7 +634,10 @@ public abstract class Inferencer extends Recorder implements Serializable {
 			if (scores != null) {
 				for (Map.Entry<Short, Map<Short, GaussianMixture>> level : scores.entrySet()) {
 					for (Map.Entry<Short, GaussianMixture> entry : level.getValue().entrySet()) {
-						if (entry.getValue() != null) { entry.getValue().clear(); }
+						if (entry.getValue() != null) { 
+							entry.getValue().clear(); 
+//							GaussianMixture.returnObject(entry.getValue()); // POOL
+						}
 					}
 					level.getValue().clear();
 				}
@@ -641,7 +645,10 @@ public abstract class Inferencer extends Recorder implements Serializable {
 			}
 			if (totals != null) {
 				for (Map.Entry<Short, GaussianMixture> entry : totals.entrySet()) {
-					if (entry.getValue() != null) { entry.getValue().clear(); }
+					if (entry.getValue() != null) { 
+						entry.getValue().clear(); 
+//						GaussianMixture.returnObject(entry.getValue()); // POOL
+					}
 				}
 				totals.clear();
 			}

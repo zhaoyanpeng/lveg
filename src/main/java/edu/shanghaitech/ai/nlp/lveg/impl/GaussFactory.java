@@ -24,14 +24,14 @@ public class GaussFactory implements KeyedPooledObjectFactory<Short, GaussianDis
 	}
 	
 	@Override
-	public void activateObject(Short ndim, PooledObject<GaussianDistribution> po) throws Exception {
-		ndim = ndim < 0 ? ndimension : ndim;
+	public void activateObject(Short key, PooledObject<GaussianDistribution> po) throws Exception {
+		short ndim = key == -1 ? ndimension : key;
 		List<Double> mus = po.getObject().getMus();
 		for (int i = 0; i < ndim; i++) {
 			double rndn = (rnd.nextDouble() - nratio) * maximum;
 			// rndn = 0.5;
 			mus.add(rndn);
-		} // better initialize mu and var in the different loops
+		}
 		List<Double> vars = po.getObject().getVars();
 		for (int i = 0; i < ndim; i++) {
 			double rndn = (rnd.nextDouble() - nratio) * maximum;
@@ -41,29 +41,27 @@ public class GaussFactory implements KeyedPooledObjectFactory<Short, GaussianDis
 	}
 
 	@Override
-	public void destroyObject(Short ndim, PooledObject<GaussianDistribution> po) throws Exception {
-		ndim = ndim < 0 ? ndimension : ndim;
-		po.getObject().destroy(ndim);
+	public void destroyObject(Short key, PooledObject<GaussianDistribution> po) throws Exception {
+		po.getObject().destroy(key);
 	}
 
 	@Override
-	public PooledObject<GaussianDistribution> makeObject(Short ndim) throws Exception {
-		ndim = ndim < 0 ? ndimension : ndim;
+	public PooledObject<GaussianDistribution> makeObject(Short key) throws Exception {
+		short ndim = key == -1 ? ndimension : key;
 		GaussianDistribution gauss = new DiagonalGaussianDistribution(ndim, false);
+		gauss.setKey(key);
 		return new DefaultPooledObject<GaussianDistribution>(gauss);
 	}
 
 	@Override
-	public void passivateObject(Short ndim, PooledObject<GaussianDistribution> po) throws Exception {
-		ndim = ndim < 0 ? ndimension : ndim;
-		po.getObject().clear();
+	public void passivateObject(Short key, PooledObject<GaussianDistribution> po) throws Exception {
+		po.getObject().clear(key);
 	}
 
 	@Override
-	public boolean validateObject(Short ndim, PooledObject<GaussianDistribution> po) {
-		ndim = ndim < 0 ? ndimension : ndim;
+	public boolean validateObject(Short key, PooledObject<GaussianDistribution> po) {
 		GaussianDistribution obj = po.getObject();
-		return obj != null && obj.isValid(ndim);
+		return obj != null && obj.isValid(key);
 	}
 
 }

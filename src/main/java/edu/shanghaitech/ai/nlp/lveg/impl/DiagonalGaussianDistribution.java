@@ -35,19 +35,19 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 	}
 	
 	
-	public static DiagonalGaussianDistribution instance(short ndimension) {
+	public static DiagonalGaussianDistribution borrowObject(short ndimension) {
 		GaussianDistribution obj = null;
 		try {
-			obj = LVeGLearner.gaussPool.borrowObject(ndimension);
+			obj = defObjectPool.borrowObject(ndimension);
 		} catch (Exception e) {
-			// CHECK pool.invalidateObject(key, obj);
 			logger.error("---------Borrow GD " + e + "\n");
 			try {
 				LVeGLearner.gaussPool.invalidateObject(ndimension, obj);
 			} catch (Exception e1) {
 				logger.error("---------Borrow GD(invalidate) " + e + "\n");
 			}
-//			obj = new DiagonalGaussianDistribution(ndimension);
+			ndimension = ndimension == -1 ? defNdimension : ndimension;
+			obj = new DiagonalGaussianDistribution(ndimension);
 		}
 		return (DiagonalGaussianDistribution) obj;
 	}
@@ -56,6 +56,7 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 	@Override
 	public DiagonalGaussianDistribution copy() {
 		DiagonalGaussianDistribution gd = new DiagonalGaussianDistribution();
+//		DiagonalGaussianDistribution gd = borrowObject((short) 0); // POOL
 		copy(gd);
 		return gd;
 	}

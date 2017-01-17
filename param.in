@@ -45,6 +45,9 @@
 -relativediff, 1e-6,
 -nratio, 0.5,
 -maxramdom, 1,
+-maxmw, 1,
+-maxmu, 1,
+-maxvar, 1,
 -ncomponent, 2,
 -dim, 2,
 
@@ -57,7 +60,7 @@
 -eondevprune, false,
 -enbatchdev, 5,
 
--runtag, hello,
+-runtag, hello_lveg,
 -logroot, log/,
 -logtype, true,
 -verbose, false,

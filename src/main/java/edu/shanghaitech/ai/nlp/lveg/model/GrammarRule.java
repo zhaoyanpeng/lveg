@@ -54,25 +54,19 @@ public abstract class GrammarRule implements Serializable {
 /*	
 	public static GaussianMixture rndRuleWeight(byte type) {
 		short defaultval = -1;
-		GaussianMixture aweight = DiagonalGaussianMixture.instance(defaultval);
-		if (aweight == null) { try {
-			Thread.sleep(10000);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} }
+		GaussianMixture aweight = DiagonalGaussianMixture.borrowObject(defaultval);
 		switch (type) {
 		case RHSPACE: // rules for the root since it does not have subtypes
 			for (int i = 0; i < aweight.ncomponent; i++) {
 				Set<GaussianDistribution> set = new HashSet<GaussianDistribution>(1, 1);
-				set.add(DiagonalGaussianDistribution.instance(defaultval));
+				set.add(DiagonalGaussianDistribution.borrowObject(defaultval));
 				aweight.add(i, Unit.C, set);
 			}
 			break;
 		case LHSPACE: // rules in the preterminal layer (discarded)
 			for (int i = 0; i < aweight.ncomponent; i++) {
 				Set<GaussianDistribution> set = new HashSet<GaussianDistribution>(1, 1);
-				set.add(DiagonalGaussianDistribution.instance(defaultval));
+				set.add(DiagonalGaussianDistribution.borrowObject(defaultval));
 				aweight.add(i, Unit.P, set);
 			}
 			break;
@@ -81,8 +75,8 @@ public abstract class GrammarRule implements Serializable {
 				Map<String, Set<GaussianDistribution>> map = new HashMap<String, Set<GaussianDistribution>>(2, 1);
 				Set<GaussianDistribution> set0 = new HashSet<GaussianDistribution>(1, 1);
 				Set<GaussianDistribution> set1 = new HashSet<GaussianDistribution>(1, 1);
-				set0.add(DiagonalGaussianDistribution.instance(defaultval));
-				set1.add(DiagonalGaussianDistribution.instance(defaultval));
+				set0.add(DiagonalGaussianDistribution.borrowObject(defaultval));
+				set1.add(DiagonalGaussianDistribution.borrowObject(defaultval));
 				map.put(Unit.P, set0);
 				map.put(Unit.UC, set1);
 				aweight.add(i, map);
@@ -94,9 +88,9 @@ public abstract class GrammarRule implements Serializable {
 				Set<GaussianDistribution> set0 = new HashSet<GaussianDistribution>(1, 1);
 				Set<GaussianDistribution> set1 = new HashSet<GaussianDistribution>(1, 1);
 				Set<GaussianDistribution> set2 = new HashSet<GaussianDistribution>(1, 1);
-				set0.add(DiagonalGaussianDistribution.instance(defaultval));
-				set1.add(DiagonalGaussianDistribution.instance(defaultval));
-				set2.add(DiagonalGaussianDistribution.instance(defaultval));
+				set0.add(DiagonalGaussianDistribution.borrowObject(defaultval));
+				set1.add(DiagonalGaussianDistribution.borrowObject(defaultval));
+				set2.add(DiagonalGaussianDistribution.borrowObject(defaultval));
 				map.put(Unit.P, set0);
 				map.put(Unit.LC, set1);
 				map.put(Unit.RC, set2);

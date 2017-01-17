@@ -8,6 +8,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
+import edu.shanghaitech.ai.nlp.util.ObjectPool;
 import edu.shanghaitech.ai.nlp.util.Recorder;
 
 /**
@@ -28,6 +29,7 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	 */
 	protected char id;
 	protected short dim;
+	protected short key; // from the object pool (>=-1) or not (<-1)
 	
 	/**
 	 * Covariances must be positive. We represent them in exponential 
@@ -38,9 +40,17 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	protected List<Double> vars;
 	protected List<Double> mus;
 	
+	protected static short defMaxMu;
+	protected static short defMaxVar;
+	protected static short defNdimension;
+	protected static double defNegRatio;
+	protected static ObjectPool<Short, GaussianDistribution> defObjectPool;
+	protected static Random defRnd;
+	
 	
 	public GaussianDistribution(short ndimension) {
 		this.id = 0;
+		this.key = -2;
 		this.dim = ndimension;
 		this.mus = new ArrayList<Double>(dim);
 		this.vars = new ArrayList<Double>(dim);
@@ -51,17 +61,40 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	 * Memory allocation and initialization.
 	 */
 	protected void initialize() {
-		short maximum = LVeGLearner.maxrandom;
 		for (int i = 0; i < dim; i++) {
-			double rndn = (LVeGLearner.random.nextDouble() - LVeGLearner.nratio) * maximum;
+			double rndn = (defRnd.nextDouble() - defNegRatio) * defMaxMu;
 			 rndn = 0.5;
 			mus.add(rndn);
 		} // better initialize mu and var in the different loops
 		for (int i = 0; i < dim; i++) {
-			double rndn = (LVeGLearner.random.nextDouble() - LVeGLearner.nratio) * maximum;
+			double rndn = (defRnd.nextDouble() - defNegRatio) * defMaxVar;
 			 rndn = 0.5;
 			vars.add(rndn);
 		}	
+	}
+	
+	
+	/**
+	 * To facilitate the parameter tuning.
+	 * 
+	 */
+	public static void config(short maxmu , short maxvar, short ndimension, 
+			double negratio, Random rnd, ObjectPool<Short, GaussianDistribution> pool) {
+		defRnd = rnd;
+		defMaxMu = maxmu;
+		defMaxVar = maxvar;
+		defNegRatio = negratio;
+		defNdimension = ndimension;
+		defObjectPool = pool;
+	}
+	
+	
+	public static void returnObject(GaussianDistribution obj) {
+		if (obj.key >= -1) {
+			defObjectPool.returnObject(obj.key, obj);
+		} else {
+			obj.clear();
+		}
 	}
 	
 	
@@ -134,15 +167,13 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 		double real, norm;
 		slice.clear();
 		truth.clear();
-//		synchronized (rnd) {
-			for (int i = 0; i < dim; i++) {
-//				norm = rnd.nextGaussian();
-				norm = ThreadLocalRandom.current().nextGaussian();
-				real = norm * Math.exp(vars.get(i)) + mus.get(i);
-				slice.add(norm);
-				truth.add(real);
-			}
-//		}
+		for (int i = 0; i < dim; i++) {
+			norm = defRnd.nextGaussian();
+//			norm = ThreadLocalRandom.current().nextGaussian();
+			real = norm * Math.exp(vars.get(i)) + mus.get(i);
+			slice.add(norm);
+			truth.add(real);
+		}
 	}
 	
 	
@@ -214,6 +245,16 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	}
 	
 	
+	public short getKey() {
+		return key;
+	}
+	
+	
+	public void setKey(short key) {
+		this.key = key;
+	}
+	
+	
 	public void destroy(short ndim) {
 		clear();
 		mus = null;
@@ -222,8 +263,14 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	
 	
 	public boolean isValid(short ndim) {
-		return (vars != null && mus != null && dim == ndim && vars.size() == mus.size() && mus.size() == dim);
+		return (vars != null && mus != null && mus.size() == dim && vars.size() == dim);
 	}
+	
+	
+	public void clear(short ndim) {
+		clear();
+	}
+	
 
 	/**
 	 * Memory clean.

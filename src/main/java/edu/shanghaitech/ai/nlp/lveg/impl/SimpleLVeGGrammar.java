@@ -157,6 +157,7 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 				}
 				
 				GaussianMixture weightSum = new DiagonalGaussianMixture();
+//				GaussianMixture weightSum = DiagonalGaussianMixture.borrowObject((short) 0); // POOL
 				UnaryGrammarRule uruleSum = new UnaryGrammarRule(iparent, ichild, type, weightSum);
 				GaussianMixture pruleWeight = null, cruleWeight = null, aruleWeight = null;
 				

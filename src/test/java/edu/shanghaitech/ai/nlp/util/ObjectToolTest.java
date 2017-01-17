@@ -26,9 +26,9 @@ public class ObjectToolTest {
 		config.setMaxTotal(2000);
 		
 		
-//		config.setBlockWhenExhausted(true);
-//		config.setMaxWaitMillis(1500);
-//		config.setTestOnBorrow(true);
+		config.setBlockWhenExhausted(true);
+		config.setMaxWaitMillis(1500);
+		config.setTestOnBorrow(true);
 //		config.setTestOnCreate(false);
 //		config.setTestOnReturn(false);
 		
@@ -54,14 +54,27 @@ public class ObjectToolTest {
 	}
 	
 	
-	public void testStress() {
-//		int total = 
+//	@Test
+	public void testStress() throws Exception {
+		int total = 2044612, factor = 4;
+		long beginTime = System.currentTimeMillis();
+		for (int i= 0; i < total; i++) {
+			mogPool.borrowObject((short) -1);
+			for (int j = 0; j < factor; j++) {
+				gaussPool.borrowObject((short) -1);
+			}
+			if (i % 100 == 0) {
+				System.out.println("-" + (i / 100));
+			}
+		}
+		long endTime = System.currentTimeMillis();
+		System.out.println("------->it consumed " + (endTime - beginTime) / 1000.0 + "s\n");
 	}
 	
 
-//	@Test
+	@Test
 	public void testObjectTool() {
-		
+		GaussianMixture lastone = null;
 		int total = 20, cnt = 0, mid = 8;
 		for (int i = 0; cnt < total; i++, cnt++) {
 			if (cnt < mid) {
@@ -71,14 +84,18 @@ public class ObjectToolTest {
 			}
 			System.out.println("-----------------" + cnt + "\t" + i);
 			try {
-//				mogPool.borrowObject((short) i);
-				gaussPool.borrowObject((short) i);
+				GaussianMixture mog = mogPool.borrowObject((short) i);
+				lastone = mog;
+//				gaussPool.borrowObject((short) i);
+				System.out.println(mog);
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			
 		}
+		
+		mogPool.returnObject(lastone.getKey(), lastone);
+		
 	}
 
 }

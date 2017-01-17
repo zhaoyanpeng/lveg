@@ -82,6 +82,7 @@ public class RuleTable<T> implements Serializable {
 		GaussianMixture count = getCount(key);
 		if (count == null) {
 			GaussianMixture gm = new DiagonalGaussianMixture();
+//			GaussianMixture gm = DiagonalGaussianMixture.borrowObject((short) 0); // POOL
 			gm.add(increment);
 			setCount(key, gm);
 			return;
@@ -94,6 +95,7 @@ public class RuleTable<T> implements Serializable {
 		GaussianMixture count = getCount(key);
 		if (count == null) {
 			GaussianMixture gm = new DiagonalGaussianMixture();
+//			GaussianMixture gm = DiagonalGaussianMixture.borrowObject((short) 0); // POOL
 			gm.add(increment, prune);
 			setCount(key, gm);
 			return;

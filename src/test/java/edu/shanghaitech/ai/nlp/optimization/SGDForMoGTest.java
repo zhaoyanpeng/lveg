@@ -20,9 +20,20 @@ public class SGDForMoGTest {
 		assert(a == b);
 		
 		char x = (char) -1;
-		x = 1;
+//		x = 1;
+		System.out.println(Integer.toBinaryString(x));
+		System.out.println(Integer.toBinaryString((short) x));
 		System.out.println((short) x);
 		System.out.println(x == 1);
+		System.out.println((int) x == -1);
+		
+		char z = 1;
+		System.out.println(Integer.toBinaryString(z));
+		System.out.println(Integer.toBinaryString((short) z));
+		System.out.println(z == 1);
+		
+		byte y = -1;
+		System.out.println(Byte.MAX_VALUE + ", " + Byte.MIN_VALUE + ", " + Integer.toBinaryString(y));
 		
 		Byte f = -1;
 		System.out.println(f);

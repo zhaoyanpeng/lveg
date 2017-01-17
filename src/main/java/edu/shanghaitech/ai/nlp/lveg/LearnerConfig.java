@@ -189,8 +189,14 @@ public class LearnerConfig extends Recorder {
 		public short nAllowedDrop = 6;
 		@Option(name = "-relativediff", usage = "maximum relative difference between the neighboring iterations (default: 1e-6)")
 		public double relativerror = 1e-6;
-		@Option(name = "-maxramdom", usage = "maximum random double (int) value when initializing MoGul parameters (Default: 1)")
+		@Option(name = "-maxramdom", usage = "maximum random double (int) value of the exponent part of MoG parameters (Default: 1)")
 		public short maxrandom = 1;
+		@Option(name = "-maxmw", usage = "maximum random value of the exponent part of the mixing weight (default: 1)")
+		public short maxmw = 1;
+		@Option(name = "-maxmu", usage = "maximum random value of the mean in the gaussians (default: 1)")
+		public short maxmu = 1;
+		@Option(name = "-maxvar", usage = "maximum random value of the exponent part of the variance in the gaussians (default: 1)")
+		public short maxvar = 1;
 		@Option(name = "-nratio", usage = "fraction of negative values when initializing MoGul parameters (Default: 0.5)")
 		public double nratio = 0.5;
 		@Option(name = "-ncomponent", usage = "# of gaussian components (default: 2)")
@@ -322,8 +328,8 @@ public class LearnerConfig extends Recorder {
 		config.setMaxTotalPerKey(Integer.MAX_VALUE);
 		config.setMaxTotal(Integer.MAX_VALUE);
 		
-//		config.setBlockWhenExhausted(true); // by default
-//		config.setMaxWaitMillis(250);
+		config.setBlockWhenExhausted(true); // by default
+		config.setMaxWaitMillis(250);
 //		config.setTestOnBorrow(true); // by default
 //		config.setTestOnCreate(true);
 //		config.setTestOnReturn(true);

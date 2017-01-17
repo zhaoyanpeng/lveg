@@ -360,6 +360,7 @@ public class LVeGInferencer extends Inferencer {
 	 */
 	protected static void setRootOutsideScore(Tree<State> tree) {
 		GaussianMixture gm = new DiagonalGaussianMixture((short) 1);
+//		GaussianMixture gm = DiagonalGaussianMixture.borrowObject((short) 1); // POOL
 		gm.marginalizeToOne();
 		tree.getLabel().setOutsideScore(gm);
 	}

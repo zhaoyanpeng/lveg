@@ -36,46 +36,38 @@ public class MoGFactory implements KeyedPooledObjectFactory<Short, GaussianMixtu
 	 * into {@code activateObject(K, T)}. TODO modify and rebuild our own pool2 library.
 	 */
 	@Override
-	public void activateObject(Short ncomp, PooledObject<GaussianMixture> po) throws Exception {
-		ncomp = ncomp < 0 ? ncomponent : ncomp;
+	public void activateObject(Short key, PooledObject<GaussianMixture> po) throws Exception {
+		short ncomp = key == -1 ? ncomponent : key;
 		PriorityQueue<Component> components = po.getObject().components();
-//		System.out.println("----------Alag B " + po.getObject());
 		for (int i = 0; i < ncomp; i++) {
 			double weight = (rnd.nextDouble() - nratio) * maximum;
 			Map<String, Set<GaussianDistribution>> multivnd = new HashMap<String, Set<GaussianDistribution>>();
 			// weight = /*-0.69314718056*/ 0; // mixing weight 0.5, 1, 2
 			components.add(new Component((short) i, weight, multivnd));
 		}
-//		System.out.println("----------Alag A " + po.getObject());
 	}
 
 	@Override
-	public void destroyObject(Short ncomp, PooledObject<GaussianMixture> po) throws Exception {
-		ncomp = ncomp < 0 ? ncomponent : ncomp;
-		po.getObject().destroy(ncomp);
+	public void destroyObject(Short key, PooledObject<GaussianMixture> po) throws Exception {
+		po.getObject().destroy(key);
 	}
 
 	@Override
-	public PooledObject<GaussianMixture> makeObject(Short ncomp) throws Exception {
-		ncomp = ncomp < 0 ? ncomponent : ncomp;
+	public PooledObject<GaussianMixture> makeObject(Short key) throws Exception {
+		short ncomp = key == -1 ? ncomponent : key;
 		GaussianMixture mog = new DiagonalGaussianMixture(ncomp, false);
-//		System.out.println("_____________MoG: " + mog);
+		mog.setKey(key);
 		return new DefaultPooledObject<GaussianMixture>(mog);
 	}
 
 	@Override
-	public void passivateObject(Short ncomp, PooledObject<GaussianMixture> po) throws Exception {
-		po.getObject().clear();
+	public void passivateObject(Short key, PooledObject<GaussianMixture> po) throws Exception {
+		po.getObject().clear(key);
 	}
 
 	@Override
-	public boolean validateObject(Short ncomp, PooledObject<GaussianMixture> po) {
-		ncomp = ncomp < 0 ? ncomponent : ncomp;
+	public boolean validateObject(Short key, PooledObject<GaussianMixture> po) {
 		GaussianMixture obj = po.getObject();
-		return obj != null && obj.isValid(ncomp);
-//		boolean flag = obj != null && obj.isValid(ncomp);
-//		System.out.println("----------Blag " + obj);
-//		System.out.println("----------Flag " + flag + " = " + (obj != null) + " & " + obj.isValid(ncomp) + " nc = " + ncomp);
-//		return flag;
+		return obj != null && obj.isValid(key);
 	}
 }

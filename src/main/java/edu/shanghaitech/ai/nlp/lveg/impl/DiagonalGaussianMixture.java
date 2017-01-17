@@ -48,19 +48,19 @@ public class DiagonalGaussianMixture extends GaussianMixture {
 	}
 	
 	
-	public static DiagonalGaussianMixture instance(short ncomponent) {
+	public static DiagonalGaussianMixture borrowObject(short ncomponent) {
 		GaussianMixture obj = null;
 		try {
-			obj = LVeGLearner.mogPool.borrowObject(ncomponent);
+			obj = defObjectPool.borrowObject(ncomponent);
 		} catch (Exception e) {
-			// CHECK pool.invalidateObject(key, obj);
 			logger.error("---------Borrow GM " + e + "\n");
 			try {
 				LVeGLearner.mogPool.invalidateObject(ncomponent, obj);
 			} catch (Exception e1) {
 				logger.error("---------Borrow GM(invalidate) " + e + "\n");
 			}
-//			obj = new DiagonalGaussianMixture(ncomponent);
+			ncomponent = ncomponent == -1 ? defNcomponent : ncomponent;
+			obj = new DiagonalGaussianMixture(ncomponent);
 		}
 		return (DiagonalGaussianMixture) obj;
 	}
@@ -69,6 +69,7 @@ public class DiagonalGaussianMixture extends GaussianMixture {
 	@Override
 	public DiagonalGaussianMixture copy(boolean deep) {
 		DiagonalGaussianMixture gm = new DiagonalGaussianMixture();
+//		DiagonalGaussianMixture gm = DiagonalGaussianMixture.borrowObject((short) 0); // POOL
 		copy(gm, deep);
 		return gm;
 	}
@@ -77,6 +78,7 @@ public class DiagonalGaussianMixture extends GaussianMixture {
 	@Override
 	public DiagonalGaussianMixture replaceKeys(Map<String, String> keys) {
 		DiagonalGaussianMixture gm = new DiagonalGaussianMixture();
+//		DiagonalGaussianMixture gm = DiagonalGaussianMixture.borrowObject((short) 0); // POOL
 		replaceKeys(gm, keys);
 		return gm;
 	}
@@ -85,6 +87,7 @@ public class DiagonalGaussianMixture extends GaussianMixture {
 	@Override
 	public DiagonalGaussianMixture replaceAllKeys(String newkey) {
 		DiagonalGaussianMixture gm = new DiagonalGaussianMixture();
+//		DiagonalGaussianMixture gm = DiagonalGaussianMixture.borrowObject((short) 0); // POOL
 		replaceAllKeys(gm, newkey);
 		return gm;
 	}
@@ -93,6 +96,7 @@ public class DiagonalGaussianMixture extends GaussianMixture {
 	@Override
 	public DiagonalGaussianMixture multiply(GaussianMixture multiplier) {
 		DiagonalGaussianMixture gm = new DiagonalGaussianMixture();
+//		DiagonalGaussianMixture gm = DiagonalGaussianMixture.borrowObject((short) 0); // POOL
 		multiply(gm, multiplier);
 		return gm;
 	}
