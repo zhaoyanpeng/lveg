@@ -54,12 +54,12 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 		short maximum = LVeGLearner.maxrandom;
 		for (int i = 0; i < dim; i++) {
 			double rndn = (LVeGLearner.random.nextDouble() - LVeGLearner.nratio) * maximum;
-			// rndn = 0.5;
+			 rndn = 0.5;
 			mus.add(rndn);
 		} // better initialize mu and var in the different loops
 		for (int i = 0; i < dim; i++) {
 			double rndn = (LVeGLearner.random.nextDouble() - LVeGLearner.nratio) * maximum;
-			// rndn = 0.5;
+			 rndn = 0.5;
 			vars.add(rndn);
 		}	
 	}

@@ -149,6 +149,16 @@ public abstract class LVeGGrammar extends Recorder implements Serializable {
 		return uRulesWithC[itag];
 	}
 	
+	public boolean containsBRule(short idParent, short idlChild, short idrChild) {
+		GrammarRule rule = new BinaryGrammarRule(idParent, idlChild, idrChild);
+		return bRuleTable.containsKey(rule);
+	}
+	
+	public boolean containsURule(short idParent, int idChild, byte type) {
+		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
+		return uRuleTable.containsKey(rule);
+	}
+	
 	public void addCount(short idParent, short idlChild, short idrChild, Map<String, GaussianMixture> count, short isample, boolean withTree) {
 		GrammarRule rule = getBRule(idParent, idlChild, idrChild);
 		addCount(rule, count, isample, withTree);
@@ -160,12 +170,12 @@ public abstract class LVeGGrammar extends Recorder implements Serializable {
 	}
 	
 	public void addCount(short idParent, int idChild, Map<String, GaussianMixture> count, byte type, short isample, boolean withTree) {
-		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
+		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type, true);
 		addCount(rule, count, isample, withTree);
 	}
 	
 	public Map<Short, List<Map<String, GaussianMixture>>> getCount(short idParent, int idChild, boolean withTree, byte type) {
-		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
+		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type, true);
 		return getCount(rule, withTree);
 	}
 	

@@ -28,13 +28,13 @@ public class RuleTableTest {
 //		RuleTable<?> unaryRuleTable = new RuleTable<UnaryGrammarRule>(UnaryGrammarRule.class);
 //		RuleTable<?> binaryRuleTable = new RuleTable<BinaryGrammarRule>(BinaryGrammarRule.class);
 		
-		GrammarRule rule0 = new UnaryGrammarRule((short) 1, (short) 2, GrammarRule.LRURULE);
-		GrammarRule rule1 = new UnaryGrammarRule((short) 1, (short) 2, GrammarRule.LRURULE);
-		GrammarRule rule5 = new UnaryGrammarRule((short) 1, (short) 2, GrammarRule.RHSPACE);	
+		GrammarRule rule0 = new UnaryGrammarRule((short) 1, (short) 2, GrammarRule.LRURULE, true);
+		GrammarRule rule1 = new UnaryGrammarRule((short) 1, (short) 2, GrammarRule.LRURULE, false);
+		GrammarRule rule5 = new UnaryGrammarRule((short) 1, (short) 2, GrammarRule.RHSPACE, true);	
 		GrammarRule rule8 = new UnaryGrammarRule((short) 1, (short) 2);	
 		
-		GrammarRule rule3 = new BinaryGrammarRule((short) 1, (short) 2, (short) 3, false);
-		GrammarRule rule4 = new BinaryGrammarRule((short) 1, (short) 2, (short) 3, false);
+		GrammarRule rule3 = new BinaryGrammarRule((short) 1, (short) 2, (short) 3, true);
+		GrammarRule rule4 = new BinaryGrammarRule((short) 1, (short) 2, (short) 3);
 		GrammarRule rule10= new BinaryGrammarRule((short) 1, (short) 2, (short) 3);
 		
 		GrammarRule rule6 = new UnaryGrammarRule((short) 4, (short) 2);

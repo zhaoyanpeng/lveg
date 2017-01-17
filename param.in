@@ -37,7 +37,7 @@
 
 -reuse, true,
 -prune, true,
--bsize, 3,
+-bsize, 30,
 -nepoch, 30,
 -maxsample, 3,
 -maxLenParsing, 120,
@@ -55,7 +55,7 @@
 -eondev, true,
 -eonextradev, false,
 -eondevprune, false,
--enbatchdev, 1,
+-enbatchdev, 5,
 
 -runtag, hello,
 -logroot, log/,

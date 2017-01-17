@@ -106,20 +106,18 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 		case 0:
 			break;
 		case 1: {
-			UnaryGrammarRule rule;
 			short idChild = children.get(0).getLabel().getId();
-			if (idParent != 0) {
-				rule = new UnaryGrammarRule(idParent, idChild, GrammarRule.LRURULE);
-			} else { // the root node
-				rule = new UnaryGrammarRule(idParent, idChild, GrammarRule.RHSPACE);
-			}
+			byte type = idParent != 0 ? GrammarRule.LRURULE : GrammarRule.RHSPACE;
+			GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
+			if (!uRuleTable.containsKey(rule)) { rule.initializeWeight(type); }
 			uRuleTable.addCount(rule, 1.0);
 			break;
 		}
 		case 2: {
 			short idLeftChild = children.get(0).getLabel().getId();
 			short idRightChild = children.get(1).getLabel().getId();
-			BinaryGrammarRule rule = new BinaryGrammarRule(idParent, idLeftChild, idRightChild, true);
+			GrammarRule rule = new BinaryGrammarRule(idParent, idLeftChild, idRightChild);
+			if (!bRuleTable.containsKey(rule)) { rule.initializeWeight(GrammarRule.LRBRULE); }
 			bRuleTable.addCount(rule, 1.0);
 			break;
 		}

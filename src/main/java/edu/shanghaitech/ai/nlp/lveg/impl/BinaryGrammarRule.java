@@ -19,9 +19,6 @@ public class BinaryGrammarRule extends GrammarRule implements Comparable<Object>
 	public short rchild;
 	
 	
-	public BinaryGrammarRule() {}
-	
-	
 	public BinaryGrammarRule(short lhs, short lchild, short rchild) {
 		this.lhs = lhs;
 		this.lchild = lchild;
@@ -30,33 +27,19 @@ public class BinaryGrammarRule extends GrammarRule implements Comparable<Object>
 	}
 	
 	
-	/**
-	 * Constructor with the rule weight initialized.
-	 * 
-	 * @param lhs    id of the tag on the left hand side
-	 * @param lchild id of the tag, representing the left child
-	 * @param rchild id of the tag, representing the right child
-	 * @param flag   to distinguish from the above constructor (without weight initialized)
-	 */
-	public BinaryGrammarRule(short lhs, short lchild, short rchild, boolean flag) {
-		this.lhs = lhs;
-		this.lchild = lchild;
-		this.rchild = rchild;
-		this.type = LRBRULE;
-		initializeWeight();
+	public BinaryGrammarRule(short lhs, short lchild, short rchild, boolean init) {
+		this(lhs, lchild, rchild);
+		if (init) { initializeWeight(GrammarRule.LRBRULE); }
 	}
 	
 	
 	public BinaryGrammarRule(short lhs, short lchild, short rchild, GaussianMixture weight) {
-		this.lhs = lhs;
-		this.lchild = lchild;
-		this.rchild = rchild;
+		this(lhs, lchild, rchild);
 		this.weight = weight;
-		this.type = LRBRULE;
 	}
 	
 	
-	private void initializeWeight() {
+	public void initializeWeight(byte type) {
 		weight = rndRuleWeight(GrammarRule.LRBRULE);
 	}
 
@@ -86,7 +69,7 @@ public class BinaryGrammarRule extends GrammarRule implements Comparable<Object>
 		
 		if (o instanceof BinaryGrammarRule) {
 			BinaryGrammarRule rule = (BinaryGrammarRule) o;
-			if (lhs == rule.lhs && lchild == rule.lchild && rchild == rule.rchild) {
+			if (lhs == rule.lhs && lchild == rule.lchild && rchild == rule.rchild && type == rule.type) {
 				return true;
 			}
 		}

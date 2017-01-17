@@ -19,23 +19,10 @@ public class UnaryGrammarRule extends GrammarRule implements Comparable<Object> 
 	public int rhs;
 	
 	
-	public UnaryGrammarRule() {
-		// TODO
-	}
-	
-	
-	/**
-	 * This constructor returns an instance without initializing the weight.
-	 * 
-	 * @param lhs  id of the tag on the left hand side
-	 * @param rhs  id of the tag on the right hand side 
-	 * 
-	 */
 	public UnaryGrammarRule(short lhs, int rhs) {
 		this.lhs = lhs;
 		this.rhs = rhs;
 		this.type = LRURULE;
-		
 	}
 	
 	
@@ -43,23 +30,28 @@ public class UnaryGrammarRule extends GrammarRule implements Comparable<Object> 
 		this.lhs = lhs;
 		this.rhs = rhs;
 		this.type = type;
-		initializeWeight(type);
+	}
+	
+	
+	public UnaryGrammarRule(short lhs, int rhs, byte type, boolean init) {
+		this(lhs, rhs, type);
+		if (init) { initializeWeight(type); }
 	}
 	
 	
 	public UnaryGrammarRule(short lhs, int rhs, byte type, GaussianMixture weight) {
-		this.lhs = lhs;
-		this.rhs = rhs;
-		this.type = type;
+		this(lhs, rhs, type);
 		this.weight = weight;
 	}
 	
 	
-	private void initializeWeight(byte type) {
+	@Override
+	public void initializeWeight(byte type) {
 		weight = rndRuleWeight(type);
 	}
 	
 	
+	@Override
 	public GrammarRule copy() {
 		UnaryGrammarRule rule = new UnaryGrammarRule(lhs, rhs);
 		rule.weight = weight.copy(true);

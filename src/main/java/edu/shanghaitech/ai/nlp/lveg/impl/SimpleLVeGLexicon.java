@@ -103,6 +103,7 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 			word.wordIdx = wordIdx;
 			short tagIdx = tags.get(i).getId();
 			GrammarRule rule = new UnaryGrammarRule(tagIdx, wordIdx, GrammarRule.LHSPACE);
+			if (!uRuleTable.containsKey(rule)) { rule.initializeWeight(GrammarRule.LHSPACE); }
 			uRuleTable.addCount(rule, 1.0);
 		}
 	}
