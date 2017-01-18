@@ -10,7 +10,7 @@
 -inGrammar, lveg_best.gr,
 -outGrammar, lveg,
 -nbatchSave, 10,
--saveGrammar, true,
+-saveGrammar, false,
 -loadGrammar, false,
 
 -lr, 0.02,
@@ -30,8 +30,9 @@
 -ntbatch, 6,
 -ntgrad, 6,
 -nteval, 6,
--pbatch, true,
--pgrad, true,
+-pbatch, false,
+-peval, false,
+-pgrad, false,
 -pmode, THREAD_POOL,
 -pverbose, false,
 

@@ -109,10 +109,8 @@ public class LVeGLearner extends LearnerConfig {
 			Optimizer loptimizer = new ParallelOptimizer(opts.ntgrad, opts.pgrad, opts.pmode, opts.pverbose);
 			grammar.setOptimizer(goptimizer);
 			lexicon.setOptimizer(loptimizer);
-			int cnt = 0;
 			logger.trace("--->Tallying trees...\n");
 			for (Tree<State> tree : trainTrees) {
-//				logger.trace(++cnt + "\n");
 				lexicon.tallyStateTree(tree);
 				grammar.tallyStateTree(tree);
 				
@@ -124,9 +122,6 @@ public class LVeGLearner extends LearnerConfig {
 			grammar.postInitialize();
 			lexicon.postInitialize();
 			logger.trace("post-initializing is over.\n");
-			
-			System.out.println("mog : " + mogPool.getNumActive());
-			System.out.println("gd  : " + gaussPool.getNumActive());
 		}
 		/*
 		logger.trace(grammar);
@@ -143,7 +138,7 @@ public class LVeGLearner extends LearnerConfig {
 		mvaluator = new ThreadPool(valuator, opts.nteval);
 		trainer = new ThreadPool(lvegParser, opts.ntbatch);
 		double ll = Double.NEGATIVE_INFINITY;
-		
+		/*
 		// initial likelihood of the training set
 		logger.trace("\n-------ll of the training data initially is... ");
 		long beginTime = System.currentTimeMillis();
@@ -151,7 +146,7 @@ public class LVeGLearner extends LearnerConfig {
 		// ll = serialLL(opts, valuator, trainTrees, numberer, true);
 		long endTime = System.currentTimeMillis();
 		logger.trace("------->" + ll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");
-		
+		*/
 		// set a global tree for debugging
 		for (Tree<State> tree : testTrees) {
 			if (tree.getYield().size() == opts.eonlylen) {
@@ -172,7 +167,8 @@ public class LVeGLearner extends LearnerConfig {
 		MethodUtil.saveTree2image(null, treeFile + "_ini_ua", parseTree, numberer);
 		
 		
-		logger.info("\n---SGD CONFIG---\n[parallel: batch-" + opts.pbatch + ", grad-" + opts.pgrad +"] " + Params.toString(false) + "\n");
+		logger.info("\n---SGD CONFIG---\n[parallel: batch-" + opts.pbatch + ", grad-" + 
+				opts.pgrad + ", eval-" + opts.peval + "] " + Params.toString(false) + "\n");
 		
 		if (opts.pbatch) {
 			parallelInBatch(numberer, ll);
@@ -439,7 +435,11 @@ public class LVeGLearner extends LearnerConfig {
 		if (opts.eontrain) {
 			logger.trace("\n-------ll of the training data after " + ibatch + " batches in epoch " + cnt + " is... ");
 			beginTime = System.currentTimeMillis();
-			trll = parallelLL(opts, mvaluator, trainTrees, numberer, true);
+			if (opts.peval) {
+				trll = parallelLL(opts, mvaluator, trainTrees, numberer, true);
+			} else {
+				trll = serialLL(opts, valuator, trainTrees, numberer, true);
+			}
 			endTime = System.currentTimeMillis();
 			logger.trace("------->" + trll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");
 			trainTrees.reset();
@@ -451,8 +451,11 @@ public class LVeGLearner extends LearnerConfig {
 		if (opts.eondev && (ibatch % opts.enbatchdev) == 0) {
 			logger.trace("\n-------ll of the dev data after " + ibatch + " batches in epoch " + cnt + " is... ");
 			beginTime = System.currentTimeMillis();
-			dell = parallelLL(opts, mvaluator, devTrees, numberer, false);
-			// dell = serialLL(opts, valuator, devTrees, numberer, false);
+			if (opts.peval) {
+				dell = parallelLL(opts, mvaluator, devTrees, numberer, false);
+			} else {
+				dell = serialLL(opts, valuator, devTrees, numberer, false);
+			}
 			endTime = System.currentTimeMillis();
 			logger.trace("------->" + dell + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");
 			devTrees.reset();

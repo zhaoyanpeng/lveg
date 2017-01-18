@@ -164,6 +164,8 @@ public class LearnerConfig extends Recorder {
 		public short nteval = 1;
 		@Option(name = "-pbatch", usage = "parallizing training in the minibatch (true) or not (false) (default: false)")
 		public boolean pbatch = true;
+		@Option(name = "-peval", usage = "parallizing evaluation section (true) or not (false) (default: false)")
+		public boolean peval = true;
 		@Option(name = "-pgrad", usage = "parallizeing gradient calculation (true) or not (false) (default: true)")
 		public boolean pgrad = true;
 		@Option(name = "-pmode", usage = "parallel mode of gradient evaluation: INVOKE_ALL, COMPLETION_SERVICE, CUSTOMIZED_BLOCK, FORK_JOIN, THREAD_POOL (default: THREAD_POOL)")
