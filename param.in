@@ -14,8 +14,8 @@
 -loadGrammar, false,
 
 -lr, 0.02,
--reg, true,
--clip, true,
+-reg, false,
+-clip, false,
 -absmax, 5.0,
 -wdecay, 0.1,
 -l1, true,
@@ -54,7 +54,7 @@
 
 -eratio, -0.1, 
 -eonlylen, 7,
--efirstk, 200,
+-efirstk, 100,
 -eontrain, true,
 -eondev, false,
 -eonextradev, false,

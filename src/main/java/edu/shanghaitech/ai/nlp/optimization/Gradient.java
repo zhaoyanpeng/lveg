@@ -210,6 +210,10 @@ public class Gradient extends Recorder implements Serializable {
 			sgd();
 			break;
 		}
+		case MOMENTUM: {
+			momentum();
+			break;
+		}
 		case ADAGRAD: {
 			adagrad();
 			break;
@@ -253,6 +257,33 @@ public class Gradient extends Recorder implements Serializable {
 	
 	
 	private void sgd() {
+		double g1st, grad;
+		for (int k = 0; k < wgrads.size(); k++) { // component k
+			Map<String, List<Double>> gcomp = ggrads.get(k);
+			Map<String, List<Double>> gcomp1 = ggrads1.get(k);
+			for (Map.Entry<String, List<Double>> grads : gcomp.entrySet()) {
+				List<Double> grads0 = grads.getValue();
+				List<Double> grads1 = gcomp1.get(grads.getKey());
+				for (int d = 0; d < grads0.size(); d++) { // dimension d
+					grad = grads0.get(d) / partition;
+					g1st = -Params.lr * grad;
+					grads1.set(d, g1st);
+					grad = g1st;
+					grad = clip(grad);
+					grads0.set(d, grad);
+				}
+			}
+			grad = wgrads.get(k) / partition;
+			g1st = -Params.lr * grad;
+			wgrads1.set(k, g1st);
+			grad = g1st;
+			grad = clip(grad);
+			wgrads.set(k, grad);
+		}
+	}
+	
+	
+	private void momentum() {
 		double g1st, grad;
 		for (int k = 0; k < wgrads.size(); k++) { // component k
 			Map<String, List<Double>> gcomp = ggrads.get(k);

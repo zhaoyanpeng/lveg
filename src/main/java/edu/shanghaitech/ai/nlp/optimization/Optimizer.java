@@ -20,7 +20,7 @@ public abstract class Optimizer extends Recorder implements Serializable {
 	 */
 	private static final long serialVersionUID = -6185772433718644490L;
 	public enum OptChoice {
-		NORMALIZED, SGD, ADAGRAD, RMSPROP, ADADELTA, ADAM
+		NORMALIZED, SGD, MOMENTUM, ADAGRAD, RMSPROP, ADADELTA, ADAM
 	}
 	/**
 	 * Pseudo counts of grammar rules given the parse tree (countWithT) or the sentence (countWithS).
