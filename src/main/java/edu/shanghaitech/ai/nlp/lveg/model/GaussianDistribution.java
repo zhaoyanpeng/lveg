@@ -63,12 +63,12 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	protected void initialize() {
 		for (int i = 0; i < dim; i++) {
 			double rndn = (defRnd.nextDouble() - defNegRatio) * defMaxMu;
-			 rndn = 0.5;
+//			 rndn = 0.5;
 			mus.add(rndn);
 		} // better initialize mu and var in the different loops
 		for (int i = 0; i < dim; i++) {
 			double rndn = (defRnd.nextDouble() - defNegRatio) * defMaxVar;
-			 rndn = 0.5;
+//			 rndn = 0.5;
 			vars.add(rndn);
 		}	
 	}

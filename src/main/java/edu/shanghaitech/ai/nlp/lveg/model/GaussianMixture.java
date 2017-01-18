@@ -61,7 +61,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 		for (int i = 0; i < ncomponent; i++) {
 			double weight = (defRnd.nextDouble() - defNegRatio) * defMaxmw;
 			Map<String, Set<GaussianDistribution>> multivnd = new HashMap<String, Set<GaussianDistribution>>();
-			 weight = 0.5 /*-0.69314718056*/ /*0*/; // mixing weight 0.5, 1, 2
+//			 weight = 0.5 /*-0.69314718056*/ /*0*/; // mixing weight 0.5, 1, 2
 			components.add(new Component((short) i, weight, multivnd));
 		}
 	}
@@ -102,7 +102,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 			if (comp.weight > LOG_ZERO && (comp.weight - maxw) > EXP_ZERO) { 
 				continue; 
 			}
-			sorted.remove(comp);
+			sorted.remove(comp); // TODO return the object
 			ncomponent--;
 		}
 		components.clear();
@@ -114,7 +114,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * @return the sorted components by the mixing weight in case when you modified the mixing weights of some components.
 	 */
 	public PriorityQueue<Component> sort() {
-		PriorityQueue<Component> sorted = new PriorityQueue<Component>(wcomparator);
+		PriorityQueue<Component> sorted = new PriorityQueue<Component>(ncomponent + 1, wcomparator);
 		sorted.addAll(components);
 		return sorted;
 	}
