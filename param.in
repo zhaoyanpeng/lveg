@@ -30,9 +30,9 @@
 -ntbatch, 6,
 -ntgrad, 6,
 -nteval, 6,
--pbatch, false,
--peval, false,
--pgrad, false,
+-pbatch, true,
+-peval, true,
+-pgrad, true,
 -pmode, THREAD_POOL,
 -pverbose, false,
 

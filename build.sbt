@@ -10,6 +10,7 @@ lazy val commonSettings = Seq(
   libraryDependencies ++= Seq(
 	Library.log4j, 
 	Library.junit,
+	Library.pool2,
 	Library.BerkeleyParser
   ),
   javacOptions ++= Seq("-source", "1.8"),
