@@ -191,6 +191,10 @@ public abstract class LVeGGrammar extends Recorder implements Serializable {
 		this.optimizer = optimizer;
 	}
 	
+	public Optimizer getOptimizer() {
+		return optimizer;
+	}
+	
 	public void evalGradients(List<Double> scoreOfST) {
 		optimizer.evalGradients(scoreOfST);
 	}

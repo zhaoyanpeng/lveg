@@ -73,4 +73,6 @@
 -precision, 3,
 -rndomseed, 0,
 
+-dgradnbatch, -1,
+
 -imgprefix, lveg

@@ -27,6 +27,7 @@ public class Gradient extends Recorder implements Serializable {
 	 * which is equally saying that the batch size is always 1.
 	 */
 	protected static final short MAX_BATCH_SIZE = 1;
+	protected boolean luckily;
 	protected boolean updated;
 	protected boolean cumulative;
 	protected double cntUpdate;
@@ -63,6 +64,7 @@ public class Gradient extends Recorder implements Serializable {
 		this.truths = holder.get(1);
 		this.cumulative = false;
 		this.updated = false;
+		this.luckily = false;
 	}
 	
 	
@@ -73,6 +75,10 @@ public class Gradient extends Recorder implements Serializable {
 		GaussianMixture ruleW = rule.getWeight();
 		for (int icomponent = 0; icomponent < ruleW.ncomponent(); icomponent++) {
 			ruleW.update(icomponent, ggrads.get(icomponent), wgrads, Optimizer.minexp);
+		}
+		if (luckily) { // debug gradients
+			logger.trace("\n----------\nRule: " + rule + "\nRule Weight: " + ruleW + 
+					"\nGrad Weight: " + wgrads + "\nGrad Gauss : " + ggrads + "\n----------\n");
 		}
 		reset();
 		return true;
@@ -88,6 +94,11 @@ public class Gradient extends Recorder implements Serializable {
 		}
 		cumulative = false;
 		updated  = false;
+	}
+	
+	
+	protected void debug(boolean beloved) {
+		this.luckily = beloved;
 	}
 	
 	

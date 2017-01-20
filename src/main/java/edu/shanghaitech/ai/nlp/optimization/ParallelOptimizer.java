@@ -312,6 +312,19 @@ public class ParallelOptimizer extends Optimizer {
 	
 	
 	@Override
+	public void debug(GrammarRule rule, boolean debug) {
+		if (rule == null || !ruleSet.contains(rule)) {
+			for (GrammarRule arule : ruleSet) {
+				gradients.get(arule).debug(debug);
+				break;
+			}
+		} else {
+			gradients.get(rule).debug(debug);
+		}
+	}
+	
+	
+	@Override
 	public void applyGradientDescent(List<Double> scoresST) {
 		Gradient gradient;
 		int nupdated = 0;

@@ -241,13 +241,18 @@ public class LearnerConfig extends Recorder {
 		public boolean logtype = false;
 		@Option(name = "-logroot", usage = "log file name (default: log/log)")
 		public String logroot = "log/";
-		@Option(name = "-nbatch", usage = "# of batchs after which the grammar evaluation is conducted (default: 1)")
+		@Option(name = "-nbatch", usage = "# of batches after which the grammar evaluation is conducted (default: 1)")
 		public short nbatch = 1;
 		@Option(name = "-precision", usage = "precision of the output decimals (default: 3)")
 		public int precision = 3;
 		@Option(name = "-rndomseed", usage = "seed for random number generator (default: 0)")
 		public int rndomseed = 111;
 		/* logger-configurations section ends */
+		
+		/* file prefix section begins */
+		@Option(name = "-dgradnbatch", usage = "# of batches after which the gradients are recorded (default: 1)")
+		public short dgradnbatch = 1;
+		/* file prefix section ends */
 		
 		/* file prefix section begins */
 		@Option(name = "-imgprefix", usage = "prefix of the image of the parse tree obtained from max rule parser (default: maxrule)")

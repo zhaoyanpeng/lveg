@@ -43,6 +43,9 @@ public class LVeGLearner extends LearnerConfig {
 	protected static StateTreeList testTrees;
 	protected static StateTreeList devTrees;
 	
+	protected static Optimizer goptimizer;
+	protected static Optimizer loptimizer;
+	
 	protected static LVeGGrammar grammar;
 	protected static LVeGLexicon lexicon;
 	
@@ -104,9 +107,11 @@ public class LVeGLearner extends LearnerConfig {
 			GrammarFile gfile = (GrammarFile) GrammarFile.load(subdatadir + opts.inGrammar);
 			grammar = gfile.getGrammar();
 			lexicon = gfile.getLexicon();
+			goptimizer = grammar.getOptimizer();
+			loptimizer = grammar.getOptimizer();
 		} else {
-			Optimizer goptimizer = new ParallelOptimizer(opts.ntgrad, opts.pgrad, opts.pmode, opts.pverbose);
-			Optimizer loptimizer = new ParallelOptimizer(opts.ntgrad, opts.pgrad, opts.pmode, opts.pverbose);
+			goptimizer = new ParallelOptimizer(opts.ntgrad, opts.pgrad, opts.pmode, opts.pverbose);
+			loptimizer = new ParallelOptimizer(opts.ntgrad, opts.pgrad, opts.pmode, opts.pverbose);
 			grammar.setOptimizer(goptimizer);
 			lexicon.setOptimizer(loptimizer);
 			logger.trace("--->Tallying trees...\n");
@@ -183,6 +188,11 @@ public class LVeGLearner extends LearnerConfig {
 	}
 	
 	
+	protected static void debugrad(boolean debug) {
+		goptimizer.debug(null, debug);
+	}
+	
+	
 	protected static void jointrainer(short nfailed) {
 		while (!trainer.isDone()) {
 			while (trainer.hasNext()) {
@@ -232,8 +242,10 @@ public class LVeGLearner extends LearnerConfig {
 					logger.trace("+++Apply gradient descent for the batch " + (isample / opts.bsize) + "... ");
 					beginTime = System.currentTimeMillis();
 					
+					if (opts.dgradnbatch > 0 && ((isample % (opts.bsize * opts.dgradnbatch)) == 0)) { debugrad(true); }
 					grammar.applyGradientDescent(scoresOfST);
 					lexicon.applyGradientDescent(scoresOfST);
+					if (opts.dgradnbatch > 0 && ((isample % (opts.bsize * opts.dgradnbatch)) == 0)) { debugrad(false); }
 					
 					endTime = System.currentTimeMillis();
 					logger.trace((endTime - beginTime) / 1000.0 + "... batch time: " + (batchend - batchstart) / 1000.0 + ", nfailed: " + nfailed + "\n");
@@ -274,6 +286,7 @@ public class LVeGLearner extends LearnerConfig {
 			logger.trace("\n\n-------epoch " + cnt + " begins-------\n\n");
 			double length = 0;
 			boolean exit = false;
+			boolean peep = false;
 			short isample = 0, idx = 0;
 			long beginTime, endTime, startTime = System.currentTimeMillis();
 			long batchstart = System.currentTimeMillis(), batchend;
@@ -316,8 +329,10 @@ public class LVeGLearner extends LearnerConfig {
 					logger.trace("+++Apply gradient descent for the batch " + (isample / opts.bsize) + "... ");
 					beginTime = System.currentTimeMillis();
 					
+					if (opts.dgradnbatch > 0 && ((isample % (opts.bsize * opts.dgradnbatch)) == 0)) { debugrad(true); }
 					grammar.applyGradientDescent(scoresOfST);
 					lexicon.applyGradientDescent(scoresOfST);
+					if (opts.dgradnbatch > 0 && ((isample % (opts.bsize * opts.dgradnbatch)) == 0)) { debugrad(false); }
 					
 					endTime = System.currentTimeMillis();
 					logger.trace((endTime - beginTime) / 1000.0 + "... batch time: " + (batchend - batchstart) / 1000.0 + "\n");
