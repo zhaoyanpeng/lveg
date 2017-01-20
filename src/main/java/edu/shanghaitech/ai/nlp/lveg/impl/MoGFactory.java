@@ -17,14 +17,14 @@ import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture.Component;
 public class MoGFactory implements KeyedPooledObjectFactory<Short, GaussianMixture> {
 	
 	protected short ncomponent;
-	protected short maximum;
-	protected double nratio;
+	protected double nwratio;
+	protected double maxmw;
 	protected Random rnd;
 	
-	public MoGFactory(short ncomponent, short maximum, double nratio, Random rnd) {
+	public MoGFactory(short ncomponent, double maxmw, double nwratio, Random rnd) {
 		this.ncomponent = ncomponent;
-		this.maximum = maximum;
-		this.nratio = nratio;
+		this.nwratio = nwratio;
+		this.maxmw = maxmw;
 		this.rnd = rnd;
 	}
 	
@@ -40,7 +40,7 @@ public class MoGFactory implements KeyedPooledObjectFactory<Short, GaussianMixtu
 		short ncomp = key == -1 ? ncomponent : key;
 		PriorityQueue<Component> components = po.getObject().components();
 		for (int i = 0; i < ncomp; i++) {
-			double weight = (rnd.nextDouble() - nratio) * maximum;
+			double weight = (rnd.nextDouble() - nwratio) * maxmw;
 			Map<String, Set<GaussianDistribution>> multivnd = new HashMap<String, Set<GaussianDistribution>>();
 			// weight = /*-0.69314718056*/ 0; // mixing weight 0.5, 1, 2
 			components.add(new Component((short) i, weight, multivnd));

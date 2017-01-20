@@ -95,8 +95,8 @@ public class LVeGLearner extends LearnerConfig {
 		lexicon = new SimpleLVeGLexicon(numberer, -1);
 		
 		/* to ease the parameters tuning */
-		GaussianMixture.config(opts.expzero, opts.maxrandom, opts.ncomponent, opts.nratio, random, mogPool);
-		GaussianDistribution.config(opts.maxmu, opts.maxvar, opts.dim, opts.nratio, random, gaussPool);
+		GaussianMixture.config(opts.expzero, opts.maxmw, opts.ncomponent, opts.nwratio, random, mogPool);
+		GaussianDistribution.config(opts.maxmu, opts.maxvar, opts.dim, opts.nmratio, opts.nvratio, random, gaussPool);
 		Optimizer.config(opts.choice, random, opts.maxsample, opts.bsize, opts.minmw); // FIXME no errors, just alert you...
 				
 		if (opts.loadGrammar && opts.inGrammar != null) {
@@ -429,7 +429,7 @@ public class LVeGLearner extends LearnerConfig {
 	
 	public static boolean peep(int isample, int cnt, Numberer numberer, List<Double> trllist, List<Double> dellist, boolean ends) throws Exception {
 		long beginTime, endTime;
-		double trll = 0, dell = 0;
+		double trll = 1e-8, dell = 1e-8;
 		int ibatch = (isample / opts.bsize);
 		// likelihood of the training set
 		if (opts.eontrain) {
@@ -479,15 +479,15 @@ public class LVeGLearner extends LearnerConfig {
 		
 		// save the intermediate grammars
 		GrammarFile gfile = new GrammarFile(grammar, lexicon);
-		if (save) { // always save the best grammar to the same file
+		if (opts.saveGrammar && save) { // always save the best grammar to the same file
 			String filename = subdatadir + opts.outGrammar + "_best" + ".gr";
 			if (gfile.save(filename)) { 
 				logger.info("\n------->the best grammar [cnt = " + cnt + ", ibatch = " + ibatch + "]\n");
 			}
 		}
 		// save the grammar at the end of each epoch or after every # of batches
-		save = (opts.saveGrammar && ((ibatch % opts.nbatchSave) == 0) && opts.outGrammar != null);
-		if (ends || save) {
+		save = (((ibatch % opts.nbatchSave) == 0) && opts.outGrammar != null);
+		if (opts.saveGrammar && (ends || save)) {
 			logger.info("\n-------saving grammar file...");
 			String filename = (ends ? subdatadir + opts.outGrammar + "_" + cnt + ".gr" 
 					: subdatadir + opts.outGrammar + "_" + cnt + "_" + ibatch + ".gr");
@@ -534,7 +534,7 @@ public class LVeGLearner extends LearnerConfig {
 		while (!valuator.isDone()) {
 			while (valuator.hasNext()) {
 				ll = (double) valuator.getNext();
-				if (Double.isInfinite(ll) || Double.isNaN(ll)) {
+				if (Double.isInfinite(ll) || Double.isNaN(ll) || ll > 0) {
 					nUnparsable++;
 				} else {
 					sumll += ll;
@@ -566,7 +566,7 @@ public class LVeGLearner extends LearnerConfig {
 			ll = valuator.probability(tree);
 //			logger.trace("\n" + cnt + "\t" + ll + "\n");
 //			System.exit(0);
-			if (Double.isInfinite(ll) || Double.isNaN(ll)) {
+			if (Double.isInfinite(ll) || Double.isNaN(ll) || ll > 0) {
 				nUnparsable++;
 			} else {
 				sumll += ll;

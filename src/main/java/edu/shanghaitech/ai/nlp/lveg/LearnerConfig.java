@@ -51,8 +51,8 @@ public class LearnerConfig extends Recorder {
 	
 	public static short dim = 2;
 	public static short ncomponent = 2;
-	public static short maxrandom = 1;
 	public static short maxlength = 7;
+	public static double maxrandom = 1;
 	public static int randomseed = 0;
 	public static int precision = 3;
 	public static Random random = new Random(randomseed);
@@ -162,6 +162,8 @@ public class LearnerConfig extends Recorder {
 		public short ntgrad = 1;
 		@Option(name = "-nteval", usage = "# of threads for grammar evaluation (default: 1)")
 		public short nteval = 1;
+		@Option(name = "-pclose", usage = "close all parallel switches (default: false)")
+		public boolean pclose = false;
 		@Option(name = "-pbatch", usage = "parallizing training in the minibatch (true) or not (false) (default: false)")
 		public boolean pbatch = true;
 		@Option(name = "-peval", usage = "parallizing evaluation section (true) or not (false) (default: false)")
@@ -191,16 +193,22 @@ public class LearnerConfig extends Recorder {
 		public short nAllowedDrop = 6;
 		@Option(name = "-relativediff", usage = "maximum relative difference between the neighboring iterations (default: 1e-6)")
 		public double relativerror = 1e-6;
-		@Option(name = "-maxramdom", usage = "maximum random double (int) value of the exponent part of MoG parameters (Default: 1)")
-		public short maxrandom = 1;
-		@Option(name = "-maxmw", usage = "maximum random value of the exponent part of the mixing weight (default: 1)")
-		public short maxmw = 1;
-		@Option(name = "-maxmu", usage = "maximum random value of the mean in the gaussians (default: 1)")
-		public short maxmu = 1;
-		@Option(name = "-maxvar", usage = "maximum random value of the exponent part of the variance in the gaussians (default: 1)")
-		public short maxvar = 1;
-		@Option(name = "-nratio", usage = "fraction of negative values when initializing MoGul parameters (Default: 0.5)")
+		@Option(name = "-nratio", usage = "fraction of negative values when initializing MoG parameters (Default: 0.5)")
 		public double nratio = 0.5;
+		@Option(name = "-maxramdom", usage = "maximum random double (int) value of the exponent part of MoG parameters (Default: 1)")
+		public double maxrandom = 1;
+		@Option(name = "-maxmw", usage = "maximum random exponent when initializing mixing weights (default: 1)")
+		public double maxmw = 1;
+		@Option(name = "-nwratio", usage = "fraction of negative exponents when initializing mixing weights (default: 0.5)")
+		public double nwratio = 0.5;
+		@Option(name = "-maxmu", usage = "maximum random mean of the gaussian (default: 1)")
+		public double maxmu = 1;
+		@Option(name = "-nmratio", usage = "fraction of negative values when initializing the means of gaussians (default: 0.5)")
+		public double nmratio = 0.5;
+		@Option(name = "-maxvar", usage = "maximum random exponent when initializing the variances of gaussians (default: 1)")
+		public double maxvar = 1;
+		@Option(name = "-nvratio", usage = "fraction of negative exponents when initializing the variances of gaussians (default: 0.5)")
+		public double nvratio = 0.5;
 		@Option(name = "-ncomponent", usage = "# of gaussian components (default: 2)")
 		public short ncomponent = 2;
 		@Option(name = "-dim", usage = "dimension of the gaussian (default: 2)")
@@ -316,6 +324,12 @@ public class LearnerConfig extends Recorder {
 		
 		logger.info("Random number generator seeded at " + opts.rndomseed + ".\n");
 		
+		if (opts.pclose) {
+			opts.pbatch = false;
+			opts.peval = false;
+			opts.pgrad = false;
+		} // ease the parameter tuning
+		
 		dim = opts.dim;
 		minmw = opts.minmw;
 		nratio = opts.nratio;
@@ -336,8 +350,8 @@ public class LearnerConfig extends Recorder {
 //		config.setTestOnCreate(true);
 //		config.setTestOnReturn(true);
 		
-		MoGFactory mfactory = new MoGFactory(opts.ncomponent, opts.maxrandom, opts.nratio, random);
-		GaussFactory gfactory = new GaussFactory(opts.dim, opts.maxrandom, opts.nratio, random);
+		MoGFactory mfactory = new MoGFactory(opts.ncomponent, opts.maxmw, opts.nwratio, random);
+		GaussFactory gfactory = new GaussFactory(opts.dim, opts.maxmu, opts.maxvar, opts.nmratio, opts.nvratio, random);
 		mogPool = new ObjectPool<Short, GaussianMixture>(mfactory, config);
 		gaussPool = new ObjectPool<Short, GaussianDistribution>(gfactory, config);
 	}

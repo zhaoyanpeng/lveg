@@ -12,14 +12,18 @@ import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 public class GaussFactory implements KeyedPooledObjectFactory<Short, GaussianDistribution> {
 	
 	protected short ndimension;
-	protected short maximum;
-	protected double nratio;
+	protected double nmratio;
+	protected double nvratio;
+	protected double maxvar;
+	protected double maxmu;
 	protected Random rnd;
 	
-	public GaussFactory(short ndimension, short maximum, double nratio, Random rnd) {
+	public GaussFactory(short ndimension, double maxmu , double maxvar, double nmratio, double nvratio, Random rnd) {
 		this.ndimension = ndimension;
-		this.maximum = maximum;
-		this.nratio = nratio;
+		this.nmratio = nmratio;
+		this.nvratio = nvratio;
+		this.maxvar = maxvar;
+		this.maxmu = maxmu;
 		this.rnd = rnd;
 	}
 	
@@ -28,13 +32,13 @@ public class GaussFactory implements KeyedPooledObjectFactory<Short, GaussianDis
 		short ndim = key == -1 ? ndimension : key;
 		List<Double> mus = po.getObject().getMus();
 		for (int i = 0; i < ndim; i++) {
-			double rndn = (rnd.nextDouble() - nratio) * maximum;
+			double rndn = (rnd.nextDouble() - nmratio) * maxmu;
 			// rndn = 0.5;
 			mus.add(rndn);
 		}
 		List<Double> vars = po.getObject().getVars();
 		for (int i = 0; i < ndim; i++) {
-			double rndn = (rnd.nextDouble() - nratio) * maximum;
+			double rndn = (rnd.nextDouble() - nvratio) * maxvar;
 			// rndn = 0.5;
 			vars.add(rndn);
 		}	

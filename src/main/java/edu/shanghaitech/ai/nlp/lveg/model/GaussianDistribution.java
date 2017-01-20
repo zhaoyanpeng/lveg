@@ -40,10 +40,11 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	protected List<Double> vars;
 	protected List<Double> mus;
 	
-	protected static short defMaxMu;
-	protected static short defMaxVar;
+	protected static double defMaxMu;
+	protected static double defMaxVar;
+	protected static double defNegMRatio;
+	protected static double defNegVRatio;
 	protected static short defNdimension;
-	protected static double defNegRatio;
 	protected static ObjectPool<Short, GaussianDistribution> defObjectPool;
 	protected static Random defRnd;
 	
@@ -62,12 +63,12 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	 */
 	protected void initialize() {
 		for (int i = 0; i < dim; i++) {
-			double rndn = (defRnd.nextDouble() - defNegRatio) * defMaxMu;
+			double rndn = (defRnd.nextDouble() - defNegMRatio) * defMaxMu;
 //			 rndn = 0.5;
 			mus.add(rndn);
 		} // better initialize mu and var in the different loops
 		for (int i = 0; i < dim; i++) {
-			double rndn = (defRnd.nextDouble() - defNegRatio) * defMaxVar;
+			double rndn = (defRnd.nextDouble() - defNegVRatio) * defMaxVar;
 //			 rndn = 0.5;
 			vars.add(rndn);
 		}	
@@ -78,12 +79,13 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	 * To facilitate the parameter tuning.
 	 * 
 	 */
-	public static void config(short maxmu , short maxvar, short ndimension, 
-			double negratio, Random rnd, ObjectPool<Short, GaussianDistribution> pool) {
+	public static void config(double maxmu , double maxvar, short ndimension, double negmratio, 
+			double negvratio, Random rnd, ObjectPool<Short, GaussianDistribution> pool) {
 		defRnd = rnd;
 		defMaxMu = maxmu;
 		defMaxVar = maxvar;
-		defNegRatio = negratio;
+		defNegMRatio = negmratio;
+		defNegVRatio = negvratio;
 		defNdimension = ndimension;
 		defObjectPool = pool;
 	}

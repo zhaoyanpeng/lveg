@@ -41,7 +41,7 @@ public class ObjectToolTest {
 		short defaultval = 2;
 		Random rnd = new Random(0);
 		MoGFactory mfactory = new MoGFactory(defaultval, defaultval, 0.5, rnd);
-		GaussFactory gfactory = new GaussFactory(defaultval, defaultval, 0.5, rnd);
+		GaussFactory gfactory = new GaussFactory(defaultval, defaultval, defaultval, 0.5, 0.5, rnd);
 		
 		mogPool = new ObjectPool<Short, GaussianMixture>(mfactory, config);
 		gaussPool = new ObjectPool<Short, GaussianDistribution>(gfactory, config);

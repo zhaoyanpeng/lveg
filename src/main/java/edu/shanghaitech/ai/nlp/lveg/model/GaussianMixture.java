@@ -32,9 +32,9 @@ public class GaussianMixture extends Recorder implements Serializable {
 	protected PriorityQueue<Component> components;
 	protected short key; // from the object pool (>=-1) or not (<-1)
 	
-	protected static short defMaxmw;
 	protected static short defNcomponent;
-	protected static double defNegRatio;
+	protected static double defMaxmw;
+	protected static double defNegWRatio;
 	protected static ObjectPool<Short, GaussianMixture> defObjectPool;
 	protected static Random defRnd;
 	
@@ -59,7 +59,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 */
 	protected void initialize() {
 		for (int i = 0; i < ncomponent; i++) {
-			double weight = (defRnd.nextDouble() - defNegRatio) * defMaxmw;
+			double weight = (defRnd.nextDouble() - defNegWRatio) * defMaxmw;
 			Map<String, Set<GaussianDistribution>> multivnd = new HashMap<String, Set<GaussianDistribution>>();
 //			 weight = 0.5 /*-0.69314718056*/ /*0*/; // mixing weight 0.5, 1, 2
 			components.add(new Component((short) i, weight, multivnd));
@@ -71,12 +71,12 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * To facilitate the parameter tuning.
 	 * 
 	 */
-	public static void config(double expzero, short maxmw, short ncomponent, 
-			double negratio, Random rnd, ObjectPool<Short, GaussianMixture> pool) {
+	public static void config(double expzero, double maxmw, short ncomponent, 
+			double negwratio, Random rnd, ObjectPool<Short, GaussianMixture> pool) {
 		EXP_ZERO = expzero;
 		defRnd = rnd;
 		defMaxmw = maxmw;
-		defNegRatio = negratio;
+		defNegWRatio = negwratio;
 		defNcomponent = ncomponent;
 		defObjectPool = pool;
 	}
@@ -1029,7 +1029,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 	@Override
 	public String toString() {
 		return "GM [bias=" + bias + ", ncomponent=" + ncomponent + ", weights=" + 
-				MethodUtil.double2str(getWeights(), LVeGLearner.precision, -1, false, true) + ", mixture=" + getMixture() + "]";
+				MethodUtil.double2str(getWeights(), LVeGLearner.precision, -1, true, true) + ", mixture=" + getMixture() + "]";
 	}
 	
 	/*
