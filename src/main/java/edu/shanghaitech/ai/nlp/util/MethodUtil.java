@@ -264,11 +264,36 @@ public class MethodUtil extends Recorder {
 	}
 	
 	
-	public static void debugTree(Tree<State> tree, boolean simple, short nfirst, Numberer numberer) {
+	public static String debugTree(Tree<State> tree, boolean simple, short nfirst, Numberer numberer, boolean onlyname) {
 		StringBuilder sb = new StringBuilder();
-		toString(tree, simple, nfirst, sb, numberer);
-		logger.debug(sb + "\n");
+		if (!onlyname) {
+			toString(tree, simple, nfirst, sb, numberer);
+		} else {
+			toString(tree, sb, numberer);
+		}
+		return sb.toString();
 	}	
+	
+	
+	private static void toString(Tree<State> tree, StringBuilder sb, Numberer numberer) {
+		if (!tree.isLeaf()) {
+			sb.append('(');
+		}
+		State state = tree.getLabel();
+		if (state != null) {
+			String name = state.getName();
+			name = name != null ? name : (String) numberer.object(state.getId());
+			sb.append(name);
+		}
+		if (!tree.isLeaf()) {
+			for (Tree<State> child : tree.getChildren()) {
+				sb.append(' ');
+				toString(child, sb, numberer);
+			}
+			sb.append(')');
+		}
+	}
+	
 	
 	private static void toString(Tree<State> tree, boolean simple, short nfirst, StringBuilder sb, Numberer numberer) {
 		if (tree.isLeaf()) { sb.append("[" + tree.getLabel().wordIdx + ", " + tree.getLabel().toString(numberer) + "]"); return; }

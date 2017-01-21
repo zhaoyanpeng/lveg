@@ -138,12 +138,12 @@ public class LVeGLearner extends LearnerConfig {
 		lexicon.labelTrees(devTrees); // pair in in Lexicon.score(...)
 		
 		lvegParser = new LVeGParser<Tree<State>, List<Double>>(grammar, lexicon, opts.maxLenParsing, opts.reuse, opts.prune);
-		mrParser = new MaxRuleParser<Tree<State>, Tree<String>>(grammar, lexicon, opts.maxLenParsing, opts.reuse, false);
-		valuator = new Valuator<Tree<State>, Double>(grammar, lexicon, opts.maxLenParsing, opts.reuse, opts.eondevprune);
+		mrParser = new MaxRuleParser<Tree<State>, Tree<String>>(grammar, lexicon, opts.maxLenParsing, opts.reuse, opts.ef1prune);
+		valuator = new Valuator<Tree<State>, Double>(grammar, lexicon, opts.maxLenParsing, opts.reuse, opts.ellprune);
 		mvaluator = new ThreadPool(valuator, opts.nteval);
 		trainer = new ThreadPool(lvegParser, opts.ntbatch);
 		double ll = Double.NEGATIVE_INFINITY;
-		/*
+		
 		// initial likelihood of the training set
 		logger.trace("\n-------ll of the training data initially is... ");
 		long beginTime = System.currentTimeMillis();
@@ -151,7 +151,7 @@ public class LVeGLearner extends LearnerConfig {
 		// ll = serialLL(opts, valuator, trainTrees, numberer, true);
 		long endTime = System.currentTimeMillis();
 		logger.trace("------->" + ll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");
-		*/
+		
 		// set a global tree for debugging
 		for (Tree<State> tree : testTrees) {
 			if (tree.getYield().size() == opts.eonlylen) {
@@ -296,7 +296,7 @@ public class LVeGLearner extends LearnerConfig {
 					if (length > opts.eonlylen) { continue; }
 				}
 				
-				// if (isample < 3) { isample++; continue; } // DEBUG to test grammar loading
+				// if (isample < 3) { isample++; continue; } // DEBUG test grammar loading
 				
 				logger.trace("---Sample " + isample + "...\t");
 				beginTime = System.currentTimeMillis();
@@ -370,13 +370,15 @@ public class LVeGLearner extends LearnerConfig {
 		
 		logger.trace("\n----------training is over----------\n");
 		
-		logger.info("\n-------saving grammar file...");
-		GrammarFile gfile = new GrammarFile(grammar, lexicon);
-		String filename = subdatadir + opts.outGrammar + "_final.gr";
-		if (gfile.save(filename)) {
-			logger.info("to \'" + filename + "\' successfully.\n");
-		} else {
-			logger.info("to \'" + filename + "\' unsuccessfully.\n");
+		if (opts.saveGrammar) {
+			logger.info("\n-------saving the final grammar file...");
+			GrammarFile gfile = new GrammarFile(grammar, lexicon);
+			String filename = subdatadir + opts.outGrammar + "_final.gr";
+			if (gfile.save(filename)) {
+				logger.info("to \'" + filename + "\' successfully.\n");
+			} else {
+				logger.info("to \'" + filename + "\' unsuccessfully.\n");
+			}
 		}
 		
 		// since the final grammar may not be the best grammar, the evaluations below are not 
@@ -507,9 +509,9 @@ public class LVeGLearner extends LearnerConfig {
 			String filename = (ends ? subdatadir + opts.outGrammar + "_" + cnt + ".gr" 
 					: subdatadir + opts.outGrammar + "_" + cnt + "_" + ibatch + ".gr");
 			if (gfile.save(filename)) {
-				logger.info("to \'" + filename + "\' successfully.");
+				logger.info("to \'" + filename + "\' successfully.\n");
 			} else {
-				logger.info("to \'" + filename + "\' unsuccessfully.");
+				logger.info("to \'" + filename + "\' unsuccessfully.\n");
 			}
 		}
 		return exit;

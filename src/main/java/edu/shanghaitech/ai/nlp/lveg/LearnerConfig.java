@@ -13,6 +13,7 @@ import org.apache.commons.pool2.impl.GenericKeyedObjectPoolConfig;
 
 import edu.berkeley.nlp.PCFGLA.Binarization;
 import edu.berkeley.nlp.PCFGLA.Corpus;
+import edu.berkeley.nlp.PCFGLA.TreeAnnotations;
 import edu.berkeley.nlp.PCFGLA.Corpus.TreeBankType;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.data.StateTreeList;
@@ -24,6 +25,7 @@ import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.optimization.Optimizer.OptChoice;
 import edu.shanghaitech.ai.nlp.optimization.ParallelOptimizer.ParallelMode;
+import edu.shanghaitech.ai.nlp.syntax.State;
 import edu.shanghaitech.ai.nlp.util.MethodUtil;
 import edu.shanghaitech.ai.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.util.ObjectPool;
@@ -162,6 +164,8 @@ public class LearnerConfig extends Recorder {
 		public short ntgrad = 1;
 		@Option(name = "-nteval", usage = "# of threads for grammar evaluation (default: 1)")
 		public short nteval = 1;
+		@Option(name = "-nttest", usage = "# of threads for f1 score calculation (default: 1)")
+		public short nttest = 1;
 		@Option(name = "-pclose", usage = "close all parallel switches (default: false)")
 		public boolean pclose = false;
 		@Option(name = "-pbatch", usage = "parallizing training in the minibatch (true) or not (false) (default: false)")
@@ -170,6 +174,8 @@ public class LearnerConfig extends Recorder {
 		public boolean peval = true;
 		@Option(name = "-pgrad", usage = "parallizeing gradient calculation (true) or not (false) (default: true)")
 		public boolean pgrad = true;
+		@Option(name = "-pf1", usage = "parallelize f1 score calculation (true) or not (false) (default: false)")
+		public boolean pf1 = false;
 		@Option(name = "-pmode", usage = "parallel mode of gradient evaluation: INVOKE_ALL, COMPLETION_SERVICE, CUSTOMIZED_BLOCK, FORK_JOIN, THREAD_POOL (default: THREAD_POOL)")
 		public ParallelMode pmode = ParallelMode.THREAD_POOL;
 		@Option(name = "-pverbose", usage = "silent (false) the parallel optimizer or not (true) (default: true)")
@@ -226,10 +232,16 @@ public class LearnerConfig extends Recorder {
 		public boolean eondev = true;
 		@Option(name = "-eontrain", usage = "evaluating the grammar on the train data (true) or not (false) (default: true)")
 		public boolean eontrain = true;
-		@Option (name = "-eonextradev", usage = "evaluating the grammar on the sentences of length less than or equal to [eonlylen + 5] (true) or not (false) (default: true)")
+		@Option(name = "-eonextradev", usage = "evaluating the grammar on the sentences of length less than or equal to [eonlylen + 5] (true) or not (false) (default: true)")
 		public boolean eonextradev = true;
-		@Option (name = "-eondevprune", usage = "applying pruning when evaluating the grammar (true) or not (false) (default: false)")
-		public boolean eondevprune = false;
+		@Option(name = "-ellprune", usage = "applying pruning when evaluating (log-likelihood) the grammar (true) or not (false) (default: false)")
+		public boolean ellprune = false;
+		@Option(name = "-ef1prune", usage = "applying pruning when evaluating (f1-score) the grammar (true) or not (false) (default: false)")
+		public boolean ef1prune = false;
+		@Option(name = "-ef1ondev", usage = "evaluating f1-score on the development dataset (true) or not (false) (default: false)")
+		public boolean ef1ondev = false;
+		@Option(name = "-ef1ontrain", usage = "evaluating f1-score on the training dataset (true) or not (false) (default: false)")
+		public boolean ef1ontrain = false;
 		@Option(name = "-enbatchdev", usage = "# of batches after which the grammar is evaluated on the development dataset (default: 5)")
 		public short enbatchdev = 5;
 		/* evaluation section ends */
@@ -385,7 +397,15 @@ public class LearnerConfig extends Recorder {
 			trainTrees = stringTreeToStateTree(trainString, numberer, opts, true);
 			testTrees = stringTreeToStateTree(testString, numberer, opts, false);
 			devTrees = stringTreeToStateTree(devString, numberer, opts, false);
-
+			/*
+			logger.trace("\n----------train---\n");
+			debugTreeType(trainString, trainTrees, numberer);
+			logger.trace("\n----------test ---\n");
+			debugTreeType(testString, testTrees, numberer);
+			logger.trace("\n----------dev  ---\n");
+			debugTreeType(devString, devTrees, numberer);
+			System.exit(0);
+			*/
 		}
 		trees.put(ID_TRAIN, trainTrees);
 		trees.put(ID_TEST, testTrees);
@@ -410,6 +430,12 @@ public class LearnerConfig extends Recorder {
 		Corpus corpus = new Corpus(
 				path, opts.treebank, opts.trainingFraction, onlyTest,
 				opts.skipSection, opts.skipBilingual, opts.keepFunctionLabel);
+		/*
+		List<Tree<String>> trees = corpus.getDevTestingTrees(); // the same as the Corpus.getTrainTrees()
+		for (int i = 0; i < 10; i++) {
+			logger.trace(i + "\tstr   tree: " + trees.get(i) + "\n");
+		}
+		*/
 		List<Tree<String>> data = Corpus.binarizeAndFilterTrees(
 				corpus.getTrainTrees(), opts.verticalMarkovization, opts.horizontalMarkovization, 
 				opts.maxSentenceLength, opts.binarization, manualAnnotation, opts.verbose);
@@ -439,6 +465,19 @@ public class LearnerConfig extends Recorder {
 			}
 		}
 		logger.trace("There are " + numberer.size() + " observed tags.\n");
+	}
+	
+	public static void debugTreeType(List<Tree<String>> strTrees, StateTreeList stateTrees, Numberer numberer) {
+		for (int i = 0; i < 10; i++) {
+			logger.trace(i + "\tstr   tree: " + TreeAnnotations.unAnnotateTree(strTrees.get(i), false) + "\n");
+			logger.trace(i + "\tstate tree: " + strTree2stateTree(stateTrees.get(i), numberer) + "\n");
+		}
+	}
+	
+	public static Tree<String> strTree2stateTree(Tree<State> tree, Numberer numberer) {
+		Tree<String> strTree = StateTreeList.stateTreeToStringTree(tree, numberer);
+		strTree = TreeAnnotations.unAnnotateTree(strTree, false);
+		return strTree;
 	}
 	
 	public static String readFile(String path, Charset encoding) throws IOException {
