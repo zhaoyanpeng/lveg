@@ -22,7 +22,7 @@
 -minmw, 1e-3,
 -expzero, 1e-6,
 -epsilon, 1e-8,
--choice, SGD,
+-choice, ADAM,
 -lambda, 0.9,
 -lambda1, 0.9,
 -lambda2, 0.999,

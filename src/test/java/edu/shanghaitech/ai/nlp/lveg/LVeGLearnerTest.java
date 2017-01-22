@@ -47,7 +47,7 @@ public class LVeGLearnerTest extends Recorder {
 		OptionParser optionParser = new OptionParser(Options.class);
 		Options opts = (Options) optionParser.parse(args, true);
 		// configurations
-		LearnerConfig.initialize(opts); // logger can only be used after the initialization
+		LearnerConfig.initialize(opts, true); // logger can only be used after the initialization
 		logger.info("Calling with " + optionParser.getParsedOptions() + "\n");
 		// loading data
 		Numberer wrapper = new Numberer();

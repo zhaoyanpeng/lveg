@@ -324,17 +324,23 @@ public class LearnerConfig extends Recorder {
 		public boolean verbose = false;
 	}
 	
-	protected static void initialize(Options opts) {
+	protected static void initialize(Options opts, boolean test) {
 		if (opts.outGrammar == null) {
 			throw new IllegalArgumentException("Output file is required.");
 		}
 		// make directories
+		String logfile = null;
 		subdatadir = opts.datadir + "/" + opts.runtag + "/";
 		sublogroot = opts.logroot + "/" + opts.runtag + "/";
-		MethodUtil.mkdir(sublogroot);
-		MethodUtil.mkdir(subdatadir);
+		if (!test) {
+			MethodUtil.mkdir(sublogroot);
+			MethodUtil.mkdir(subdatadir);
+			logfile = opts.logroot + "/" + opts.runtag;
+		} else {
+			logfile = opts.logroot + "/" + opts.runtag + "_f1";
+		}
 		if (opts.logtype) {
-			logger = logUtil.getBothLogger(opts.logroot + "/" + opts.runtag);
+			logger = logUtil.getBothLogger(logfile);
 		} else {
 			logger = logUtil.getConsoleLogger();
 		}
