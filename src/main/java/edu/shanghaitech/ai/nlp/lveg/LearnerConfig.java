@@ -331,13 +331,15 @@ public class LearnerConfig extends Recorder {
 		// make directories
 		String logfile = null;
 		subdatadir = opts.datadir + "/" + opts.runtag + "/";
-		sublogroot = opts.logroot + "/" + opts.runtag + "/";
 		if (!test) {
-			MethodUtil.mkdir(sublogroot);
-			MethodUtil.mkdir(subdatadir);
+			sublogroot = opts.logroot + "/" + opts.runtag + "/";
 			logfile = opts.logroot + "/" + opts.runtag;
+			MethodUtil.mkdir(subdatadir);
+			MethodUtil.mkdir(sublogroot);
 		} else {
+			sublogroot = opts.logroot + "/" + opts.runtag + "_f1/";
 			logfile = opts.logroot + "/" + opts.runtag + "_f1";
+			MethodUtil.mkdir(sublogroot);
 		}
 		if (opts.logtype) {
 			logger = logUtil.getBothLogger(logfile);
