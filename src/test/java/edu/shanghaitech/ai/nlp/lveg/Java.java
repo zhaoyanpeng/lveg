@@ -67,6 +67,9 @@ public class Java {
 	public void testDate() {
 		String timeStamp = new SimpleDateFormat(".yyyyMMddHHmmss").format(new Date());
 		System.out.println(timeStamp);
+		
+		String xx = " ";
+		System.out.println(xx.trim().equals(""));
 	}
 	
 	

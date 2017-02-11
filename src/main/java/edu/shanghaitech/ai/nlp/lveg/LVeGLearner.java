@@ -3,6 +3,7 @@ package edu.shanghaitech.ai.nlp.lveg;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -160,17 +161,18 @@ public class LVeGLearner extends LearnerConfig {
 			}
 		}
 		/* State tree to String tree */
-		String treename = treeFile + "_gd";
-		Tree<String> stringTree = StateTreeList.stateTreeToStringTree(globalTree, numberer);
-		MethodUtil.saveTree2image(null, treename, stringTree, numberer);
-		stringTree = TreeAnnotations.unAnnotateTree(stringTree, false);
-		MethodUtil.saveTree2image(null, treename + "_ua", stringTree, numberer);
-		
-		Tree<String> parseTree = mrParser.parse(globalTree);
-		MethodUtil.saveTree2image(null, treeFile + "_ini", parseTree, numberer);
-		stringTree = TreeAnnotations.unAnnotateTree(stringTree, false);
-		MethodUtil.saveTree2image(null, treeFile + "_ini_ua", parseTree, numberer);
-		
+		if (opts.ellimwrite) {
+			String treename = treeFile + "_gd";
+			Tree<String> stringTree = StateTreeList.stateTreeToStringTree(globalTree, numberer);
+			MethodUtil.saveTree2image(null, treename, stringTree, numberer);
+			stringTree = TreeAnnotations.unAnnotateTree(stringTree, false);
+			MethodUtil.saveTree2image(null, treename + "_ua", stringTree, numberer);
+			
+			Tree<String> parseTree = mrParser.parse(globalTree);
+			MethodUtil.saveTree2image(null, treeFile + "_ini", parseTree, numberer);
+			stringTree = TreeAnnotations.unAnnotateTree(stringTree, false);
+			MethodUtil.saveTree2image(null, treeFile + "_ini_ua", parseTree, numberer);
+		}
 		
 		logger.info("\n---SGD CONFIG---\n[parallel: batch-" + opts.pbatch + ", grad-" + 
 				opts.pgrad + ", eval-" + opts.peval + "] " + Params.toString(false) + "\n");
@@ -286,7 +288,6 @@ public class LVeGLearner extends LearnerConfig {
 			logger.trace("\n\n-------epoch " + cnt + " begins-------\n\n");
 			double length = 0;
 			boolean exit = false;
-			boolean peep = false;
 			short isample = 0, idx = 0;
 			long beginTime, endTime, startTime = System.currentTimeMillis();
 			long batchstart = System.currentTimeMillis(), batchend;
@@ -365,10 +366,11 @@ public class LVeGLearner extends LearnerConfig {
 	
 	public static void finals(List<Double> trllist, List<Double> dellist, Numberer numberer, boolean exit) {
 		long beginTime, endTime;
-		logger.trace("Convergence Path [train]: " + trllist + "\n");
-		logger.trace("Convergence Path [ dev ]: " + dellist + "\n");
 		
-		logger.trace("\n----------training is over----------\n");
+		logger.trace("Convergence Path [train]: " + trllist + "\tMAX: " + Collections.max(trllist) + "\n");
+		logger.trace("Convergence Path [ dev ]: " + dellist + "\tMAX: " + Collections.max(dellist) + "\n");
+		
+		logger.trace("\n----------training is over after " + trllist.size() + " batches----------\n");
 		
 		if (opts.saveGrammar) {
 			logger.info("\n-------saving the final grammar file...");
@@ -415,7 +417,7 @@ public class LVeGLearner extends LearnerConfig {
 		// if not a multiple of batchsize
 		long beginTime, endTime;
 		if (idx != 0) {
-			logger.trace("+++Apply gradient descent for the last batch " + (isample / opts.bsize) + "... ");
+			logger.trace("+++Apply gradient descent for the last batch " + (isample / opts.bsize + 1) + "... ");
 			beginTime = System.currentTimeMillis();
 			grammar.applyGradientDescent(scoresOfST);
 			lexicon.applyGradientDescent(scoresOfST);
@@ -488,11 +490,13 @@ public class LVeGLearner extends LearnerConfig {
 		}
 		
 		// visualize the parse tree
-		String treename = ends ? treeFile + "_" + cnt : treeFile + "_" + cnt + "_" + ibatch;
-		Tree<String> parseTree = mrParser.parse(globalTree);
-		MethodUtil.saveTree2image(null, treename, parseTree, numberer);
-		parseTree = TreeAnnotations.unAnnotateTree(parseTree, false);
-		MethodUtil.saveTree2image(null, treename + "_ua", parseTree, numberer);
+		if (opts.ellimwrite) {
+			String treename = ends ? treeFile + "_" + cnt : treeFile + "_" + cnt + "_" + ibatch;
+			Tree<String> parseTree = mrParser.parse(globalTree);
+			MethodUtil.saveTree2image(null, treename, parseTree, numberer);
+			parseTree = TreeAnnotations.unAnnotateTree(parseTree, false);
+			MethodUtil.saveTree2image(null, treename + "_ua", parseTree, numberer);
+		}
 		
 		// save the intermediate grammars
 		GrammarFile gfile = new GrammarFile(grammar, lexicon);

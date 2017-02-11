@@ -9,9 +9,9 @@ import java.util.List;
 import java.util.Map;
 
 import edu.berkeley.nlp.PCFGLA.TreeAnnotations;
-import edu.berkeley.nlp.parser.EnglishPennTreebankParseEvaluator;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.data.StateTreeList;
+import edu.shanghaitech.ai.nlp.eval.EnglishPennTreebankParseEvaluator;
 import edu.shanghaitech.ai.nlp.data.ObjectFileManager.GrammarFile;
 import edu.shanghaitech.ai.nlp.lveg.impl.MaxRuleParser;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
@@ -110,9 +110,11 @@ public class LVeGTester extends LearnerConfig {
 		
 		f1entry(testTrees, numberer, false);
 		if (opts.ef1ontrain) { 
+			scorer.reset();
 			f1entry(trainTrees, numberer, true);
 		}
 		if (opts.ef1ondev) {
+			scorer.reset();
 			f1entry(devTrees, numberer, false);
 		}
 		// kill threads
@@ -168,7 +170,7 @@ public class LVeGTester extends LearnerConfig {
 		}
 		mparser.reset();
 		logger.trace("\n[max rule parser: " + nUnparsable + " unparsable sample(s) of " + stateTreeList.size() + "(" + trees.size() + ") samples]\n");
-		scorer.display(true);
+		logger.trace(scorer.display() + "\n\n");
 	}
 	
 	
@@ -183,7 +185,7 @@ public class LVeGTester extends LearnerConfig {
 			idx++; // index the State tree
 		}
 		logger.trace("\n[max rule parser: " + nUnparsable + " unparsable sample(s) of " + stateTreeList.size() + "(" + trees.size() + ") samples]\n");
-		scorer.display(true);
+		logger.trace(scorer.display() + "\n\n");
 	}
 	
 	
@@ -214,17 +216,23 @@ public class LVeGTester extends LearnerConfig {
 	
 	public static boolean saveTree(Tree<State> tree, Tree<String> parsedTree, Numberer numberer, int idx) {
 		try {
-			String treename = treeFile + "_gd_" + idx;
-			Tree<String> goldTree = StateTreeList.stateTreeToStringTree(tree, numberer);
-			MethodUtil.saveTree2image(null, treename, goldTree, numberer);
-			goldTree = TreeAnnotations.unAnnotateTree(goldTree, false);
-			MethodUtil.saveTree2image(null, treename + "_ua", goldTree, numberer);
-			
-			treename = treeFile + "_te_" + idx;
-			MethodUtil.saveTree2image(null, treename, parsedTree, numberer);
-			parsedTree = TreeAnnotations.unAnnotateTree(parsedTree, false);
-			MethodUtil.saveTree2image(null, treename + "_ua", parsedTree, numberer);
-			
+			Tree<String> goldTree = null;
+			if (opts.ef1imwrite) {
+				String treename = treeFile + "_gd_" + idx;
+				goldTree = StateTreeList.stateTreeToStringTree(tree, numberer);
+				MethodUtil.saveTree2image(null, treename, goldTree, numberer);
+				goldTree = TreeAnnotations.unAnnotateTree(goldTree, false);
+				MethodUtil.saveTree2image(null, treename + "_ua", goldTree, numberer);
+				
+				treename = treeFile + "_te_" + idx;
+				MethodUtil.saveTree2image(null, treename, parsedTree, numberer);
+				parsedTree = TreeAnnotations.unAnnotateTree(parsedTree, false);
+				MethodUtil.saveTree2image(null, treename + "_ua", parsedTree, numberer);
+			} else {
+				goldTree = StateTreeList.stateTreeToStringTree(tree, numberer);
+				goldTree = TreeAnnotations.unAnnotateTree(goldTree, false);
+				parsedTree = TreeAnnotations.unAnnotateTree(parsedTree, false);
+			}
 			scorer.evaluate(parsedTree, goldTree);
 			logger.trace(idx + "\tgold  : " + goldTree + "\n");
 			logger.trace(idx + "\tparsed: " + parsedTree + "\n");

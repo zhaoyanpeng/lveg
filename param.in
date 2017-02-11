@@ -31,11 +31,10 @@
 -ntgrad, 6,
 -nteval, 6,
 -nttest, 6,
--pclose, true,
+-pclose, false,
 -pbatch, true,
 -peval, true,
 -pgrad, true,
--pf1, true,
 -pmode, THREAD_POOL,
 -pverbose, false,
 
@@ -60,17 +59,23 @@
 
 -eratio, -0.1, 
 -eonlylen, 7,
--efirstk, 100,
+-efirstk, 50,
 -eontrain, true,
--eondev, false,
--eonextradev, false,
--ellprune, false,
+-eondev, true,
+-eonextradev, true,
+-ellprune, true,
+-ellimwrite, false,
+-enbatchdev, 1,
+
+-pf1, true,
+-ef1tag, ,
+-ef1pthhd, 1e-6,
 -ef1prune, false,
 -ef1ondev, true,
 -ef1ontrain, true,
--enbatchdev, 1,
+-ef1imwrite, false,
 
--runtag, test_gr,
+-runtag, test_lveg,
 -logroot, log/,
 -logtype, true,
 -verbose, false,
@@ -78,6 +83,6 @@
 -precision, 3,
 -rndomseed, 0,
 
--dgradnbatch, -1,
+-dgradnbatch, 1,
 
 -imgprefix, lveg

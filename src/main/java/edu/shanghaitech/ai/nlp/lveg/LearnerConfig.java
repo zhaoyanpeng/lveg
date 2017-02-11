@@ -174,8 +174,6 @@ public class LearnerConfig extends Recorder {
 		public boolean peval = true;
 		@Option(name = "-pgrad", usage = "parallizeing gradient calculation (true) or not (false) (default: true)")
 		public boolean pgrad = true;
-		@Option(name = "-pf1", usage = "parallelize f1 score calculation (true) or not (false) (default: false)")
-		public boolean pf1 = false;
 		@Option(name = "-pmode", usage = "parallel mode of gradient evaluation: INVOKE_ALL, COMPLETION_SERVICE, CUSTOMIZED_BLOCK, FORK_JOIN, THREAD_POOL (default: THREAD_POOL)")
 		public ParallelMode pmode = ParallelMode.THREAD_POOL;
 		@Option(name = "-pverbose", usage = "silent (false) the parallel optimizer or not (true) (default: true)")
@@ -236,15 +234,28 @@ public class LearnerConfig extends Recorder {
 		public boolean eonextradev = true;
 		@Option(name = "-ellprune", usage = "applying pruning when evaluating (log-likelihood) the grammar (true) or not (false) (default: false)")
 		public boolean ellprune = false;
+		@Option(name = "-ellimwrite", usage = "write parse tree to image (true) or not (false) when evaluating ll (default: false)")
+		public boolean ellimwrite = false;
+		@Option(name = "-enbatchdev", usage = "# of batches after which the grammar is evaluated on the development dataset (default: 5)")
+		public short enbatchdev = 5;
+		/* evaluation section ends */
+		
+		/* evaluate f1 score section begins */
+		@Option(name = "-pf1", usage = "parallelize f1 score calculation (true) or not (false) (default: false)")
+		public boolean pf1 = false;
+		@Option(name = "-ef1tag", usage = "the flag assigned to a f1 evaluation (default: \"\")")
+		public String ef1tag = "";
+		@Option(name = "-ef1pthhd", usage = "pruning threshold for parsing, see parameter \'expzero\' (default: 1e-6)")
+		public double ef1pthhd = 1e-6;
 		@Option(name = "-ef1prune", usage = "applying pruning when evaluating (f1-score) the grammar (true) or not (false) (default: false)")
 		public boolean ef1prune = false;
 		@Option(name = "-ef1ondev", usage = "evaluating f1-score on the development dataset (true) or not (false) (default: false)")
 		public boolean ef1ondev = false;
 		@Option(name = "-ef1ontrain", usage = "evaluating f1-score on the training dataset (true) or not (false) (default: false)")
 		public boolean ef1ontrain = false;
-		@Option(name = "-enbatchdev", usage = "# of batches after which the grammar is evaluated on the development dataset (default: 5)")
-		public short enbatchdev = 5;
-		/* evaluation section ends */
+		@Option(name = "-ef1imwrite", usage = "write parse tree to image (true) or not (false) when evaluating f1 score (default: false)")
+		public boolean ef1imwrite = false;
+		/* evaluate f1 score section ends */
 		
 		/* logger configurations section begins */
 		@Option(name = "-runtag", usage = "the flag assigned to a run specially (default: lveg)")
@@ -337,8 +348,9 @@ public class LearnerConfig extends Recorder {
 			MethodUtil.mkdir(subdatadir);
 			MethodUtil.mkdir(sublogroot);
 		} else {
-			sublogroot = opts.logroot + "/" + opts.runtag + "_f1/";
-			logfile = opts.logroot + "/" + opts.runtag + "_f1";
+			String suffix = opts.ef1tag.equals("") ? opts.runtag + "_f1" : opts.runtag + "_f1_" + opts.ef1tag;
+			sublogroot = opts.logroot + "/" + suffix + "/";
+			logfile = opts.logroot + "/" + suffix;
 			MethodUtil.mkdir(sublogroot);
 		}
 		if (opts.logtype) {
