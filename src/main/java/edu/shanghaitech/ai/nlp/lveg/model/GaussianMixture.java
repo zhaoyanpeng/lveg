@@ -73,7 +73,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 */
 	public static void config(double expzero, double maxmw, short ncomponent, 
 			double negwratio, Random rnd, ObjectPool<Short, GaussianMixture> pool) {
-		EXP_ZERO = expzero;
+		EXP_ZERO = Math.log(expzero);
 		defRnd = rnd;
 		defMaxmw = maxmw;
 		defNegWRatio = negwratio;
@@ -95,23 +95,22 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * Remove the trivial components.
 	 */
 	public void delTrivia() {
-		if (ncomponent == 0) { return; }
+		if (ncomponent <= 1) { return; }
 		PriorityQueue<Component> sorted = sort();
 		double maxw = sorted.peek().weight;
 		for (Component comp : components) {
 			if (comp.weight > LOG_ZERO && (comp.weight - maxw) > EXP_ZERO) { 
 				continue; 
 			}
-			sorted.remove(comp); // TODO return the object
-			ncomponent--;
+			sorted.remove(comp);
 		}
-		components.clear();
 		components = sorted;
+		ncomponent = sorted.size();
 	}
 	
 	
 	/**
-	 * @return the sorted components by the mixing weight in case when you modified the mixing weights of some components.
+	 * @return the sorted components by the mixing weight in case when you have modified the mixing weights of some components.
 	 */
 	public PriorityQueue<Component> sort() {
 		PriorityQueue<Component> sorted = new PriorityQueue<Component>(ncomponent + 1, wcomparator);
@@ -137,15 +136,19 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 */
 	public void add(GaussianMixture gm, boolean prune) {
 		// TODO bias += gm.bias;
+		ncomponent += gm.ncomponent;
+		components.addAll(gm.components);
+		if (prune) { delTrivia(); }
+		/*
 		if (prune && components.size() > 0) {
-			double maxw = components.peek().weight;
+			double maxw = components.peek().weight; // may not be the real maximum weight
 			for (Component comp : gm.components) {
 				if (comp.weight > LOG_ZERO && (comp.weight - maxw) > EXP_ZERO) {
 					ncomponent++;
 					components.add(comp);
 					maxw = components.peek().weight;
 				} else {
-					/*comp.clear();*/ 
+					comp.clear(); 
 					// CHECK find what influence this line can cause on parsers.
 					// DONE  see comments in Inferencer.Cell.addScore(...).
 				}
@@ -154,6 +157,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 			ncomponent += gm.ncomponent;
 			components.addAll(gm.components);
 		}
+		*/
 	}
 	
 	
