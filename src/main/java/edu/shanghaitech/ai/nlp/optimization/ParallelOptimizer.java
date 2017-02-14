@@ -312,15 +312,17 @@ public class ParallelOptimizer extends Optimizer {
 	
 	
 	@Override
-	public void debug(GrammarRule rule, boolean debug) {
+	public Object debug(GrammarRule rule, boolean debug) {
+		Object grads = null;
 		if (rule == null || !ruleSet.contains(rule)) {
 			for (GrammarRule arule : ruleSet) {
-				gradients.get(arule).debug(debug);
+				grads = gradients.get(arule).debug(arule, debug);
 				break;
 			}
 		} else {
-			gradients.get(rule).debug(debug);
+			grads = gradients.get(rule).debug(rule, debug);
 		}
+		return grads;
 	}
 	
 	

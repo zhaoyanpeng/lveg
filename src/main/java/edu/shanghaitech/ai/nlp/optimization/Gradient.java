@@ -22,12 +22,19 @@ public class Gradient extends Recorder implements Serializable {
 	 * 
 	 */
 	private static final long serialVersionUID = 2620919219751675203L;
+	public static class Grads {
+		public List<Double> wgrads;
+		public List<Map<String, List<Double>>> ggrads;
+		public Grads(List<Double> wgrads, List<Map<String, List<Double>>> ggrads) {
+			this.wgrads = wgrads;
+			this.ggrads = ggrads;
+		}
+	}
 	/*
 	 * It always holds the counts calculated from only one sample, 
 	 * which is equally saying that the batch size is always 1.
 	 */
 	protected static final short MAX_BATCH_SIZE = 1;
-	protected boolean luckily;
 	protected boolean updated;
 	protected boolean cumulative;
 	protected double cntUpdate;
@@ -64,7 +71,6 @@ public class Gradient extends Recorder implements Serializable {
 		this.truths = holder.get(1);
 		this.cumulative = false;
 		this.updated = false;
-		this.luckily = false;
 	}
 	
 	
@@ -75,10 +81,6 @@ public class Gradient extends Recorder implements Serializable {
 		GaussianMixture ruleW = rule.getWeight();
 		for (int icomponent = 0; icomponent < ruleW.ncomponent(); icomponent++) {
 			ruleW.update(icomponent, ggrads.get(icomponent), wgrads, Optimizer.minexp);
-		}
-		if (luckily) { // debug gradients
-			logger.trace("\n----------\nRule: " + rule + "\nRule Weight: " + ruleW + 
-					"\nGrad Weight: " + wgrads + "\nGrad Gauss : " + ggrads + "\n----------\n");
 		}
 		reset();
 		return true;
@@ -97,8 +99,14 @@ public class Gradient extends Recorder implements Serializable {
 	}
 	
 	
-	protected void debug(boolean beloved) {
-		this.luckily = beloved;
+	protected Object debug(GrammarRule rule, boolean beloved) {
+		if (beloved) { // debug gradients
+			logger.trace("\n----------\nRule: " + rule + "\nRule Weight: " + rule.getWeight() + 
+					"\nGrad Weight: " + wgrads + "\nGrad Gauss : " + ggrads + "\n----------\n");
+			return null;
+		} else {
+			return new Grads(wgrads, ggrads);
+		}
 	}
 	
 	

@@ -20,7 +20,7 @@ import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
 import edu.shanghaitech.ai.nlp.optimization.Optimizer;
 import edu.shanghaitech.ai.nlp.syntax.State;
-import edu.shanghaitech.ai.nlp.util.MethodUtil;
+import edu.shanghaitech.ai.nlp.util.FunUtil;
 import edu.shanghaitech.ai.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.util.OptionParser;
 import edu.shanghaitech.ai.nlp.util.ThreadPool;
@@ -208,7 +208,7 @@ public class LVeGTester extends LearnerConfig {
 			Tree<String> strTree = strTree2stateTree(Tree<State> tree, Numberer numberer)
 			logger.trace((cnt - 1) + "\t" + strTree + "\n");
 			*/
-			// logger.trace((cnt - 1) + "\t" + MethodUtil.debugTree(tree, false, (short) -1, numberer, true) + "\n");
+			// logger.trace((cnt - 1) + "\t" + FunUtil.debugTree(tree, false, (short) -1, numberer, true) + "\n");
 		}
 		return trees;
 	}
@@ -220,14 +220,14 @@ public class LVeGTester extends LearnerConfig {
 			if (opts.ef1imwrite) {
 				String treename = treeFile + "_gd_" + idx;
 				goldTree = StateTreeList.stateTreeToStringTree(tree, numberer);
-				MethodUtil.saveTree2image(null, treename, goldTree, numberer);
+				FunUtil.saveTree2image(null, treename, goldTree, numberer);
 				goldTree = TreeAnnotations.unAnnotateTree(goldTree, false);
-				MethodUtil.saveTree2image(null, treename + "_ua", goldTree, numberer);
+				FunUtil.saveTree2image(null, treename + "_ua", goldTree, numberer);
 				
 				treename = treeFile + "_te_" + idx;
-				MethodUtil.saveTree2image(null, treename, parsedTree, numberer);
+				FunUtil.saveTree2image(null, treename, parsedTree, numberer);
 				parsedTree = TreeAnnotations.unAnnotateTree(parsedTree, false);
-				MethodUtil.saveTree2image(null, treename + "_ua", parsedTree, numberer);
+				FunUtil.saveTree2image(null, treename + "_ua", parsedTree, numberer);
 			} else {
 				goldTree = StateTreeList.stateTreeToStringTree(tree, numberer);
 				goldTree = TreeAnnotations.unAnnotateTree(goldTree, false);

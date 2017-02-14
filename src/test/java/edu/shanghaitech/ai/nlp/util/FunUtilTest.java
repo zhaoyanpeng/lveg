@@ -12,41 +12,41 @@ import org.junit.Test;
 import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
 import edu.shanghaitech.ai.nlp.lveg.LearnerConfig;
 
-public class MethodUtilTest {
+public class FunUtilTest {
 	
 	@Test
-	public void testMethodUtil() {
+	public void testFunUtil() {
 		int maxint = 10;
 		Integer[] arrayInt = new Integer[5];
-		MethodUtil.randomInitArray(arrayInt, Integer.class, maxint);
-		MethodUtil.printArray(arrayInt);
+		FunUtil.randomInitArray(arrayInt, Integer.class, maxint);
+		FunUtil.printArray(arrayInt);
 		
 		Double[] arrayDouble = new Double[5];
-		MethodUtil.randomInitArray(arrayDouble, Double.class, 1);
-		MethodUtil.printArray(arrayDouble);
+		FunUtil.randomInitArray(arrayDouble, Double.class, 1);
+		FunUtil.printArray(arrayDouble);
 		
 		List<Integer> listInt = new ArrayList<Integer>();
-		MethodUtil.randomInitList(LVeGLearner.random, listInt, Integer.class, 5, maxint, 0.5, false, true);
-		MethodUtil.printList(listInt);
+		FunUtil.randomInitList(LVeGLearner.random, listInt, Integer.class, 5, maxint, 0.5, false, true);
+		FunUtil.printList(listInt);
 		
 		List<Double> listDouble = new ArrayList<Double>();
-		MethodUtil.randomInitList(LVeGLearner.random, listDouble, Double.class, 5, 1, 0.5, false, true);
-		MethodUtil.printList(listDouble);
+		FunUtil.randomInitList(LVeGLearner.random, listDouble, Double.class, 5, 1, 0.5, false, true);
+		FunUtil.printList(listDouble);
 		
 		int[] arrayint = new int[5];
-		MethodUtil.randomInitArrayInt(arrayint, maxint);
-		MethodUtil.printArrayInt(arrayint);
+		FunUtil.randomInitArrayInt(arrayint, maxint);
+		FunUtil.printArrayInt(arrayint);
 		
 		double[] arraydouble = new double[5];
-		MethodUtil.randomInitArrayDouble(arraydouble);
-		MethodUtil.printArrayDouble(arraydouble);
+		FunUtil.randomInitArrayDouble(arraydouble);
+		FunUtil.printArrayDouble(arraydouble);
 		
 		Double[] xarray = new Double[0];
-		MethodUtil.printArray(xarray);
+		FunUtil.printArray(xarray);
 		
 		double x = -30;
 		double y = -6;
-		double z = MethodUtil.logAdd(x, y);
+		double z = FunUtil.logAdd(x, y);
 		double m = Math.log((Math.exp(x) + Math.exp(y)));
 		System.out.println("Precision of the logAdd method is: " + (m - z) + ", [m = " + m + ", z =" + z + "]");
 	}
@@ -54,7 +54,7 @@ public class MethodUtilTest {
 //	@Test
 	public void testShuffle() {
 		List<Integer> listInt = new ArrayList<Integer>();
-		MethodUtil.randomInitList(LVeGLearner.random, listInt, Integer.class, 5, 2, 0.5, false, true);
+		FunUtil.randomInitList(LVeGLearner.random, listInt, Integer.class, 5, 2, 0.5, false, true);
 		System.out.println("---shuffle test---");
 		System.out.println(listInt);
 		Collections.shuffle(listInt, new Random(0));

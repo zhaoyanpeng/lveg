@@ -82,6 +82,23 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 	
 	
 	@Override
+	protected double mulAndMarginalize(GaussianDistribution gd) { 
+		if (gd != null && gd.getDim() == dim) {
+			double value = 0, vtmp = 0, epsilon = 1e-8/*0*/;
+			List<Double> vars1 = gd.getVars();
+			List<Double> mus1 = gd.getMus();
+			for (int i = 0; i < dim; i++) {
+				vtmp = 2 * (Math.exp(vars.get(i) * 2) + Math.exp(vars1.get(i) * 2)) + epsilon;
+				value += -0.5 * Math.log(vtmp * Math.PI) - Math.pow(mus.get(i) - mus1.get(i), 2) / vtmp;
+			}
+			return value;
+		}
+		logger.error("Invalid multipliers. input: " + gd + ", this: " + this + "\n");
+		return Double.NEGATIVE_INFINITY; 
+	};
+	
+	
+	@Override
 	protected void derivative(double factor, List<Double> sample, List<Double> grads, boolean cumulative, boolean normal) {
 		if (sample != null && sample.size() == dim) {
 			if (!cumulative) {

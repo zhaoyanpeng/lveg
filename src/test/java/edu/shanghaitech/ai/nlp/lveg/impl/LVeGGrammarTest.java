@@ -9,7 +9,7 @@ import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.impl.UnaryGrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
-import edu.shanghaitech.ai.nlp.util.MethodUtil;
+import edu.shanghaitech.ai.nlp.util.FunUtil;
 
 public class LVeGGrammarTest {
 	
@@ -77,6 +77,6 @@ public class LVeGGrammarTest {
 		}
 		*/
 		
-		MethodUtil.checkUnaryRuleCircle(grammar, null, true);
+		FunUtil.checkUnaryRuleCircle(grammar, null, true);
 	}
 }

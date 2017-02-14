@@ -26,7 +26,7 @@ import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.optimization.Optimizer.OptChoice;
 import edu.shanghaitech.ai.nlp.optimization.ParallelOptimizer.ParallelMode;
 import edu.shanghaitech.ai.nlp.syntax.State;
-import edu.shanghaitech.ai.nlp.util.MethodUtil;
+import edu.shanghaitech.ai.nlp.util.FunUtil;
 import edu.shanghaitech.ai.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.util.ObjectPool;
 import edu.shanghaitech.ai.nlp.util.Option;
@@ -345,13 +345,13 @@ public class LearnerConfig extends Recorder {
 		if (!test) {
 			sublogroot = opts.logroot + "/" + opts.runtag + "/";
 			logfile = opts.logroot + "/" + opts.runtag;
-			MethodUtil.mkdir(subdatadir);
-			MethodUtil.mkdir(sublogroot);
+			FunUtil.mkdir(subdatadir);
+			FunUtil.mkdir(sublogroot);
 		} else {
 			String suffix = opts.ef1tag.equals("") ? opts.runtag + "_f1" : opts.runtag + "_f1_" + opts.ef1tag;
 			sublogroot = opts.logroot + "/" + suffix + "/";
 			logfile = opts.logroot + "/" + suffix;
-			MethodUtil.mkdir(sublogroot);
+			FunUtil.mkdir(sublogroot);
 		}
 		if (opts.logtype) {
 			logger = logUtil.getBothLogger(logfile);

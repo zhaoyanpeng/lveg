@@ -1,18 +1,17 @@
 package edu.shanghaitech.ai.nlp.lveg;
 
 import java.io.IOException;
+import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import edu.berkeley.nlp.PCFGLA.TreeAnnotations;
 import edu.berkeley.nlp.syntax.Tree;
-import edu.shanghaitech.ai.nlp.util.FunUtil;
-import edu.shanghaitech.ai.nlp.util.Numberer;
-import edu.shanghaitech.ai.nlp.util.OptionParser;
-import edu.shanghaitech.ai.nlp.util.ThreadPool;
+import edu.berkeley.nlp.syntax.Trees;
 import edu.shanghaitech.ai.nlp.data.StateTreeList;
 import edu.shanghaitech.ai.nlp.data.ObjectFileManager.GrammarFile;
 import edu.shanghaitech.ai.nlp.lveg.impl.LVeGParser;
@@ -22,27 +21,26 @@ import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGLexicon;
 import edu.shanghaitech.ai.nlp.lveg.impl.Valuator;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
 import edu.shanghaitech.ai.nlp.optimization.Optimizer;
 import edu.shanghaitech.ai.nlp.optimization.ParallelOptimizer;
 import edu.shanghaitech.ai.nlp.syntax.State;
+import edu.shanghaitech.ai.nlp.util.FunUtil;
+import edu.shanghaitech.ai.nlp.util.Numberer;
+import edu.shanghaitech.ai.nlp.util.OptionParser;
+import edu.shanghaitech.ai.nlp.util.ThreadPool;
 
-/**
- * There is only one Grammar instance shared by trainer, lvegParser, maxRuleParser, and valuator.
- * 
- * @author Yanpeng Zhao
- *
- */
-public class LVeGLearner extends LearnerConfig {
+public class LVeGToy extends LearnerConfig {
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 1249878080098056557L;
+	private static final long serialVersionUID = 8827498326298180622L;
 	
 	protected static StateTreeList trainTrees;
-	protected static StateTreeList testTrees;
-	protected static StateTreeList devTrees;
+//	protected static StateTreeList testTrees;
+//	protected static StateTreeList devTrees;
 	
 	protected static Optimizer goptimizer;
 	protected static Optimizer loptimizer;
@@ -61,8 +59,8 @@ public class LVeGLearner extends LearnerConfig {
 	protected static String treeFile;
 	
 	protected static Options opts;
+	protected static int ntree = 2;
 	
-
 	public static void main(String[] args) throws Exception {
 		String fparams = args[0];
 		try {
@@ -77,7 +75,7 @@ public class LVeGLearner extends LearnerConfig {
 		logger.info("Calling with " + optionParser.getParsedOptions() + "\n");
 		// loading data
 		Numberer wrapper = new Numberer();
-		Map<String, StateTreeList> trees = loadData(wrapper, opts);
+		Map<String, StateTreeList> trees = makeData(wrapper, opts);
 		// training
 		long startTime = System.currentTimeMillis();
 		train(trees, wrapper);
@@ -85,12 +83,12 @@ public class LVeGLearner extends LearnerConfig {
 		logger.trace("[total time consumed by LVeG learner] " + (endTime - startTime) / 1000.0 + "\n");
 	}
 	
-	
 	private static void train(Map<String, StateTreeList> trees, Numberer wrapper) throws Exception {
 		trainTrees = trees.get(ID_TRAIN);
+		/*
 		testTrees = trees.get(ID_TEST);
 		devTrees = trees.get(ID_DEV);
-		
+		*/
 		treeFile = sublogroot + opts.imgprefix;
 		
 		Numberer numberer = wrapper.getGlobalNumberer(KEY_TAG_SET);
@@ -135,9 +133,10 @@ public class LVeGLearner extends LearnerConfig {
 		System.exit(0);
 		*/
 		lexicon.labelTrees(trainTrees); // FIXME no errors, just alert you to pay attention to it 
+		/*
 		lexicon.labelTrees(testTrees); // save the search time cost by finding a specific tag-word
 		lexicon.labelTrees(devTrees); // pair in in Lexicon.score(...)
-		
+		*/
 		lvegParser = new LVeGParser<Tree<State>, List<Double>>(grammar, lexicon, opts.maxLenParsing, opts.reuse, opts.prune);
 		mrParser = new MaxRuleParser<Tree<State>, Tree<String>>(grammar, lexicon, opts.maxLenParsing, opts.reuse, opts.ef1prune);
 		valuator = new Valuator<Tree<State>, Double>(grammar, lexicon, opts.maxLenParsing, opts.reuse, opts.ellprune);
@@ -148,11 +147,11 @@ public class LVeGLearner extends LearnerConfig {
 		// initial likelihood of the training set
 		logger.trace("\n-------ll of the training data initially is... ");
 		long beginTime = System.currentTimeMillis();
-		ll = parallelLL(opts, mvaluator, trainTrees, numberer, true);
-		// ll = serialLL(opts, valuator, trainTrees, numberer, true);
+//		ll = parallelLL(opts, mvaluator, trainTrees, numberer, true);
+		 ll = serialLL(opts, valuator, trainTrees, numberer, true);
 		long endTime = System.currentTimeMillis();
 		logger.trace("------->" + ll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");
-		
+		/*
 		// set a global tree for debugging
 		for (Tree<State> tree : testTrees) {
 			if (tree.getYield().size() == opts.eonlylen) {
@@ -160,6 +159,7 @@ public class LVeGLearner extends LearnerConfig {
 				break;
 			}
 		}
+		*/
 		/* State tree to String tree */
 		if (opts.ellimwrite) {
 			String treename = treeFile + "_gd";
@@ -189,9 +189,18 @@ public class LVeGLearner extends LearnerConfig {
 		mvaluator.shutdown();
 	}
 	
-	
 	protected static void debugrad(boolean debug) {
-		goptimizer.debug(null, debug);
+		
+		Map<GrammarRule, GrammarRule> uRuleMap = grammar.getURuleMap();
+		for (Map.Entry<GrammarRule, GrammarRule> entry : uRuleMap.entrySet()) {
+			goptimizer.debug(entry.getKey(), debug);
+		}
+		uRuleMap = lexicon.getURuleMap();
+		for (Map.Entry<GrammarRule, GrammarRule> entry : uRuleMap.entrySet()) {
+			loptimizer.debug(entry.getKey(), debug);
+		}
+		
+		/*goptimizer.debug(null, debug);*/
 	}
 	
 	
@@ -240,14 +249,14 @@ public class LVeGLearner extends LearnerConfig {
 					trainer.reset();  // after the whole batch
 					batchend = System.currentTimeMillis();
 					
+					if (opts.dgradnbatch > 0 && ((isample % (opts.bsize * opts.dgradnbatch)) == 0)) { debugrad(true); }
+					
 					// apply gradient descent
 					logger.trace("+++Apply gradient descent for the batch " + (isample / opts.bsize) + "... ");
 					beginTime = System.currentTimeMillis();
 					
-					if (opts.dgradnbatch > 0 && ((isample % (opts.bsize * opts.dgradnbatch)) == 0)) { debugrad(true); }
 					grammar.applyGradientDescent(scoresOfST);
 					lexicon.applyGradientDescent(scoresOfST);
-					if (opts.dgradnbatch > 0 && ((isample % (opts.bsize * opts.dgradnbatch)) == 0)) { debugrad(false); }
 					
 					endTime = System.currentTimeMillis();
 					logger.trace((endTime - beginTime) / 1000.0 + "... batch time: " + (batchend - batchstart) / 1000.0 + ", nfailed: " + nfailed + "\n");
@@ -326,14 +335,17 @@ public class LVeGLearner extends LearnerConfig {
 				if (++idx % opts.bsize == 0) {
 					batchend = System.currentTimeMillis();
 					
+					if (opts.dgradnbatch > 0 && ((isample % (opts.bsize * opts.dgradnbatch)) == 0)) { 
+						debugrad(true); 
+						FunUtil.gradcheck(grammar, lexicon, lvegParser, valuator, tree);
+					}
+					
 					// apply gradient descent
 					logger.trace("+++Apply gradient descent for the batch " + (isample / opts.bsize) + "... ");
 					beginTime = System.currentTimeMillis();
 					
-					if (opts.dgradnbatch > 0 && ((isample % (opts.bsize * opts.dgradnbatch)) == 0)) { debugrad(true); }
 					grammar.applyGradientDescent(scoresOfST);
 					lexicon.applyGradientDescent(scoresOfST);
-					if (opts.dgradnbatch > 0 && ((isample % (opts.bsize * opts.dgradnbatch)) == 0)) { debugrad(false); }
 					
 					endTime = System.currentTimeMillis();
 					logger.trace((endTime - beginTime) / 1000.0 + "... batch time: " + (batchend - batchstart) / 1000.0 + "\n");
@@ -368,8 +380,9 @@ public class LVeGLearner extends LearnerConfig {
 		long beginTime, endTime;
 		
 		logger.trace("Convergence Path [train]: " + trllist + "\tMAX: " + Collections.max(trllist) + "\n");
+		/*
 		logger.trace("Convergence Path [ dev ]: " + dellist + "\tMAX: " + Collections.max(dellist) + "\n");
-		
+		*/
 		logger.trace("\n----------training is over after " + trllist.size() + " batches----------\n");
 		
 		if (opts.saveGrammar) {
@@ -386,7 +399,7 @@ public class LVeGLearner extends LearnerConfig {
 		// since the final grammar may not be the best grammar, the evaluations below are not 
 		// so helpful for analyzing results.
 		if (exit) { return; }
-		
+		/*
 		logger.trace("------->evaluating on the training dataset...");
 		beginTime = System.currentTimeMillis();
 		double ll = parallelLL(opts, mvaluator, trainTrees, numberer, true);
@@ -407,6 +420,7 @@ public class LVeGLearner extends LearnerConfig {
 		endTime = System.currentTimeMillis();
 		logger.trace("ll is "+ ll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");
 		testTrees.reset();
+		*/
 	}
 	
 	
@@ -432,7 +446,8 @@ public class LVeGLearner extends LearnerConfig {
 		
 		// likelihood of the data set
 		logger.trace("\n----------log-likelihood in epoch is under evaluation----------\n");
-		boolean exit = peep(isample, cnt, numberer, trllist, dellist, true);
+		/*boolean exit = peep(isample, cnt, numberer, trllist, dellist, true);*/
+		boolean exit = false;
 		logger.trace("\n------------------------evaluation over------------------------\n");
 		
 		// we shall clear the inside and outside score in each state 
@@ -464,7 +479,7 @@ public class LVeGLearner extends LearnerConfig {
 			trainTrees.reset();
 			trllist.add(trll);
 		}
-		
+		/*
 		// check dropping count according to the log likelihood on the development set
 		boolean exit = false, save = false;
 		if (opts.eondev && (ibatch % opts.enbatchdev) == 0) {
@@ -519,6 +534,8 @@ public class LVeGLearner extends LearnerConfig {
 			}
 		}
 		return exit;
+		*/
+		return false;
 	}
 	
 	
@@ -597,4 +614,23 @@ public class LVeGLearner extends LearnerConfig {
 		return sumll;
 	}
 	
+	public static Map<String, StateTreeList> makeData(Numberer wraper, Options opts) {
+		StateTreeList trainTrees;
+		Numberer numberer = wraper.getGlobalNumberer(KEY_TAG_SET);
+		Map<String, StateTreeList> trees = new HashMap<String, StateTreeList>(3, 1);
+		List<Tree<String>> strTrees = new ArrayList<Tree<String>>();
+		for (int i = 0; i < ntree; i++) {
+			String string = "(ROOT (A_" + i + " (B X_" + i + ")))";
+			strTrees.add((new Trees.PennTreeReader(new StringReader(string))).next());
+		}
+		int idx = 0;
+//		for (int i = 0; i < 1; i++) {
+//			String string = "(ROOT (A_" + idx + " (B X_" + idx + ")))";
+//			strTrees.add((new Trees.PennTreeReader(new StringReader(string))).next());
+//		}
+		trainTrees = stringTreeToStateTree(strTrees, numberer, opts, false);
+		trees.put(ID_TRAIN, trainTrees);
+		return trees;
+	}
+
 }

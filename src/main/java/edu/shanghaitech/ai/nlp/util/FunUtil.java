@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Formatter;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
@@ -31,10 +32,13 @@ import edu.berkeley.nlp.ui.TreeJPanel;
 import edu.shanghaitech.ai.nlp.data.StateTreeList;
 import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
 import edu.shanghaitech.ai.nlp.lveg.LearnerConfig.Options;
+import edu.shanghaitech.ai.nlp.lveg.impl.LVeGParser;
 import edu.shanghaitech.ai.nlp.lveg.impl.UnaryGrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.impl.Valuator;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
+import edu.shanghaitech.ai.nlp.optimization.Gradient.Grads;
 import edu.shanghaitech.ai.nlp.lveg.model.Inferencer.Cell;
 import edu.shanghaitech.ai.nlp.lveg.model.Inferencer.Chart;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
@@ -47,7 +51,7 @@ import edu.shanghaitech.ai.nlp.syntax.State;
  * @author Yanpeng Zhao
  *
  */
-public class MethodUtil extends Recorder {
+public class FunUtil extends Recorder {
 	/**
 	 * 
 	 */
@@ -61,6 +65,55 @@ public class MethodUtil extends Recorder {
 	private static Random random = new Random(LVeGLearner.randomseed);
 	private static LVeGGrammar grammar;
 	private static LVeGLexicon lexicon;
+	
+	
+	public static void gradcheck(LVeGGrammar grammar, LVeGLexicon lexicon, LVeGParser<?, ?> lvegParser, Valuator<?, ?> valuator, Tree<State> tree) {
+		double delta = 1e-3;
+		Map<GrammarRule, GrammarRule> uRuleMap = grammar.getURuleMap();
+		for (Map.Entry<GrammarRule, GrammarRule> entry : uRuleMap.entrySet()) {
+			gradcheck(grammar, lexicon, entry, valuator, tree, delta);
+		}
+		uRuleMap = lexicon.getURuleMap();
+		for (Map.Entry<GrammarRule, GrammarRule> entry : uRuleMap.entrySet()) {
+			gradcheck(grammar, lexicon, entry, valuator, tree, delta);
+		}
+	}
+	
+	
+	public static void gradcheck(LVeGGrammar grammar, LVeGLexicon lexicon, Map.Entry<GrammarRule, GrammarRule> entry, Valuator<?, ?> valuator, Tree<State> tree, double delta) {
+		GaussianMixture gm = entry.getValue().getWeight();
+		double src = gm.getWeight(0);
+		// w.r.t. mixing weight
+		gm.setWeight(0, gm.getWeight(0) + delta);
+		double llBefore = valuator.probability(tree);
+		double t1 = gm.getWeight(0);
+		
+		gm.setWeight(0, gm.getWeight(0) - 2 * delta);
+		double llAfter = valuator.probability(tree);
+		double t2 = gm.getWeight(0);
+		
+		// restore
+		gm.setWeight(0, gm.getWeight(0) + delta);	
+		double des = gm.getWeight(0);
+		double numericalGrad = (llBefore - llAfter) / (2 * (t1 - t2));
+		
+		logger.trace("\n-----\nRule: " + entry.getKey() + "\nGrad Weight: " + 
+				numericalGrad + "=(" + llBefore + " - " + llAfter + ")/(" + 2 * delta + ")\n" + 
+				"B : " + src + "\tA : " + des + "\t(B - A)  =" + (des - src) + "\n" +
+				"t1: " + t1 + "\tt2: " + t2 + "\t(t1 - t2)=" + (t1 - t2) + "\n" +
+				"\n-----\n");
+		Object gradients = null;
+		if (entry.getKey().type != GrammarRule.LHSPACE) {
+			gradients = grammar.getOptimizer().debug(entry.getKey(), false);
+		} else {
+			gradients = lexicon.getOptimizer().debug(entry.getKey(), false);
+		}
+		Grads grads = null;
+		if (gradients != null) {
+			grads = (Grads) gradients;
+			logger.trace("\n---\nWgrads: " + grads.wgrads + "\nGgrads: " + grads.ggrads + "\n---\n");
+		}
+	}
 	
 	
 	public static void debugShuffle(StateTreeList trainTrees) {
@@ -80,6 +133,7 @@ public class MethodUtil extends Recorder {
 			}
 		}
 	}
+	
 	
 	public static void debugChainRule(LVeGGrammar agrammar) {
 		grammar = agrammar;

@@ -21,7 +21,7 @@ import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture.Component;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.Unit;
-import edu.shanghaitech.ai.nlp.util.MethodUtil;
+import edu.shanghaitech.ai.nlp.util.FunUtil;
 
 public class GaussianMixtureTest {
 	
@@ -294,7 +294,7 @@ public class GaussianMixtureTest {
 		
 		int n = 1500;
 		List<Double> weights = new ArrayList<Double>();
-		MethodUtil.randomInitList(LVeGLearner.random, weights, Double.class, n, 10, 0.5, false, true);
+		FunUtil.randomInitList(LVeGLearner.random, weights, Double.class, n, 10, 0.5, false, true);
 //		gm0.setWeights(weights);
 		
 		System.out.println("n = " + n);

@@ -7,7 +7,7 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
 import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
-import edu.shanghaitech.ai.nlp.util.MethodUtil;
+import edu.shanghaitech.ai.nlp.util.FunUtil;
 import edu.shanghaitech.ai.nlp.util.ObjectPool;
 import edu.shanghaitech.ai.nlp.util.Recorder;
 
@@ -64,12 +64,12 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	protected void initialize() {
 		for (int i = 0; i < dim; i++) {
 			double rndn = (defRnd.nextDouble() - defNegMRatio) * defMaxMu;
-//			 rndn = 0.5;
+			 rndn = /*0.5*/ 0;
 			mus.add(rndn);
 		} // better initialize mu and var in the different loops
 		for (int i = 0; i < dim; i++) {
 			double rndn = (defRnd.nextDouble() - defNegVRatio) * defMaxVar;
-//			 rndn = 0.5;
+			 rndn = /*0.5*/ 0;
 			vars.add(rndn);
 		}	
 	}
@@ -147,6 +147,15 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	
 	
 	/**
+	 * Take the product of two gaussians and marginalize it.
+	 * 
+	 * @param gd a gaussian as a multiplier
+	 * @return   marginalization of the production
+	 */
+	protected double mulAndMarginalize(GaussianDistribution gd) { return Double.NEGATIVE_INFINITY; };
+	
+	
+	/**
 	 * Take the derivative of gaussian distribution with respect to the parameters (mu & sigma).
 	 * 
 	 * @param factor  dRuleWeight * weight * dMixingWeight
@@ -213,6 +222,14 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 			var = vars.get(i) + grads.get(i * 2 + 1);
 			mus.set(i, mu);
 			vars.set(i, var);
+		}
+	}
+	
+	
+	protected void disturbParams(double delta) {
+		for (int i = 0; i < dim; i++) {
+			mus.set(i, mus.get(i) + delta);
+			vars.set(i, vars.get(i) + delta);
 		}
 	}
 	
@@ -323,8 +340,8 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 
 	@Override
 	public String toString() {
-		return "GD [dim=" + dim + ", mus=" + MethodUtil.double2str(mus, LVeGLearner.precision, -1, false, true) + 
-				", stds=" + MethodUtil.double2str(vars, LVeGLearner.precision, -1, true, true) + "]";
+		return "GD [dim=" + dim + ", mus=" + FunUtil.double2str(mus, LVeGLearner.precision, -1, false, true) + 
+				", stds=" + FunUtil.double2str(vars, LVeGLearner.precision, -1, true, true) + "]";
 	}
 
 }

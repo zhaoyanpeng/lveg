@@ -10,7 +10,7 @@ import edu.shanghaitech.ai.nlp.lveg.model.Parser;
 import edu.shanghaitech.ai.nlp.lveg.model.Inferencer.Chart;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.syntax.State;
-import edu.shanghaitech.ai.nlp.util.MethodUtil;
+import edu.shanghaitech.ai.nlp.util.FunUtil;
 
 public class Valuator<I, O> extends Parser<I, O> {
 	/**
@@ -80,7 +80,7 @@ public class Valuator<I, O> extends Parser<I, O> {
 		LVeGInferencer.insideScoreWithTree(tree);
 		GaussianMixture gm = tree.getLabel().getInsideScore();
 		double score = gm.eval(null, true);
-//		MethodUtil.debugTree(tree, true, (short) -1, Inferencer.grammar.numberer); // DEBUG
+//		FunUtil.debugTree(tree, true, (short) -1, Inferencer.grammar.numberer); // DEBUG
 //		logger.trace("\n" + score + " " + Math.exp(score) + "\n");
 		return score;
 	}
@@ -104,7 +104,7 @@ public class Valuator<I, O> extends Parser<I, O> {
 		Inferencer.insideScore(chart, sentence, nword, prune);
 		GaussianMixture gm = chart.getInsideScore((short) 0, Chart.idx(0, 1));
 		double score = gm.eval(null, true);
-//		MethodUtil.debugChart(chart.getChart(true), (short) -1, nword); // DEBUG
+//		FunUtil.debugChart(chart.getChart(true), (short) -1, nword); // DEBUG
 //		logger.trace("\n" + score + " " + Math.exp(score) + "\n");
 		return score;
 	}

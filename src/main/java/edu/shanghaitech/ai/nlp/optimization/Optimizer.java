@@ -58,7 +58,7 @@ public abstract class Optimizer extends Recorder implements Serializable {
 	
 	protected abstract void reset();
 	
-	public void debug(GrammarRule rule, boolean debug) { /* NULL */ }
+	public Object debug(GrammarRule rule, boolean debug) { return null; }
 	public void shutdown() { /* NULL */ }
 	
 	/**

@@ -5,9 +5,12 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.PriorityQueue;
 import java.util.Set;
 
 import org.junit.Test;
+
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture.Component;
 
 public class Java {
 	
@@ -64,6 +67,23 @@ public class Java {
 	
 	
 	@Test
+	public void testQueue() {
+		PriorityQueue<Integer> sorted = new PriorityQueue<Integer>(5);
+		for (int i = 0; i < 5; i++) {
+			sorted.add(i);
+		}
+		System.out.println(sorted);
+		for (Integer it : sorted) {
+			if (it < 3) {
+				continue;
+			}
+			sorted.remove(it); // this is a bad coding example
+		}
+		System.out.println(sorted);
+	}
+	
+	
+//	@Test
 	public void testDate() {
 		String timeStamp = new SimpleDateFormat(".yyyyMMddHHmmss").format(new Date());
 		System.out.println(timeStamp);

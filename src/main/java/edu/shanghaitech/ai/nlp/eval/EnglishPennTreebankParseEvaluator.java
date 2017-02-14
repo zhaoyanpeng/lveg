@@ -413,7 +413,7 @@ public class EnglishPennTreebankParseEvaluator<L> {
 		}
 
 	}
-
+/*
 	public static void main(String[] args) throws Throwable {
 		Tree<String> goldTree = (new Trees.PennTreeReader(new StringReader(
 				"(ROOT (S (NP (DT the) (NN can)) (VP (VBD fell))))"))).next();
@@ -433,7 +433,7 @@ public class EnglishPennTreebankParseEvaluator<L> {
 		rule_eval.evaluate(guessedTree, goldTree);
 		rule_eval.display(true);
 	}
-
+*/
 	public static class RuleEval<L> extends AbstractEval<L> {
 		Set<L> labelsToIgnore;
 		Set<L> punctuationTags;

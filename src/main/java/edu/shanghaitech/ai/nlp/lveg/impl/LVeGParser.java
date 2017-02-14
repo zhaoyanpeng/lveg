@@ -11,7 +11,7 @@ import edu.shanghaitech.ai.nlp.lveg.model.Parser;
 import edu.shanghaitech.ai.nlp.lveg.model.Inferencer.Chart;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.syntax.State;
-import edu.shanghaitech.ai.nlp.util.MethodUtil;
+import edu.shanghaitech.ai.nlp.util.FunUtil;
 
 /**
  * @author Yanpeng Zhao
@@ -50,14 +50,14 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 		scores.add(scoreS);
 		scores.add((double) sample.getYield().size());
 //		logger.trace("\no---id=" + Thread.currentThread().getId() + ", itask=" + itask + " " + 
-//				MethodUtil.double2str(scores, 3, -1, false, true) + " comes...\n"); // DEBUG
+//				FunUtil.double2str(scores, 3, -1, false, true) + " comes...\n"); // DEBUG
 		synchronized (inferencer) {
 //			logger.trace("\ni---id=" + Thread.currentThread().getId() + ", itask=" + itask + " enters...\n"); // DEBUG
 			inferencer.evalRuleCountWithTree(sample, (short) 0);
 			inferencer.evalRuleCount(sample, chart, (short) 0, prune);
 			inferencer.evalGradients(scores);
 //			logger.trace("\ni---id=" + Thread.currentThread().getId() + ", itask=" + itask + " " + 
-//					MethodUtil.double2str(scores, 3, -1, false, true) + " leaves...\n"); // DEBUG
+//					FunUtil.double2str(scores, 3, -1, false, true) + " leaves...\n"); // DEBUG
 		}
 		Meta<O> cache = new Meta(itask, scores);
 		synchronized (caches) {
@@ -78,14 +78,14 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 	public double evalRuleCount(Tree<State> tree, short isample) {
 		double scoreS = doInsideOutside(tree); 
 //		logger.trace("\nInside scores with the sentence...\n\n"); // DEBUG
-//		MethodUtil.debugChart(Chart.getChart(true), (short) 2); // DEBUG
+//		FunUtil.debugChart(Chart.getChart(true), (short) 2); // DEBUG
 //		logger.trace("\nOutside scores with the sentence...\n\n"); // DEBUG
-//		MethodUtil.debugChart(Chart.getChart(false), (short) 2); // DEBUG
+//		FunUtil.debugChart(Chart.getChart(false), (short) 2); // DEBUG
 		
 		inferencer.evalRuleCount(tree, chart, isample, prune);
 		
 //		logger.trace("\nCheck rule count with the sentence...\n"); // DEBUG
-//		MethodUtil.debugCount(inferencer.grammar, inferencer.lexicon, tree, chart); // DEBUG
+//		FunUtil.debugCount(inferencer.grammar, inferencer.lexicon, tree, chart); // DEBUG
 //		logger.trace("\nEval count with the sentence over.\n"); // DEBUG
 		return scoreS;
 	}
@@ -94,13 +94,13 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 	public double evalRuleCountWithTree(Tree<State> tree, short isample) {
 //		logger.trace("\nInside/outside scores with the tree...\n\n"); // DEBUG
 		double scoreT = doInsideOutsideWithTree(tree); 
-//		MethodUtil.debugTree(tree, false, (short) 2); // DEBUG
+//		FunUtil.debugTree(tree, false, (short) 2); // DEBUG
 
 		// compute the rule counts
 		inferencer.evalRuleCountWithTree(tree, isample);
 		
 //		logger.trace("\nCheck rule count with the tree...\n"); // DEBUG
-//		MethodUtil.debugCount(inferencer.grammar, inferencer.lexicon, tree); // DEBUG
+//		FunUtil.debugCount(inferencer.grammar, inferencer.lexicon, tree); // DEBUG
 //		logger.trace("\nEval count with the tree over.\n"); // DEBUG
 		return scoreT;
 	}
@@ -121,12 +121,12 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 		}
 //		logger.trace("\nInside score...\n"); // DEBUG
 		LVeGInferencer.insideScore(chart, sentence, nword, prune);
-//		MethodUtil.debugChart(Chart.iGetChart(), (short) 2); // DEBUG
+//		FunUtil.debugChart(Chart.iGetChart(), (short) 2); // DEBUG
 
 //		logger.trace("\nOutside score...\n"); // DEBUG
 		LVeGInferencer.setRootOutsideScore(chart);
 		LVeGInferencer.outsideScore(chart, sentence, nword, prune);
-//		MethodUtil.debugChart(Chart.oGetChart(), (short) 2); // DEBUG
+//		FunUtil.debugChart(Chart.oGetChart(), (short) 2); // DEBUG
 		
 		GaussianMixture score = chart.getInsideScore((short) 0, Chart.idx(0, 1));
 		double scoreS = score.eval(null, true);
@@ -151,12 +151,12 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 	private double doInsideOutsideWithTree(Tree<State> tree) {
 //		logger.trace("\nInside score with the tree...\n"); // DEBUG	
 		LVeGInferencer.insideScoreWithTree(tree);
-//		MethodUtil.debugTree(tree, false, (short) 2); // DEBUG
+//		FunUtil.debugTree(tree, false, (short) 2); // DEBUG
 		
 //		logger.trace("\nOutside score with the tree...\n"); // DEBUG
 		LVeGInferencer.setRootOutsideScore(tree);
 		LVeGInferencer.outsideScoreWithTree(tree);
-//		MethodUtil.debugTree(tree, false, (short) 2); // DEBUG
+//		FunUtil.debugTree(tree, false, (short) 2); // DEBUG
 		
 		// the parse tree score, which should contain only weights of the components
 		GaussianMixture score = tree.getLabel().getInsideScore();

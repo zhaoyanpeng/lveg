@@ -13,7 +13,7 @@ import java.util.Set;
 
 import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
 import edu.shanghaitech.ai.nlp.lveg.LearnerConfig.Params;
-import edu.shanghaitech.ai.nlp.util.MethodUtil;
+import edu.shanghaitech.ai.nlp.util.FunUtil;
 import edu.shanghaitech.ai.nlp.util.ObjectPool;
 import edu.shanghaitech.ai.nlp.util.Recorder;
 
@@ -61,7 +61,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 		for (int i = 0; i < ncomponent; i++) {
 			double weight = (defRnd.nextDouble() - defNegWRatio) * defMaxmw;
 			Map<String, Set<GaussianDistribution>> multivnd = new HashMap<String, Set<GaussianDistribution>>();
-//			 weight = 0.5 /*-0.69314718056*/ /*0*/; // mixing weight 0.5, 1, 2
+			 weight = /*0.5*/ /*-0.69314718056*/ 0; // mixing weight 0.5, 1, 2
 			components.add(new Component((short) i, weight, multivnd));
 		}
 	}
@@ -397,6 +397,31 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 */
 	public GaussianMixture mulForInsideOutside(GaussianMixture gm, String key, boolean deep) {
 		GaussianMixture amixture = this.copy(deep);
+		// calculating inside score can always remove some portions, but calculating outside score
+		// can not, because the rule ROOT->N has the dummy outside score for ROOT (one component but
+		// without gaussians) and the rule weight does not contain "P" portion. Here is hardcoding
+		if (gm.components.size() == 1 && gm.size(0) == 0) {
+			return amixture;
+		}
+		// the following is the general case
+		for (Component comp : amixture.components) {
+			double logsum = Double.NEGATIVE_INFINITY;
+			GaussianDistribution gd = comp.squeeze(key);
+			for (Component comp1 : gm.components) {
+				GaussianDistribution gd1 = comp1.squeeze(null);
+				gm.size(0);
+				double logcomp = comp1.weight + gd.mulAndMarginalize(gd1);
+				logsum = FunUtil.logAdd(logsum, logcomp);
+			}
+			// CHECK Math.log(Math.exp(a) * b)
+			comp.weight += logsum;
+			comp.multivnd.remove(key);
+		}
+		return amixture;
+	}
+	/*
+	public GaussianMixture mulForInsideOutside(GaussianMixture gm, String key, boolean deep) {
+		GaussianMixture amixture = this.copy(deep);
 		double logsum = gm.marginalize(true);
 		for (Component comp : amixture.components) {
 			// CHECK Math.log(Math.exp(a) * b)
@@ -405,6 +430,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 		}
 		return amixture;
 	}
+	*/
 	
 	
 	/**
@@ -496,7 +522,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 		if (logarithm) {
 			double logval = Double.NEGATIVE_INFINITY;
 			for (Component comp : components) {
-				logval = MethodUtil.logAdd(logval, comp.weight);
+				logval = FunUtil.logAdd(logval, comp.weight);
 			}
 			return logval;
 		} else {
@@ -547,6 +573,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 		Component comp = components.peek();
 		comp.clear();
 		comp.weight = 0;
+		comp.id = 0;
 	}
 	
 	
@@ -567,7 +594,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 			} else {
 				Component acomp = amixture.getComponent((short) idx);
 				// CHECK Math.log(Math.exp(a) + Math.exp(b))
-				acomp.weight = MethodUtil.logAdd(acomp.weight, comp.weight);
+				acomp.weight = FunUtil.logAdd(acomp.weight, comp.weight);
 			}
 		}
 		return amixture;
@@ -802,7 +829,6 @@ public class GaussianMixture extends Recorder implements Serializable {
 		comp.weight = comp.weight < minexp ? minexp : comp.weight;
 	}
 	
-	
 	/**
 	 * Allocate memory space for gradients.
 	 * 
@@ -934,7 +960,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 	public double getWeight(int iComponent) {
 		Component comp = null;
 		if ((comp = getComponent((short) iComponent)) != null) {
-			return Math.exp(comp.weight);
+			return comp.weight;
 		}
 		return 0.0;
 	}
@@ -1021,7 +1047,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 		if (simple) {
 			StringBuffer sb = new StringBuffer();
 			sb.append("GM [ncomponent=" + ncomponent + ", weights=" + 
-					MethodUtil.double2str(getWeights(), LVeGLearner.precision, nfirst, true, true));
+					FunUtil.double2str(getWeights(), LVeGLearner.precision, nfirst, true, true));
 			sb.append("]");
 			return sb.toString();
 		} else {
@@ -1033,7 +1059,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 	@Override
 	public String toString() {
 		return "GM [bias=" + bias + ", ncomponent=" + ncomponent + ", weights=" + 
-				MethodUtil.double2str(getWeights(), LVeGLearner.precision, -1, true, true) + ", mixture=" + getMixture() + "]";
+				FunUtil.double2str(getWeights(), LVeGLearner.precision, -1, true, true) + ", mixture=" + getMixture() + "]";
 	}
 	
 	/*
@@ -1071,6 +1097,24 @@ public class GaussianMixture extends Recorder implements Serializable {
 			this.id = id;
 			this.weight = weight;
 			this.multivnd = multivnd;
+		}
+		
+		public GaussianDistribution squeeze(String key) {
+			Set<GaussianDistribution> gaussians = null;
+			if (key == null) {
+				for (Map.Entry<String, Set<GaussianDistribution>> gaussian : multivnd.entrySet()) {
+					gaussians = gaussian.getValue();
+					break;
+				}
+			} else {
+				gaussians = multivnd.get(key);
+			}
+			if (gaussians != null) {
+				for (GaussianDistribution gd : gaussians) {
+					return gd;
+				}
+			}
+			return null;
 		}
 		
 		public void setWeight(double weight) {
