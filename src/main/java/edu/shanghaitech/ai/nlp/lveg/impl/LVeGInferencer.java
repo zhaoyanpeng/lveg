@@ -290,41 +290,42 @@ public class LVeGInferencer extends Inferencer {
 		Set<Short> set;
 		List<GrammarRule> rules;
 		GaussianMixture outScore, cinScore;
-		// have to process ROOT node specifically
-		if (idx == 0 && (set = chart.keySet(idx, false, (short) (LENGTH_UCHAIN + 1))) != null) {
-			for (Short idTag : set) { // can only contain ROOT
-				rules = grammar.getURuleWithP(idTag);
-				Iterator<GrammarRule> iterator = rules.iterator(); // see set ROOT's outside score
-				outScore = chart.getOutsideScore(idTag, idx, (short) (LENGTH_UCHAIN + 1)); // 1
-				while (iterator.hasNext()) {
-					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
-					if (!chart.containsKey((short) rule.rhs, idx, true)) { continue; }
-					cinScore = chart.getInsideScore((short) rule.rhs, idx); // CHECK not correct? Yes, it's correct.
-					Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>();
-					scores.put(GrammarRule.Unit.P, outScore);
-					scores.put(GrammarRule.Unit.C, cinScore);
-					grammar.addCount(rule.lhs, rule.rhs, scores, GrammarRule.RHSPACE, isample, false);
+		if (word == null) {
+			// have to process ROOT node specifically
+			if (idx == 0 && (set = chart.keySet(idx, false, (short) (LENGTH_UCHAIN + 1))) != null) {
+				for (Short idTag : set) { // can only contain ROOT
+					rules = grammar.getURuleWithP(idTag);
+					Iterator<GrammarRule> iterator = rules.iterator(); // see set ROOT's outside score
+					outScore = chart.getOutsideScore(idTag, idx, (short) (LENGTH_UCHAIN + 1)); // 1
+					while (iterator.hasNext()) {
+						UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
+						if (!chart.containsKey((short) rule.rhs, idx, true)) { continue; }
+						cinScore = chart.getInsideScore((short) rule.rhs, idx); // CHECK not correct? Yes, it's correct.
+						Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>();
+						scores.put(GrammarRule.Unit.P, outScore);
+						scores.put(GrammarRule.Unit.C, cinScore);
+						grammar.addCount(rule.lhs, rule.rhs, scores, GrammarRule.RHSPACE, isample, false);
+					}
 				}
 			}
-		}
-		// general unary grammar rules
-		Map<GrammarRule, GrammarRule> uRuleMap = grammar.getURuleMap();
-		for (Map.Entry<GrammarRule, GrammarRule> rmap : uRuleMap.entrySet()) {
-			UnaryGrammarRule rule = (UnaryGrammarRule) rmap.getValue();
-			if (rule.type == GrammarRule.RHSPACE) { continue; }
-			if (!chart.containsKey(rule.lhs, idx, false) || !chart.containsKey((short) rule.rhs, idx, true)) { continue; }
-			Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>();
-			mergeUnaryRuleCount(chart, idx, rule, scores, (short) 0, (short) (0), prune); // O_{0}(X) I_{0}(Y)
-			mergeUnaryRuleCount(chart, idx, rule, scores, (short) 0, (short) (1), prune); // O_{0}(X) I_{1}(Y)
-			mergeUnaryRuleCount(chart, idx, rule, scores, (short) 1, (short) (0), prune); // O_{1}(X) I_{0}(Y)
-			if (!scores.isEmpty()) { grammar.addCount(rule.lhs, rule.rhs, scores, GrammarRule.LRURULE, isample, false); }
-		}
-		// have to process unary rules containing LEXICONS specifically
-		if (word != null) {
+			// general unary grammar rules
+			Map<GrammarRule, GrammarRule> uRuleMap = grammar.getURuleMap();
+			for (Map.Entry<GrammarRule, GrammarRule> rmap : uRuleMap.entrySet()) {
+				UnaryGrammarRule rule = (UnaryGrammarRule) rmap.getValue();
+				if (rule.type == GrammarRule.RHSPACE) { continue; }
+				if (!chart.containsKey(rule.lhs, idx, false) || !chart.containsKey((short) rule.rhs, idx, true)) { continue; }
+				Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>();
+				mergeUnaryRuleCount(chart, idx, rule, scores, (short) 0, (short) (0), prune); // O_{0}(X) I_{0}(Y)
+				mergeUnaryRuleCount(chart, idx, rule, scores, (short) 0, (short) (1), prune); // O_{0}(X) I_{1}(Y)
+				mergeUnaryRuleCount(chart, idx, rule, scores, (short) 1, (short) (0), prune); // O_{1}(X) I_{0}(Y)
+				if (!scores.isEmpty()) { grammar.addCount(rule.lhs, rule.rhs, scores, GrammarRule.LRURULE, isample, false); }
+			}
+		} else {
+			// have to process unary rules containing LEXICONS specifically
 			rules = lexicon.getRulesWithWord(word);
 			for (GrammarRule rule : rules) {
 //				if (chart.containsKey(rule.lhs, idx, true, (short) 0) && chart.containsKey(rule.lhs, idx, false)) {
-//					cinScore = chart.getInsideScore(rule.lhs, idx, (short) 0);
+//					cinScore = chart.getInsideScore(rule.lhs, idx, (short) 0); // pay attention to this bug
 				if (chart.containsKey(rule.lhs, idx, false)) {
 					Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>();
 					cinScore = lexicon.score(word, rule.lhs);

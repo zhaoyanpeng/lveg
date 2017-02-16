@@ -66,7 +66,7 @@ public class Java {
 	}
 	
 	
-	@Test
+//	@Test
 	public void testQueue() {
 		PriorityQueue<Integer> sorted = new PriorityQueue<Integer>(5);
 		for (int i = 0; i < 5; i++) {
@@ -83,13 +83,26 @@ public class Java {
 	}
 	
 	
-//	@Test
+	@Test
 	public void testDate() {
 		String timeStamp = new SimpleDateFormat(".yyyyMMddHHmmss").format(new Date());
 		System.out.println(timeStamp);
 		
 		String xx = " ";
 		System.out.println(xx.trim().equals(""));
+		
+//		double l1 = (-5.0620584989385815 + 4.368911318378636);
+//		double l2 = (-5.0620384989385805 + 4.368891318378635);
+		
+//		double l3 = (-5.062048498938581 + 4.368901318378636);
+//		double l1 = (-5.061048498938581 + 4.367901318378635);
+//		double l2 = (-5.063048498938581 + 4.369901318378636);
+		
+		double l3 = ((-5.063048498938581 + 4.369401193378641) - (-5.061048498938581 + 4.368401193378641)) / (0.002);
+//		System.out.println(String.format("%.10f", l1));
+//		System.out.println(String.format("%.10f", l2));
+		System.out.println(String.format("%.10f", l3));
+
 	}
 	
 	

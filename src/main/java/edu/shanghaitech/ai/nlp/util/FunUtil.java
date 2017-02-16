@@ -67,51 +67,87 @@ public class FunUtil extends Recorder {
 	private static LVeGLexicon lexicon;
 	
 	
-	public static void gradcheck(LVeGGrammar grammar, LVeGLexicon lexicon, LVeGParser<?, ?> lvegParser, Valuator<?, ?> valuator, Tree<State> tree) {
+	public static void gradcheck(LVeGGrammar grammar, LVeGLexicon lexicon, LVeGParser<?, ?> lvegParser, 
+			Valuator<?, ?> valuator, Tree<State> tree, double maxsample) {
 		double delta = 1e-3;
 		Map<GrammarRule, GrammarRule> uRuleMap = grammar.getURuleMap();
 		for (Map.Entry<GrammarRule, GrammarRule> entry : uRuleMap.entrySet()) {
-			gradcheck(grammar, lexicon, entry, valuator, tree, delta);
+			gradcheck(grammar, lexicon, entry, lvegParser, valuator, tree, delta, maxsample);
 		}
 		uRuleMap = lexicon.getURuleMap();
 		for (Map.Entry<GrammarRule, GrammarRule> entry : uRuleMap.entrySet()) {
-			gradcheck(grammar, lexicon, entry, valuator, tree, delta);
+			gradcheck(grammar, lexicon, entry, lvegParser, valuator, tree, delta, maxsample);
+			return;
 		}
 	}
 	
 	
-	public static void gradcheck(LVeGGrammar grammar, LVeGLexicon lexicon, Map.Entry<GrammarRule, GrammarRule> entry, Valuator<?, ?> valuator, Tree<State> tree, double delta) {
+	public static void gradcheck(LVeGGrammar grammar, LVeGLexicon lexicon, Map.Entry<GrammarRule, GrammarRule> entry, 
+			LVeGParser<?, ?> lvegParser, Valuator<?, ?> valuator, Tree<State> tree, double delta, double maxsample) {
 		GaussianMixture gm = entry.getValue().getWeight();
 		double src = gm.getWeight(0);
 		// w.r.t. mixing weight
 		gm.setWeight(0, gm.getWeight(0) + delta);
-		double llBefore = valuator.probability(tree);
+		
+		
+//		double llBefore = valuator.probability(tree);
+		double ltBefore = lvegParser.doInsideOutsideWithTree(tree);
+		double lsBefore = lvegParser.doInsideOutside(tree);
+		double llBefore = ltBefore - lsBefore;
+		
+		
 		double t1 = gm.getWeight(0);
 		
 		gm.setWeight(0, gm.getWeight(0) - 2 * delta);
-		double llAfter = valuator.probability(tree);
+		
+		
+//		double llAfter = valuator.probability(tree);
+		double ltAfter = lvegParser.doInsideOutsideWithTree(tree);
+		double lsAfter = lvegParser.doInsideOutside(tree);
+		double llAfter = ltAfter - lsAfter;
+		
+		logger.trace("ltB: " + ltBefore + "\tlsB: " + lsBefore + "\tllB: " + llBefore + "\n" +
+				"ltA: " + ltAfter + "\tlsA: " + lsAfter + "\tllA: " + llAfter);
+		
 		double t2 = gm.getWeight(0);
 		
 		// restore
 		gm.setWeight(0, gm.getWeight(0) + delta);	
 		double des = gm.getWeight(0);
-		double numericalGrad = (llBefore - llAfter) / (2 * (t1 - t2));
+		double numericalGrad = -(llBefore - llAfter) / ((t1 - t2));
 		
 		logger.trace("\n-----\nRule: " + entry.getKey() + "\nGrad Weight: " + 
-				numericalGrad + "=(" + llBefore + " - " + llAfter + ")/(" + 2 * delta + ")\n" + 
+				numericalGrad + "=(" + llBefore + " - " + llAfter + ")/(" + (t1 - t2) + ")\n" + 
 				"B : " + src + "\tA : " + des + "\t(B - A)  =" + (des - src) + "\n" +
-				"t1: " + t1 + "\tt2: " + t2 + "\t(t1 - t2)=" + (t1 - t2) + "\n" +
-				"\n-----\n");
+				"t1: " + t1 + "\tt2: " + t2 + "\t(t1 - t2)=" + (t1 - t2) + "\n-----\n");
 		Object gradients = null;
 		if (entry.getKey().type != GrammarRule.LHSPACE) {
 			gradients = grammar.getOptimizer().debug(entry.getKey(), false);
 		} else {
 			gradients = lexicon.getOptimizer().debug(entry.getKey(), false);
 		}
-		Grads grads = null;
+		// divide it by # of samplings
+		StringBuffer sb = new StringBuffer();
 		if (gradients != null) {
-			grads = (Grads) gradients;
-			logger.trace("\n---\nWgrads: " + grads.wgrads + "\nGgrads: " + grads.ggrads + "\n---\n");
+			Grads grads = (Grads) gradients;
+			sb.append("\n---\nWgrads: ");
+			List<Double> wgrads = new ArrayList<Double>(grads.wgrads.size());
+			for (Double dw : grads.wgrads) {
+				wgrads.add(dw / maxsample);
+			}
+			List<Map<String, List<Double>>> ggrads = new ArrayList<Map<String, List<Double>>>(grads.ggrads.size());
+			for (Map<String, List<Double>> comp : grads.ggrads) {
+				Map<String, List<Double>> gauss = new HashMap<String, List<Double>>(comp.size(), 1);
+				for (Map.Entry<String, List<Double>> gaussian : comp.entrySet()) {
+					List<Double> params = new ArrayList<Double>(gaussian.getValue().size());
+					for (Double dg : gaussian.getValue()) {
+						params.add(dg / maxsample);
+					}
+					gauss.put(gaussian.getKey(), params);
+				}
+				ggrads.add(gauss);
+			}
+			logger.trace("\n---\nWgrads: " + wgrads + "\nGgrads: " + ggrads + "\n---\n");
 		}
 	}
 	
@@ -158,38 +194,37 @@ public class FunUtil extends Recorder {
 		grammar = agrammar;
 		lexicon = alexicon;
 
-//		double count0 = 0;
-//		int niter = 20, iiter = 0;
-//		Map<GrammarRule, GrammarRule> uRuleMap = grammar.getUnaryRuleMap();
-//		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBinaryRuleMap();
-//		// unary grammar rules
-//		LVeGLearner.logger.trace("\n---Unary Grammar Rules---\n\n");
-//		for (Map.Entry<GrammarRule, GrammarRule> rmap : uRuleMap.entrySet()) {
-//			GrammarRule rule = rmap.getValue();
-//			List<Map<String, GaussianMixture>> count = grammar.getCount(rule, false);
-//			LVeGLearner.logger.trace(rule + "\tcount=" + count + "\n");
-//			if (++iiter >= niter) { break; }
-//		}
-//		
-//		iiter = 0;
-//		// binary grammar rules
-//		LVeGLearner.logger.trace("\n---Binary Grammar Rules---\n\n");
-//		for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
-//			GrammarRule rule = rmap.getValue();
-//			List<Map<String, GaussianMixture>> count = grammar.getCount(rule, false);
-//			LVeGLearner.logger.trace(rule + "\tcount=" + count + "\n");
-//			if (++iiter > niter) { break; }
-//		}
-//		
-//		iiter = 0;
-//		// unary rules in lexicon
-//		Set<GrammarRule> ruleSet = lexicon.getRuleSet();
-//		LVeGLearner.logger.trace("\n---Unary Grammar Rules in Lexicon---\n");
-//		for (GrammarRule rule : ruleSet) {
-//			List<Map<String, GaussianMixture>> count = lexicon.getCount(rule, false);
-//			LVeGLearner.logger.trace(rule + "\tcount=" + count);
-//			if (++iiter >= niter) { break; }
-//		}
+		int niter = 20, iiter = 0;
+		Map<GrammarRule, GrammarRule> uRuleMap = grammar.getURuleMap();
+		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBRuleMap();
+		// unary grammar rules
+		LVeGLearner.logger.trace("\n---Unary Grammar Rules---\n\n");
+		for (Map.Entry<GrammarRule, GrammarRule> rmap : uRuleMap.entrySet()) {
+			GrammarRule rule = rmap.getValue();
+			Map<Short, List<Map<String, GaussianMixture>>> count = grammar.getCount(rule, false);
+			LVeGLearner.logger.trace(rule + "\tcount=" + count + "\n");
+			if (++iiter >= niter) { break; }
+		}
+		
+		iiter = 0;
+		// binary grammar rules
+		LVeGLearner.logger.trace("\n---Binary Grammar Rules---\n\n");
+		for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
+			GrammarRule rule = rmap.getValue();
+			Map<Short, List<Map<String, GaussianMixture>>> count = grammar.getCount(rule, false);
+			LVeGLearner.logger.trace(rule + "\tcount=" + count + "\n");
+			if (++iiter > niter) { break; }
+		}
+		
+		iiter = 0;
+		// unary rules in lexicon
+		Set<GrammarRule> ruleSet = lexicon.getRuleSet();
+		LVeGLearner.logger.trace("\n---Unary Grammar Rules in Lexicon---\n");
+		for (GrammarRule rule : ruleSet) {
+			Map<Short, List<Map<String, GaussianMixture>>> count = lexicon.getCount(rule, false);
+			LVeGLearner.logger.trace(rule + "\tcount=" + count + "\n");
+			if (++iiter >= niter) { break; }
+		}
 		
 	}
 	
@@ -254,24 +289,24 @@ public class FunUtil extends Recorder {
 		grammar = agrammar;
 		lexicon = alexicon;
 		logger.trace("\n---Rule Counts in The Tree---\n\n");
-		checkCount(tree);
+		checkCount(agrammar, alexicon, tree);
 	}
 	
 	
-	public static void checkCount(Tree<State> tree) {
+	public static void checkCount(LVeGGrammar grammar, LVeGLexicon lexicon, Tree<State> tree) {
 		if (tree.isLeaf()) { return; }
 		
 		List<Tree<State>> children = tree.getChildren();
 		for (Tree<State> child : children) {
-			checkCount(child);
+			checkCount(grammar, lexicon, child);
 		}
 		
 		State parent = tree.getLabel();
 		short idParent = parent.getId();
-		/*
+		
 		if (tree.isPreTerminal()) {
 			State word = children.get(0).getLabel();
-			List<Map<String, GaussianMixture>> count = lexicon.getCount(idParent, (short) word.wordIdx, GrammarRule.LHSPACE, true);
+			Map<Short, List<Map<String, GaussianMixture>>> count = lexicon.getCount(idParent, (short) word.wordIdx, true, GrammarRule.LHSPACE);
 			logger.trace("Word\trule: [" + idParent + ", " + word.wordIdx + "/" + word.getName() + "] count=" + count + "\n"); // DEBUG
 		} else {
 			switch (children.size()) {
@@ -283,9 +318,9 @@ public class FunUtil extends Recorder {
 				short idChild = child.getId();
 				
 				// root, if (idParent == 0) is true
-				char type = idParent == 0 ? GrammarRule.RHSPACE : GrammarRule.GENERAL;
+				byte type = idParent == 0 ? GrammarRule.RHSPACE : GrammarRule.LRURULE;
 				
-				List<Map<String, GaussianMixture>> count = grammar.getCount(idParent, idChild, type, true);
+				Map<Short, List<Map<String, GaussianMixture>>> count = grammar.getCount(idParent, idChild, true, type);
 				logger.trace("Unary\trule: [" + idParent + ", " + idChild + "] count=" + count + "\n"); // DEBUG
 				break;
 			}
@@ -295,7 +330,7 @@ public class FunUtil extends Recorder {
 				short idlChild = lchild.getId();
 				short idrChild = rchild.getId();
 				
-				List<Map<String, GaussianMixture>> count = grammar.getCount(idParent, idlChild, idrChild, true);
+				Map<Short, List<Map<String, GaussianMixture>>> count = grammar.getCount(idParent, idlChild, idrChild, true);
 				logger.trace("Binary\trule: [" + idParent + ", " + idlChild + ", " + idrChild + "] count=" + count + "\n"); // DEBUG
 				break;
 			}
@@ -304,7 +339,7 @@ public class FunUtil extends Recorder {
 				System.exit(0);	
 			}
 		}
-		*/
+		
 	}
 	
 	

@@ -105,43 +105,45 @@ public abstract class GrammarRule implements Serializable {
 */	
 	
 	public static GaussianMixture rndRuleWeight(byte type) {
-		GaussianMixture aweight = new DiagonalGaussianMixture(LVeGLearner.ncomponent);
+		short defNcomp = GaussianMixture.defNcomponent;
+		short defNdim = GaussianDistribution.defNdimension;
+		GaussianMixture aweight = new DiagonalGaussianMixture(defNcomp);
 		switch (type) {
 		case RHSPACE: // rules for the root since it does not have subtypes
-			for (int i = 0; i < LVeGLearner.ncomponent; i++) {
+			for (int i = 0; i < defNcomp; i++) {
 				Set<GaussianDistribution> set = new HashSet<GaussianDistribution>(1, 1);
-				set.add(new DiagonalGaussianDistribution(LVeGLearner.dim));
+				set.add(new DiagonalGaussianDistribution(defNdim));
 				aweight.add(i, Unit.C, set);
 			}
 			break;
 		case LHSPACE: // rules in the preterminal layer (discarded)
-			for (int i = 0; i < LVeGLearner.ncomponent; i++) {
+			for (int i = 0; i < defNcomp; i++) {
 				Set<GaussianDistribution> set = new HashSet<GaussianDistribution>(1, 1);
-				set.add(new DiagonalGaussianDistribution(LVeGLearner.dim));
+				set.add(new DiagonalGaussianDistribution(defNdim));
 				aweight.add(i, Unit.P, set);
 			}
 			break;
 		case LRURULE: // general unary rules 
-			for (int i = 0; i < LVeGLearner.ncomponent; i++) {
+			for (int i = 0; i < defNcomp; i++) {
 				Map<String, Set<GaussianDistribution>> map = new HashMap<String, Set<GaussianDistribution>>(2, 1);
 				Set<GaussianDistribution> set0 = new HashSet<GaussianDistribution>(1, 1);
 				Set<GaussianDistribution> set1 = new HashSet<GaussianDistribution>(1, 1);
-				set0.add(new DiagonalGaussianDistribution(LVeGLearner.dim));
-				set1.add(new DiagonalGaussianDistribution(LVeGLearner.dim));
+				set0.add(new DiagonalGaussianDistribution(defNdim));
+				set1.add(new DiagonalGaussianDistribution(defNdim));
 				map.put(Unit.P, set0);
 				map.put(Unit.UC, set1);
 				aweight.add(i, map);
 			}
 			break;
 		case LRBRULE: // general binary rules
-			for (int i = 0; i < LVeGLearner.ncomponent; i++) {
+			for (int i = 0; i < defNcomp; i++) {
 				Map<String, Set<GaussianDistribution>> map = new HashMap<String, Set<GaussianDistribution>>(3, 1);
 				Set<GaussianDistribution> set0 = new HashSet<GaussianDistribution>(1, 1);
 				Set<GaussianDistribution> set1 = new HashSet<GaussianDistribution>(1, 1);
 				Set<GaussianDistribution> set2 = new HashSet<GaussianDistribution>(1, 1);
-				set0.add(new DiagonalGaussianDistribution(LVeGLearner.dim));
-				set1.add(new DiagonalGaussianDistribution(LVeGLearner.dim));
-				set2.add(new DiagonalGaussianDistribution(LVeGLearner.dim));
+				set0.add(new DiagonalGaussianDistribution(defNdim));
+				set1.add(new DiagonalGaussianDistribution(defNdim));
+				set2.add(new DiagonalGaussianDistribution(defNdim));
 				map.put(Unit.P, set0);
 				map.put(Unit.LC, set1);
 				map.put(Unit.RC, set2);

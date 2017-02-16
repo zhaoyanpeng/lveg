@@ -337,7 +337,7 @@ public class LVeGToy extends LearnerConfig {
 					
 					if (opts.dgradnbatch > 0 && ((isample % (opts.bsize * opts.dgradnbatch)) == 0)) { 
 						debugrad(true); 
-						FunUtil.gradcheck(grammar, lexicon, lvegParser, valuator, tree);
+						FunUtil.gradcheck(grammar, lexicon, lvegParser, valuator, tree, opts.maxsample);
 					}
 					
 					// apply gradient descent
@@ -623,7 +623,7 @@ public class LVeGToy extends LearnerConfig {
 			String string = "(ROOT (A_" + i + " (B X_" + i + ")))";
 			strTrees.add((new Trees.PennTreeReader(new StringReader(string))).next());
 		}
-		int idx = 0;
+//		int idx = 0;
 //		for (int i = 0; i < 1; i++) {
 //			String string = "(ROOT (A_" + idx + " (B X_" + idx + ")))";
 //			strTrees.add((new Trees.PennTreeReader(new StringReader(string))).next());

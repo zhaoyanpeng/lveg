@@ -65,6 +65,7 @@ public class Valuator<I, O> extends Parser<I, O> {
 	public double probability(Tree<State> tree) {
 		double jointdist = scoreTree(tree);
 		double partition = scoreSentence(tree);
+		logger.trace("\n+++jointdist: " + jointdist + "\tpartition: " + partition + "\n"); // DEBUG
 		double ll = jointdist - partition; // in logarithm
 		return ll;
 	}

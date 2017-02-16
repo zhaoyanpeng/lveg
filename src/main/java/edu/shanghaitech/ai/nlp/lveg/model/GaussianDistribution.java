@@ -128,7 +128,7 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	 * 
 	 * @param sample the sample 
 	 * @param normal whether the sample is from N(0, 1) (true) or from this gaussian (false).
-	 * @return
+	 * @return       in logarithm
 	 */
 	protected double eval(List<Double> sample, boolean normal) { return -0.0; } 
 	
@@ -152,7 +152,7 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	 * @param gd a gaussian as a multiplier
 	 * @return   marginalization of the production
 	 */
-	protected double mulAndMarginalize(GaussianDistribution gd) { return Double.NEGATIVE_INFINITY; };
+	public double mulAndMarginalize(GaussianDistribution gd) { return Double.NEGATIVE_INFINITY; };
 	
 	
 	/**

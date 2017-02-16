@@ -66,6 +66,16 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 	protected double eval(List<Double> sample, boolean normal) { 
 		if (sample != null && sample.size() == dim) {
 			// sample = normalize(sample);
+			double astd, norm, exps = 0.0, sinv = 0.0;
+			for (int i = 0; i < dim; i++) {
+				astd = Math.exp(vars.get(i));
+				norm = normal ? sample.get(i) : (sample.get(i) - mus.get(i)) / astd;
+				exps -= Math.pow(norm, 2) / 2;
+				sinv -= vars.get(i);
+			}
+			double value = -(dim / 2.0) * Math.log(2 * Math.PI) + sinv + exps; // (dim / 2) - (dim / 2.0)
+			return value;
+			/*
 			double astd, norm, exps = 0.0, sinv = 1.0;
 			for (int i = 0; i < dim; i++) {
 				astd = Math.exp(vars.get(i));
@@ -73,16 +83,17 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 				exps -= Math.pow(norm, 2) / 2;
 				sinv /= astd;
 			}
-			double value = Math.pow(2 * Math.PI, -dim / 2) * sinv * Math.exp(exps);
+			double value = Math.pow(2 * Math.PI, -dim / 2.0) * sinv * Math.exp(exps); // (dim / 2) - (dim / 2.0)
 			return value;
+			*/
 		}
 		logger.error("Invalid input sample for evaling the gaussian. sample: " + sample + ", this: " + this + "\n");
-		return -1.0;
+		return Double.NEGATIVE_INFINITY;
 	}
 	
 	
 	@Override
-	protected double mulAndMarginalize(GaussianDistribution gd) { 
+	public double mulAndMarginalize(GaussianDistribution gd) { 
 		if (gd != null && gd.getDim() == dim) {
 			double value = 0, vtmp = 0, epsilon = 1e-8/*0*/;
 			List<Double> vars1 = gd.getVars();

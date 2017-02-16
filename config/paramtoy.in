@@ -16,10 +16,10 @@
 -lr, 0.01,
 -reg, false,
 -clip, false,
--absmax, 5.0,
--wdecay, 0.001,
+-absmax, 3.0,
+-wdecay, 1e-4,
 -l1, true,
--minmw, 1e-3,
+-minmw, 1e-9,
 -expzero, 1e-6,
 -epsilon, 1e-8,
 -choice, ADAM,
@@ -41,8 +41,8 @@
 -reuse, true,
 -prune, false,
 -bsize, 1,
--nepoch, 5,
--maxsample, 3,
+-nepoch, 1,
+-maxsample, 100000,
 -maxLenParsing, 120,
 -nAllowedDrop, 6,
 -relativediff, 1e-6,
@@ -54,7 +54,7 @@
 -nmratio, 0.5,
 -maxvar, 5,
 -nvratio, 0.8,
--ncomponent, 1,
+-ncomponent, 2,
 -dim, 1,
 
 -eratio, -0.1, 
@@ -75,7 +75,7 @@
 -ef1ontrain, true,
 -ef1imwrite, false,
 
--runtag, toy_0212_2_1_1_1_ek500_ttt,
+-runtag, toy_0216_2_2_1_1_3000_ek1,
 -logroot, log/,
 -logtype, true,
 -verbose, false,
@@ -83,6 +83,6 @@
 -precision, 3,
 -rndomseed, 0,
 
--dgradnbatch, -1,
+-dgradnbatch, 1,
 
 -imgprefix, lveg

@@ -55,7 +55,7 @@ public class SimpleMinimizer extends Recorder implements Serializable {
 	}
 	
 	
-	public SimpleMinimizer(Random random, short msample, short bsize) {
+	public SimpleMinimizer(Random random, int msample, short bsize) {
 		this();
 	}
 	

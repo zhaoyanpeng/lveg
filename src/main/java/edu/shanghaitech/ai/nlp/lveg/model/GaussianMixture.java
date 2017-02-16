@@ -409,16 +409,16 @@ public class GaussianMixture extends Recorder implements Serializable {
 			GaussianDistribution gd = comp.squeeze(key);
 			for (Component comp1 : gm.components) {
 				GaussianDistribution gd1 = comp1.squeeze(null);
-				gm.size(0);
 				double logcomp = comp1.weight + gd.mulAndMarginalize(gd1);
 				logsum = FunUtil.logAdd(logsum, logcomp);
 			}
-			// CHECK Math.log(Math.exp(a) * b)
 			comp.weight += logsum;
 			comp.multivnd.remove(key);
 		}
 		return amixture;
 	}
+	
+	
 	/*
 	public GaussianMixture mulForInsideOutside(GaussianMixture gm, String key, boolean deep) {
 		GaussianMixture amixture = this.copy(deep);
@@ -691,13 +691,16 @@ public class GaussianMixture extends Recorder implements Serializable {
 	public double evalInsideOutside(List<Double> sample, boolean normal) {
 		double ret = 0.0, value;
 		for (Component comp : components) {
-			value = 1.0;
+			value = 0.0;
 			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : comp.multivnd.entrySet()) {
 				for (GaussianDistribution gd : gaussian.getValue()) {
-					value *= gd.eval(sample, normal);
+					value += gd.eval(sample, normal);
+					if (Double.isInfinite(value)) {
+						logger.error("\n---derivate the mixting weight---\n" + this + "\n");
+					}
 				}
 			}
-			ret += Math.exp(comp.weight) * value;
+			ret += Math.exp(comp.weight + value);
 		}
 		return ret;
 	}
@@ -716,18 +719,18 @@ public class GaussianMixture extends Recorder implements Serializable {
 		
 		double ret = 0.0, value;
 		for (Component comp : components) {
-			value = 1.0;
+			value = 0.0;
 			// TODO This is not correct because every component contains the same variables but with different parameters.
 			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : comp.multivnd.entrySet()) {
 				List<Double> slice = sample.get(gaussian.getKey());
 				for (GaussianDistribution gd : gaussian.getValue()) {
-					value *= gd.eval(slice, normal);
-					if (value < 0) {
+					value += gd.eval(slice, normal);
+					if (Double.isInfinite(value)) {
 						logger.error("\n---derivate the mixting weight---\n" + this + "\n");
 					}
 				}
 			}
-			ret += Math.exp(comp.weight) * value;
+			ret += Math.exp(comp.weight + value);
 		}
 		return ret;
 	}
@@ -755,20 +758,22 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * 
 	 * @param sample     the sample from N(0, 1)
 	 * @param icomponent index of the component
+	 * @param normal     whether the sample is from N(0, 1) or not
 	 * @return
 	 */
 	public double derivateMixingWeight(Map<String, List<Double>> sample, int iComponent, boolean normal) {
-		double value = 1.0;
+		double value = 0.0;
 		Component comp = getComponent((short) iComponent);
 		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : comp.multivnd.entrySet()) {
 			List<Double> slice = sample.get(gaussian.getKey());
 			for (GaussianDistribution gd : gaussian.getValue()) {
-				value *= gd.eval(slice, normal);
-				if (value < 0) {
+				value += gd.eval(slice, normal);
+				if (Double.isInfinite(value)) {
 					logger.error("\n---derivate the mixting weight---\n" + this + "\n");
 				}
 			}
 		}
+		value = Math.exp(value);
 		return value;
 	}
 	
@@ -1091,7 +1096,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 		private static final long serialVersionUID = -1211997783170967017L;
 		protected short id;
 		protected double weight;
-		Map<String, Set<GaussianDistribution>> multivnd; // Multivariate Normal Distribution
+		protected Map<String, Set<GaussianDistribution>> multivnd; // Multivariate Normal Distribution
 		
 		public Component(short id, double weight, Map<String, Set<GaussianDistribution>> multivnd) {
 			this.id = id;
@@ -1115,6 +1120,10 @@ public class GaussianMixture extends Recorder implements Serializable {
 				}
 			}
 			return null;
+		}
+		
+		public Map<String, Set<GaussianDistribution>> getMultivnd() {
+			return multivnd;
 		}
 		
 		public void setWeight(double weight) {

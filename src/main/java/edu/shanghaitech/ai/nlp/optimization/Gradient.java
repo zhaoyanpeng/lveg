@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Random;
 
 import edu.shanghaitech.ai.nlp.lveg.LearnerConfig.Params;
+import edu.shanghaitech.ai.nlp.lveg.impl.UnaryGrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
 import edu.shanghaitech.ai.nlp.optimization.Optimizer.OptChoice;
@@ -46,7 +47,7 @@ public class Gradient extends Recorder implements Serializable {
 	protected Map<String, List<Double>> sample;
 	
 	
-	public Gradient(GrammarRule rule, Random random, short msample, short bsize) {
+	public Gradient(GrammarRule rule, Random random, int msample, short bsize) {
 		GaussianMixture ruleW = rule.getWeight();
 		initialize(ruleW);
 		this.cntUpdate = 0;
@@ -124,10 +125,11 @@ public class Gradient extends Recorder implements Serializable {
 		Map<String, List<Double>> ggrad;
 		boolean removed = false, allocated, iallocated;
 		double scoreT, scoreS, dRuleW;
+		
 		for (int icomponent = 0; icomponent < ruleW.ncomponent(); icomponent++) {
 			ggrad = ggrads.get(icomponent);
 			iallocated = false; // assume ggrad has not been allocated
-			for (short isample = 0; isample < Optimizer.maxsample; isample++) {
+			for (int isample = 0; isample < Optimizer.maxsample; isample++) {
 				ruleW.sample(icomponent, sample, truths, Optimizer.rnd);
 				
 //				logger.trace("\n" + rule + ", icomp" + icomponent + ", isample: " + isample + "\nsample: " + sample + "\ntruths: " + truths + "\n"); // DEBUG
@@ -214,6 +216,7 @@ public class Gradient extends Recorder implements Serializable {
 				if (found) { countWithS += cnt; }
 			}
 		}
+//		logger.trace("cnts: " + countWithS + "\tcntt: " + countWithT + "\n"); // DEBUG
 		dRuleW = Math.exp(Math.log(countWithS) - scoreS) - Math.exp(Math.log(countWithT) - scoreT);
 		return dRuleW;
 	}

@@ -77,31 +77,31 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 	
 	public double evalRuleCount(Tree<State> tree, short isample) {
 		double scoreS = doInsideOutside(tree); 
-//		logger.trace("\nInside scores with the sentence...\n\n"); // DEBUG
-//		FunUtil.debugChart(Chart.getChart(true), (short) 2); // DEBUG
-//		logger.trace("\nOutside scores with the sentence...\n\n"); // DEBUG
-//		FunUtil.debugChart(Chart.getChart(false), (short) 2); // DEBUG
+		logger.trace("\nInside scores with the sentence...\n\n"); // DEBUG
+		FunUtil.debugChart(chart.getChart(true), (short) -1, tree.getYield().size()); // DEBUG
+		logger.trace("\nOutside scores with the sentence...\n\n"); // DEBUG
+		FunUtil.debugChart(chart.getChart(false), (short) -1, tree.getYield().size()); // DEBUG
 		
 		inferencer.evalRuleCount(tree, chart, isample, prune);
 		
-//		logger.trace("\nCheck rule count with the sentence...\n"); // DEBUG
-//		FunUtil.debugCount(inferencer.grammar, inferencer.lexicon, tree, chart); // DEBUG
-//		logger.trace("\nEval count with the sentence over.\n"); // DEBUG
+		logger.trace("\nCheck rule count with the sentence...\n"); // DEBUG
+		FunUtil.debugCount(Inferencer.grammar, Inferencer.lexicon, tree, chart); // DEBUG
+		logger.trace("\nEval count with the sentence over.\n"); // DEBUG
 		return scoreS;
 	}
 	
 	
 	public double evalRuleCountWithTree(Tree<State> tree, short isample) {
-//		logger.trace("\nInside/outside scores with the tree...\n\n"); // DEBUG
 		double scoreT = doInsideOutsideWithTree(tree); 
-//		FunUtil.debugTree(tree, false, (short) 2); // DEBUG
+		logger.trace("\nInside/outside scores with the tree...\n\n"); // DEBUG
+		logger.trace(FunUtil.debugTree(tree, false, (short) 2, Inferencer.grammar.numberer, false) + "\n"); // DEBUG
 
 		// compute the rule counts
 		inferencer.evalRuleCountWithTree(tree, isample);
 		
-//		logger.trace("\nCheck rule count with the tree...\n"); // DEBUG
-//		FunUtil.debugCount(inferencer.grammar, inferencer.lexicon, tree); // DEBUG
-//		logger.trace("\nEval count with the tree over.\n"); // DEBUG
+		logger.trace("\nCheck rule count with the tree...\n"); // DEBUG
+		FunUtil.debugCount(Inferencer.grammar, Inferencer.lexicon, tree); // DEBUG
+		logger.trace("\nEval count with the tree over.\n"); // DEBUG
 		return scoreT;
 	}
 	
@@ -110,7 +110,7 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 	 * @param tree the parse tree
 	 * @return
 	 */
-	private double doInsideOutside(Tree<State> tree) {
+	public double doInsideOutside(Tree<State> tree) {
 		List<State> sentence = tree.getYield();
 		int nword = sentence.size();
 		if (reuse) {
@@ -148,7 +148,7 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 	 * 
 	 * @param tree the parse tree
 	 */
-	private double doInsideOutsideWithTree(Tree<State> tree) {
+	public double doInsideOutsideWithTree(Tree<State> tree) {
 //		logger.trace("\nInside score with the tree...\n"); // DEBUG	
 		LVeGInferencer.insideScoreWithTree(tree);
 //		FunUtil.debugTree(tree, false, (short) 2); // DEBUG

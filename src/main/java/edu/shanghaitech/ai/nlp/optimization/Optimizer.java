@@ -34,7 +34,7 @@ public abstract class Optimizer extends Recorder implements Serializable {
 	 */
 	protected Set<GrammarRule> ruleSet;
 	protected static Random rnd;
-	protected static short maxsample = 2;
+	protected static int maxsample = 2;
 	protected static short batchsize = 1;
 	protected static double minexp = Math.log(1e-6);
 	protected static OptChoice choice = OptChoice.ADAM;
@@ -106,7 +106,7 @@ public abstract class Optimizer extends Recorder implements Serializable {
 	 * @param msample
 	 * @param bsize
 	 */
-	public static void config(OptChoice achoice, Random random, short msample, short bsize, double minweight) {
+	public static void config(OptChoice achoice, Random random, int msample, short bsize, double minweight) {
 		choice = achoice;
 		rnd = random;
 		batchsize = bsize;
