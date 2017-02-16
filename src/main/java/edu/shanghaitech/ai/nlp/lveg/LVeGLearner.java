@@ -121,9 +121,10 @@ public class LVeGLearner extends LearnerConfig {
 				grammar.tallyStateTree(tree);
 				
 			}
+			/*
 			System.out.println("mog : " + mogPool.getNumActive());
 			System.out.println("gd  : " + gaussPool.getNumActive());
-			
+			*/
 			logger.trace("\n--->Going through the training set is over...");
 			grammar.postInitialize();
 			lexicon.postInitialize();

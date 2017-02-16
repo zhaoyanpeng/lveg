@@ -9,7 +9,7 @@
 
 -inGrammar, lveg_best.gr,
 -outGrammar, lveg,
--nbatchSave, 10,
+-nbatchSave, 20,
 -saveGrammar, true,
 -loadGrammar, false,
 
@@ -20,7 +20,7 @@
 -wdecay, 0.1,
 -l1, true,
 -minmw, 1e-3,
--expzero, 1e-6,
+-expzero, 1e-3,
 -epsilon, 1e-8,
 -choice, ADAM,
 -lambda, 0.9,
@@ -75,7 +75,7 @@
 -ef1ontrain, true,
 -ef1imwrite, false,
 
--runtag, test_lveg,
+-runtag, test_lveg_fdsf,
 -logroot, log/,
 -logtype, true,
 -verbose, false,
