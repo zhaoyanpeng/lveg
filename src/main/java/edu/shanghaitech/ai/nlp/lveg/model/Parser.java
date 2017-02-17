@@ -14,19 +14,27 @@ public abstract class Parser<I, O> extends Recorder implements Executor<I, O> {
 	protected short maxLenParsing = 120;
 	
 	protected int idx;
-	protected boolean prune;
 	protected boolean reuse;
 	protected boolean parallel;
+	protected boolean iosprune;
+	protected boolean cntprune;
 	
 	protected I task;
 	protected int itask;
 	protected Chart chart;
 	protected PriorityQueue<Meta<O>> caches;
 	
-	protected Parser(short maxLenParsing, boolean reuse, boolean prune) {
+	protected Parser(short maxLenParsing, boolean reuse, boolean iosprune) {
 		this.maxLenParsing = maxLenParsing;
+		this.iosprune = iosprune;
 		this.reuse = reuse;
-		this.prune = prune;
+	}
+	
+	protected Parser(short maxLenParsing, boolean reuse, boolean iosprune, boolean cntprune) {
+		this.maxLenParsing = maxLenParsing;
+		this.iosprune = iosprune;
+		this.cntprune = cntprune;
+		this.reuse = reuse;
 	}
 	
 	@Override

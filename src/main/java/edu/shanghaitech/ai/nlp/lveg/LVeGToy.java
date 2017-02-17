@@ -97,7 +97,7 @@ public class LVeGToy extends LearnerConfig {
 		lexicon = new SimpleLVeGLexicon(numberer, -1);
 		
 		/* to ease the parameters tuning */
-		GaussianMixture.config(opts.expzero, opts.maxmw, opts.ncomponent, opts.nwratio, random, mogPool);
+		GaussianMixture.config(opts.maxnbig, opts.expzero, opts.maxmw, opts.ncomponent, opts.nwratio, random, mogPool);
 		GaussianDistribution.config(opts.maxmu, opts.maxvar, opts.dim, opts.nmratio, opts.nvratio, random, gaussPool);
 		Optimizer.config(opts.choice, random, opts.maxsample, opts.bsize, opts.minmw); // FIXME no errors, just alert you...
 				
@@ -137,7 +137,7 @@ public class LVeGToy extends LearnerConfig {
 		lexicon.labelTrees(testTrees); // save the search time cost by finding a specific tag-word
 		lexicon.labelTrees(devTrees); // pair in in Lexicon.score(...)
 		*/
-		lvegParser = new LVeGParser<Tree<State>, List<Double>>(grammar, lexicon, opts.maxLenParsing, opts.reuse, opts.prune);
+		lvegParser = new LVeGParser<Tree<State>, List<Double>>(grammar, lexicon, opts.maxLenParsing, opts.reuse, opts.iosprune, opts.cntprune);
 		mrParser = new MaxRuleParser<Tree<State>, Tree<String>>(grammar, lexicon, opts.maxLenParsing, opts.reuse, opts.ef1prune);
 		valuator = new Valuator<Tree<State>, Double>(grammar, lexicon, opts.maxLenParsing, opts.reuse, opts.ellprune);
 		mvaluator = new ThreadPool(valuator, opts.nteval);

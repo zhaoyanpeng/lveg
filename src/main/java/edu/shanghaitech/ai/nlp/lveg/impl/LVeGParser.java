@@ -26,14 +26,15 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 	
 	
 	private LVeGParser(LVeGParser<?, ?> parser) {
-		super(parser.maxLenParsing, parser.reuse, parser.prune);
+		super(parser.maxLenParsing, parser.reuse, parser.iosprune, parser.cntprune);
 		this.inferencer = parser.inferencer;
 		this.chart = parser.reuse ? new Chart(maxLenParsing, false) : null;
 	}
 	
 	
-	public LVeGParser(LVeGGrammar grammar, LVeGLexicon lexicon, short maxLenParsing, boolean reuse, boolean prune) {
-		super(maxLenParsing, reuse, prune);
+	public LVeGParser(LVeGGrammar grammar, LVeGLexicon lexicon, short maxLenParsing, 
+			boolean reuse, boolean iosprune, boolean cntprune) {
+		super(maxLenParsing, reuse, iosprune, cntprune);
 		this.inferencer = new LVeGInferencer(grammar, lexicon);
 		this.chart = reuse ? new Chart(maxLenParsing, false) : null;
 	}
@@ -54,7 +55,7 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 		synchronized (inferencer) {
 //			logger.trace("\ni---id=" + Thread.currentThread().getId() + ", itask=" + itask + " enters...\n"); // DEBUG
 			inferencer.evalRuleCountWithTree(sample, (short) 0);
-			inferencer.evalRuleCount(sample, chart, (short) 0, prune);
+			inferencer.evalRuleCount(sample, chart, (short) 0, cntprune);
 			inferencer.evalGradients(scores);
 //			logger.trace("\ni---id=" + Thread.currentThread().getId() + ", itask=" + itask + " " + 
 //					FunUtil.double2str(scores, 3, -1, false, true) + " leaves...\n"); // DEBUG
@@ -82,7 +83,7 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 //		logger.trace("\nOutside scores with the sentence...\n\n"); // DEBUG
 //		FunUtil.debugChart(chart.getChart(false), (short) -1, tree.getYield().size()); // DEBUG
 		
-		inferencer.evalRuleCount(tree, chart, isample, prune);
+		inferencer.evalRuleCount(tree, chart, isample, cntprune);
 		
 //		logger.trace("\nCheck rule count with the sentence...\n"); // DEBUG
 //		FunUtil.debugCount(Inferencer.grammar, Inferencer.lexicon, tree, chart); // DEBUG
@@ -120,12 +121,12 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 			chart = new Chart(nword, false);
 		}
 //		logger.trace("\nInside score...\n"); // DEBUG
-		LVeGInferencer.insideScore(chart, sentence, nword, prune);
+		LVeGInferencer.insideScore(chart, sentence, nword, iosprune);
 //		FunUtil.debugChart(Chart.iGetChart(), (short) 2); // DEBUG
 
 //		logger.trace("\nOutside score...\n"); // DEBUG
 		LVeGInferencer.setRootOutsideScore(chart);
-		LVeGInferencer.outsideScore(chart, sentence, nword, prune);
+		LVeGInferencer.outsideScore(chart, sentence, nword, iosprune);
 //		FunUtil.debugChart(Chart.oGetChart(), (short) 2); // DEBUG
 		
 		GaussianMixture score = chart.getInsideScore((short) 0, Chart.idx(0, 1));

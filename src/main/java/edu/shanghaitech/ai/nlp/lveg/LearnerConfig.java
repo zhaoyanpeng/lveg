@@ -130,8 +130,6 @@ public class LearnerConfig extends Recorder {
 		public boolean l1 = true;
 		@Option(name = "-minmw", usage = "minimum mixing weight (default: 1e-6)")
 		public double minmw = 1e-6;
-		@Option(name = "-expzero", usage = "relative magnitude calculated as a / b = exp(log(a) - log(b)) (default: 1e-6)")
-		public double expzero = 1e-6;
 		@Option(name = "-epsilon", usage = "a small constant to avoid the division by zero (default: 1e-8)")
 		public double epsilon = 1e-8;
 		@Option(name = "-choice", usage = "optimization methods: NORMALIZED, SGD, ADAGRAD, RMSPROP, ADADELTA, ADAM (default: ADAM)")
@@ -183,8 +181,14 @@ public class LearnerConfig extends Recorder {
 		/* training configurations section begins */
 		@Option(name = "-reuse", usage = "whether reuse the chart for CYK and inside-outside score (true) or not (false) (default: true)")
 		public boolean reuse = true;
-		@Option(name = "-prune", usage = "avoid adding trivial components if the mixing weights are equal to zero (default: false)")
-		public boolean prune = false;
+		@Option(name = "-iosprune", usage = "when evaluating inside-outside score, avoid adding trivial components if the mixing weights are equal to zero (default: false)")
+		public boolean iosprune = false;
+		@Option(name = "-cntprune", usage = "when evaluating expected counts, avoid adding trivial components if the mixing weights are equal to zero (default: false)")
+		public boolean cntprune = false;
+		@Option(name = "-maxnbig", usage = "reserve max first n components of MoG (default: 100)")
+		public short maxnbig = 100;
+		@Option(name = "-expzero", usage = "relative magnitude calculated as a / b = exp(log(a) - log(b)) (default: 1e-6)")
+		public double expzero = 1e-6;
 		@Option(name = "-bsize", usage = "# of the samples in a batch (default: 128)")
 		public short bsize = 128;
 		@Option(name = "-nepoch", usage = "# of epoches for training (default: 10)")

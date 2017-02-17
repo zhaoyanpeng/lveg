@@ -28,14 +28,10 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 	}
 	
 	
-	
-	/**
-	 * This case has not been tested.
-	 */
 	public void testIntegrationComp2Dim2() {
 		Random rnd = new Random(0);
 		short ncomp = 2, ndim = 2;
-		GaussianMixture.config(1e-6, 4, ncomp, 0.5, rnd, null);
+		GaussianMixture.config((short) -1, 1e-6, 4, ncomp, 0.5, rnd, null);
 		GaussianDistribution.config(1, 5, ndim, 0.5, 0.8, rnd, null);
 		
 		GrammarRule ur01 = new UnaryGrammarRule((short) 0, (short) 1, GrammarRule.RHSPACE, true);	
@@ -66,13 +62,13 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 //		ur01.getWeight().setWeight(0, 1e-3);
 		
 		GaussianMixture cin01 = ur01.getWeight().mulForInsideOutside(cin12, GrammarRule.Unit.C, true);
-		logger.trace("cin01    : " + cin01 + "\t" + cin01.getWeight(0) + "\n");
+		logger.trace("cin01    : " + cin01 + "\t" + FunUtil.logAdd(cin01.getWeight(0), cin01.getWeight(1)) + "\n");
 		GaussianMixture cin01copy = marginalize(ur01.getWeight(), cin12, GrammarRule.Unit.C, true);
 		logger.trace("cin01copy: " + cin01copy + "\n");
 		GaussianMixture cin03 = ur03.getWeight().mulForInsideOutside(cin32, GrammarRule.Unit.C, true);
-		logger.trace("cin03    : " + cin03 + "\t" + cin03.getWeight(0) + "\n");
+		logger.trace("cin03    : " + cin03 + "\t" + FunUtil.logAdd(cin03.getWeight(0), cin03.getWeight(1)) + "\n");
 		
-		logger.trace("Score    : " + FunUtil.logAdd(cin01.getWeight(0), cin03.getWeight(0)) + "\n");
+		logger.trace("Score    : " + FunUtil.logAdd(cin01.marginalize(true), cin03.marginalize(true)) + "\n");
 		
 		logger.trace("\n---Outside Score---\n");
 		GaussianMixture outor = new DiagonalGaussianMixture((short) 1);
@@ -93,8 +89,8 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		GaussianMixture cinsides = cin12;
 		GaussianMixture outsidet = outor;
 		GaussianMixture cinsidet = cin12;
-		double scoret = cin01.getWeight(0);
-		double scores = FunUtil.logAdd(cin01.getWeight(0), cin03.getWeight(0));
+		double scoret = FunUtil.logAdd(cin01.getWeight(0), cin01.getWeight(1));
+		double scores = FunUtil.logAdd(cin01.marginalize(true), cin03.marginalize(true));
 		
 		logger.trace("\n---Counts---\n");
 		logger.trace("scoret: " + scoret + "\tscores: " + scores + "\n");
@@ -104,51 +100,37 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		logger.trace("cinsidet: " + cinsidet + "\n");
 		
 		Random rnd1 = new Random(0);
-//		evalgradientsDim2(nsample, ur01, outsides, cinsides, outsidet, cinsidet, scoret, scores, rnd1);
+		evalgradientsComp2Dim2(nsample, ur01, outsides, cinsides, outsidet, cinsidet, scoret, scores, rnd1);
 	}
 	
 	
 	public void evalgradientsComp2Dim2(int nsample, GrammarRule rule, GaussianMixture outsides, GaussianMixture cinsides, 
 			GaussianMixture outsidet, GaussianMixture cinsidet, double scoret, double scores, Random rnd) {
-		double sum = 0.0;
+		double sum1 = 0.0, sum2 = 0.0;
 		logger.trace("\nscoret: " + scoret + "\tscores: " + scores + "\n\n");
 		for (int i = 0; i < nsample; i++) {
 			
-//			double snorm = snorms[i];
-			double pnorm1 = rnd.nextGaussian(); // sample from N(0, 1)
-			double pvnorm1 = Math.pow(2 * Math.PI * 1, -0.5) * Math.exp(-pnorm1 * pnorm1 / 2.0);
-//			logger.trace("snorm1: " + snorm1 + "\n");
-//			logger.trace("vnorm1: " + vnorm1 + "\t" + Math.log(vnorm1) + "\n");
+			double comp1dim1 = /*0.07791503650933558*/rnd.nextGaussian();
+			double comp1dim2 = rnd.nextGaussian();
+			double comp2dim1 = rnd.nextGaussian();
+			double comp2dim2 = rnd.nextGaussian();
 			
-			double pnorm2 = rnd.nextGaussian(); // sample from N(0, 1)
-			double pvnorm2 = Math.pow(2 * Math.PI * 1, -0.5) * Math.exp(-pnorm2 * pnorm2 / 2.0);
-//			logger.trace("snorm2: " + snorm2 + "\n");
-//			logger.trace("vnorm2: " + vnorm2 + "\t" + Math.log(vnorm2) + "\n");
+			double c1d1v = normal(comp1dim1);
+			double c1d2v = normal(comp1dim2);
+			double c2d1v = normal(comp2dim1);
+			double c2d2v = normal(comp2dim2);
 			
+			double c1in = Math.exp(cinsides.getWeight(0)) * c1d1v * c1d2v * 2;
+			double c2in = Math.exp(cinsides.getWeight(1)) * c2d1v * c2d2v * 2;
 			
-			double cnorm1 = rnd.nextGaussian(); // sample from N(0, 1)
-			double cvnorm1 = Math.pow(2 * Math.PI * 1, -0.5) * Math.exp(-cnorm1 * cnorm1 / 2.0);
-//			logger.trace("snorm1: " + snorm1 + "\n");
-//			logger.trace("vnorm1: " + vnorm1 + "\t" + Math.log(vnorm1) + "\n");
+			double dc1w = Math.exp(0) * c1d1v * c1d2v;
+			double dc2w = Math.exp(0) * c2d1v * c2d2v;
 			
-			double cnorm2 = rnd.nextGaussian(); // sample from N(0, 1)
-			double cvnorm2 = Math.pow(2 * Math.PI * 1, -0.5) * Math.exp(-cnorm2 * cnorm2 / 2.0);
-//			logger.trace("snorm2: " + snorm2 + "\n");
-//			logger.trace("vnorm2: " + vnorm2 + "\t" + Math.log(vnorm2) + "\n");
+			double dc1r = Math.exp(Math.log(c1in) - scores) - Math.exp(Math.log(c1in) - scoret);
+			double dc2r = Math.exp(Math.log(c2in) - scores) - Math.exp(Math.log(c2in) - scoret);
 			
-			double pvalue = pvnorm1 * pvnorm2, cvalue = cvnorm1 * cvnorm2;
-			
-			double dW = Math.exp(0) * pvalue * cvalue;
-//			logger.trace("dW   : " + dW + "\t" + Math.log(dW) + "\n");
-			
-			double in = pvalue * cvalue;
-//			logger.trace("in   : " + in + "\tw: " + Math.exp(cinsides.getWeight(0)) + "\n");
-			
-			double dR = Math.exp(Math.log(in) - scores) - Math.exp(Math.log(in) - scoret);
-//			logger.trace("dR   : " + dR + "\n");
-//			logger.trace("dWdR : " + dW * dR + "\n\n");
-			sum += dW * dR;
-			
+			sum1 += dc1w * dc1r;
+			sum2 += dc2w * dc2r;
 			
 			/*
 //			double snorm = snorms[i];
@@ -174,15 +156,16 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 			sum += dW * dR;
 			*/
 		}
-		sum /= nsample;
-		logger.trace("Evaluated Grad: " + sum + "\n");
+		sum1 /= nsample;
+		sum2 /= nsample;
+		logger.trace("Evaluated Grad: [" + sum1 + ", " + sum2 + "]\n");
 	}
 	
 	
 	public void testIntegrationComp2Dim1() {
 		Random rnd = new Random(0);
 		short ncomp = 2, ndim = 1;
-		GaussianMixture.config(1e-6, 4, ncomp, 0.5, rnd, null);
+		GaussianMixture.config((short) -1, 1e-6, 4, ncomp, 0.5, rnd, null);
 		GaussianDistribution.config(1, 5, ndim, 0.5, 0.8, rnd, null);
 		
 		GrammarRule ur01 = new UnaryGrammarRule((short) 0, (short) 1, GrammarRule.RHSPACE, true);	
@@ -312,7 +295,7 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 	public void testIntegrationComp1Dim2() {
 		Random rnd = new Random(0);
 		short ncomp = 1, ndim = 2;
-		GaussianMixture.config(1e-6, 4, ncomp, 0.5, rnd, null);
+		GaussianMixture.config((short) -1, 1e-6, 4, ncomp, 0.5, rnd, null);
 		GaussianDistribution.config(1, 5, ndim, 0.5, 0.8, rnd, null);
 		
 		GrammarRule ur01 = new UnaryGrammarRule((short) 0, (short) 1, GrammarRule.RHSPACE, true);	
@@ -381,7 +364,7 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		logger.trace("cinsidet: " + cinsidet + "\n");
 		
 		Random rnd1 = new Random(0);
-//		evalgradientsDim2(nsample, ur01, outsides, cinsides, outsidet, cinsidet, scoret, scores, rnd1);
+//		evalgradientsComp1Dim2(nsample, ur01, outsides, cinsides, outsidet, cinsidet, scoret, scores, rnd1);
 	}
 	
 	
@@ -460,7 +443,7 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 	public void testIntegrationComp1Dim1() {
 		Random rnd = new Random(0);
 		short ncomp = 1, ndim = 1;
-		GaussianMixture.config(1e-6, 4, ncomp, 0.5, rnd, null);
+		GaussianMixture.config((short) -1, 1e-6, 4, ncomp, 0.5, rnd, null);
 		GaussianDistribution.config(1, 5, ndim, 0.5, 0.8, rnd, null);
 		
 		GrammarRule ur01 = new UnaryGrammarRule((short) 0, (short) 1, GrammarRule.RHSPACE, true);	

@@ -21,14 +21,14 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 	
 	
 	private MaxRuleParser(MaxRuleParser<?, ?> parser) {
-		super(parser.maxLenParsing, parser.reuse, parser.prune);
+		super(parser.maxLenParsing, parser.reuse, parser.iosprune);
 		this.inferencer = parser.inferencer;
 		this.chart = parser.reuse ? new Chart(maxLenParsing, true) : null;
 	}
 	
 	
-	public MaxRuleParser(LVeGGrammar grammar, LVeGLexicon lexicon, short maxLenParsing, boolean reuse, boolean prune) {
-		super(maxLenParsing, reuse, prune);
+	public MaxRuleParser(LVeGGrammar grammar, LVeGLexicon lexicon, short maxLenParsing, boolean reuse, boolean iosprune) {
+		super(maxLenParsing, reuse, iosprune);
 		this.inferencer = new MaxRuleInferencer(grammar, lexicon);
 		this.chart = reuse ? new Chart(maxLenParsing, true) : null;
 	}
@@ -104,12 +104,12 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 			chart = new Chart(nword, true);
 		}
 //		logger.trace("\nInside score...\n"); // DEBUG
-		Inferencer.insideScore(chart, sentence, nword, prune);
+		Inferencer.insideScore(chart, sentence, nword, iosprune);
 //		MethodUtil.debugChart(Chart.iGetChart(), (short) 2); // DEBUG
 
 //		logger.trace("\nOutside score...\n"); // DEBUG
 		Inferencer.setRootOutsideScore(chart);
-		Inferencer.outsideScore(chart, sentence, nword, prune);
+		Inferencer.outsideScore(chart, sentence, nword, iosprune);
 //		MethodUtil.debugChart(Chart.oGetChart(), (short) 2); // DEBUG
 		
 		return chart;

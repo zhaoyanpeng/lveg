@@ -32,6 +32,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 	protected PriorityQueue<Component> components;
 	protected short key; // from the object pool (>=-1) or not (<-1)
 	
+	protected static short defMaxNbig;
 	protected static short defNcomponent;
 	protected static double defMaxmw;
 	protected static double defNegWRatio;
@@ -71,9 +72,10 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * To facilitate the parameter tuning.
 	 * 
 	 */
-	public static void config(double expzero, double maxmw, short ncomponent, 
+	public static void config(short maxnbig, double expzero, double maxmw, short ncomponent, 
 			double negwratio, Random rnd, ObjectPool<Short, GaussianMixture> pool) {
 		EXP_ZERO = Math.log(expzero);
+		defMaxNbig = maxnbig;
 		defRnd = rnd;
 		defMaxmw = maxmw;
 		defNegWRatio = negwratio;
@@ -97,15 +99,28 @@ public class GaussianMixture extends Recorder implements Serializable {
 	public void delTrivia() {
 		if (ncomponent <= 1) { return; }
 		PriorityQueue<Component> sorted = sort();
-		double maxw = sorted.peek().weight;
-		for (Component comp : components) {
-			if (comp.weight > LOG_ZERO && (comp.weight - maxw) > EXP_ZERO) { 
-				continue; 
+		if (defMaxNbig > 0) {
+			components.clear();
+			if (sorted.size() > defMaxNbig) {
+				while (!sorted.isEmpty()) {
+					components.add(sorted.poll());
+					if (components.size() == defMaxNbig) { break; }
+				}
+			} else {
+				components.addAll(sorted);
 			}
-			sorted.remove(comp);
+			ncomponent = components.size();
+		} else {
+			double maxw = sorted.peek().weight;
+			for (Component comp : components) {
+				if (comp.weight > LOG_ZERO && (comp.weight - maxw) > EXP_ZERO) { 
+					continue; 
+				}
+				sorted.remove(comp);
+			}
+			components = sorted;
+			ncomponent = sorted.size();
 		}
-		components = sorted;
-		ncomponent = sorted.size();
 	}
 	
 	
