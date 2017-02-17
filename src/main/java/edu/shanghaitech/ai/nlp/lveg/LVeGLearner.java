@@ -502,9 +502,9 @@ public class LVeGLearner extends LearnerConfig {
 		// save the intermediate grammars
 		GrammarFile gfile = new GrammarFile(grammar, lexicon);
 		if (opts.saveGrammar && save) { // always save the best grammar to the same file
-			String filename = subdatadir + opts.outGrammar + "_best" + ".gr";
+			String filename = subdatadir + opts.outGrammar + "_best.gr";
 			if (gfile.save(filename)) { 
-				logger.info("\n------->the best grammar [cnt = " + cnt + ", ibatch = " + ibatch + "]\n");
+				logger.info("\n------->the best [dev] grammar [cnt = " + cnt + ", ibatch = " + ibatch + "]\n");
 			}
 		}
 		// save the grammar at the end of each epoch or after every # of batches
@@ -517,6 +517,14 @@ public class LVeGLearner extends LearnerConfig {
 				logger.info("to \'" + filename + "\' successfully.\n");
 			} else {
 				logger.info("to \'" + filename + "\' unsuccessfully.\n");
+			}
+		}
+		// save the best grammar according to the log likelihood on training set
+		if (trll < 0 && trll > besttrain) {
+			besttrain = trll;
+			String filename = subdatadir + opts.outGrammar + "_best_train.gr";
+			if (gfile.save(filename)) { 
+				logger.info("\n------->the best [train] grammar [cnt = " + cnt + ", ibatch = " + ibatch + "]\n");
 			}
 		}
 		return exit;

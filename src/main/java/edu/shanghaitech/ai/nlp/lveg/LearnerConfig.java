@@ -49,6 +49,7 @@ public class LearnerConfig extends Recorder {
 	public static double nratio = 0.5;
 	
 	public static short cntdrop = 0;
+	public static double besttrain = Double.NEGATIVE_INFINITY;
 	public static double bestscore = Double.NEGATIVE_INFINITY;
 	
 	public static short dim = 2;
