@@ -69,7 +69,7 @@ public class FunUtil extends Recorder {
 	
 	public static void gradcheck(LVeGGrammar grammar, LVeGLexicon lexicon, LVeGParser<?, ?> lvegParser, 
 			Valuator<?, ?> valuator, Tree<State> tree, double maxsample) {
-		double delta = 1e-3;
+		double delta = 1e-5;
 		Map<GrammarRule, GrammarRule> uRuleMap = grammar.getURuleMap();
 		for (Map.Entry<GrammarRule, GrammarRule> entry : uRuleMap.entrySet()) {
 			gradcheck(grammar, lexicon, entry, lvegParser, valuator, tree, delta, maxsample);
@@ -86,6 +86,11 @@ public class FunUtil extends Recorder {
 			LVeGParser<?, ?> lvegParser, Valuator<?, ?> valuator, Tree<State> tree, double delta, double maxsample) {
 		GaussianMixture gm = entry.getValue().getWeight();
 		double src = gm.getWeight(0);
+		
+		double ltInit = lvegParser.doInsideOutsideWithTree(tree);
+		double lsInit = lvegParser.doInsideOutside(tree);
+		double llInit = ltInit - lsInit;
+		
 		// w.r.t. mixing weight
 		gm.setWeight(0, gm.getWeight(0) + delta);
 		
@@ -106,7 +111,9 @@ public class FunUtil extends Recorder {
 		double lsAfter = lvegParser.doInsideOutside(tree);
 		double llAfter = ltAfter - lsAfter;
 		
-		logger.trace("ltB: " + ltBefore + "\tlsB: " + lsBefore + "\tllB: " + llBefore + "\n" +
+		logger.trace(
+				"\nltI: " + ltInit + "\tlsI: " + lsInit + "\tllI: " + llInit + "\n" +
+				"ltB: " + ltBefore + "\tlsB: " + lsBefore + "\tllB: " + llBefore + "\n" +
 				"ltA: " + ltAfter + "\tlsA: " + lsAfter + "\tllA: " + llAfter);
 		
 		double t2 = gm.getWeight(0);

@@ -30,7 +30,7 @@
 -ntgrad, 6,
 -nteval, 6,
 -nttest, 6,
--pclose, false,
+-pclose, true,
 -pbatch, true,
 -peval, true,
 -pgrad, true,

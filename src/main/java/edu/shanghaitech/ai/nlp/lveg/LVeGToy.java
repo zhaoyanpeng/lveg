@@ -18,12 +18,14 @@ import edu.shanghaitech.ai.nlp.lveg.impl.LVeGParser;
 import edu.shanghaitech.ai.nlp.lveg.impl.MaxRuleParser;
 import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGLexicon;
+import edu.shanghaitech.ai.nlp.lveg.impl.UnaryGrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.impl.Valuator;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture.Component;
 import edu.shanghaitech.ai.nlp.optimization.Optimizer;
 import edu.shanghaitech.ai.nlp.optimization.ParallelOptimizer;
 import edu.shanghaitech.ai.nlp.syntax.State;
@@ -127,6 +129,9 @@ public class LVeGToy extends LearnerConfig {
 			lexicon.postInitialize();
 			logger.trace("post-initializing is over.\n");
 		}
+		
+//		customize(grammar, lexicon); // reset grammar rules
+		
 		/*
 		logger.trace(grammar);
 		logger.trace(lexicon);
@@ -632,5 +637,60 @@ public class LVeGToy extends LearnerConfig {
 		trees.put(ID_TRAIN, trainTrees);
 		return trees;
 	}
-
+	
+	
+	private static void customize(LVeGGrammar grammar, LVeGLexicon lexicon) {
+		GrammarRule ur01 = new UnaryGrammarRule((short) 0, (short) 1, GrammarRule.RHSPACE, true);	
+		GrammarRule ur03 = new UnaryGrammarRule((short) 0, (short) 3, GrammarRule.RHSPACE, true);	
+		GrammarRule ur12 = new UnaryGrammarRule((short) 1, (short) 2, GrammarRule.LRURULE, true);	
+		GrammarRule ur32 = new UnaryGrammarRule((short) 3, (short) 2, GrammarRule.LRURULE, true);	
+		GrammarRule ur20 = new UnaryGrammarRule((short) 2, (short) 0, GrammarRule.LHSPACE, true);	
+		GrammarRule ur21 = new UnaryGrammarRule((short) 2, (short) 1, GrammarRule.LHSPACE, true);	
+		
+		Component comp01 = ur01.getWeight().getComponent((short) 0);
+		Component comp03 = ur03.getWeight().getComponent((short) 0);
+		Component comp12 = ur12.getWeight().getComponent((short) 0);
+		Component comp32 = ur32.getWeight().getComponent((short) 0);
+		Component comp20 = ur20.getWeight().getComponent((short) 0);
+		Component comp21 = ur21.getWeight().getComponent((short) 0);
+		
+		GaussianDistribution gd01 = comp01.squeeze(GrammarRule.Unit.C);
+		GaussianDistribution gd03 = comp03.squeeze(GrammarRule.Unit.C);
+		GaussianDistribution gd12p = comp12.squeeze(GrammarRule.Unit.P);
+		GaussianDistribution gd12c = comp12.squeeze(GrammarRule.Unit.UC);
+		GaussianDistribution gd32p = comp32.squeeze(GrammarRule.Unit.P);
+		GaussianDistribution gd32c = comp32.squeeze(GrammarRule.Unit.UC);
+		GaussianDistribution gd20 = comp20.squeeze(GrammarRule.Unit.P);
+		GaussianDistribution gd21 = comp21.squeeze(GrammarRule.Unit.P);
+		
+		double mua = 1.0, mub = -1.0;
+		gd01.getMus().set(0, mua);
+		gd03.getMus().set(0, mub);
+		gd12p.getMus().set(0, mua);
+		gd12c.getMus().set(0, mua);
+		gd32p.getMus().set(0, mub);
+		gd32c.getMus().set(0, mub);
+		gd20.getMus().set(0, mua);
+		gd21.getMus().set(0, mub);
+		
+		double std = 3;
+		double vara = Math.log(std), varb = Math.log(std);
+		gd01.getVars().set(0, vara);
+		gd03.getVars().set(0, varb);
+		gd12p.getVars().set(0, vara);
+		gd12c.getVars().set(0, vara);
+		gd32p.getVars().set(0, varb);
+		gd32c.getVars().set(0, varb);
+		gd20.getVars().set(0, vara);
+		gd21.getVars().set(0, varb);
+		
+		Map<GrammarRule, GrammarRule> urmap = grammar.getURuleMap();
+		urmap.get(ur01).setWeight(ur01.getWeight());
+		urmap.get(ur03).setWeight(ur03.getWeight());
+		urmap.get(ur12).setWeight(ur12.getWeight());
+		urmap.get(ur32).setWeight(ur32.getWeight());
+		urmap = lexicon.getURuleMap();
+		urmap.get(ur20).setWeight(ur20.getWeight());
+		urmap.get(ur21).setWeight(ur21.getWeight());
+	}
 }

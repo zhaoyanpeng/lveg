@@ -24,7 +24,7 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 
 		String logfile = "log/mog_test_t";
 		logger = logUtil.getBothLogger(logfile);
-		testIntegrationComp2Dim2();
+		testIntegrationComp1Dim1V();
 	}
 	
 	
@@ -476,9 +476,12 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		GaussianMixture cin01copy = marginalize(ur01.getWeight(), cin12, GrammarRule.Unit.C, true);
 		logger.trace("cin01copy: " + cin01copy + "\n");
 		GaussianMixture cin03 = ur03.getWeight().mulForInsideOutside(cin32, GrammarRule.Unit.C, true);
-		logger.trace("cin03    : " + cin03 + "\t" + cin01.getWeight(0) + "\n");
+		logger.trace("cin03    : " + cin03 + "\t" + cin03.getWeight(0) + "\n");
 		
-		logger.trace("Score    : " + FunUtil.logAdd(cin01.getWeight(0), cin03.getWeight(0)) + "\n");
+		double scoret = cin01.getWeight(0);;
+		double scores = FunUtil.logAdd(cin01.getWeight(0), cin03.getWeight(0));
+		logger.trace("Score    : " + scores + "\n");
+		logger.trace("Loglh    : " + (scoret - scores) + "\t" + Math.exp(scoret - scores) + "\n");
 		
 		logger.trace("\n---Outside Score---\n");
 		GaussianMixture outor = new DiagonalGaussianMixture((short) 1);
@@ -499,8 +502,6 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		GaussianMixture cinsides = cin12;
 		GaussianMixture outsidet = outor;
 		GaussianMixture cinsidet = cin12;
-		double scoret = cin01.getWeight(0);
-		double scores = FunUtil.logAdd(cin01.getWeight(0), cin03.getWeight(0));
 		
 		logger.trace("\n---Counts---\n");
 		logger.trace("scoret: " + scoret + "\tscores: " + scores + "\n");
@@ -523,7 +524,9 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		double[] pnorms = {-0.48705662466425903, 1.581991482792654, -1.0894906314581259};
 		double[] cnorms = {-0.016890356724075888, 0.008265704520321576, -0.8504780918057038};
 		
+		double std = 1e-20;
 		for (int i = 0; i < nsample; i++) {
+			/*
 //			double pp = pnorms[i];
 //			double cp = cnorms[i];
 			
@@ -546,26 +549,170 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 			logger.trace("dR   : " + dR + "\n");
 			logger.trace("dWdR : " + dW * dR + "\n\n");
 			sum += dW * dR;
+			*/
 			
 			
-			/*
 //			double snorm = snorms[i];
 			double snorm = rnd.nextGaussian(); // sample from N(0, 1)
-			double vnorm = Math.pow(2 * Math.PI * 1, -0.5) * Math.exp(-snorm * snorm / 2.0);
-			logger.trace("snorm: " + snorm + "\n");
-			logger.trace("vnorm: " + vnorm + "\t" + Math.log(vnorm) + "\n");
+//			snorm = (snorm - 0) / std;
+			double vnorm = Math.pow(2 * Math.PI * 1, -0.5) * Math.exp(-snorm * snorm / 2.0) / std;
+//			logger.trace("snorm: " + snorm + "\n");
+//			logger.trace("vnorm: " + vnorm + "\t" + Math.log(vnorm) + "\n");
 			
 			double dW = Math.exp(0) * vnorm;
-			logger.trace("dW   : " + dW + "\t" + Math.log(dW) + "\n");
+//			logger.trace("dW   : " + dW + "\t" + Math.log(dW) + "\n");
 			
 			double in = Math.exp(cinsides.getWeight(0)) * vnorm;
-			logger.trace("in   : " + in + "\tw: " + Math.exp(cinsides.getWeight(0)) + "\n");
+//			logger.trace("in   : " + in + "\tw: " + Math.exp(cinsides.getWeight(0)) + "\n");
 			
-			double dR = Math.exp(Math.log(in) - scores) - Math.exp(Math.log(0) - scoret);
-			logger.trace("dR   : " + dR + "\n");
-			logger.trace("dWdR : " + dW * dR + "\n\n");
+			double dR = Math.exp(Math.log(in) - scores) - Math.exp(Math.log(in) - scoret);
+//			logger.trace("dR   : " + dR + "\n");
+//			logger.trace("dWdR : " + dW * dR + "\n\n");
 			sum += dW * dR;
-			*/
+			
+		}
+		sum /= nsample;
+		logger.trace("Evaluated Grad: " + sum + "\n");
+	}
+	
+	public void testIntegrationComp1Dim1V() {
+		Random rnd = new Random(0);
+		short ncomp = 1, ndim = 1;
+		GaussianMixture.config((short) -1, 1e-6, 4, ncomp, 0.5, rnd, null);
+		GaussianDistribution.config(1, 5, ndim, 0.5, 0.8, rnd, null);
+		
+		GrammarRule ur01 = new UnaryGrammarRule((short) 0, (short) 1, GrammarRule.RHSPACE, true);	
+		GrammarRule ur03 = new UnaryGrammarRule((short) 0, (short) 3, GrammarRule.RHSPACE, true);	
+		GrammarRule ur12 = new UnaryGrammarRule((short) 1, (short) 2, GrammarRule.LRURULE, true);	
+		GrammarRule ur32 = new UnaryGrammarRule((short) 3, (short) 2, GrammarRule.LRURULE, true);	
+		GrammarRule ur20 = new UnaryGrammarRule((short) 2, (short) 0, GrammarRule.LHSPACE, true);	
+		GrammarRule ur21 = new UnaryGrammarRule((short) 2, (short) 1, GrammarRule.LHSPACE, true);	
+		
+		Component comp01 = ur01.getWeight().getComponent((short) 0);
+		Component comp03 = ur03.getWeight().getComponent((short) 0);
+		Component comp12 = ur12.getWeight().getComponent((short) 0);
+		Component comp32 = ur32.getWeight().getComponent((short) 0);
+		Component comp20 = ur20.getWeight().getComponent((short) 0);
+		Component comp21 = ur21.getWeight().getComponent((short) 0);
+		
+		GaussianDistribution gd01 = comp01.squeeze(GrammarRule.Unit.C);
+		GaussianDistribution gd03 = comp03.squeeze(GrammarRule.Unit.C);
+		GaussianDistribution gd12p = comp12.squeeze(GrammarRule.Unit.P);
+		GaussianDistribution gd12c = comp12.squeeze(GrammarRule.Unit.UC);
+		GaussianDistribution gd32p = comp32.squeeze(GrammarRule.Unit.P);
+		GaussianDistribution gd32c = comp32.squeeze(GrammarRule.Unit.UC);
+		GaussianDistribution gd20 = comp20.squeeze(GrammarRule.Unit.P);
+		GaussianDistribution gd21 = comp21.squeeze(GrammarRule.Unit.P);
+		
+		double mua = 1.0, mub = -1.0;
+		gd01.getMus().set(0, mua);
+		gd03.getMus().set(0, mub);
+		gd12p.getMus().set(0, mua);
+		gd12c.getMus().set(0, mua);
+		gd32p.getMus().set(0, mub);
+		gd32c.getMus().set(0, mub);
+		gd20.getMus().set(0, mua);
+		gd21.getMus().set(0, mub);
+		
+		double std = 3;
+		double vara = Math.log(std), varb = Math.log(std);
+		gd01.getVars().set(0, vara);
+		gd03.getVars().set(0, varb);
+		gd12p.getVars().set(0, vara);
+		gd12c.getVars().set(0, vara);
+		gd32p.getVars().set(0, varb);
+		gd32c.getVars().set(0, varb);
+		gd20.getVars().set(0, vara);
+		gd21.getVars().set(0, varb);
+		
+		printRule(ur01);
+		printRule(ur03);
+		printRule(ur12);
+		printRule(ur32);
+		printRule(ur20);
+		printRule(ur21);
+		
+		logger.trace("\n---Inside Score---\n");
+		GaussianMixture cin20 = ur20.getWeight().copy(true);
+//		cin20.setWeight(0, -1e-5);
+		GaussianMixture cin12 = ur12.getWeight().mulForInsideOutside(cin20, GrammarRule.Unit.UC, true); // in logarithm
+		logger.trace("cin12    : " + cin12 + "\t" + cin12.getWeight(0) + "\n");
+		GaussianMixture cin12copy = marginalize(ur12.getWeight(), cin20, GrammarRule.Unit.UC, true);    // in the normal way
+		logger.trace("cin12copy: " + cin12copy + "\t" + cin12copy.getWeight(0) + "\n");
+		
+		GaussianMixture cin32 = ur32.getWeight().mulForInsideOutside(cin20, GrammarRule.Unit.UC, true);
+		logger.trace("cin32    : " + cin32 + "\t" + cin32.getWeight(0) + "\n");
+		GaussianMixture cin32copy = marginalize(ur32.getWeight(), cin20, GrammarRule.Unit.UC, true);
+		logger.trace("cin32copy: " + cin32copy + "\t" + cin32copy.getWeight(0) + "\n");
+		
+//		ur01.getWeight().setWeight(0, -1e-5);
+		
+		GaussianMixture cin01 = ur01.getWeight().mulForInsideOutside(cin12, GrammarRule.Unit.C, true);
+		logger.trace("cin01    : " + cin01 + "\t" + cin01.getWeight(0) + "\n");
+		GaussianMixture cin01copy = marginalize(ur01.getWeight(), cin12, GrammarRule.Unit.C, true);
+		logger.trace("cin01copy: " + cin01copy + "\n");
+		GaussianMixture cin03 = ur03.getWeight().mulForInsideOutside(cin32, GrammarRule.Unit.C, true);
+		logger.trace("cin03    : " + cin03 + "\t" + cin03.getWeight(0) + "\n");
+		
+		double scoret = cin01.getWeight(0);
+		double scores = FunUtil.logAdd(cin01.getWeight(0), cin03.getWeight(0));
+		logger.trace("Score    : " + scores + "\n");
+		logger.trace("Loglh    : " + (scoret - scores) + "\t" + Math.exp(scoret - scores) + "\n");
+		
+		logger.trace("\n---Outside Score---\n");
+		GaussianMixture outor = new DiagonalGaussianMixture((short) 1);
+		outor.marginalizeToOne();
+		logger.trace("outor    :" + outor + "\n");
+		
+		GaussianMixture outx1 = ur01.getWeight().mulForInsideOutside(outor, GrammarRule.Unit.P, true);
+		logger.trace("outx1    :" + outx1 + "\n");
+		GaussianMixture outx3 = ur03.getWeight().mulForInsideOutside(outor, GrammarRule.Unit.P, true);
+		logger.trace("outx3    :" + outx3 + "\n");
+		GaussianMixture outx2 = ur12.getWeight().mulForInsideOutside(outx1, GrammarRule.Unit.P, true);
+		GaussianMixture outsidet = outx2.copy(true);
+		GaussianMixture out32 = ur32.getWeight().mulForInsideOutside(outx3, GrammarRule.Unit.P, true);
+		outx2.add(out32, false);
+		logger.trace("outx2    :" + outx2 + "\n");
+		
+		int nsample = 300000;
+		GaussianMixture outsides = outx2;
+		GaussianMixture cinsides = cin20;
+		GaussianMixture cinsidet = cin20;
+		
+		logger.trace("\n---Counts---\n");
+		logger.trace("scoret: " + scoret + "\tscores: " + scores + "\n");
+		logger.trace("outsides: " + outsides + "\n");
+		logger.trace("outsidet: " + outsidet + "\n");
+		logger.trace("cinsides: " + cinsides + "\n");
+		logger.trace("cinsidet: " + cinsidet + "\n");
+		
+		Random rnd1 = new Random(0);
+//		evalgradientsComp1Dim1V(nsample, ur01, outsides, cinsides, outsidet, cinsidet, scoret, scores, rnd1);
+		evalgradientsComp1Dim1V(nsample, ur20, outx2, cinsides, outsidet, cinsidet, scoret, scores, rnd1, std);
+	}
+	
+	public void evalgradientsComp1Dim1V(int nsample, GrammarRule rule, GaussianMixture outsides, GaussianMixture cinsides, 
+			GaussianMixture outsidet, GaussianMixture cinsidet, double scoret, double scores, Random rnd, double std) {
+		double sum = 0.0;
+		logger.trace("\nscoret: " + scoret + "\tscores: " + scores + "\n\n");
+		for (int i = 0; i < nsample; i++) {
+			
+			double snorm = rnd.nextGaussian(); // sample from N(0, 1)
+			double real0 = snorm * std + 1; // current distribution N(1, 1)
+			double real1 = (real0 + 1) / std; // transformed to N(-1, 1)
+			double vnorm0 = Math.pow(2 * Math.PI * 1, -0.5) * Math.exp(-snorm * snorm / 2.0) / std;
+			double vnorm1 = Math.pow(2 * Math.PI * 1, -0.5) * Math.exp(-real1 * real1 / 2.0) / std;
+			
+			double dW = Math.exp(0) * vnorm0;
+			
+			double cntt = Math.exp(outsidet.getWeight(0)) * vnorm0;
+			double cnts = Math.exp(outsides.getWeight(0)) * vnorm1 + cntt;
+			
+			double dR = Math.exp(Math.log(cnts) - scores) - Math.exp(Math.log(cntt) - scoret);
+//			logger.trace("dR   : " + dR + "\n");
+//			logger.trace("dWdR : " + dW * dR + "\n\n");
+			sum += dW * dR;
+			
 		}
 		sum /= nsample;
 		logger.trace("Evaluated Grad: " + sum + "\n");

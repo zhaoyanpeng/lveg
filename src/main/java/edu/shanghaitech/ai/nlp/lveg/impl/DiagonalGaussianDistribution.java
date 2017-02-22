@@ -95,7 +95,7 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 	@Override
 	public double mulAndMarginalize(GaussianDistribution gd) { 
 		if (gd != null && gd.getDim() == dim) {
-			double value = 0, vtmp = 0, epsilon = 1e-8/*0*/;
+			double value = 0, vtmp = 0, epsilon = /*1e-8*/0;
 			List<Double> vars1 = gd.getVars();
 			List<Double> mus1 = gd.getMus();
 			for (int i = 0; i < dim; i++) {

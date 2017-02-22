@@ -102,6 +102,8 @@ public class Java {
 //		System.out.println(String.format("%.10f", l1));
 //		System.out.println(String.format("%.10f", l2));
 		System.out.println(String.format("%.10f", l3));
+		
+		System.out.println(0.0 / Double.NEGATIVE_INFINITY);
 
 	}
 	

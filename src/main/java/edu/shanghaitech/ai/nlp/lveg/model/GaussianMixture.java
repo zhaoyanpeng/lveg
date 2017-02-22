@@ -62,7 +62,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 		for (int i = 0; i < ncomponent; i++) {
 			double weight = (defRnd.nextDouble() - defNegWRatio) * defMaxmw;
 			Map<String, Set<GaussianDistribution>> multivnd = new HashMap<String, Set<GaussianDistribution>>();
-//			 weight = /*0.5*/ /*-0.69314718056*/ 0; // mixing weight 0.5, 1, 2
+			 weight = /*-0.69314718056*/ 0; // mixing weight 0.5, 1, 2
 			components.add(new Component((short) i, weight, multivnd));
 		}
 	}
@@ -1067,6 +1067,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 		if (simple) {
 			StringBuffer sb = new StringBuffer();
 			sb.append("GM [ncomponent=" + ncomponent + ", weights=" + 
+//					FunUtil.double2str(getWeights(), 16, -1, false, false) + "<->" +
 					FunUtil.double2str(getWeights(), LVeGLearner.precision, nfirst, true, true));
 			sb.append("]");
 			return sb.toString();
@@ -1079,6 +1080,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 	@Override
 	public String toString() {
 		return "GM [bias=" + bias + ", ncomponent=" + ncomponent + ", weights=" + 
+//				FunUtil.double2str(getWeights(), 16, -1, false, false) + "<->" +
 				FunUtil.double2str(getWeights(), LVeGLearner.precision, -1, true, true) + ", mixture=" + getMixture() + "]";
 	}
 	
