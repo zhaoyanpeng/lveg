@@ -186,6 +186,8 @@ public class LearnerConfig extends Recorder {
 		public boolean iosprune = false;
 		@Option(name = "-cntprune", usage = "when evaluating expected counts, avoid adding trivial components if the mixing weights are equal to zero (default: false)")
 		public boolean cntprune = false;
+		@Option(name = "-sampling", usage = "whether use sampling techniques (true) in evaluating gradients or not (false) (default: false)")
+		public boolean sampling = false;
 		@Option(name = "-maxnbig", usage = "reserve max first n components of MoG (default: 100)")
 		public short maxnbig = 100;
 		@Option(name = "-expzero", usage = "relative magnitude calculated as a / b = exp(log(a) - log(b)) (default: 1e-6)")

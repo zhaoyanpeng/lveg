@@ -40,6 +40,7 @@
 -reuse, true,
 -iosprune, true,
 -cntprune, false,
+-sampling, false,
 -maxnbig, 30,
 -expzero, 1e-3,
 -bsize, 3,

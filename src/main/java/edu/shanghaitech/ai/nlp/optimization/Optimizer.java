@@ -37,6 +37,7 @@ public abstract class Optimizer extends Recorder implements Serializable {
 	protected static int maxsample = 2;
 	protected static short batchsize = 1;
 	protected static double minexp = Math.log(1e-6);
+	protected static boolean sampling = false;
 	protected static OptChoice choice = OptChoice.ADAM;
 	
 	/**
@@ -106,12 +107,13 @@ public abstract class Optimizer extends Recorder implements Serializable {
 	 * @param msample
 	 * @param bsize
 	 */
-	public static void config(OptChoice achoice, Random random, int msample, short bsize, double minweight) {
+	public static void config(OptChoice achoice, Random random, int msample, short bsize, double minweight, boolean spling) {
 		choice = achoice;
 		rnd = random;
 		batchsize = bsize;
 		maxsample = msample;
 		minexp = Math.log(minweight);
+		sampling = spling;
 	}
 	
 	

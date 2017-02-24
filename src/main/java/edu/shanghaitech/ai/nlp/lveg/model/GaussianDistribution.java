@@ -146,6 +146,17 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	}
 	
 	
+	public void derivative(boolean cumulative, double factor, List<Double> grads, List<List<Double>> caches) {}
+	public void derivative(boolean cumulative, List<Double> grads, List<Double> gradst, List<Double> gradss, double scoreT, double scoreS) {}
+	
+	
+	/**
+	 * @param gd    a gaussian as a multiplier
+	 * @param cache integrals
+	 */
+	protected double integral(GaussianDistribution gd, List<List<Double>> cache) { return Double.NEGATIVE_INFINITY; }
+	
+	
 	/**
 	 * Take the product of two gaussians and marginalize it.
 	 * 

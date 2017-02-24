@@ -30,7 +30,7 @@
 -ntgrad, 6,
 -nteval, 6,
 -nttest, 6,
--pclose, true,
+-pclose, false,
 -pbatch, true,
 -peval, true,
 -pgrad, true,
@@ -40,11 +40,12 @@
 -reuse, true,
 -iosprune, false,
 -cntprune, false,
+-sampling, true,
 -maxnbig, -30,
 -expzero, 1e-6,
--bsize, 1,
--nepoch, 1,
--maxsample, 300000,
+-bsize, 15,
+-nepoch, 999,
+-maxsample, 3,
 -maxLenParsing, 120,
 -nAllowedDrop, 6,
 -relativediff, 1e-6,
@@ -57,7 +58,7 @@
 -maxvar, 5,
 -nvratio, 0.8,
 -ncomponent, 1,
--dim, 1,
+-dim, 2,
 
 -eratio, -0.1, 
 -eonlylen, -1,
@@ -77,7 +78,7 @@
 -ef1ontrain, true,
 -ef1imwrite, false,
 
--runtag, toy_0218_2_1_1_1_300_ek1,
+-runtag, toy_0223_50_1_2_15_3_sp_ek999,
 -logroot, log/,
 -logtype, true,
 -verbose, false,
@@ -85,6 +86,6 @@
 -precision, 3,
 -rndomseed, 0,
 
--dgradnbatch, 1,
+-dgradnbatch, -1,
 
 -imgprefix, lveg

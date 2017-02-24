@@ -8,7 +8,6 @@ import java.util.Map;
 import java.util.Random;
 
 import edu.shanghaitech.ai.nlp.lveg.LearnerConfig.Params;
-import edu.shanghaitech.ai.nlp.lveg.impl.UnaryGrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
 import edu.shanghaitech.ai.nlp.optimization.Optimizer.OptChoice;
@@ -41,11 +40,13 @@ public class Gradient extends Recorder implements Serializable {
 	protected double cntUpdate;
 	protected double partition;
 	protected List<Double> wgrads, wgrads1, wgrads2;
-	protected List<Map<String, List<Double>>> ggrads, ggrads1, ggrads2;
+	protected List<Map<String, List<Double>>> ggrads, ggrads1, ggrads2, ggradst, ggradss;
 	
 	protected Map<String, List<Double>> truths;
 	protected Map<String, List<Double>> sample;
 	
+	protected List<Map<String, List<List<Double>>>> cachesWithT;
+	protected List<Map<String, List<List<Double>>>> cachesWithS;
 	
 	public Gradient(GrammarRule rule, Random random, int msample, short bsize) {
 		GaussianMixture ruleW = rule.getWeight();
@@ -55,8 +56,10 @@ public class Gradient extends Recorder implements Serializable {
 		// TODO use lazy initialization?
 		this.wgrads1 = new ArrayList<Double>(ruleW.ncomponent());
 		this.wgrads2 = new ArrayList<Double>(ruleW.ncomponent());
-		this.ggrads1 = rule.getWeight().zeroslike();
-		this.ggrads2 = rule.getWeight().zeroslike();
+		this.ggrads1 = ruleW.zeroslike(true);
+		this.ggrads2 = ruleW.zeroslike(true);
+		this.ggradst = ruleW.zeroslike(false);
+		this.ggradss = ruleW.zeroslike(false);
 		for (int i = 0; i < ruleW.ncomponent(); i++) {
 			wgrads1.add(0.0);
 			wgrads2.add(0.0);
@@ -65,13 +68,15 @@ public class Gradient extends Recorder implements Serializable {
 	
 	
 	private void initialize(GaussianMixture ruleW) {
-		this.ggrads = ruleW.zeroslike();
+		this.ggrads = ruleW.zeroslike(false);
 		this.wgrads = new ArrayList<Double>(ruleW.ncomponent());
 		List<HashMap<String, List<Double>>> holder = ruleW.zeroslike(0); 
 		this.sample = holder.get(0);
 		this.truths = holder.get(1);
 		this.cumulative = false;
 		this.updated = false;
+		this.cachesWithT = ruleW.cachelike(0, 2, 50);
+		this.cachesWithS = ruleW.cachelike(0, 10, 50);
 	}
 	
 	
@@ -100,6 +105,24 @@ public class Gradient extends Recorder implements Serializable {
 	}
 	
 	
+	protected void clearCaches() {
+		for (Map<String, List<List<Double>>> caches : cachesWithT) {
+			for (Map.Entry<String, List<List<Double>>> part : caches.entrySet()) {
+				for (List<Double> cache : part.getValue()) {
+					cache.clear();
+				}
+			}
+		}
+		for (Map<String, List<List<Double>>> caches : cachesWithS) {
+			for (Map.Entry<String, List<List<Double>>> part : caches.entrySet()) {
+				for (List<Double> cache : part.getValue()) {
+					cache.clear();
+				}
+			}
+		}
+	}
+	
+	
 	protected Object debug(GrammarRule rule, boolean beloved) {
 		if (beloved) { // debug gradients
 			logger.trace("\n----------\nRule: " + rule + "\nRule Weight: " + rule.getWeight() + 
@@ -107,6 +130,15 @@ public class Gradient extends Recorder implements Serializable {
 			return null;
 		} else {
 			return new Grads(wgrads, ggrads);
+		}
+	}
+	
+	
+	protected boolean eval(GrammarRule rule, Batch ioScoreWithT, Batch ioScoreWithS, List<Double> scoreSandT) {
+		if (Optimizer.sampling) {
+			return evalsampling(rule, ioScoreWithT, ioScoreWithS, scoreSandT);
+		} else {
+			return evalintegral(rule, ioScoreWithT, ioScoreWithS, scoreSandT);
 		}
 	}
 	
@@ -119,7 +151,64 @@ public class Gradient extends Recorder implements Serializable {
 	 * @param ioScoreWithS
 	 * @param scoreSandT
 	 */
-	protected boolean eval(GrammarRule rule, Batch ioScoreWithT, Batch ioScoreWithS, List<Double> scoreSandT) {
+	protected boolean evalintegral(GrammarRule rule, Batch ioScoreWithT, Batch ioScoreWithS, List<Double> scoreSandT) {
+		List<Map<String, GaussianMixture>> iosWithT, iosWithS;
+		boolean removed = false, allocated, iallocated;
+		Map<String, List<Double>> grads, gradst, gradss;
+		double scoreT, scoreS;
+		
+		GaussianMixture ruleW = rule.getWeight();
+		for (int icomponent = 0; icomponent < ruleW.ncomponent(); icomponent++) {
+			iallocated = false; // ggrad below is assumed to have not been allocated
+			grads = ggrads.get(icomponent);
+			gradst = ggradst.get(icomponent);
+			gradss = ggradss.get(icomponent);
+			for (short i = 0; i < MAX_BATCH_SIZE; i++) {
+				iosWithT = ioScoreWithT.get(i);
+				iosWithS = ioScoreWithS.get(i);
+				if (iosWithT == null && iosWithS == null) { continue; } // zero counts
+				scoreT = scoreSandT.get(i * 2);
+				scoreS = scoreSandT.get(i * 2 + 1);
+				// cancel the denominator w(r) 
+				if (!removed && rule.getType() == GrammarRule.LHSPACE) { 
+					if (iosWithT != null) { 
+						for (Map<String, GaussianMixture> ios : iosWithT) { ios.remove(GrammarRule.Unit.C); } 
+					}
+					if (iosWithS != null) { 
+						for (Map<String, GaussianMixture> ios : iosWithS) { ios.remove(GrammarRule.Unit.C); } 
+					}
+				}
+				// remove the meaningless outside score of ROOT
+				if (!removed && rule.getType() == GrammarRule.RHSPACE) { 
+					if (iosWithT != null) { 
+						for (Map<String, GaussianMixture> ios : iosWithT) { ios.remove(GrammarRule.Unit.P); } 
+					}
+					if (iosWithS != null) { 
+						for (Map<String, GaussianMixture> ios : iosWithS) { ios.remove(GrammarRule.Unit.P); } 
+					}
+				}
+				allocated = cumulative ? true : (iallocated ? true : false);
+				ruleW.derivative(allocated, icomponent, scoreT, scoreS, gradst, gradss, grads, wgrads, iosWithT, iosWithS, cachesWithT, cachesWithS);
+				iallocated = true; // ggrad must have been allocated after derivative() is invoked
+				updated = true; // we can apply gradient descent with the gradients
+			}
+			removed = true; // avoid useless checking and removing
+			clearCaches(); // clear caches of this component
+		}
+		cumulative = true; // accumulate gradients in a batch
+		return updated;
+	}
+	
+	
+	/**
+	 * Eval and accumulate the gradients.
+	 * 
+	 * @param rule
+	 * @param ioScoreWithT
+	 * @param ioScoreWithS
+	 * @param scoreSandT
+	 */
+	protected boolean evalsampling(GrammarRule rule, Batch ioScoreWithT, Batch ioScoreWithS, List<Double> scoreSandT) {
 		List<Map<String, GaussianMixture>> iosWithT, iosWithS;
 		GaussianMixture ruleW = rule.getWeight();
 		Map<String, List<Double>> ggrad;

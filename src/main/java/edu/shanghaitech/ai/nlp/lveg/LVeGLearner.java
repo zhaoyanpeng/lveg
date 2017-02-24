@@ -101,7 +101,7 @@ public class LVeGLearner extends LearnerConfig {
 		/* to ease the parameters tuning */
 		GaussianMixture.config(opts.maxnbig, opts.expzero, opts.maxmw, opts.ncomponent, opts.nwratio, random, mogPool);
 		GaussianDistribution.config(opts.maxmu, opts.maxvar, opts.dim, opts.nmratio, opts.nvratio, random, gaussPool);
-		Optimizer.config(opts.choice, random, opts.maxsample, opts.bsize, opts.minmw); // FIXME no errors, just alert you...
+		Optimizer.config(opts.choice, random, opts.maxsample, opts.bsize, opts.minmw, opts.sampling); // FIXME no errors, just alert you...
 				
 		if (opts.loadGrammar && opts.inGrammar != null) {
 			logger.trace("--->Loading grammars from \'" + opts.datadir + opts.inGrammar + "\'...\n");

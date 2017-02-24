@@ -35,6 +35,7 @@ import edu.shanghaitech.ai.nlp.lveg.LearnerConfig.Options;
 import edu.shanghaitech.ai.nlp.lveg.impl.LVeGParser;
 import edu.shanghaitech.ai.nlp.lveg.impl.UnaryGrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.impl.Valuator;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
@@ -73,11 +74,11 @@ public class FunUtil extends Recorder {
 		Map<GrammarRule, GrammarRule> uRuleMap = grammar.getURuleMap();
 		for (Map.Entry<GrammarRule, GrammarRule> entry : uRuleMap.entrySet()) {
 			gradcheck(grammar, lexicon, entry, lvegParser, valuator, tree, delta, maxsample);
+			return;
 		}
 		uRuleMap = lexicon.getURuleMap();
 		for (Map.Entry<GrammarRule, GrammarRule> entry : uRuleMap.entrySet()) {
 			gradcheck(grammar, lexicon, entry, lvegParser, valuator, tree, delta, maxsample);
-			return;
 		}
 	}
 	
@@ -110,12 +111,12 @@ public class FunUtil extends Recorder {
 		double ltAfter = lvegParser.doInsideOutsideWithTree(tree);
 		double lsAfter = lvegParser.doInsideOutside(tree);
 		double llAfter = ltAfter - lsAfter;
-		
+		/*
 		logger.trace(
 				"\nltI: " + ltInit + "\tlsI: " + lsInit + "\tllI: " + llInit + "\n" +
 				"ltB: " + ltBefore + "\tlsB: " + lsBefore + "\tllB: " + llBefore + "\n" +
 				"ltA: " + ltAfter + "\tlsA: " + lsAfter + "\tllA: " + llAfter);
-		
+		*/
 		double t2 = gm.getWeight(0);
 		
 		// restore
@@ -127,6 +128,12 @@ public class FunUtil extends Recorder {
 				numericalGrad + "=(" + llBefore + " - " + llAfter + ")/(" + (t1 - t2) + ")\n" + 
 				"B : " + src + "\tA : " + des + "\t(B - A)  =" + (des - src) + "\n" +
 				"t1: " + t1 + "\tt2: " + t2 + "\t(t1 - t2)=" + (t1 - t2) + "\n-----\n");
+		
+		
+		gradcheckmu(entry, lvegParser, valuator, tree, delta);
+		gradcheckvar(entry, lvegParser, valuator, tree, delta);
+		
+		
 		Object gradients = null;
 		if (entry.getKey().type != GrammarRule.LHSPACE) {
 			gradients = grammar.getOptimizer().debug(entry.getKey(), false);
@@ -156,6 +163,108 @@ public class FunUtil extends Recorder {
 			}
 			logger.trace("\n---\nWgrads: " + wgrads + "\nGgrads: " + ggrads + "\n---\n");
 		}
+	}
+	
+	
+	public static void gradcheckmu(Map.Entry<GrammarRule, GrammarRule> entry, 
+			LVeGParser<?, ?> lvegParser, Valuator<?, ?> valuator, Tree<State> tree, double delta) {
+		GaussianMixture gm = entry.getValue().getWeight();
+		
+		double ltInit = lvegParser.doInsideOutsideWithTree(tree);
+		double lsInit = lvegParser.doInsideOutside(tree);
+		double llInit = ltInit - lsInit;
+		
+		// w.r.t. mixing weight
+		GaussianDistribution gd = gm.getComponent((short) 0).squeeze(null);
+		List<Double> mus = gd.getMus();
+		
+		double src = mus.get(0);
+		mus.set(0, mus.get(0) + delta);
+		
+		
+//		double llBefore = valuator.probability(tree);
+		double ltBefore = lvegParser.doInsideOutsideWithTree(tree);
+		double lsBefore = lvegParser.doInsideOutside(tree);
+		double llBefore = ltBefore - lsBefore;
+		
+		
+		double t1 = mus.get(0);
+		
+		mus.set(0, mus.get(0) - 2 * delta);
+		
+		
+//		double llAfter = valuator.probability(tree);
+		double ltAfter = lvegParser.doInsideOutsideWithTree(tree);
+		double lsAfter = lvegParser.doInsideOutside(tree);
+		double llAfter = ltAfter - lsAfter;
+		/*
+		logger.trace(
+				"\nltI: " + ltInit + "\tlsI: " + lsInit + "\tllI: " + llInit + "\n" +
+				"ltB: " + ltBefore + "\tlsB: " + lsBefore + "\tllB: " + llBefore + "\n" +
+				"ltA: " + ltAfter + "\tlsA: " + lsAfter + "\tllA: " + llAfter);
+		*/
+		double t2 = mus.get(0);
+		
+		// restore
+		mus.set(0, mus.get(0) + delta);	
+		double des = mus.get(0);
+		double numericalGrad = -(llBefore - llAfter) / ((t1 - t2));
+		
+		logger.trace("\n-----\nRule: " + entry.getKey() + "\nGrad MU    : " + 
+				numericalGrad + "=(" + llBefore + " - " + llAfter + ")/(" + (t1 - t2) + ")\n" + 
+				"B : " + src + "\tA : " + des + "\t(B - A)  =" + (des - src) + "\n" +
+				"t1: " + t1 + "\tt2: " + t2 + "\t(t1 - t2)=" + (t1 - t2) + "\n-----\n");
+	}
+	
+	
+	public static void gradcheckvar(Map.Entry<GrammarRule, GrammarRule> entry, 
+			LVeGParser<?, ?> lvegParser, Valuator<?, ?> valuator, Tree<State> tree, double delta) {
+		GaussianMixture gm = entry.getValue().getWeight();
+		
+		double ltInit = lvegParser.doInsideOutsideWithTree(tree);
+		double lsInit = lvegParser.doInsideOutside(tree);
+		double llInit = ltInit - lsInit;
+		
+		// w.r.t. mixing weight
+		GaussianDistribution gd = gm.getComponent((short) 0).squeeze(null);
+		List<Double> vars = gd.getVars();
+		
+		double src = vars.get(0);
+		vars.set(0, vars.get(0) + delta);
+		
+		
+//		double llBefore = valuator.probability(tree);
+		double ltBefore = lvegParser.doInsideOutsideWithTree(tree);
+		double lsBefore = lvegParser.doInsideOutside(tree);
+		double llBefore = ltBefore - lsBefore;
+		
+		
+		double t1 = vars.get(0);
+		
+		vars.set(0, vars.get(0) - 2 * delta);
+		
+		
+//		double llAfter = valuator.probability(tree);
+		double ltAfter = lvegParser.doInsideOutsideWithTree(tree);
+		double lsAfter = lvegParser.doInsideOutside(tree);
+		double llAfter = ltAfter - lsAfter;
+		/*
+		logger.trace(
+				"\nltI: " + ltInit + "\tlsI: " + lsInit + "\tllI: " + llInit + "\n" +
+				"ltB: " + ltBefore + "\tlsB: " + lsBefore + "\tllB: " + llBefore + "\n" +
+				"ltA: " + ltAfter + "\tlsA: " + lsAfter + "\tllA: " + llAfter);
+		*/
+		double t2 = vars.get(0);
+		
+		// restore
+		vars.set(0, vars.get(0) + delta);	
+		double des = vars.get(0);
+		double numericalGrad = -(llBefore - llAfter) / ((t1 - t2) /*2 * delta*/);
+		
+		logger.trace("\n-----\nRule: " + entry.getKey() + "\nGrad VAR   : " + 
+				numericalGrad + "=(" + llBefore + " - " + llAfter + ")/(" + (t1 - t2) + ")\n" + 
+				"B : " + src + "\tA : " + des + "\t(B - A)  =" + (des - src) + "\n" +
+				"t1: " + t1 + "\tt2: " + t2 + "\t(t1 - t2)=" + (t1 - t2) + "\n-----\n");
 	}
 	
 	

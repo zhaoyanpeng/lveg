@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.PriorityQueue;
 import java.util.Random;
 import java.util.Set;
@@ -814,8 +815,8 @@ public class GaussianMixture extends Recorder implements Serializable {
 		}
 		Component comp = getComponent((short) iComponent);
 		double weight = Math.exp(comp.weight);
-		double penalty = Params.reg ? (Params.l1 ? Params.wdecay * weight : Params.wdecay * Math.pow(weight, 2)) : 0.0;
-		double dMixingW = factor * weight * derivateMixingWeight(sample, iComponent, normal);
+		double dPenalty = Params.reg ? (Params.l1 ? Params.wdecay * weight : Params.wdecay * Math.pow(weight, 2)) : 0.0;
+		double dMixingW = factor * weight * /*1*/derivateMixingWeight(sample, iComponent, normal);
 		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : comp.multivnd.entrySet()) {
 			List<Double> slice = sample.get(gaussian.getKey());
 			List<Double> grads = ggrads.get(gaussian.getKey());
@@ -824,8 +825,186 @@ public class GaussianMixture extends Recorder implements Serializable {
 				// break; // CHECK only one gaussian is allowed
 			}
 		}
-		dMixingW += penalty;
+		dMixingW += dPenalty;
 		wgrads.set(iComponent, wgrads.get(iComponent) + dMixingW);
+	}
+	
+	
+	/**
+	 * Derivative w.r.t. mixing weight & mu & sigma.
+	 */
+	public void derivative(boolean cumulative, int iComponent, double scoreT, double scoreS, 
+			Map<String, List<Double>> gradst, Map<String, List<Double>> gradss, Map<String, List<Double>> grads, 
+			List<Double> wgrads, List<Map<String, GaussianMixture>> cntsWithT, List<Map<String, GaussianMixture>> cntsWithS, 
+			List<Map<String, List<List<Double>>>> cachesWithT, List<Map<String, List<List<Double>>>> cachesWithS) {
+		if (!cumulative && iComponent == 0) { // CHECK stupid if...else..., wgrads is used by all components.
+			wgrads.clear();
+			for (int i = 0; i < ncomponent; i++) {
+				wgrads.add(0.0);
+			}
+		}
+		// memo
+		Component comp = getComponent((short) iComponent);
+		allocateMemory(cntsWithT, cntsWithS, cachesWithT, cachesWithS);
+		double partWithT = computeCaches(comp, cntsWithT, cachesWithT);
+		double partWithS = computeCaches(comp, cntsWithS, cachesWithS);
+		
+		// w.r.t. mixing weight
+		double weight = Math.exp(comp.weight);
+		double dMixingW = Math.exp(partWithS - scoreS) - Math.exp(partWithT - scoreT);
+		double dPenalty = Params.reg ? (Params.l1 ? Params.wdecay * weight : Params.wdecay * Math.pow(weight, 2)) : 0.0;
+		dMixingW += dPenalty;
+		wgrads.set(iComponent, wgrads.get(iComponent) + dMixingW);
+		
+		// w.r.t. mu & sigma
+		boolean zeroflagt = derivative(gradst, comp, cntsWithT, cachesWithT);
+		boolean zeroflags = derivative(gradss, comp, cntsWithS, cachesWithS);
+		derivative(comp, cumulative, zeroflagt, zeroflags, Math.exp(scoreT), Math.exp(scoreS), gradst, gradss, grads);
+	}
+	
+	
+	/**
+	 * Compute the intermediate values needed in gradients computation.
+	 * 
+	 * @param ggrads which stores intermediate values in computing gradients
+	 * @param comp   the component of the rule weight
+	 * @param counts which decides if expected counts exist (true) or not (false)
+	 * @param caches see {@link #computeCaches(Component, List, List)}
+	 * @return
+	 */
+	protected boolean derivative(Map<String, List<Double>> ggrads, Component comp, 
+			List<Map<String, GaussianMixture>> counts, List<Map<String, List<List<Double>>>> caches) {
+		if (counts == null) { return false; }
+		for (Entry<String, Set<GaussianDistribution>> node : comp.multivnd.entrySet()) { // head variable or tail variable
+			String key = node.getKey();
+			for (int i = 0; i < counts.size(); i++) { // every occurrence
+				Map<String, List<List<Double>>> cache = caches.get(i); // tail portion is constant if the node is head variable, vice versus 
+				double factor = Math.exp(factorButKey(key, cache) + comp.weight); // pay attention to ...
+				for (GaussianDistribution gd : node.getValue()) {
+					boolean cumulative = (i> 0);
+					gd.derivative(cumulative, factor, ggrads.get(key), cache.get(key));
+					break;
+				}
+			}
+		}
+		return true;
+	}
+	
+	
+	/**
+	 * @param comp       the component of the rule weight
+	 * @param cumulative accumulate gradients (true) or not (false)
+	 * @param zeroflagt  if the expected counts with parse tree exist (true) or not (false)
+	 * @param zeroflags  if the expected counts with sentence exist (true) or not (false)
+	 * @param scoreT     score of the parse tree, should be in non-logarithmic form
+	 * @param scoreS     score of the sentence, should be in non-logarithmic form
+	 * @param gradst     intermediate values (with parse tree) from {@link #derivative(Map, Component, List, List)}
+	 * @param gradss     intermediate values (with sentence) from {@link #derivative(Map, Component, List, List)}
+	 * @param grads      which holder gradients of mu & sigma
+	 */
+	protected void derivative(Component comp, boolean cumulative, boolean zeroflagt, boolean zeroflags, double scoreT, double scoreS,
+			Map<String, List<Double>> gradst, Map<String, List<Double>> gradss, Map<String, List<Double>> grads) {
+		if (!(zeroflagt || zeroflags)) { logger.error("There must be something wrong.\n"); }
+		for (Map.Entry<String, Set<GaussianDistribution>> node : comp.multivnd.entrySet()) {
+			List<Double> agrads = grads.get(node.getKey());
+			List<Double> agradst = zeroflagt ? gradst.get(node.getKey()) : null;
+			List<Double> agradss = zeroflags ? gradss.get(node.getKey()) : null;
+			for (GaussianDistribution gd : node.getValue()) {
+				gd.derivative(cumulative, agrads, agradst, agradss, scoreT, scoreS);
+				break;
+			}
+		}
+	}
+	
+	
+	/**
+	 * If the variable we are considering is in the head portion, then the tail portion is a constant. 
+	 * What we do by this method is computing such constant.
+	 * 
+	 * @param key    which specifics a specific portion (head variable or tail variable)
+	 * @param caches see {@link #computeCaches(Component, List, List)} and {@link #integral(GaussianDistribution, GaussianMixture, List)}
+	 * @return       in logarithmic
+	 */
+	protected double factorButKey(String key, Map<String, List<List<Double>>> caches) {
+		double factor = 0;
+		for (Entry<String, List<List<Double>>> cache : caches.entrySet()) {
+			if (!key.equals(cache.getKey())) {
+				List<Double> values = cache.getValue().get(0);
+				factor += values.get(values.size() - 1); // the last item in the first row is what we need
+			}
+		}
+		return factor; // in logarithmic form
+	}
+	
+	
+	/**
+	 * Compute integrals of NN, xNN, xxNN, where x is the variable in some dimension, n is the d-dimensional Gaussian.
+	 * 
+	 * @param comp   current component
+	 * @param counts rule counts given parse tree or sentence
+	 * @param caches integrals holder 
+	 * @return       in logarithmic form
+	 */
+	protected double computeCaches(Component comp, List<Map<String, GaussianMixture>> counts, List<Map<String, List<List<Double>>>> caches) {
+		if (counts == null) { return Double.NEGATIVE_INFINITY; }
+		double values = Double.NEGATIVE_INFINITY;
+		for (int i = 0; i < counts.size(); i++) {
+			double value = 0;
+			Map<String, GaussianMixture> count = counts.get(i);
+			Map<String, List<List<Double>>> cache = caches.get(i);
+			for (Entry<String, Set<GaussianDistribution>> node : comp.multivnd.entrySet()) {
+				double vtmp = 0;
+				for (GaussianDistribution gd : node.getValue()) {
+					List<List<Double>> space = cache.get(node.getKey());
+					GaussianMixture ios = count.get(node.getKey());
+					vtmp = integral(gd, ios, space); // outside score & head variable or inside score & tail variable
+					break; // only loop once, in fact, this break is not necessary
+				}
+				value += vtmp; // multiplication between different portions (head variable or tail variable)
+			}
+			value += comp.weight; // counts for an occurrence
+			values = FunUtil.logAdd(values, value); // sum of the integrals from all occurrences
+		}
+		return values;
+	}
+	
+	
+	/**
+	 * Integrals of NN, xNN, xxNN from a specific portion (outside score & head or inside score & tail variable).
+	 * 
+	 * @param gd    a specific portion of the grammar rule weight (head variable or tail variable)
+	 * @param gm    inside/outside score, we shall restrict # of components because it is memory-consuming
+	 * @param cache memory space
+	 * @return      integrals in logarithmic form, I will give an example
+	 */
+	protected double integral(GaussianDistribution gd, GaussianMixture gm, List<List<Double>> cache) {
+		double value = Double.NEGATIVE_INFINITY, vtmp;
+		List<Double> weights = cache.get(cache.size() - 1);
+		for (Component comp : gm.components) {
+			weights.add(comp.weight);
+			GaussianDistribution ios = comp.squeeze(null);
+			vtmp = gd.integral(ios, cache);
+			vtmp += comp.weight; // integral contributed by one component
+			value = FunUtil.logAdd(value, vtmp);
+		}
+		List<Double> sumvals = cache.get(0); // the last item in the first row
+		sumvals.add(value); // sum of integrals from the current portion, in logarithmic form
+		return value;
+	}
+	
+	
+	protected void allocateMemory(List<Map<String, GaussianMixture>> cntsWithT, List<Map<String, GaussianMixture>> cntsWithS, 
+			List<Map<String, List<List<Double>>>> cachesWithT, List<Map<String, List<List<Double>>>> cachesWithS) {
+		int delta = -1;
+		if (cntsWithT != null && (delta = cntsWithT.size() - cachesWithT.size()) > 0) {
+			List<Map<String, List<List<Double>>>> wantage = cachelike(0, delta, 50);
+			cachesWithT.addAll(wantage);
+		}
+		delta = -1;
+		if (cntsWithS != null && (delta = cntsWithS.size() - cachesWithS.size()) > 0) {
+			List<Map<String, List<List<Double>>>> wantage = cachelike(0, delta, 50);
+			cachesWithS.addAll(wantage);
+		}
 	}
 	
 	
@@ -849,12 +1028,14 @@ public class GaussianMixture extends Recorder implements Serializable {
 		comp.weight = comp.weight < minexp ? minexp : comp.weight;
 	}
 	
+	
 	/**
 	 * Allocate memory space for gradients.
 	 * 
+	 * @param pad pad the allocated memory (true) or not (false)
 	 * @return gradients holder
 	 */
-	public List<Map<String, List<Double>>> zeroslike() {
+	public List<Map<String, List<Double>>> zeroslike(boolean pad) {
 		List<Map<String, List<Double>>> grads = new ArrayList<Map<String, List<Double>>>(ncomponent);
 		for (Component comp : components) {
 			Map<String, List<Double>> gcomp = new HashMap<String, List<Double>>(comp.multivnd.size(), 1);
@@ -862,8 +1043,10 @@ public class GaussianMixture extends Recorder implements Serializable {
 				if (gaussian.getValue().size() > 1) { logger.error("Invalid rule weight.\n"); }
 				for (GaussianDistribution gd : gaussian.getValue()) {
 					List<Double> grad = new ArrayList<Double>(gd.dim * 2);
-					for (int i = 0; i < gd.dim * 2; i++) {
-						grad.add(0.0); // preallocate memo
+					if (pad) {
+						for (int i = 0; i < gd.dim * 2; i++) {
+							grad.add(0.0); // preallocate memo
+						}
 					}
 					gcomp.put(gaussian.getKey(), grad);
 				}
@@ -895,6 +1078,31 @@ public class GaussianMixture extends Recorder implements Serializable {
 		holder.add(sample);
 		holder.add(truths);
 		return holder;
+	}
+	
+	
+	/**
+	 * Allocate memory space for caches to be used for gradients calculation.
+	 * 
+	 * @param iComponent 0 by default, since all components have the same portions.
+	 * @return caches holder
+	 */
+	public List<Map<String, List<List<Double>>>> cachelike(int iComponent, int ncnt, int capacity) {
+		Component comp = getComponent((short) iComponent);
+		List<Map<String, List<List<Double>>>> caches = new ArrayList<Map<String, List<List<Double>>>>(ncnt);
+		for (int i = 0; i < ncnt; i++) {
+			Map<String, List<List<Double>>> cache = new HashMap<String, List<List<Double>>>(comp.multivnd.size(), 1);
+			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : comp.multivnd.entrySet()) {
+				int size = 3 * comp.squeeze(gaussian.getKey()).dim + 1;
+				List<List<Double>> comps = new ArrayList<List<Double>>(size); // nn * d, xnn * d, xxnn * d, w
+				for (int j = 0; j < size; j++) {
+					comps.add(new ArrayList<Double>(capacity));
+				}
+				cache.put(gaussian.getKey(), comps);
+			}
+			caches.add(cache);
+		}
+		return caches;
 	}
 	
 	
@@ -1067,7 +1275,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 		if (simple) {
 			StringBuffer sb = new StringBuffer();
 			sb.append("GM [ncomponent=" + ncomponent + ", weights=" + 
-//					FunUtil.double2str(getWeights(), 16, -1, false, false) + "<->" +
+					FunUtil.double2str(getWeights(), 16, -1, false, false) + "<->" +
 					FunUtil.double2str(getWeights(), LVeGLearner.precision, nfirst, true, true));
 			sb.append("]");
 			return sb.toString();
@@ -1080,7 +1288,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 	@Override
 	public String toString() {
 		return "GM [bias=" + bias + ", ncomponent=" + ncomponent + ", weights=" + 
-//				FunUtil.double2str(getWeights(), 16, -1, false, false) + "<->" +
+				FunUtil.double2str(getWeights(), 16, -1, false, false) + "<->" +
 				FunUtil.double2str(getWeights(), LVeGLearner.precision, -1, true, true) + ", mixture=" + getMixture() + "]";
 	}
 	

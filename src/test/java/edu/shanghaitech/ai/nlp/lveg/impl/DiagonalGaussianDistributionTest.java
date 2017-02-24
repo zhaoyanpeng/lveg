@@ -24,7 +24,7 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 
 		String logfile = "log/mog_test_t";
 		logger = logUtil.getBothLogger(logfile);
-		testIntegrationComp1Dim1V();
+		testIntegrationComp1Dim1Ana();
 	}
 	
 	
@@ -718,6 +718,168 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		logger.trace("Evaluated Grad: " + sum + "\n");
 	}
 	
+	public void testIntegrationComp1Dim1Ana() {
+		Random rnd = new Random(0);
+		short ncomp = 1, ndim = 1;
+		GaussianMixture.config((short) -1, 1e-6, 4, ncomp, 0.5, rnd, null);
+		GaussianDistribution.config(1, 5, ndim, 0.5, 0.8, rnd, null);
+		
+		GrammarRule ur01 = new UnaryGrammarRule((short) 0, (short) 1, GrammarRule.RHSPACE, true);	
+		GrammarRule ur03 = new UnaryGrammarRule((short) 0, (short) 3, GrammarRule.RHSPACE, true);	
+		GrammarRule ur12 = new UnaryGrammarRule((short) 1, (short) 2, GrammarRule.LRURULE, true);	
+		GrammarRule ur32 = new UnaryGrammarRule((short) 3, (short) 2, GrammarRule.LRURULE, true);	
+		GrammarRule ur20 = new UnaryGrammarRule((short) 2, (short) 0, GrammarRule.LHSPACE, true);	
+		GrammarRule ur21 = new UnaryGrammarRule((short) 2, (short) 1, GrammarRule.LHSPACE, true);	
+		
+		Component comp01 = ur01.getWeight().getComponent((short) 0);
+		Component comp03 = ur03.getWeight().getComponent((short) 0);
+		Component comp12 = ur12.getWeight().getComponent((short) 0);
+		Component comp32 = ur32.getWeight().getComponent((short) 0);
+		Component comp20 = ur20.getWeight().getComponent((short) 0);
+		Component comp21 = ur21.getWeight().getComponent((short) 0);
+		
+		comp01.setWeight(0.5);
+		comp03.setWeight(-0.5);
+		comp12.setWeight(0.5);
+		comp32.setWeight(-0.5);
+		comp20.setWeight(0.0);
+		comp21.setWeight(0.0);
+		
+		GaussianDistribution gd01 = comp01.squeeze(GrammarRule.Unit.C);
+		GaussianDistribution gd03 = comp03.squeeze(GrammarRule.Unit.C);
+		GaussianDistribution gd12p = comp12.squeeze(GrammarRule.Unit.P);
+		GaussianDistribution gd12c = comp12.squeeze(GrammarRule.Unit.UC);
+		GaussianDistribution gd32p = comp32.squeeze(GrammarRule.Unit.P);
+		GaussianDistribution gd32c = comp32.squeeze(GrammarRule.Unit.UC);
+		GaussianDistribution gd20 = comp20.squeeze(GrammarRule.Unit.P);
+		GaussianDistribution gd21 = comp21.squeeze(GrammarRule.Unit.P);
+		
+		double mua = 0.0, mub = 0.0;
+		gd01.getMus().set(0, mua);
+		gd03.getMus().set(0, mub);
+		gd12p.getMus().set(0, mua);
+		gd12c.getMus().set(0, mua);
+		gd32p.getMus().set(0, mub);
+		gd32c.getMus().set(0, mub);
+		gd20.getMus().set(0, mua);
+		gd21.getMus().set(0, mub);
+		
+		double std = 3;
+		double vara = Math.log(std), varb = Math.log(std);
+		gd01.getVars().set(0, -0.25);
+		gd03.getVars().set(0, 0.25);
+		gd12p.getVars().set(0, -0.25);
+		gd12c.getVars().set(0, -0.25);
+		gd32p.getVars().set(0, 0.25);
+		gd32c.getVars().set(0, 0.25);
+		gd20.getVars().set(0, 0.0);
+		gd21.getVars().set(0, 0.0);	
+		
+		printRule(ur01);
+		printRule(ur03);
+		printRule(ur12);
+		printRule(ur32);
+		printRule(ur20);
+		printRule(ur21);
+		
+		logger.trace("\n---Inside Score---\n");
+		GaussianMixture cin20 = ur20.getWeight().copy(true);
+//		cin20.setWeight(0, -0.1);
+		GaussianMixture cin12 = ur12.getWeight().mulForInsideOutside(cin20, GrammarRule.Unit.UC, true); // in logarithm
+		logger.trace("cin12    : " + cin12 + "\n");
+		GaussianMixture cin12copy = marginalize(ur12.getWeight(), cin20, GrammarRule.Unit.UC, true);    // in the normal way
+		logger.trace("cin12copy: " + cin12copy + "\n");
+		
+		GaussianMixture cin32 = ur32.getWeight().mulForInsideOutside(cin20, GrammarRule.Unit.UC, true);
+		logger.trace("cin32    : " + cin32 + "\n");
+		
+		GaussianMixture cin01 = ur01.getWeight().mulForInsideOutside(cin12, GrammarRule.Unit.C, true);
+		logger.trace("cin01    : " + cin01 + "\t" + cin01.getWeight(0) + "\n");
+		GaussianMixture cin01copy = marginalize(ur01.getWeight(), cin12, GrammarRule.Unit.C, true);
+		logger.trace("cin01copy: " + cin01copy + "\n");
+		GaussianMixture cin03 = ur03.getWeight().mulForInsideOutside(cin32, GrammarRule.Unit.C, true);
+		logger.trace("cin03    : " + cin03 + "\t" + cin03.getWeight(0) + "\n");
+		
+		double scoret = cin03.getWeight(0);;
+		double scores = FunUtil.logAdd(cin01.getWeight(0), cin03.getWeight(0));
+		logger.trace("Score    : " + scores + "\n");
+		logger.trace("Loglh    : " + (scoret - scores) + "\t" + Math.exp(scoret - scores) + "\n");
+		
+		logger.trace("\n---Outside Score---\n");
+		GaussianMixture outor = new DiagonalGaussianMixture((short) 1);
+		outor.marginalizeToOne();
+		logger.trace("outor    :" + outor + "\n");
+		
+		GaussianMixture outx1 = ur01.getWeight().mulForInsideOutside(outor, GrammarRule.Unit.P, true);
+		logger.trace("outx1    :" + outx1 + "\n");
+		GaussianMixture outx3 = ur03.getWeight().mulForInsideOutside(outor, GrammarRule.Unit.P, true);
+		logger.trace("outx3    :" + outx3 + "\n");
+		GaussianMixture outx2 = ur12.getWeight().mulForInsideOutside(outx1, GrammarRule.Unit.P, true);
+		GaussianMixture out32 = ur32.getWeight().mulForInsideOutside(outx3, GrammarRule.Unit.P, true);
+		outx2.add(out32, false);
+		logger.trace("outx2    :" + outx2 + "\n");
+		
+		int nsample = 300;
+		GaussianMixture outsides = outor;
+		GaussianMixture cinsides = cin32;
+		GaussianMixture outsidet = outor;
+		GaussianMixture cinsidet = cin32;
+		
+		logger.trace("\n---Counts---\n");
+		logger.trace("scoret: " + scoret + "\tscores: " + scores + "\n");
+		logger.trace("outsides: " + outsides + "\n");
+		logger.trace("outsidet: " + outsidet + "\n");
+		logger.trace("cinsides: " + cinsides + "\n");
+		logger.trace("cinsidet: " + cinsidet + "\n");
+		
+		Random rnd1 = new Random(0);
+		evalgradientsComp1Dim1Ana(nsample, ur03, outsides, cinsides, outsidet, cinsidet, scoret, scores, rnd1);
+	}
+	
+	public void evalgradientsComp1Dim1Ana(int nsample, GrammarRule rule, GaussianMixture outsides, GaussianMixture cinsides, 
+			GaussianMixture outsidet, GaussianMixture cinsidet, double scoret, double scores, Random rnd) {
+		double sum = 0.0;
+		logger.trace("\nscoret: " + scoret + "\tscores: " + scores + "\n");
+		logger.trace("rule: " + rule.getWeight() + "\n\n");
+		
+		Component icomp = cinsides.getComponent((short) 0);
+		GaussianDistribution iscore = icomp.squeeze(GrammarRule.Unit.P);
+		Component rcomp = rule.getWeight().getComponent((short) 0);
+		GaussianDistribution rscore = rcomp.squeeze(GrammarRule.Unit.C);
+		
+		logger.trace(icomp + "\n" + rcomp + "\n");
+		
+		double factor = Math.exp(icomp.getWeight() + rcomp.getWeight());
+		double nn = marginalize(iscore, rscore); 
+		logger.trace("cnts: " + nn + "\n");
+		nn *= factor;
+		double xnn = marginalizex(iscore, rscore, 0);
+		logger.trace("xnn : " + xnn + "\n");
+		xnn *= factor;
+		double xxnn = marginalizexx(iscore, rscore, 0);
+		logger.trace("xxnn: " + xxnn + "\n");
+		xxnn *= factor;
+		
+		
+		double wgrad = nn / Math.exp(scores) - nn / Math.exp(scoret);
+		
+		double mu0 = 0, mu1 = 0;
+		double var0 = Math.exp(0.25 * 2), var1 = Math.exp(0.25 * 2);
+		double vtmp = (var0 * var1) / (var0 + var1);
+		xxnn = nn * vtmp / var0 - nn;
+		
+		double vgrad = xxnn / Math.exp(scores) - xxnn / Math.exp(scoret);
+		logger.trace(xxnn + "\t" + vgrad + "\n");
+		logger.trace(nn + "\t" + factor + "\n");
+		logger.trace("Evaluated Grad: " + wgrad + "\n");
+	}
+	
+	public void derivative(double order0, double order1, double order2) {
+		
+		
+		return;
+	}
+	
 	public double normal(double x) {
 		return Math.pow(2 * Math.PI * 1, -0.5) * Math.exp(-x * x / 2.0);
 	}
@@ -755,11 +917,78 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		List<Double> mus0 = gd0.getMus();
 		List<Double> mus1 = gd1.getMus();
 		for (int i = 0; i < dim; i++) {
-			double mtmp = -Math.pow(mus0.get(i) - mus1.get(i), 2);
-			double vtmp = 2 * (Math.exp(vars0.get(i) * 2) + Math.exp(vars1.get(i) * 2)) + epsilon;
-			vdims *= Math.pow(vtmp * Math.PI, -0.5) * Math.exp(mtmp / vtmp);
+			vdims *= integral(mus0.get(i), mus1.get(i), vars0.get(i), vars1.get(i), epsilon);
 		}
+		vdims *= Math.pow(2 * Math.PI, -dim / 2.0);
 		return vdims;
+	}
+	
+	
+	public double marginalizex(GaussianDistribution gd0, GaussianDistribution gd1, int idim) {
+		int dim = gd0.getDim();
+		double vdims = 1.0, epsilon = 0;
+		List<Double> vars0 = gd0.getVars();
+		List<Double> vars1 = gd1.getVars();
+		List<Double> mus0 = gd0.getMus();
+		List<Double> mus1 = gd1.getMus();
+		for (int i = 0; i < dim; i++) {
+			if (i != idim) {
+				vdims *= integral(mus0.get(i), mus1.get(i), vars0.get(i), vars1.get(i), epsilon);
+			} else {
+				vdims *= integralx(mus0.get(i), mus1.get(i), vars0.get(i), vars1.get(i), epsilon);
+			}
+		}
+		vdims *= Math.pow(2 * Math.PI, -dim / 2.0);
+		return vdims;
+	}
+	
+	
+	public double marginalizexx(GaussianDistribution gd0, GaussianDistribution gd1, int idim) {
+		int dim = gd0.getDim();
+		double vdims = 1.0, epsilon = 0;
+		List<Double> vars0 = gd0.getVars();
+		List<Double> vars1 = gd1.getVars();
+		List<Double> mus0 = gd0.getMus();
+		List<Double> mus1 = gd1.getMus();
+		for (int i = 0; i < dim; i++) {
+			if (i != idim) {
+				vdims *= integral(mus0.get(i), mus1.get(i), vars0.get(i), vars1.get(i), epsilon);
+			} else {
+				vdims *= integralxx(mus0.get(i), mus1.get(i), vars0.get(i), vars1.get(i), epsilon);
+			}
+		}
+		vdims *= Math.pow(2 * Math.PI, -dim / 2.0);
+		return vdims;
+	}
+	
+	
+	public double integral(double mu0, double mu1, double var0, double var1, double epsilon) {
+		double mtmp = -Math.pow(mu0 - mu1, 2);
+		double vtmp = Math.exp(var0 * 2) + Math.exp(var1 * 2) + epsilon;
+		double vval = Math.pow(vtmp, -0.5) * Math.exp(mtmp / (2 * vtmp));
+		return vval;
+	}
+	
+	
+	public double integralx(double mu0, double mu1, double var0, double var1, double epsilon) {
+		double mtmp = -Math.pow(mu0 - mu1, 2);
+		double vtmp = Math.exp(var0 * 2) + Math.exp(var1 * 2) + epsilon;
+		double vval =  Math.pow(vtmp, -0.5) * Math.exp(mtmp / (2 * vtmp));
+		double factor = (mu0 * Math.exp(var1 * 2) + mu1 * Math.exp(var0 * 2)) / vtmp;
+		vval = factor * vval;
+		return vval;
+	}
+	
+	
+	public double integralxx(double mu0, double mu1, double var0, double var1, double epsilon) {
+		double mtmp = -Math.pow(mu0 - mu1, 2);
+		double vtmp = Math.exp(var0 * 2) + Math.exp(var1 * 2) + epsilon;
+		double vval =  Math.pow(vtmp, -0.5) * Math.exp(mtmp / (2 * vtmp));
+		double factor0 = (mu0 * Math.exp(var1 * 2) + mu1 * Math.exp(var0 * 2)) / vtmp;
+		factor0 = Math.pow(factor0, 2);
+		double factor1 = Math.exp(var0 * 2) * Math.exp(var1 * 2) / vtmp;
+		vval = (factor0 + factor1) * vval;
+		return vval;
 	}
 	
 	

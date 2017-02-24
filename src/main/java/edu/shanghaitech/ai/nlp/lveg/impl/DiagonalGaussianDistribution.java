@@ -4,6 +4,7 @@ import java.util.List;
 
 import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
+import edu.shanghaitech.ai.nlp.util.FunUtil;
 
 /**
  * Diagonal Gaussian distribution.
@@ -89,6 +90,111 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 		}
 		logger.error("Invalid input sample for evaling the gaussian. sample: " + sample + ", this: " + this + "\n");
 		return Double.NEGATIVE_INFINITY;
+	}
+	
+	@Override
+	public void derivative(boolean cumulative, List<Double> grads, List<Double> gradst, List<Double> gradss, double scoreT, double scoreS) {
+		if (!cumulative) {
+			grads.clear();
+			for (int i = 0; i < dim * 2; i++) {
+				grads.add(0.0);
+			}
+		}
+		double tmps, tmpt, grad;
+		for (int i = 0; i < dim * 2; i++) {
+			tmpt = gradst == null ? 0 : gradst.get(i);
+			tmps = gradss == null ? 0 : gradss.get(i);
+			grad = tmps / scoreS - tmpt / scoreT;
+			grads.set(i, grads.get(i) + grad);
+		}
+	}
+	
+	
+	@Override
+	public void derivative(boolean cumulative, double factor, List<Double> grads, List<List<Double>> caches) {
+		if (!cumulative) {
+			grads.clear();
+			for (int i = 0; i < dim * 2; i++) {
+				grads.add(0.0);
+			}
+		}
+		int ncomp = caches.get(0).size() - 1;
+		double mgrad, vgrad, vtmp0, vtmp1, mu, var;
+		double mall = 0, vall = 0, munit = 0, vunit = 0;
+		double aconst = Math.log(2 * Math.PI) * (-dim / 2.0);
+		List<Double> weights = caches.get(caches.size() - 1);
+		for (int i = 0; i < dim; i++) {
+			mall = 0;
+			vall = 0;
+			mu = mus.get(i);
+			var = Math.exp(vars.get(i) * 2);
+			for (int icomp = 0; icomp < ncomp; icomp++) {
+				vtmp0 = weights.get(icomp);
+				vtmp1 = weights.get(icomp);
+				munit = caches.get(dim + i).get(icomp); 
+				vunit = caches.get(dim * 2 + i).get(icomp); 
+				for (int j = 0; j < dim; j++) {
+					if (j != i) { // in logarithmic form
+						vtmp0 += caches.get(j).get(icomp);
+					}
+					vtmp1 += caches.get(j).get(icomp);
+				}
+				vtmp0 += aconst; // integrals from NN but x in the current dimension
+				vtmp1 += aconst; // integrals from NN (explicit normalizer in normal distribution)
+				munit = munit * Math.exp(vtmp0); // integrals from xNN, non-logarithmic form
+				vunit = Math.exp(vunit + vtmp0); // integrals from xxNN, in logarithmic form
+				
+				vtmp1 = Math.exp(vtmp1);
+				munit = munit / var; // xNN  / var 
+				mgrad = munit - vtmp1 * mu / var;
+				vunit = vunit / var; // xxNN / var 
+				vgrad = vunit - 2 * mu * munit + (mu * mu / var - 1) * vtmp1;
+				
+				mall += mgrad;
+				vall += vgrad;
+			}
+			mgrad = factor * mall;
+			vgrad = factor * vall;
+			grads.set(i * 2, grads.get(i * 2) + mgrad);
+			grads.set(i * 2 + 1, grads.get(i * 2 + 1) + vgrad);
+		}
+	}
+	
+	
+	@Override
+	public double integral(GaussianDistribution gd, List<List<Double>> cache) {
+		if (gd != null && gd.getDim() == dim) {
+			double value = 0, vtmp = 0, epsilon = 0;
+			List<Double> order0, order1, order2;
+			List<Double> vars1 = gd.getVars();
+			List<Double> mus1 = gd.getMus();
+			for (int i = 0; i < dim; i++) {
+				double mu0 = mus.get(i), mu1 = mus1.get(i);
+				double vr0 = Math.exp(vars.get(i) * 2), vr1 = Math.exp(vars1.get(i) * 2);
+				vtmp = vr0 + vr1 + epsilon;
+				// int NN dx
+				order0 = cache.get(i);
+				double shared0 = -0.5 * Math.log(vtmp) - Math.pow(mu0 - mu1, 2) / (2 * vtmp);
+				order0.add(shared0); // in logarithmic form
+				// int xNN dx
+				order1 = cache.get(dim + i);
+				double shared1 = (mu0 * vr1 + mu1 * vr0) / vtmp;
+				double realval = shared1 * Math.exp(shared0);
+				order1.add(realval); // not in logarithmic form since shared1 may be negative
+				// int xxNN dx
+				order2 = cache.get(dim * 2 + i);
+				double part20 = 2 * Math.log(Math.abs(shared1));
+				double part21 = 2 * (vars.get(i) + vars1.get(i)) - Math.log(vtmp);
+				realval = FunUtil.logAdd(part20, part21) + shared0;
+				order2.add(realval); // in logarithmic form
+				// complete integral
+				value += shared0;
+			}
+			value += Math.log(2 * Math.PI) * (-dim / 2.0); // normalizer in Gaussian is implicitly cached
+			return value;
+		}
+		logger.error("Invalid multipliers. input: " + gd + ", this: " + this + "\n");
+		return Double.NEGATIVE_INFINITY; 
 	}
 	
 	
