@@ -30,7 +30,7 @@
 -ntgrad, 6,
 -nteval, 6,
 -nttest, 6,
--pclose, false,
+-pclose, true,
 -pbatch, true,
 -peval, true,
 -pgrad, true,
@@ -43,8 +43,8 @@
 -sampling, false,
 -maxnbig, -30,
 -expzero, 1e-6,
--bsize, 15,
--nepoch, 999,
+-bsize, 1,
+-nepoch, 3,
 -maxsample, 1,
 -maxLenParsing, 120,
 -nAllowedDrop, 6,
@@ -86,6 +86,6 @@
 -precision, 3,
 -rndomseed, 0,
 
--dgradnbatch, -1,
+-dgradnbatch, 1,
 
 -imgprefix, lveg

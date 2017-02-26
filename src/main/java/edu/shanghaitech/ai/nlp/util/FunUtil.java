@@ -74,7 +74,7 @@ public class FunUtil extends Recorder {
 		Map<GrammarRule, GrammarRule> uRuleMap = grammar.getURuleMap();
 		for (Map.Entry<GrammarRule, GrammarRule> entry : uRuleMap.entrySet()) {
 			gradcheck(grammar, lexicon, entry, lvegParser, valuator, tree, delta, maxsample);
-			return;
+//			return;
 		}
 		uRuleMap = lexicon.getURuleMap();
 		for (Map.Entry<GrammarRule, GrammarRule> entry : uRuleMap.entrySet()) {

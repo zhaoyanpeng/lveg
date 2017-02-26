@@ -314,11 +314,9 @@ public class LVeGInferencer extends Inferencer {
 				UnaryGrammarRule rule = (UnaryGrammarRule) rmap.getValue();
 				if (rule.type == GrammarRule.RHSPACE) { continue; }
 				if (!chart.containsKey(rule.lhs, idx, false) || !chart.containsKey((short) rule.rhs, idx, true)) { continue; }
-				Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>();
-				mergeUnaryRuleCount(chart, idx, rule, scores, (short) 0, (short) (0), prune); // O_{0}(X) I_{0}(Y)
-				mergeUnaryRuleCount(chart, idx, rule, scores, (short) 0, (short) (1), prune); // O_{0}(X) I_{1}(Y)
-				mergeUnaryRuleCount(chart, idx, rule, scores, (short) 1, (short) (0), prune); // O_{1}(X) I_{0}(Y)
-				if (!scores.isEmpty()) { grammar.addCount(rule.lhs, rule.rhs, scores, GrammarRule.LRURULE, isample, false); }
+				mergeUnaryRuleCount(chart, idx, rule, isample, (short) 0, (short) (0), prune); // O_{0}(X) I_{0}(Y)
+				mergeUnaryRuleCount(chart, idx, rule, isample, (short) 0, (short) (1), prune); // O_{0}(X) I_{1}(Y)
+				mergeUnaryRuleCount(chart, idx, rule, isample, (short) 1, (short) (0), prune); // O_{1}(X) I_{0}(Y)
 			}
 		} else {
 			// have to process unary rules containing LEXICONS specifically
@@ -339,17 +337,14 @@ public class LVeGInferencer extends Inferencer {
 	}
 	
 	private void mergeUnaryRuleCount(Chart chart, int idx, UnaryGrammarRule rule, 
-			Map<String, GaussianMixture> scores, short olevel, short ilevel, boolean prune) {
+			short isample, short olevel, short ilevel, boolean prune) {
 		if (chart.containsKey(rule.lhs, idx, false, olevel) && chart.containsKey((short) rule.rhs, idx, true, ilevel)) {
+			Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>();
 			GaussianMixture cinScore = chart.getInsideScore((short) rule.rhs, idx, ilevel);
 			GaussianMixture outScore = chart.getOutsideScore((short) rule.lhs, idx, olevel);
-			if (scores.get(GrammarRule.Unit.P) != null) {
-				scores.get(GrammarRule.Unit.P).add(outScore, prune);
-				scores.get(GrammarRule.Unit.UC).add(cinScore, prune);
-			} else { // new memory space
-				scores.put(GrammarRule.Unit.P, outScore.copy(true));
-				scores.put(GrammarRule.Unit.UC, cinScore.copy(true));
-			}
+			scores.put(GrammarRule.Unit.P, outScore);
+			scores.put(GrammarRule.Unit.UC, cinScore);
+			grammar.addCount(rule.lhs, rule.rhs, scores, GrammarRule.LRURULE, isample, false);
 		}
 	}
 	

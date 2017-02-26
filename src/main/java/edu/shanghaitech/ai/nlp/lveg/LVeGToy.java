@@ -341,7 +341,7 @@ public class LVeGToy extends LearnerConfig {
 					batchend = System.currentTimeMillis();
 					
 					if (opts.dgradnbatch > 0 && ((isample % (opts.bsize * opts.dgradnbatch)) == 0)) { 
-//						debugrad(true); 
+						debugrad(true); 
 						FunUtil.gradcheck(grammar, lexicon, lvegParser, valuator, tree, opts.maxsample);
 					}
 					

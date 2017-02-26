@@ -62,7 +62,10 @@ public class LVeGLearner extends LearnerConfig {
 	
 	protected static Options opts;
 	
-
+	protected static double bestTrainLL = 0.0;
+	protected static double bestDevLL = 0.0;
+	protected static int nbatch = 0;
+	
 	public static void main(String[] args) throws Exception {
 		String fparams = args[0];
 		try {
@@ -83,6 +86,7 @@ public class LVeGLearner extends LearnerConfig {
 		train(trees, wrapper);
 		long endTime = System.currentTimeMillis();
 		logger.trace("[total time consumed by LVeG learner] " + (endTime - startTime) / 1000.0 + "\n");
+		logger.trace("[summary] " + opts.runtag + "\t" + nbatch + "\t" + bestDevLL + "\t" + bestTrainLL + "\t" + (endTime - startTime) / 1000.0 + "\n");
 	}
 	
 	
@@ -368,10 +372,14 @@ public class LVeGLearner extends LearnerConfig {
 	public static void finals(List<Double> trllist, List<Double> dellist, Numberer numberer, boolean exit) {
 		long beginTime, endTime;
 		
-		logger.trace("Convergence Path [train]: " + trllist + "\tMAX: " + Collections.max(trllist) + "\n");
-		logger.trace("Convergence Path [ dev ]: " + dellist + "\tMAX: " + Collections.max(dellist) + "\n");
+		if (!trllist.isEmpty()) { bestTrainLL = Collections.max(trllist); }
+		if (!dellist.isEmpty()) { bestDevLL = Collections.max(dellist); }
+		nbatch = trllist.size();
 		
-		logger.trace("\n----------training is over after " + trllist.size() + " batches----------\n");
+		logger.trace("Convergence Path [train]: " + trllist + "\tMAX: " + bestTrainLL + "\n");
+		logger.trace("Convergence Path [ dev ]: " + dellist + "\tMAX: " + bestDevLL + "\n");
+		
+		logger.trace("\n----------training is over after " + nbatch + " batches----------\n");
 		
 		if (opts.saveGrammar) {
 			logger.info("\n-------saving the final grammar file...");
