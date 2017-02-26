@@ -18,7 +18,7 @@ import edu.shanghaitech.ai.nlp.util.Recorder;
  * @author Yanpeng Zhao
  *
  */
-public class GaussianDistribution extends Recorder implements Comparable<Object>, Serializable {
+public abstract class GaussianDistribution extends Recorder implements Comparable<Object>, Serializable {
 	/**
 	 * 
 	 */
@@ -49,7 +49,7 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	protected static Random defRnd;
 	
 	
-	public GaussianDistribution(short ndimension) {
+	protected GaussianDistribution(short ndimension) {
 		this.id = 0;
 		this.key = -2;
 		this.dim = ndimension;
@@ -64,7 +64,7 @@ public class GaussianDistribution extends Recorder implements Comparable<Object>
 	protected void initialize() {
 		for (int i = 0; i < dim; i++) {
 			double rndn = (defRnd.nextDouble() - defNegMRatio) * defMaxMu;
-			 rndn = /*0.5*/ 0;
+//			 rndn = /*0.5*/ 0;
 			mus.add(rndn);
 		} // better initialize mu and var in the different loops
 		for (int i = 0; i < dim; i++) {

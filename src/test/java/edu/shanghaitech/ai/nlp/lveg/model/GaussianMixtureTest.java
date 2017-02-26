@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
+import java.util.Random;
 import java.util.Set;
 
 import org.junit.Test;
@@ -25,11 +26,20 @@ import edu.shanghaitech.ai.nlp.util.FunUtil;
 
 public class GaussianMixtureTest {
 	
-	protected static GaussianMixture gm0 = new DiagonalGaussianMixture(LVeGLearner.ncomponent);
-	protected static GaussianMixture gm1 = new DiagonalGaussianMixture(LVeGLearner.ncomponent);
-	protected static GaussianMixture gm2 = new DiagonalGaussianMixture(LVeGLearner.ncomponent);
+	protected static GaussianMixture gm0;
+	protected static GaussianMixture gm1;
+	protected static GaussianMixture gm2;
 	
 	static {
+		Random rnd = new Random(0);
+		short ncomp = 2, ndim = 2;
+		GaussianMixture.config((short) -1, 1e-6, 4, ncomp, 0.5, rnd, null);
+		GaussianDistribution.config(1, 5, ndim, 0.5, 0.8, rnd, null);
+		
+		gm0 = new DiagonalGaussianMixture(LVeGLearner.ncomponent);
+		gm1 = new DiagonalGaussianMixture(LVeGLearner.ncomponent);
+		gm2 = new DiagonalGaussianMixture(LVeGLearner.ncomponent);
+		
 		for (int i = 0; i < LVeGLearner.ncomponent; i++) {
 			Map<String, Set<GaussianDistribution>> map = new HashMap<String, Set<GaussianDistribution>>();
 			Set<GaussianDistribution> list0 = new HashSet<GaussianDistribution>();
@@ -167,7 +177,7 @@ public class GaussianMixtureTest {
 	}
 	
 	
-	@Test
+//	@Test
 	public void testPriorityQueue() {
 		GaussianMixture gmc = gm2.copy(true);
 		System.out.println("gmc---" + gmc);
@@ -248,7 +258,7 @@ public class GaussianMixtureTest {
 	}
 	
 	
-//	@Test
+	@Test
 	public void testMultiply() {
 		
 		GaussianMixture gm3 = gm0.multiply(gm1);

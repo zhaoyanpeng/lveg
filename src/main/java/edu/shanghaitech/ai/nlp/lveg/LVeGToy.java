@@ -61,7 +61,7 @@ public class LVeGToy extends LearnerConfig {
 	protected static String treeFile;
 	
 	protected static Options opts;
-	protected static int ntree = 50;
+	protected static int ntree = 100;
 	
 	public static void main(String[] args) throws Exception {
 		String fparams = args[0];
@@ -77,7 +77,7 @@ public class LVeGToy extends LearnerConfig {
 		logger.info("Calling with " + optionParser.getParsedOptions() + "\n");
 		// loading data
 		Numberer wrapper = new Numberer();
-		Map<String, StateTreeList> trees = makeData(wrapper, opts);
+		Map<String, StateTreeList> trees = /*makeData(wrapper, opts)*/ makeComplexData(wrapper, opts);
 		// training
 		long startTime = System.currentTimeMillis();
 		train(trees, wrapper);
@@ -619,7 +619,36 @@ public class LVeGToy extends LearnerConfig {
 		return sumll;
 	}
 	
-	public static Map<String, StateTreeList> makeData(Numberer wraper, Options opts) {
+	
+	protected static Map<String, StateTreeList> makeComplexData(Numberer wraper, Options opts) {
+		StateTreeList trainTrees;
+		Numberer numberer = wraper.getGlobalNumberer(KEY_TAG_SET);
+		Map<String, StateTreeList> trees = new HashMap<String, StateTreeList>(3, 1);
+		List<Tree<String>> strTrees = new ArrayList<Tree<String>>();
+		
+		String str1 = "(ROOT (S (A w_0) (E (B w_1) (C w_2))))";
+		String str2 = "(ROOT (S (A w_0) (F (B w_1) (C w_2))))";
+		String str3 = "(ROOT (S (A w_0) (G (E (B w_1) (C w_2)))))";
+		String str4 = "(ROOT (S (A w_0) (F (E (D (B w_1) (C w_2))))))";
+		String str5 = "(ROOT (L (A w_0) (M (B w_1) (C w_2))))";
+		String str6 = "(ROOT (L (K (A w_0) (M (B w_1) (C w_2)))))";
+		String str7 = "(ROOT (K (J (A w_0) (M (B w_1) (C w_2)))))";
+		String str8 = "(ROOT (J (A w_0) (M (B w_1) (C w_2))))";
+		strTrees.add((new Trees.PennTreeReader(new StringReader(str1))).next());
+		strTrees.add((new Trees.PennTreeReader(new StringReader(str2))).next());
+		strTrees.add((new Trees.PennTreeReader(new StringReader(str3))).next());
+		strTrees.add((new Trees.PennTreeReader(new StringReader(str4))).next());
+		strTrees.add((new Trees.PennTreeReader(new StringReader(str5))).next());
+		strTrees.add((new Trees.PennTreeReader(new StringReader(str6))).next());
+		strTrees.add((new Trees.PennTreeReader(new StringReader(str7))).next());
+		strTrees.add((new Trees.PennTreeReader(new StringReader(str8))).next());
+		
+		trainTrees = stringTreeToStateTree(strTrees, numberer, opts, false);
+		trees.put(ID_TRAIN, trainTrees);
+		return trees;
+	}
+	
+	protected static Map<String, StateTreeList> makeData(Numberer wraper, Options opts) {
 		StateTreeList trainTrees;
 		Numberer numberer = wraper.getGlobalNumberer(KEY_TAG_SET);
 		Map<String, StateTreeList> trees = new HashMap<String, StateTreeList>(3, 1);
@@ -639,7 +668,10 @@ public class LVeGToy extends LearnerConfig {
 	}
 	
 	
-	private static void customize(LVeGGrammar grammar, LVeGLexicon lexicon) {
+	
+	
+	
+	protected static void customize(LVeGGrammar grammar, LVeGLexicon lexicon) {
 		GrammarRule ur01 = new UnaryGrammarRule((short) 0, (short) 1, GrammarRule.RHSPACE, true);	
 		GrammarRule ur03 = new UnaryGrammarRule((short) 0, (short) 3, GrammarRule.RHSPACE, true);	
 		GrammarRule ur12 = new UnaryGrammarRule((short) 1, (short) 2, GrammarRule.LRURULE, true);	

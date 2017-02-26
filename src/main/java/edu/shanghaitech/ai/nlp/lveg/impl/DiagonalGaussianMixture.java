@@ -65,6 +65,10 @@ public class DiagonalGaussianMixture extends GaussianMixture {
 		return (DiagonalGaussianMixture) obj;
 	}
 
+	@Override
+	public GaussianMixture instance(short ncomponent, boolean init) {
+		return new DiagonalGaussianMixture(ncomponent, init);
+	}
 	
 	@Override
 	public DiagonalGaussianMixture copy(boolean deep) {

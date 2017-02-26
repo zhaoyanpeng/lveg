@@ -23,7 +23,7 @@ import edu.shanghaitech.ai.nlp.util.Recorder;
  * @author Yanpeng Zhao
  *
  */
-public class GaussianMixture extends Recorder implements Serializable {
+public abstract class GaussianMixture extends Recorder implements Serializable {
 	/**
 	 * 
 	 */
@@ -48,7 +48,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 	protected double bias;
 	protected int ncomponent;
 	
-	public GaussianMixture(short ncomponent) {
+	protected GaussianMixture(short ncomponent) {
 		this.bias = 0;
 		this.key = -2;
 		this.ncomponent = ncomponent;
@@ -274,7 +274,8 @@ public class GaussianMixture extends Recorder implements Serializable {
 		}
 		return null;
 	}
-
+	
+	public abstract GaussianMixture instance(short ncomponent, boolean init);
 	
 	/**
 	 * Make a copy of this MoG. This will create a new instance of MoG.
@@ -601,7 +602,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 	 * @return
 	 */
 	public static GaussianMixture merge(GaussianMixture gm) {
-		GaussianMixture amixture = new GaussianMixture((short) 0); // POOL
+		GaussianMixture amixture = gm.instance((short) 0, false);
 		for (Component comp : gm.components) {
 			int idx = amixture.contains(comp.multivnd);
 			if (idx < 0) {
@@ -816,7 +817,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 		Component comp = getComponent((short) iComponent);
 		double weight = Math.exp(comp.weight);
 		double dPenalty = Params.reg ? (Params.l1 ? Params.wdecay * weight : Params.wdecay * Math.pow(weight, 2)) : 0.0;
-		double dMixingW = factor * weight * /*1*/derivateMixingWeight(sample, iComponent, normal);
+		double dMixingW = factor * weight * 1/*derivateMixingWeight(sample, iComponent, normal)*/;
 		for (Map.Entry<String, Set<GaussianDistribution>> gaussian : comp.multivnd.entrySet()) {
 			List<Double> slice = sample.get(gaussian.getKey());
 			List<Double> grads = ggrads.get(gaussian.getKey());
@@ -938,7 +939,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 	
 	
 	/**
-	 * Compute integrals of NN, xNN, xxNN, where x is the variable in some dimension, n is the d-dimensional Gaussian.
+	 * Compute integrals of NN, xNN, xxNN, where x is the variable in some dimension, N is the d-dimensional Gaussian.
 	 * 
 	 * @param comp   current component
 	 * @param counts rule counts given parse tree or sentence
@@ -1275,7 +1276,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 		if (simple) {
 			StringBuffer sb = new StringBuffer();
 			sb.append("GM [ncomponent=" + ncomponent + ", weights=" + 
-					FunUtil.double2str(getWeights(), 16, -1, false, false) + "<->" +
+//					FunUtil.double2str(getWeights(), 16, -1, false, false) + "<->" +
 					FunUtil.double2str(getWeights(), LVeGLearner.precision, nfirst, true, true));
 			sb.append("]");
 			return sb.toString();
@@ -1288,7 +1289,7 @@ public class GaussianMixture extends Recorder implements Serializable {
 	@Override
 	public String toString() {
 		return "GM [bias=" + bias + ", ncomponent=" + ncomponent + ", weights=" + 
-				FunUtil.double2str(getWeights(), 16, -1, false, false) + "<->" +
+//				FunUtil.double2str(getWeights(), 16, -1, false, false) + "<->" +
 				FunUtil.double2str(getWeights(), LVeGLearner.precision, -1, true, true) + ", mixture=" + getMixture() + "]";
 	}
 	

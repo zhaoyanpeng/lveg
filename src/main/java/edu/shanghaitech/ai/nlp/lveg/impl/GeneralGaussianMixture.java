@@ -13,4 +13,10 @@ public class GeneralGaussianMixture extends GaussianMixture {
 	 */
 	private static final long serialVersionUID = -6052750581733945498L;
 
+	@Override
+	public GaussianMixture instance(short ncomponent, boolean init) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 }
