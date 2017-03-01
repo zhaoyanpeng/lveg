@@ -243,12 +243,12 @@ public abstract class Inferencer extends Recorder implements Serializable {
 		GaussianMixture pinScore, cinScore;
 		while (level < LENGTH_UCHAIN && (set = chart.keySet(idx, true, level)) != null) {
 			for (Short idTag : set) {
-				rules = grammar.getURuleWithC(idTag); // ROOT is excluded
+				rules = grammar.getURuleWithC(idTag); // ROOT is excluded, and is not considered in level 0
 				Iterator<GrammarRule> iterator = rules.iterator();
 				cinScore = chart.getInsideScore(idTag, idx, level);
 				while (iterator.hasNext()) {
 					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
-					if (idx != 0 && rule.type == GrammarRule.RHSPACE) { continue; } // ROOT is allowed
+					if (idx != 0 && rule.type == GrammarRule.RHSPACE) { continue; } // ROOT is allowed only when it is in cell 0 and is in level 1 or 2
 					rmKey = rule.type == GrammarRule.RHSPACE ? GrammarRule.Unit.C : GrammarRule.Unit.UC;
 					pinScore = rule.weight.mulForInsideOutside(cinScore, rmKey, true);
 					chart.addInsideScore(rule.lhs, idx, pinScore, (short) (level + 1), prune);
@@ -256,7 +256,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 			}
 			level++;
 		}
-		// have to process ROOT node specifically
+		// have to process ROOT node specifically, ROOT is in cell 0 and is in level 3
 		if (idx == 0 && (set = chart.keySet(idx, true, LENGTH_UCHAIN)) != null) {
 			for (Short idTag : set) { // the maximum inside level below ROOT
 				rules = grammar.getURuleWithC(idTag);
@@ -264,7 +264,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				cinScore = chart.getInsideScore(idTag, idx, LENGTH_UCHAIN);
 				while (iterator.hasNext()) {
 					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
-					if (rule.type != GrammarRule.RHSPACE) { continue; } 
+					if (rule.type != GrammarRule.RHSPACE) { continue; } // only consider ROOT in level 3
 					pinScore = rule.weight.mulForInsideOutside(cinScore, GrammarRule.Unit.C, true);
 					chart.addInsideScore(rule.lhs, idx, pinScore, (short) (LENGTH_UCHAIN + 1), prune);
 				}
@@ -358,6 +358,10 @@ public abstract class Inferencer extends Recorder implements Serializable {
 		
 		public void addMaxRuleCount(short key, int idx, double count, int sons, Short splitpoint, short level) {
 			mchart.get(idx).addMaxRuleCount(key, count, sons, splitpoint, level);
+		}
+		
+		public int getMaxRuleSon(short key, int idx, short level) {
+			return mchart.get(idx).getMaxRuleSon(key, level);
 		}
 		
 		public int getMaxRuleSon(short key, int idx) {
@@ -499,7 +503,8 @@ public abstract class Inferencer extends Recorder implements Serializable {
 		private Map<Short, GaussianMixture> totals;
 		private Map<Short, Map<Short, GaussianMixture>> scores;
 		
-		private Map<Short, Map<Short, Double>> maxRuleCnt;
+		private Map<Short, Map<Short, Double>> maxRuleCnts;
+		private Map<Short, Map<Short, Integer>> maxRuleSons;
 		private Map<Short, Integer> maxRuleSon;
 		private Map<Short, Short> maxRulePos;
 		private Map<Short, Short> splitPoint;
@@ -514,7 +519,8 @@ public abstract class Inferencer extends Recorder implements Serializable {
 		public Cell(boolean maxrule) {
 			this();
 			if (maxrule) {
-				this.maxRuleCnt = new HashMap<Short, Map<Short, Double>>();
+				this.maxRuleCnts = new HashMap<Short, Map<Short, Double>>(3, 1);
+				this.maxRuleSons = new HashMap<Short, Map<Short, Integer>>(3, 1);
 				this.maxRulePos = new HashMap<Short, Short>();
 				this.maxRuleSon = new HashMap<Short, Integer>(); // low 2 bytes are used
 				this.splitPoint = new HashMap<Short, Short>();
@@ -542,7 +548,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 		}
 		
 		protected Set<Short> keySetMaxRule(short level) {
-			return maxRuleCnt.get(level) == null ? null : maxRuleCnt.get(level).keySet();
+			return maxRuleCnts.get(level) == null ? null : maxRuleCnts.get(level).keySet();
 		}
 		
 		protected boolean containsKey(short key) {
@@ -554,29 +560,50 @@ public abstract class Inferencer extends Recorder implements Serializable {
 		}
 		
 		protected void addMaxRuleCount(short key, double count, int sons, Short splitpoint, short level) {
-			Map<Short, Double> lscore = maxRuleCnt.get(level);
-			if (lscore == null) {
-				lscore = new HashMap<Short, Double>();
-				maxRuleCnt.put(level, lscore);
+			// cnts for the same nonterminals in different levels
+			Map<Short, Double> lcnts = maxRuleCnts.get(level);
+			if (lcnts == null) {
+				lcnts = new HashMap<Short, Double>();
+				maxRuleCnts.put(level, lcnts);
 			}
-			Double cnt = lscore.get(key);
+			Double cnt = lcnts.get(key); // double check
 			if (cnt != null && cnt > count) { return; }
-			lscore.put(key, count);
+			lcnts.put(key, count);
+			// sons for the same nonterminals in different levels
+			Map<Short, Integer> lsons = maxRuleSons.get(level);
+			if (lsons == null) {
+				lsons = new HashMap<Short, Integer>();
+				maxRuleSons.put(level, lsons);
+			}
+			lsons.put(key, sons);
+			// the max one
 			maxRulePos.put(key, level);
 			maxRuleSon.put(key, sons);
-			if (level == 0) { // binary rules
+			if (level == 0) { // binary rules or ROOT
 				splitPoint.put(key, splitpoint);
 			}
 		}
 		
 		protected double getMaxRuleCount(short key, short level) {
-			Double cnt = maxRuleCnt.get(level) == null ? null : maxRuleCnt.get(level).get(key);
+			Double cnt = maxRuleCnts.get(level) == null ? null : maxRuleCnts.get(level).get(key);
 			return cnt == null ? Double.NEGATIVE_INFINITY : cnt;
 		}
 		
 		protected double getMaxRuleCount(short key) {
 			Short lkey = maxRulePos.get(key);
-			return lkey == null ? Double.NEGATIVE_INFINITY : maxRuleCnt.get(lkey).get(key);
+			return lkey == null ? Double.NEGATIVE_INFINITY : maxRuleCnts.get(lkey).get(key);
+		}
+		
+		protected int getMaxRuleSon(short key, short level) {
+			Integer son = maxRuleSons.get(level) == null ? null : maxRuleSons.get(level).get(key);
+			return son == null ? -1 : son;
+			/*
+			Map<Short, Integer> lsons = null;
+			if ((lsons = maxRuleSons.get(level)) != null) {
+				return lsons.get(key);
+			}
+			return -1;
+			*/
 		}
 		
 		protected int getMaxRuleSon(short key) {
@@ -653,11 +680,11 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				totals.clear();
 			}
 			// the following is for max rule parser
-			if (maxRuleCnt != null) {
-				for (Map.Entry<Short, Map<Short, Double>> entry : maxRuleCnt.entrySet()) {
+			if (maxRuleCnts != null) {
+				for (Map.Entry<Short, Map<Short, Double>> entry : maxRuleCnts.entrySet()) {
 					if (entry.getValue() != null) { entry.getValue().clear(); }
 				}
-				maxRuleCnt.clear();
+				maxRuleCnts.clear();
 			}
 			if (maxRuleSon != null) { maxRuleSon.clear(); }
 			if (maxRulePos != null) { maxRulePos.clear(); }
@@ -700,7 +727,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 			StringBuffer sb = new StringBuffer();
 			sb.append("Cell [status=" + status + ", size=" + totals.size());
 			for (Map.Entry<Short, GaussianMixture> score : totals.entrySet()) {
-				name = (String)grammar.numberer.object(score.getKey());
+				name = (String) grammar.numberer.object(score.getKey());
 				sb.append(", " + name + "=" + score.getValue());
 			}
 			sb.append("]");

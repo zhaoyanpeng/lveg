@@ -1,6 +1,7 @@
 package edu.shanghaitech.ai.nlp.lveg;
 
 import java.io.IOException;
+import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -10,6 +11,7 @@ import java.util.Map;
 
 import edu.berkeley.nlp.PCFGLA.TreeAnnotations;
 import edu.berkeley.nlp.syntax.Tree;
+import edu.berkeley.nlp.syntax.Trees;
 import edu.shanghaitech.ai.nlp.data.StateTreeList;
 import edu.shanghaitech.ai.nlp.eval.EnglishPennTreebankParseEvaluator;
 import edu.shanghaitech.ai.nlp.data.ObjectFileManager.GrammarFile;
@@ -175,9 +177,21 @@ public class LVeGTester extends LearnerConfig {
 	
 	
 	public static void serialFscore(Options opts, MaxRuleParser<?, ?> mrParser, StateTreeList stateTreeList, Numberer numberer, boolean istrain) {
+		/*
+		String str = "(ROOT (NP^g (@NP^g (NN EDUCATION) (NNS ADS)) (: :)))";
+		Tree<String> strtree = (new Trees.PennTreeReader(new StringReader(str))).next();	
+		Tree<State> statetree = StateTreeList.stringTreeToStateTree(strtree, numberer);
+		mrParser.parse(statetree);
+		*/
 		int nUnparsable = 0, idx = 0;
 		List<Tree<State>> trees = filterTrees(opts, stateTreeList, numberer, istrain);
 		for (Tree<State> tree : trees) {
+			/*
+			if (tree.getYield().size() > 3) {
+				continue;
+			}
+			logger.trace(FunUtil.debugTree(tree, false, (short) 2, numberer, true) + "\n");
+			*/
 			Tree<String> parsedTree = mrParser.parse(tree);
 			if (!saveTree(tree, parsedTree, numberer, idx)) {
 				nUnparsable++;

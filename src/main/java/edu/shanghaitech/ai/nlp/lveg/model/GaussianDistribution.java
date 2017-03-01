@@ -106,6 +106,7 @@ public abstract class GaussianDistribution extends Recorder implements Comparabl
 	 * @return
 	 */
 	public GaussianDistribution copy() { return null; }
+	public abstract GaussianDistribution instance(short ndimension, boolean init);
 	
 	
 	/**
@@ -154,7 +155,7 @@ public abstract class GaussianDistribution extends Recorder implements Comparabl
 	 * @param gd    a gaussian as a multiplier
 	 * @param cache integrals
 	 */
-	protected double integral(GaussianDistribution gd, List<List<Double>> cache) { return Double.NEGATIVE_INFINITY; }
+	public double integral(GaussianDistribution gd, List<List<Double>> cache) { return Double.NEGATIVE_INFINITY; }
 	
 	
 	/**
@@ -163,7 +164,7 @@ public abstract class GaussianDistribution extends Recorder implements Comparabl
 	 * @param gd a gaussian as a multiplier
 	 * @return   marginalization of the production
 	 */
-	public double mulAndMarginalize(GaussianDistribution gd) { return Double.NEGATIVE_INFINITY; };
+	public abstract double mulAndMarginalize(GaussianDistribution gd);
 	
 	
 	/**

@@ -276,6 +276,7 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	}
 	
 	public abstract GaussianMixture instance(short ncomponent, boolean init);
+	public abstract double mulAndMarginalize(Map<String, GaussianMixture> counts);
 	
 	/**
 	 * Make a copy of this MoG. This will create a new instance of MoG.
@@ -950,14 +951,14 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 		if (counts == null) { return Double.NEGATIVE_INFINITY; }
 		double values = Double.NEGATIVE_INFINITY;
 		for (int i = 0; i < counts.size(); i++) {
-			double value = 0;
+			double value = 0.0, vtmp = 0.0;
 			Map<String, GaussianMixture> count = counts.get(i);
 			Map<String, List<List<Double>>> cache = caches.get(i);
 			for (Entry<String, Set<GaussianDistribution>> node : comp.multivnd.entrySet()) {
-				double vtmp = 0;
+				vtmp = 0;
+				GaussianMixture ios = count.get(node.getKey());
+				List<List<Double>> space = cache.get(node.getKey());
 				for (GaussianDistribution gd : node.getValue()) {
-					List<List<Double>> space = cache.get(node.getKey());
-					GaussianMixture ios = count.get(node.getKey());
 					vtmp = integral(gd, ios, space); // outside score & head variable or inside score & tail variable
 					break; // only loop once, in fact, this break is not necessary
 				}

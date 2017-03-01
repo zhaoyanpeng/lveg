@@ -1,6 +1,7 @@
 package edu.shanghaitech.ai.nlp.lveg.impl;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -55,7 +56,9 @@ public class MaxRuleInferencer extends Inferencer {
 				if (chart.containsKey(rule.lhs, iCell, false)) {
 					cinScore = lexicon.score(word, rule.lhs);
 					outScore = chart.getOutsideScore(rule.lhs, iCell);
-					newcnt = outScore.marginalize(true) + cinScore.marginalize(true) - scoreS;
+					Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>(1, 1);
+					scores.put(GrammarRule.Unit.P, outScore);
+					newcnt = cinScore.mulAndMarginalize(scores) - scoreS;
 					chart.addMaxRuleCount(rule.lhs, iCell, newcnt, 0, (short) -1, (short) 0);
 				}
 			}
@@ -87,8 +90,11 @@ public class MaxRuleInferencer extends Inferencer {
 						}
 						newcnt = lcount + rcount;
 						if ((maxcnt = chart.getMaxRuleCount(rule.lhs, c2)) > newcnt) { continue; }
-						newcnt = newcnt + rule.weight.marginalize(true) + outScore.marginalize(true) + 
-								linScore.marginalize(true) + rinScore.marginalize(true) - scoreS; // CHECK
+						Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>(3, 1);
+						scores.put(GrammarRule.Unit.P, outScore);
+						scores.put(GrammarRule.Unit.LC, linScore);
+						scores.put(GrammarRule.Unit.RC, rinScore);
+						newcnt = newcnt + rule.weight.mulAndMarginalize(scores) - scoreS;
 						if (newcnt > maxcnt) {
 							// the negative, higher 2 bytes (lchild, sign bit exclusive) <- lower 2 bytes (rchild)
 							int sons = (1 << 31) + (rule.lchild << 16) + rule.rchild;
@@ -113,7 +119,7 @@ public class MaxRuleInferencer extends Inferencer {
 		GaussianMixture outScore, cinScore, w0, w1;
 		// chain unary rule of length 1
 		Set<Short> mkeyLevel0 = chart.keySetMaxRule(idx, (short) 0);
-		if (mkeyLevel0 != null) {
+		if (mkeyLevel0 != null) { // ROOT in cell 0 and in level 1 should be allowed? No
 			for (short mkey : mkeyLevel0) {
 				if ((cinScore = chart.getInsideScore(mkey, idx, (short) 0)) == null) { continue; }
 				if ((count = chart.getMaxRuleCount(mkey, idx, (short) 0)) == Double.NEGATIVE_INFINITY) { continue; }
@@ -121,10 +127,13 @@ public class MaxRuleInferencer extends Inferencer {
 				Iterator<GrammarRule> iterator = rules.iterator();
 				while (iterator.hasNext()) {
 					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
-					if (rule.type == GrammarRule.RHSPACE) { continue; } // ROOT in cell 0 is NOT allowed
+					if (rule.type == GrammarRule.RHSPACE) { continue; } // ROOT is excluded
 					if ((maxcnt = chart.getMaxRuleCount(rule.lhs, idx)) > count) { continue; }
 					if ((outScore = chart.getOutsideScore(rule.lhs, idx, (short) 0)) == null) { continue; }
-					newcnt = count + rule.weight.marginalize(true) + cinScore.marginalize(true) + outScore.marginalize(true) - scoreS;
+					Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>(2, 1);
+					scores.put(GrammarRule.Unit.P, outScore);
+					scores.put(GrammarRule.Unit.UC, cinScore);
+					newcnt = count + rule.weight.mulAndMarginalize(scores) - scoreS;
 					if (newcnt > maxcnt) {
 						chart.addMaxRuleCount(rule.lhs, idx, newcnt, mkey, (short) -1, (short) 1);
 					}
@@ -135,11 +144,11 @@ public class MaxRuleInferencer extends Inferencer {
 		Set<Short> ikeyLevel0 = chart.keySet(idx, true, (short) 0);
 		Set<Short> ikeyLevel1 = chart.keySet(idx, true, (short) 1);
 		Set<Short> okeyLevel0 = chart.keySet(idx, false, (short) 0);
-		if (ikeyLevel0 != null && ikeyLevel1 != null && okeyLevel0 != null) {
+		if (ikeyLevel0 != null && ikeyLevel1 != null && okeyLevel0 != null) { // ROOT in cell 0 and in level 2 should be allowed? No
 			for (Short ikey : ikeyLevel0) {
 				if ((count = chart.getMaxRuleCount(ikey, idx, (short) 0)) == Double.NEGATIVE_INFINITY) { continue; }
 				for (Short okey : okeyLevel0) {
-					if (ikey == okey) { continue; } // nonsense
+					if (okey == ROOT || ikey == okey) { continue; } // ROOT is excluded, nonsense when ikey == okey
 					if ((maxcnt = chart.getMaxRuleCount(okey, idx)) > count) { continue; }
 					if ((cinScore = chart.getInsideScore(ikey, idx, (short) 0)) == null || 
 							(outScore = chart.getOutsideScore(okey, idx, (short) 0)) == null) {
@@ -150,8 +159,11 @@ public class MaxRuleInferencer extends Inferencer {
 								(w1 = grammar.getURuleWeight(okey, mid, GrammarRule.LRURULE, true)) == null) {
 							continue;
 						}
-						newcnt = count + cinScore.marginalize(true) + w0.marginalize(true) + 
-								w1.marginalize(true) + outScore.marginalize(true) - scoreS;
+						cinScore = w0.mulForInsideOutside(cinScore, GrammarRule.Unit.UC, true);
+						Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>(2, 1);
+						scores.put(GrammarRule.Unit.P, outScore);
+						scores.put(GrammarRule.Unit.UC, cinScore);
+						newcnt = count + w1.mulAndMarginalize(scores) - scoreS;
 						if (newcnt > maxcnt) {
 							int sons = (ikey << 16) + mid; // higher 2 bytes (grandson) <- lower 2 bytes (child)
 							chart.addMaxRuleCount(okey, idx, newcnt, sons, (short) -1, (short) 2);
@@ -160,20 +172,24 @@ public class MaxRuleInferencer extends Inferencer {
 				}
 			}
 		}
-		// ROOT
+		// ROOT treated as a specific 'binary' rule, I think we should not consider ROOT in the above two cases, and 
+		// only consider it in the following case, only in this way will we keep the count calculation consist. Here
+		// we can probably construct ROOT->A->B->C; ROOT->B->C; ROOT->C;
 		if (idx == 0 && (outScore = chart.getOutsideScore(ROOT, idx)) != null) {
 			rules = grammar.getURuleWithP(ROOT); // outside score should be 1
 			Iterator<GrammarRule> iterator = rules.iterator();
 			while (iterator.hasNext()) { // CHECK need to check again
-				UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
+				UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next(); 
 				if ((cinScore = chart.getInsideScore((short) rule.rhs, idx)) == null ||
 						(count = chart.getMaxRuleCount((short) rule.rhs, idx)) == Double.NEGATIVE_INFINITY ||
 						(maxcnt = chart.getMaxRuleCount(ROOT, idx)) > count) {
 					continue;
 				}
-				newcnt = count + rule.weight.marginalize(true) + cinScore.marginalize(true) + outScore.marginalize(true) - scoreS;
+				Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>(1, 1);
+				scores.put(GrammarRule.Unit.C, cinScore);
+				newcnt = count + rule.weight.mulAndMarginalize(scores) - scoreS;
 				if (newcnt > maxcnt) {
-					chart.addMaxRuleCount(ROOT, idx, newcnt, rule.rhs, (short) -1, (short) 0);
+					chart.addMaxRuleCount(ROOT, idx, newcnt, rule.rhs, (short) -1, (short) 0); // a specific 'binary' rule
 				}
 			}	
 		}
@@ -239,7 +255,7 @@ public class MaxRuleInferencer extends Inferencer {
 		String pname = (String) grammar.numberer.object(idtag);
 		if (pname.endsWith("^g")) { pname = pname.substring(0, pname.length() - 2); }
 		int idx = Chart.idx(left, nword - (right - left));
-		int son = ((chart.getMaxRuleSon(idtag, idx) << 1) >>> 1);
+		int son = chart.getMaxRuleSon(idtag, idx, (short) 0); // can only exist in level 0
 		if (right  == left) {
 			if (son == 0) {
 				children.add(new Tree<String>(sentence.get(left)));
@@ -250,9 +266,14 @@ public class MaxRuleInferencer extends Inferencer {
 			int splitpoint = chart.getSplitPoint(idtag, idx);
 			if (splitpoint == -1) {
 				logger.error("\n---holly shit---\n");
-				logger.error("do you want to know what is wrong?\n");
+				logger.error("it is not the binary rule since there is no split point.\n");
 				return new Tree<String>("ROOT");
 			}
+			if (son > 0) {
+				logger.error("it is not the binary rule since son is larger than 0.\n");
+				return new Tree<String>("ROOT");
+			}
+			son = ((son << 1) >>> 1);
 			short lchild = (short) (son >>> 16);
 			short rchild = (short) ((son << 16) >> 16);
 			Tree<String> lchildTree = extractBestMaxRuleParse(chart, left, splitpoint, nword, lchild, sentence);

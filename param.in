@@ -13,7 +13,7 @@
 -saveGrammar, true,
 -loadGrammar, false,
 
--lr, 0.02,
+-lr, 0.01,
 -reg, false,
 -clip, false,
 -absmax, 5.0,
@@ -58,7 +58,7 @@
 -maxvar, 5,
 -nvratio, 0.8,
 -ncomponent, 2,
--dim, 2,
+-dim, 4,
 
 -eratio, -0.1, 
 -eonlylen, 7,
@@ -71,14 +71,14 @@
 -enbatchdev, 1,
 
 -pf1, true,
--ef1tag, ,
+-ef1tag, f1,
 -ef1pthhd, 1e-6,
--ef1prune, false,
+-ef1prune, true,
 -ef1ondev, true,
 -ef1ontrain, true,
--ef1imwrite, false,
+-ef1imwrite, true,
 
--runtag, test_lveg_02242247_nb_30,
+-runtag, test_lveg,
 -logroot, log/,
 -logtype, true,
 -verbose, false,

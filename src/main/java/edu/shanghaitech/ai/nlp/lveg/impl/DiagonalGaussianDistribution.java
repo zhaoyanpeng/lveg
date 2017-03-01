@@ -18,23 +18,24 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 	 */
 	private static final long serialVersionUID = 4484028334969182856L;
 
-
 	public DiagonalGaussianDistribution() {
 		super((short) 0);
 	}
-	
 	
 	public DiagonalGaussianDistribution(short ndimension) {
 		super(ndimension);
 		initialize();
 	}
 	
-	
 	public DiagonalGaussianDistribution(short ndimension, boolean init) {
 		super(ndimension);
 		if (init) { initialize(); }
 	}
 	
+	@Override
+	public GaussianDistribution instance(short ndimension, boolean init) {
+		return new DiagonalGaussianDistribution(ndimension, init);
+	}
 	
 	public static DiagonalGaussianDistribution borrowObject(short ndimension) {
 		GaussianDistribution obj = null;
