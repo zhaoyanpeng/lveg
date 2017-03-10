@@ -31,8 +31,11 @@ public class GeneralGaussianMixture extends GaussianMixture {
 
 	@Override
 	public double mulAndMarginalize(Map<String, GaussianMixture> counts) {
-		// TODO Auto-generated method stub
 		return 0;
+	}
+
+	@Override
+	protected void initialize() {
 	}
 
 }

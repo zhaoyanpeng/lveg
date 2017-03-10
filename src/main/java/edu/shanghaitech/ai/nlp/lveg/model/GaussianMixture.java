@@ -59,14 +59,7 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	/**
 	 * Initialize the fields by default.
 	 */
-	protected void initialize() {
-		for (int i = 0; i < ncomponent; i++) {
-			double weight = (defRnd.nextDouble() - defNegWRatio) * defMaxmw;
-			Map<String, Set<GaussianDistribution>> multivnd = new HashMap<String, Set<GaussianDistribution>>();
-			 weight = /*-0.69314718056*/ 0; // mixing weight 0.5, 1, 2
-			components.add(new Component((short) i, weight, multivnd));
-		}
-	}
+	protected abstract void initialize();
 	
 	
 	/**

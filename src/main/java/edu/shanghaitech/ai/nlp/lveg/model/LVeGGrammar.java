@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Set;
 
 import edu.berkeley.nlp.syntax.Tree;
+import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
 import edu.shanghaitech.ai.nlp.lveg.impl.BinaryGrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.impl.RuleTable;
 import edu.shanghaitech.ai.nlp.lveg.impl.UnaryGrammarRule;
@@ -81,7 +82,8 @@ public abstract class LVeGGrammar extends Recorder implements Serializable {
 			// if the given query rule is not valid (never appears in the training set).
 			logger.warn("\nBinary Rule NOT Found: [P: " + idParent + ", LC: " + idlChild + ", RC: " + idrChild + "]\n");
 			GaussianMixture weight = GrammarRule.rndRuleWeight(GrammarRule.LRBRULE);
-			weight.setWeights(Double.NEGATIVE_INFINITY);
+			/*weight.setWeights(Double.NEGATIVE_INFINITY);*/
+			weight.setWeights(LVeGLearner.minmw);
 			return weight;
 		} else { // 
 			return null;
@@ -96,7 +98,8 @@ public abstract class LVeGGrammar extends Recorder implements Serializable {
 		if (!context) {
 			logger.warn("\nUnary Rule NOT Found: [P: " + idParent + ", UC: " + idChild + ", TYPE: " + type + "]\n");
 			GaussianMixture weight = GrammarRule.rndRuleWeight(type);
-			weight.setWeights(Double.NEGATIVE_INFINITY);
+			/*weight.setWeights(Double.NEGATIVE_INFINITY);*/
+			weight.setWeights(LVeGLearner.minmw);
 			return weight;
 		} else {
 			return null;
@@ -170,12 +173,12 @@ public abstract class LVeGGrammar extends Recorder implements Serializable {
 	}
 	
 	public void addCount(short idParent, int idChild, Map<String, GaussianMixture> count, byte type, short isample, boolean withTree) {
-		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type, true);
+		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
 		addCount(rule, count, isample, withTree);
 	}
 	
 	public Map<Short, List<Map<String, GaussianMixture>>> getCount(short idParent, int idChild, boolean withTree, byte type) {
-		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type, true);
+		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
 		return getCount(rule, withTree);
 	}
 	

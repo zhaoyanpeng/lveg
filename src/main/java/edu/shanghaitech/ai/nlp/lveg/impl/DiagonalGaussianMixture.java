@@ -1,5 +1,6 @@
 package edu.shanghaitech.ai.nlp.lveg.impl;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -8,6 +9,7 @@ import java.util.Set;
 import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture.Component;
 import edu.shanghaitech.ai.nlp.util.FunUtil;
 
 /**
@@ -66,6 +68,16 @@ public class DiagonalGaussianMixture extends GaussianMixture {
 			obj = new DiagonalGaussianMixture(ncomponent);
 		}
 		return (DiagonalGaussianMixture) obj;
+	}
+	
+	@Override
+	protected void initialize() {
+		for (int i = 0; i < ncomponent; i++) {
+			double weight = (defRnd.nextDouble() - defNegWRatio) * defMaxmw;
+			Map<String, Set<GaussianDistribution>> multivnd = new HashMap<String, Set<GaussianDistribution>>();
+			 weight = /*-0.69314718056*/ 0; // mixing weight 0.5, 1, 2
+			components.add(new Component((short) i, weight, multivnd));
+		}
 	}
 	
 	@Override

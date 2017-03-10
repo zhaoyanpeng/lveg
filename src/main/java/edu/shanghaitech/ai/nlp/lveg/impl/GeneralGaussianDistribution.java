@@ -39,4 +39,10 @@ public class GeneralGaussianDistribution extends GaussianDistribution {
 		return 0;
 	}
 
+	@Override
+	protected void initialize() {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

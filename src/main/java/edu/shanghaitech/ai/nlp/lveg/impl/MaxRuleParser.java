@@ -11,6 +11,7 @@ import edu.shanghaitech.ai.nlp.lveg.model.Parser;
 import edu.shanghaitech.ai.nlp.lveg.model.Inferencer.Chart;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.syntax.State;
+import edu.shanghaitech.ai.nlp.util.FunUtil;
 
 public class MaxRuleParser<I, O> extends Parser<I, O> {
 	/**
@@ -105,7 +106,7 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 		}
 //		logger.trace("\nInside score...\n"); // DEBUG
 		Inferencer.insideScore(chart, sentence, nword, iosprune);
-//		MethodUtil.debugChart(Chart.iGetChart(), (short) 2); // DEBUG
+		FunUtil.debugChart(chart.getChart(true), (short) -1, tree.getYield().size()); 
 
 //		logger.trace("\nOutside score...\n"); // DEBUG
 		Inferencer.setRootOutsideScore(chart);

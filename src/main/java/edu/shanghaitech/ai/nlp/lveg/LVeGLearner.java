@@ -153,8 +153,10 @@ public class LVeGLearner extends LearnerConfig {
 		// initial likelihood of the training set
 		logger.trace("\n-------ll of the training data initially is... ");
 		long beginTime = System.currentTimeMillis();
-		ll = parallelLL(opts, mvaluator, trainTrees, numberer, true);
-		// ll = serialLL(opts, valuator, trainTrees, numberer, true);
+		if (opts.eontrain) {
+			ll = parallelLL(opts, mvaluator, trainTrees, numberer, true);
+			// ll = serialLL(opts, valuator, trainTrees, numberer, true);
+		}
 		long endTime = System.currentTimeMillis();
 		logger.trace("------->" + ll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");
 		

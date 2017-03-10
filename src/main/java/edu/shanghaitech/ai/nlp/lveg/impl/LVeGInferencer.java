@@ -211,7 +211,7 @@ public class LVeGInferencer extends Inferencer {
 							linScore = chart.getInsideScore(rule.lchild, c0);
 							rinScore = chart.getInsideScore(rule.rchild, c1);
 							
-							Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>();
+							Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>(3, 1);
 							scores.put(GrammarRule.Unit.P, outScore);
 							scores.put(GrammarRule.Unit.LC, linScore);
 							scores.put(GrammarRule.Unit.RC, rinScore);
@@ -241,7 +241,7 @@ public class LVeGInferencer extends Inferencer {
 		State parent = tree.getLabel();
 		short idParent = parent.getId();
 		GaussianMixture outScore = parent.getOutsideScore();
-		Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>();
+		Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>(3, 1);
 		scores.put(GrammarRule.Unit.P, outScore);
 		
 		if (tree.isPreTerminal()) {
@@ -301,7 +301,7 @@ public class LVeGInferencer extends Inferencer {
 						UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
 						if (!chart.containsKey((short) rule.rhs, idx, true)) { continue; }
 						cinScore = chart.getInsideScore((short) rule.rhs, idx); // CHECK not correct? Yes, it's correct.
-						Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>();
+						Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>(2, 1);
 						scores.put(GrammarRule.Unit.P, outScore);
 						scores.put(GrammarRule.Unit.C, cinScore);
 						grammar.addCount(rule.lhs, rule.rhs, scores, GrammarRule.RHSPACE, isample, false);
@@ -325,7 +325,7 @@ public class LVeGInferencer extends Inferencer {
 //				if (chart.containsKey(rule.lhs, idx, true, (short) 0) && chart.containsKey(rule.lhs, idx, false)) {
 //					cinScore = chart.getInsideScore(rule.lhs, idx, (short) 0); // pay attention to this bug
 				if (chart.containsKey(rule.lhs, idx, false)) {
-					Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>();
+					Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>(2, 1);
 					cinScore = lexicon.score(word, rule.lhs);
 					outScore = chart.getOutsideScore(rule.lhs, idx);
 					scores.put(GrammarRule.Unit.P, outScore);
@@ -339,7 +339,7 @@ public class LVeGInferencer extends Inferencer {
 	private void mergeUnaryRuleCount(Chart chart, int idx, UnaryGrammarRule rule, 
 			short isample, short olevel, short ilevel, boolean prune) {
 		if (chart.containsKey(rule.lhs, idx, false, olevel) && chart.containsKey((short) rule.rhs, idx, true, ilevel)) {
-			Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>();
+			Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>(2, 1);
 			GaussianMixture cinScore = chart.getInsideScore((short) rule.rhs, idx, ilevel);
 			GaussianMixture outScore = chart.getOutsideScore((short) rule.lhs, idx, olevel);
 			scores.put(GrammarRule.Unit.P, outScore);

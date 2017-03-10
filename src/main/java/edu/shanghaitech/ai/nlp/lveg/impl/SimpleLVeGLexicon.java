@@ -109,10 +109,15 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 	}
 	
 	
-	@Override
-	public List<GrammarRule> getRulesWithWord(State word) {
+	/**
+	 * Find the most possible word index, should not smaller than zero.
+	 * 
+	 * @param word the word (name and position in the sentence)
+	 * @return
+	 */
+	public int getWordIdx(State word) {
 		// map the word to its real index
-		int wordIdx = word.wordIdx;
+		int wordIdx = word.wordIdx, idx;
 		String signature = "(UNK)", name = word.getName();
 		if (wordIdx < 0) { // the unlabeled word
 			wordIdx = wordIndexer.indexOf(name);
@@ -123,38 +128,44 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 			wordIdx = wordIndexer.indexOf(signature);
 			word.wordIdx = wordIdx;
 		}
-		if (wordIdx == -1) { // CHECK
-			return new ArrayList<GrammarRule>(0);
+		while (wordIdx == -1 && (idx = signature.lastIndexOf('-')) > 0) { // the unknown word
+			// stupid special case, such as Hardest UNK-INITC-est with pos = 0
+			logger.warn("\nUnknown word signature checking [word: " + name + ", sig: " + signature + "]\n");
+			signature = signature.substring(0, idx);
+			wordIdx = wordIndexer.indexof(signature);
+			word.wordIdx = wordIdx;
 		}
+		if (wordIdx == -1) { // CHECK set it to UNK
+			logger.warn("\nUnknown word signature finalizing [word: " + name + ", sig: " + "UNK (DUMY)]\n");
+			wordIdx = wordIndexer.indexof("UNK");
+			word.wordIdx = wordIdx;
+		}
+		return wordIdx;
+	}
+	
+	
+	@Override
+	public List<GrammarRule> getRulesWithWord(State word) {
+		int wordIdx = getWordIdx(word);
 		return uRulesWithC[wordIdx];
 	}
 	
 
 	@Override
 	public GaussianMixture score(State word, short itag) {
-		// map the word to its real index
-		int wordIdx = word.wordIdx;
-		String signature = "(UNK)", name = word.getName();
-		if (wordIdx < 0) { // the unlabeled word
-			wordIdx = wordIndexer.indexOf(name);
-			word.wordIdx = wordIdx;
-		}
-		if (wordIdx == -1) { // the rare word
-			signature = getSignature(name, word.from);
-			wordIdx = wordIndexer.indexOf(signature);
-			word.wordIdx = wordIdx;
-		}
-		if (wordIdx == -1) { // the unknown word
-			logger.warn("\nUnknown Word Signature [P: " + itag + ", UC: " + wordIdx + ", word = " + name + ", sig = " +  signature + "]\n");
+		int wordIdx = getWordIdx(word); // should be >= 0
+		if (wordIdx == -1) { // double check
+			logger.warn("\nUnknown Word Signature [P: " + itag + ", UC: " + wordIdx + ", word = " + word.getName() + ", sig = (UNK)]\n");
 			GaussianMixture weight = GrammarRule.rndRuleWeight(GrammarRule.LHSPACE);
 			weight.setWeights(LVeGLearner.minmw);
 			return weight;
 		}
 		GrammarRule rule = getURule(itag, wordIdx, GrammarRule.LHSPACE);
-		if (rule == null) {
-			logger.warn("\nUnknown Lexicon Rule [P: " + itag + ", UC: " + wordIdx + ", word = " + name + ", sig = " +  signature + "]\n");
+		if (rule == null) { // double check
+			logger.warn("\nUnknown Lexicon Rule [P: " + itag + ", UC: " + wordIdx + ", word = " + word.getName() + ", sig = (UNK)]\n");
 			GaussianMixture weight = GrammarRule.rndRuleWeight(GrammarRule.LHSPACE);
-			weight.setWeights(Double.NEGATIVE_INFINITY);
+			/*weight.setWeights(Double.NEGATIVE_INFINITY);*/
+			weight.setWeights(LVeGLearner.minmw);
 			return weight;
 		}
 		return rule.getWeight();
