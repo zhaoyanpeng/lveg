@@ -519,8 +519,8 @@ public abstract class Inferencer extends Recorder implements Serializable {
 		public Cell(boolean maxrule) {
 			this();
 			if (maxrule) {
-				this.maxRuleCnts = new HashMap<Short, Map<Short, Double>>(3, 1);
-				this.maxRuleSons = new HashMap<Short, Map<Short, Integer>>(3, 1);
+				this.maxRuleCnts = new HashMap<Short, Map<Short, Double>>(5, 1);
+				this.maxRuleSons = new HashMap<Short, Map<Short, Integer>>(5, 1);
 				this.maxRulePos = new HashMap<Short, Short>();
 				this.maxRuleSon = new HashMap<Short, Integer>(); // low 2 bytes are used
 				this.splitPoint = new HashMap<Short, Short>();

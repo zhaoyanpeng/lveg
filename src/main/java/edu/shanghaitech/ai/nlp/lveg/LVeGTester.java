@@ -177,12 +177,11 @@ public class LVeGTester extends LearnerConfig {
 	
 	
 	public static void serialFscore(Options opts, MaxRuleParser<?, ?> mrParser, StateTreeList stateTreeList, Numberer numberer, boolean istrain) {
-		
 //		String str = "(ROOT (NP^g (@NP^g (NN EDUCATION) (NNS ADS)) (: :)))";
-		String str = "(ROOT (SINV^g (@SINV^g (@SINV^g (VP^g (ADVP^g (JJS Hardest)) (NN hit)) (VP^g (VBP are))) (SBAR^g (WHNP^g (WP what)) (S^g (NP^g (PRP he)) (VP^g (VBZ calls) (S^g (NP^g (NP^g (@NP^g (@NP^g (`` ``) (JJ secondary)) ('' '')) (NNS sites)) (SBAR^g (WHNP^g (WDT that)) (S^g (ADVP^g (RB primarily)) (VP^g (VBP serve) (NP^g (NN neighborhood) (NNS residents))))))))))) (. .)))";
-		Tree<String> strtree = (new Trees.PennTreeReader(new StringReader(str))).next();	
-		Tree<State> statetree = StateTreeList.stringTreeToStateTree(strtree, numberer);
-		mrParser.parse(statetree);
+//		String str = "(ROOT (SINV^g (@SINV^g (@SINV^g (VP^g (ADVP^g (JJS Hardest)) (NN hit)) (VP^g (VBP are))) (SBAR^g (WHNP^g (WP what)) (S^g (NP^g (PRP he)) (VP^g (VBZ calls) (S^g (NP^g (NP^g (@NP^g (@NP^g (`` ``) (JJ secondary)) ('' '')) (NNS sites)) (SBAR^g (WHNP^g (WDT that)) (S^g (ADVP^g (RB primarily)) (VP^g (VBP serve) (NP^g (NN neighborhood) (NNS residents))))))))))) (. .)))";
+//		Tree<String> strtree = (new Trees.PennTreeReader(new StringReader(str))).next();	
+//		Tree<State> statetree = StateTreeList.stringTreeToStateTree(strtree, numberer);
+//		mrParser.parse(statetree);
 		
 		int nUnparsable = 0, idx = 0;
 		List<Tree<State>> trees = filterTrees(opts, stateTreeList, numberer, istrain);

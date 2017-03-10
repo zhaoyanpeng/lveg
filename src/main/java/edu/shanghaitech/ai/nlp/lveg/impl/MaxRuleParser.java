@@ -38,7 +38,15 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 	@Override
 	public synchronized Object call() throws Exception {
 		if (task == null) { return null; }
-		Tree<String> tree = parse((Tree<State>) task);
+		Tree<State> sample = (Tree<State>) task;
+		evalMaxRuleCount(sample);
+		Tree<String> tree = StateTreeList.stateTreeToStringTree(sample, Inferencer.grammar.numberer);
+		tree = inferencer.extractBestMaxRuleParse(chart, tree.getYield());
+		/*
+		synchronized (inferencer) {
+			tree = inferencer.extractBestMaxRuleParse(chart, tree.getYield());
+		}
+		*/
 		Meta<O> cache = new Meta(itask, tree);
 		synchronized (caches) {
 			caches.add(cache);
@@ -80,7 +88,8 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 //		MethodUtil.debugChart(Chart.getChart(false), (short) 2); // DEBUG
 		
 		GaussianMixture score = chart.getInsideScore((short) 0, Chart.idx(0, 1));
-		double scoreS = score.eval(null, true);
+//		double scoreS = score == null ? Double.MAX_VALUE : score.eval(null, true);
+		double scoreS = score.eval(null, true); // score != null
 		
 //		logger.trace("\nSentence score in logarithm: " + scoreS + ", Margin: " + score.marginalize(false) + "\n"); // DEBUG
 //		logger.trace("\nEval rule count with the sentence...\n"); // DEBUG
@@ -106,12 +115,12 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 		}
 //		logger.trace("\nInside score...\n"); // DEBUG
 		Inferencer.insideScore(chart, sentence, nword, iosprune);
-		FunUtil.debugChart(chart.getChart(true), (short) -1, tree.getYield().size()); 
+//		FunUtil.debugChart(chart.getChart(true), (short) -1, tree.getYield().size()); // DEBUG
 
 //		logger.trace("\nOutside score...\n"); // DEBUG
 		Inferencer.setRootOutsideScore(chart);
 		Inferencer.outsideScore(chart, sentence, nword, iosprune);
-//		MethodUtil.debugChart(Chart.oGetChart(), (short) 2); // DEBUG
+//		FunUtil.debugChart(chart.getChart(false), (short) -1, tree.getYield().size()); // DEBUG
 		
 		return chart;
 	}

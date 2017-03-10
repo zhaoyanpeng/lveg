@@ -61,8 +61,8 @@
 -dim, 4,
 
 -eratio, -0.1, 
--eonlylen, 15,
--efirstk, 10000,
+-eonlylen, 7,
+-efirstk, 100,
 -eontrain, true,
 -eondev, true,
 -eonextradev, true,
@@ -70,13 +70,13 @@
 -ellimwrite, false,
 -enbatchdev, 1,
 
--pf1, false,
+-pf1, true,
 -ef1tag, f1,
 -ef1pthhd, 1e-6,
 -ef1prune, true,
 -ef1ondev, true,
 -ef1ontrain, false,
--ef1imwrite, true,
+-ef1imwrite, false,
 
 -runtag, test_lveg,
 -logroot, log/,

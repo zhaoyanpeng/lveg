@@ -108,39 +108,80 @@ public class MaxRuleInferencer extends Inferencer {
 		}
 	}
 	
+	
 	/**
-	 * @param chart  CYK chart
-	 * @param idx    index of the cell in the chart
-	 * @param scoreS sentence score
+	 * Discriminate unary rules in the chain.
 	 */
-	private void maxRuleCountForUnaryRule(Chart chart, int idx, double scoreS) {
-		List<GrammarRule> rules;
+	private void maxRuleCountForUnaryRuleLevel(Chart chart, int idx, double scoreS) {
 		double count, newcnt, maxcnt;
-		GaussianMixture outScore, cinScore, w0, w1;
-		// chain unary rule of length 1
-		Set<Short> mkeyLevel0 = chart.keySetMaxRule(idx, (short) 0);
-		if (mkeyLevel0 != null) { // ROOT in cell 0 and in level 1 should be allowed? No
-			for (short mkey : mkeyLevel0) {
-				if ((cinScore = chart.getInsideScore(mkey, idx, (short) 0)) == null) { continue; }
-				if ((count = chart.getMaxRuleCount(mkey, idx, (short) 0)) == Double.NEGATIVE_INFINITY) { continue; }
-				rules = grammar.getURuleWithC(mkey);
-				Iterator<GrammarRule> iterator = rules.iterator();
-				while (iterator.hasNext()) {
-					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
-					if (rule.type == GrammarRule.RHSPACE) { continue; } // ROOT is excluded
-					if ((maxcnt = chart.getMaxRuleCount(rule.lhs, idx)) > count) { continue; }
-					if ((outScore = chart.getOutsideScore(rule.lhs, idx, (short) 0)) == null) { continue; }
+		GaussianMixture outScore, cinScore, ruleW;
+		Map<Short, Short>  midsons = new HashMap<Short, Short>(99, 1);
+		Map<Short, Double> midcnts = new HashMap<Short, Double>(99, 1);
+		// first level
+		Set<Short> ikeyLevel = chart.keySet(idx, true, (short) 0);
+		Set<Short> okeyLevel = chart.keySet(idx, false, (short) 1);
+		if (ikeyLevel != null && okeyLevel != null) {
+			for (Short ikey : ikeyLevel) {
+				if ((count = chart.getMaxRuleCount(ikey, idx, (short) 0)) == Double.NEGATIVE_INFINITY) { continue; }
+				for (Short okey : okeyLevel) {
+					maxcnt = Double.NEGATIVE_INFINITY;
+					if (okey == ROOT || ikey == okey) { continue; }
+					if (midcnts.containsKey(okey) && (maxcnt = midcnts.get(okey)) > count) { continue; }
+					if ((cinScore = chart.getInsideScore(ikey, idx, (short) 0)) == null || 
+							(outScore = chart.getOutsideScore(okey, idx, (short) 1)) == null) {
+						continue;
+					}
+					if ((ruleW = grammar.getURuleWeight(okey, ikey, GrammarRule.LRURULE, true)) == null) { continue; }
 					Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>(2, 1);
 					scores.put(GrammarRule.Unit.P, outScore);
 					scores.put(GrammarRule.Unit.UC, cinScore);
-					newcnt = count + rule.weight.mulAndMarginalize(scores) - scoreS;
+					newcnt = count + ruleW.mulAndMarginalize(scores) - scoreS;
 					if (newcnt > maxcnt) {
-						chart.addMaxRuleCount(rule.lhs, idx, newcnt, mkey, (short) -1, (short) 1);
+						midcnts.put(okey, newcnt);
+						midsons.put(okey, ikey);
 					}
 				}
 			}
 		}
-		// chain unary rule of length 2
+		// second level
+		ikeyLevel = midcnts.keySet();
+		okeyLevel = chart.keySet(idx, false, (short) 0);
+		if (!midcnts.isEmpty() && okeyLevel != null) {
+			for (Short ikey : ikeyLevel) {
+				count = midcnts.get(ikey);
+				int son = midsons.get(ikey);
+				for (Short okey : okeyLevel) {
+					if (okey == ROOT || ikey == okey || son == okey) { continue; }
+					if ((maxcnt = chart.getMaxRuleCount(okey, idx)) > count) { continue; }
+					if ((cinScore = chart.getInsideScore(ikey, idx, (short) 1)) == null || 
+							(outScore = chart.getOutsideScore(okey, idx, (short) 0)) == null) {
+						continue;
+					}
+					if ((ruleW = grammar.getURuleWeight(okey, ikey, GrammarRule.LRURULE, true)) == null) { continue; }
+					Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>(2, 1);
+					scores.put(GrammarRule.Unit.P, outScore);
+					scores.put(GrammarRule.Unit.UC, cinScore);
+					newcnt = count + ruleW.mulAndMarginalize(scores) - scoreS;
+					if (newcnt > maxcnt) {
+						int sons = (son << 16) + ikey;
+						chart.addMaxRuleCount(okey, idx, newcnt, sons, (short) -1, (short) 2);
+					}
+				}
+			}
+			
+		}
+		midsons.clear();
+		midcnts.clear();
+	}
+	
+	
+	/**
+	 * Treat the chain unary rule as a unary rule.
+	 */
+	@SuppressWarnings("unused")
+	private void maxRuleCountForUnaryRuleChain(Chart chart, int idx, double scoreS) {
+		double count, newcnt, maxcnt;
+		GaussianMixture outScore, cinScore, w0, w1;
 		Set<Short> ikeyLevel0 = chart.keySet(idx, true, (short) 0);
 		Set<Short> ikeyLevel1 = chart.keySet(idx, true, (short) 1);
 		Set<Short> okeyLevel0 = chart.keySet(idx, false, (short) 0);
@@ -172,6 +213,46 @@ public class MaxRuleInferencer extends Inferencer {
 				}
 			}
 		}
+	}
+	
+	
+	/**
+	 * @param chart  CYK chart
+	 * @param idx    index of the cell in the chart
+	 * @param scoreS sentence score
+	 */
+	private void maxRuleCountForUnaryRule(Chart chart, int idx, double scoreS) {
+		List<GrammarRule> rules;
+		double count, newcnt, maxcnt;
+		GaussianMixture outScore, cinScore;
+		// chain unary rule of length 1
+		Set<Short> mkeyLevel0 = chart.keySetMaxRule(idx, (short) 0);
+		if (mkeyLevel0 != null) { // ROOT in cell 0 and in level 1 should be allowed? No
+			for (short mkey : mkeyLevel0) {
+				if ((cinScore = chart.getInsideScore(mkey, idx, (short) 0)) == null) { continue; }
+				if ((count = chart.getMaxRuleCount(mkey, idx, (short) 0)) == Double.NEGATIVE_INFINITY) { continue; }
+				rules = grammar.getURuleWithC(mkey);
+				Iterator<GrammarRule> iterator = rules.iterator();
+				while (iterator.hasNext()) {
+					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
+					if (rule.type == GrammarRule.RHSPACE) { continue; } // ROOT is excluded
+					if ((maxcnt = chart.getMaxRuleCount(rule.lhs, idx)) > count) { continue; }
+					if ((outScore = chart.getOutsideScore(rule.lhs, idx, (short) 0)) == null) { continue; }
+					Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>(2, 1);
+					scores.put(GrammarRule.Unit.P, outScore);
+					scores.put(GrammarRule.Unit.UC, cinScore);
+					newcnt = count + rule.weight.mulAndMarginalize(scores) - scoreS;
+					if (newcnt > maxcnt) {
+						chart.addMaxRuleCount(rule.lhs, idx, newcnt, mkey, (short) -1, (short) 1);
+					}
+				}
+			}
+		}
+		
+		// chain unary rule of length 2
+//		maxRuleCountForUnaryRuleChain(chart, idx, scoreS);
+		maxRuleCountForUnaryRuleLevel(chart, idx, scoreS);
+		
 		// ROOT treated as a specific 'binary' rule, I think we should not consider ROOT in the above two cases, and 
 		// only consider it in the following case, only in this way will we keep the count calculation consist. Here
 		// we can probably construct ROOT->A->B->C; ROOT->B->C; ROOT->C;
