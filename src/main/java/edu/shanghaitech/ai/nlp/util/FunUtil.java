@@ -463,7 +463,7 @@ public class FunUtil extends Recorder {
 		int size = nword * (nword + 1) / 2;
 		if (chart != null) {
 			for (int i = 0; i < size; i++) {
-				logger.debug(i + "\t" + chart.get(i).toString(true, nfirst) + "\n\n");
+				logger.debug(i + "\t" + chart.get(i).toString(true, nfirst, true) + "\n\n");
 			}
 		}
 	}

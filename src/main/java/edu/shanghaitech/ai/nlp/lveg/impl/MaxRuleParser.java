@@ -83,9 +83,9 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 		int nword = sentence.size();
 		doInsideOutside(tree, sentence, nword);
 //		logger.trace("\nInside scores with the sentence...\n\n"); // DEBUG
-//		MethodUtil.debugChart(Chart.getChart(true), (short) 2); // DEBUG
+//		FunUtil.debugChart(chart.getChart(true), (short) -1, tree.getYield().size()); // DEBUG
 //		logger.trace("\nOutside scores with the sentence...\n\n"); // DEBUG
-//		MethodUtil.debugChart(Chart.getChart(false), (short) 2); // DEBUG
+//		FunUtil.debugChart(chart.getChart(false), (short) -1, tree.getYield().size()); // DEBUG
 		
 		GaussianMixture score = chart.getInsideScore((short) 0, Chart.idx(0, 1));
 //		double scoreS = score == null ? Double.MAX_VALUE : score.eval(null, true);
@@ -115,7 +115,7 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 		}
 //		logger.trace("\nInside score...\n"); // DEBUG
 		Inferencer.insideScore(chart, sentence, nword, iosprune);
-//		FunUtil.debugChart(chart.getChart(true), (short) -1, tree.getYield().size()); // DEBUG
+		FunUtil.debugChart(chart.getChart(true), (short) -1, tree.getYield().size()); // DEBUG
 
 //		logger.trace("\nOutside score...\n"); // DEBUG
 		Inferencer.setRootOutsideScore(chart);

@@ -36,7 +36,9 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	protected static short defMaxNbig;
 	protected static short defNcomponent;
 	protected static double defMaxmw;
+	protected static double defRetainRatio;
 	protected static double defNegWRatio;
+	protected static double defRiseRate;
 	protected static ObjectPool<Short, GaussianMixture> defObjectPool;
 	protected static Random defRnd;
 	
@@ -66,13 +68,15 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	 * To facilitate the parameter tuning.
 	 * 
 	 */
-	public static void config(short maxnbig, double expzero, double maxmw, short ncomponent, 
-			double negwratio, Random rnd, ObjectPool<Short, GaussianMixture> pool) {
+	public static void config(short maxnbig, double expzero, double maxmw, short ncomponent, double negwratio, 
+			double riserate, double retainratio, Random rnd, ObjectPool<Short, GaussianMixture> pool) {
 		EXP_ZERO = Math.log(expzero);
 		defMaxNbig = maxnbig;
 		defRnd = rnd;
 		defMaxmw = maxmw;
+		defRiseRate = riserate;
 		defNegWRatio = negwratio;
+		defRetainRatio = retainratio;
 		defNcomponent = ncomponent;
 		defObjectPool = pool;
 	}
@@ -93,12 +97,20 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	public void delTrivia() {
 		if (ncomponent <= 1) { return; }
 		PriorityQueue<Component> sorted = sort();
-		if (defMaxNbig > 0) {
+		if (defMaxNbig > 0 && (defRetainRatio > 0 || defRiseRate > 0)) {
+			int base = 0;
+			if (defRetainRatio > 0) {
+				base = sorted.size();
+				base = base > defMaxNbig ? (defMaxNbig + (int) (defRetainRatio * base)) : defMaxNbig;
+			} else {
+				base = (int) Math.round(sorted.size() / 30.0);
+				base = base > 2 ? (defMaxNbig + (int) (defRiseRate * (base - 2))) : defMaxNbig;
+			}
 			components.clear();
-			if (sorted.size() > defMaxNbig) {
+			if (sorted.size() > base) {
 				while (!sorted.isEmpty()) {
 					components.add(sorted.poll());
-					if (components.size() == defMaxNbig) { break; }
+					if (components.size() == base) { break; }
 				}
 			} else {
 				components.addAll(sorted);

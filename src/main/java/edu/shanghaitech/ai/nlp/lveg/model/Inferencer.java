@@ -691,7 +691,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 			if (splitPoint != null) { splitPoint.clear(); }
 		}
 		
-		public String toString(boolean simple, int nfirst) {
+		public String toString(boolean simple, int nfirst, boolean quantity) {
 			if (simple) {
 				String name;
 				StringBuffer sb = new StringBuffer();
@@ -699,8 +699,11 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				
 				for (Map.Entry<Short, GaussianMixture> score : totals.entrySet()) {
 					name = (String) grammar.numberer.object(score.getKey());
-					sb.append(", " + name + "=" + score.getValue().toString(simple, nfirst));
-					// sb.append(", " + name + "(nc)=" + score.getValue().ncomponent);
+					if (quantity) {
+						sb.append(", " + name + "(nc)=" + score.getValue().ncomponent);
+					} else {
+						sb.append(", " + name + "=" + score.getValue().toString(simple, nfirst));
+					}
 				}
 				
 				sb.append("]");
@@ -710,7 +713,11 @@ public abstract class Inferencer extends Recorder implements Serializable {
 					sb.append("\n------>level " + level.getKey() + " ntag = " + level.getValue().size() + "\n");
 					for (Map.Entry<Short, GaussianMixture> detail : level.getValue().entrySet()) {
 						name = (String) grammar.numberer.object(detail.getKey());
-						sb.append("\nid=" + detail.getKey() + ", " + name + "=" + detail.getValue().toString(simple, nfirst));
+						if (quantity) {
+							sb.append("\nid=" + detail.getKey() + ", " + name + "(nc)=" + detail.getValue().ncomponent);
+						} else {
+							sb.append("\nid=" + detail.getKey() + ", " + name + "=" + detail.getValue().toString(simple, nfirst));
+						}
 					}
 					sb.append("\n");
 				}

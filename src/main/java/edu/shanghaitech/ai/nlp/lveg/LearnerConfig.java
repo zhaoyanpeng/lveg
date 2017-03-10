@@ -63,6 +63,14 @@ public class LearnerConfig extends Recorder {
 	
 	public static ObjectPool<Short, GaussianMixture> mogPool;
 	public static ObjectPool<Short, GaussianDistribution> gaussPool;
+	
+	public static String reference = "ROOT=1 S^g=22 @S^g=29 PP^g=40 IN=34 NP^g=57 @NP^g=61 DT=21 NNP=53 CD=27 NN=59 ``=1 "
+			+ "''=1 POS=2 PRN^g=5 @PRN^g=8 -LRB-=2 VBN=35 NNS=51 VP^g=47 @VP^g=47 VBP=19 ,=1 CC=7 -RRB-=2 VBD=28 ADVP^g=28 "
+			+ "RB=41 TO=1 .=3 VBZ=18 NNPS=6 SBAR^g=18 PRP=3 PRP$=5 VB=31 ADJP^g=26 JJ=56 QP^g=13 @PP^g=11 MD=3 UCP^g=2 @UCP^g=3 "
+			+ "VBG=26 @SBAR^g=5 WHNP^g=4 @ADVP^g=4 RBR=4 :=5 SINV^g=2 @SINV^g=9 WP=2 WDT=2 JJR=5 PDT=2 RBS=1 @QP^g=14 @ADJP^g=10 "
+			+ "FRAG^g=2 NAC^g=2 @NAC^g=3 WHADVP^g=2 WRB=2 JJS=6 $=1 PRT^g=2 RP=1 NX^g=3 @FRAG^g=3 WHPP^g=1 FW=1 SQ^g=2 @SQ^g=2 @NX^g=3 "
+			+ "SBARQ^g=1 @SBARQ^g=2 EX=2 CONJP^g=1 WHADJP^g=1 SYM=1 #=1 @CONJP^g=1 LS=1 @WHADJP^g=1 INTJ^g=1 UH=1 WP$=1 X^g=1 @WHNP^g=1 "
+			+ "RRC^g=1 @WHADVP^g=1 LST^g=1 @X^g=1 @INTJ^g=1 PRT|ADVP^g=50 @PRT^g=1 @LST^g=1 @RRC^g=1";
 
 	public static class Params {
 		public static double lr;
@@ -188,8 +196,12 @@ public class LearnerConfig extends Recorder {
 		public boolean cntprune = false;
 		@Option(name = "-sampling", usage = "whether use sampling techniques (true) in evaluating gradients or not (false) (default: false)")
 		public boolean sampling = false;
+		@Option(name = "-riserate", usage = "# of components allowed to be increased for every 100 more components (default: 2.0)")
+		public double riserate = 2.0;
 		@Option(name = "-maxnbig", usage = "reserve max first n components of MoG (default: 100)")
 		public short maxnbig = 100;
+		@Option(name = "-rtratio", usage = "ratio of # of retained components to total number of components (default: 0.2)")
+		public double rtratio = 0.2;
 		@Option(name = "-expzero", usage = "relative magnitude calculated as a / b = exp(log(a) - log(b)) (default: 1e-6)")
 		public double expzero = 1e-6;
 		@Option(name = "-bsize", usage = "# of the samples in a batch (default: 128)")

@@ -103,7 +103,8 @@ public class LVeGLearner extends LearnerConfig {
 		lexicon = new SimpleLVeGLexicon(numberer, -1);
 		
 		/* to ease the parameters tuning */
-		GaussianMixture.config(opts.maxnbig, opts.expzero, opts.maxmw, opts.ncomponent, opts.nwratio, random, mogPool);
+		GaussianMixture.config(opts.maxnbig, opts.expzero, opts.maxmw, opts.ncomponent, 
+				opts.nwratio, opts.riserate, opts.rtratio, random, mogPool);
 		GaussianDistribution.config(opts.maxmu, opts.maxvar, opts.dim, opts.nmratio, opts.nvratio, random, gaussPool);
 		Optimizer.config(opts.choice, random, opts.maxsample, opts.bsize, opts.minmw, opts.sampling); // FIXME no errors, just alert you...
 				
