@@ -29,7 +29,7 @@ public class BinaryGrammarRule extends GrammarRule implements Comparable<Object>
 	
 	public BinaryGrammarRule(short lhs, short lchild, short rchild, boolean init) {
 		this(lhs, lchild, rchild);
-		if (init) { initializeWeight(GrammarRule.LRBRULE); }
+		if (init) { initializeWeight(GrammarRule.LRBRULE, (short) -1, (short) -1); }
 	}
 	
 	
@@ -39,8 +39,8 @@ public class BinaryGrammarRule extends GrammarRule implements Comparable<Object>
 	}
 	
 	
-	public void initializeWeight(byte type) {
-		weight = rndRuleWeight(GrammarRule.LRBRULE);
+	public void initializeWeight(byte type, short ncomponent, short ndim) {
+		weight = rndRuleWeight(GrammarRule.LRBRULE, ncomponent, ndim);
 	}
 
 	

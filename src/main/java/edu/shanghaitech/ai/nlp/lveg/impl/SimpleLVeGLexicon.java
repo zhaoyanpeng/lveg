@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.data.StateTreeList;
@@ -40,8 +41,10 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 	}
 	
 	
-	public SimpleLVeGLexicon(Numberer numberer, int ntag) {
+	public SimpleLVeGLexicon(Numberer numberer, int ntag, boolean useRef, Map<Short, Short> nSubTypes) {
 		this();
+		this.refSubTypes = nSubTypes;
+		this.useRef = useRef;
 		if (numberer == null) {
 			this.numberer = null;
 			this.ntag = ntag;
@@ -103,7 +106,14 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 			word.wordIdx = wordIdx;
 			short tagIdx = tags.get(i).getId();
 			GrammarRule rule = new UnaryGrammarRule(tagIdx, wordIdx, GrammarRule.LHSPACE);
-			if (!uRuleTable.containsKey(rule)) { rule.initializeWeight(GrammarRule.LHSPACE); }
+			if (!uRuleTable.containsKey(rule)) { 
+				short ncomp = (short) -1;
+				if (useRef) { // 1 component for 20 sub-types for lexicon rules
+					ncomp = (short) (Math.floor(refSubTypes.get(tagIdx) / 20.0));
+					ncomp = ncomp == 0 ? -1 : (ncomp > 3 ? 3 : ncomp);
+				}
+				rule.initializeWeight(GrammarRule.LHSPACE, ncomp, (short) -1); 
+			}
 			uRuleTable.addCount(rule, 1.0);
 		}
 	}
@@ -156,14 +166,14 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 		int wordIdx = getWordIdx(word); // should be >= 0
 		if (wordIdx == -1) { // double check
 			logger.warn("\nUnknown Word Signature [P: " + itag + ", UC: " + wordIdx + ", word = " + word.getName() + ", sig = (UNK)]\n");
-			GaussianMixture weight = GrammarRule.rndRuleWeight(GrammarRule.LHSPACE);
+			GaussianMixture weight = GrammarRule.rndRuleWeight(GrammarRule.LHSPACE, (short) -1, (short) -1);
 			weight.setWeights(LVeGLearner.minmw);
 			return weight;
 		}
 		GrammarRule rule = getURule(itag, wordIdx, GrammarRule.LHSPACE);
 		if (rule == null) { // double check
 			logger.warn("\nUnknown Lexicon Rule [P: " + itag + ", UC: " + wordIdx + ", word = " + word.getName() + ", sig = (UNK)]\n");
-			GaussianMixture weight = GrammarRule.rndRuleWeight(GrammarRule.LHSPACE);
+			GaussianMixture weight = GrammarRule.rndRuleWeight(GrammarRule.LHSPACE, (short) -1, (short) -1);
 			/*weight.setWeights(Double.NEGATIVE_INFINITY);*/
 			weight.setWeights(LVeGLearner.minmw);
 			return weight;
@@ -194,7 +204,7 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 			}
 		}
 		
-		int cnt = 0;
+		int cnt = 0, ncomp = 0;
 		sb.append("\n");
 		sb.append("---Unary Rules---\n");
 		for (int i = 0; i < ntag; i++) {
@@ -202,7 +212,8 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 			List<GrammarRule> rules = uRulesWithP[i];
 			sb.append("Tag " + i + "\t[" + numberer.object(i) + "] has " + rules.size() + " rules\n" );
 			for (GrammarRule rule : rules) {
-				sb.append(rule + "\t" + uRuleTable.getCount(rule).getBias());
+				ncomp += rule.weight.ncomponent();
+				sb.append(rule + "\t" + uRuleTable.getCount(rule).getBias() + "\t" + rule.weight.ncomponent());
 				if (++count % ncol == 0) {
 					sb.append("\n");
 				}
@@ -210,7 +221,7 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 			cnt += rules.size();
 			sb.append("\n");
 		}
-		sb.append("---Lexicon rules. Total: " + cnt + "\n");
+		sb.append("---Lexicon rules. Total: " + cnt + ", average ncomp: " + ((double) ncomp / cnt) + "\n");
 		return sb.toString();
 	}
 

@@ -49,7 +49,7 @@ public abstract class GrammarRule implements Serializable {
 	
 	public abstract boolean isUnary();
 	public abstract GrammarRule copy();
-	public abstract void initializeWeight(byte type);
+	public abstract void initializeWeight(byte type, short ncomponent, short ndim);
 	
 /*	
 	public static GaussianMixture rndRuleWeight(byte type) {
@@ -104,9 +104,9 @@ public abstract class GrammarRule implements Serializable {
 	}
 */	
 	
-	public static GaussianMixture rndRuleWeight(byte type) {
-		short defNcomp = GaussianMixture.defNcomponent;
-		short defNdim = GaussianDistribution.defNdimension;
+	public static GaussianMixture rndRuleWeight(byte type, short ncomponent, short ndim) {
+		short defNcomp = ncomponent > 0 ? ncomponent : GaussianMixture.defNcomponent;
+		short defNdim = ndim > 0 ? ndim : GaussianDistribution.defNdimension;
 		GaussianMixture aweight = new DiagonalGaussianMixture(defNcomp);
 		switch (type) {
 		case RHSPACE: // rules for the root since it does not have subtypes

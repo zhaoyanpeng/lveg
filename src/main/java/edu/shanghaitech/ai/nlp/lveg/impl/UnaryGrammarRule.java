@@ -35,7 +35,7 @@ public class UnaryGrammarRule extends GrammarRule implements Comparable<Object> 
 	
 	public UnaryGrammarRule(short lhs, int rhs, byte type, boolean init) {
 		this(lhs, rhs, type);
-		if (init) { initializeWeight(type); }
+		if (init) { initializeWeight(type, (short) -1, (short) -1); }
 	}
 	
 	
@@ -46,8 +46,8 @@ public class UnaryGrammarRule extends GrammarRule implements Comparable<Object> 
 	
 	
 	@Override
-	public void initializeWeight(byte type) {
-		weight = rndRuleWeight(type);
+	public void initializeWeight(byte type, short ncomponent, short ndim) {
+		weight = rndRuleWeight(type, ncomponent, ndim);
 	}
 	
 	

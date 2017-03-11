@@ -25,11 +25,13 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 	private static final long serialVersionUID = 650638115156791313L;
 
 	
-	public SimpleLVeGGrammar(Numberer numberer, int ntag) {
+	public SimpleLVeGGrammar(Numberer numberer, int ntag, boolean useRef, Map<Short, Short> nSubTypes) {
 		this.uRuleTable = new RuleTable<UnaryGrammarRule>(UnaryGrammarRule.class);
 		this.bRuleTable = new RuleTable<BinaryGrammarRule>(BinaryGrammarRule.class);
 		this.uRuleMap = new HashMap<GrammarRule, GrammarRule>();
 		this.bRuleMap = new HashMap<GrammarRule, GrammarRule>();
+		this.refSubTypes = nSubTypes;
+		this.useRef = useRef;
 		if (numberer == null) {
 			this.numberer = null;
 			this.ntag = ntag;
@@ -109,15 +111,55 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 			short idChild = children.get(0).getLabel().getId();
 			byte type = idParent != 0 ? GrammarRule.LRURULE : GrammarRule.RHSPACE;
 			GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
-			if (!uRuleTable.containsKey(rule)) { rule.initializeWeight(type); }
+			if (!uRuleTable.containsKey(rule)) { 
+				int ntype, ncomp = (short) -1;
+				if (useRef) {
+					ntype = refSubTypes.get(idParent) * refSubTypes.get(idChild);
+					if (ntype < 600) {
+						ncomp = (short) (Math.floor(ntype / 250.0));
+					} else if (ntype < 1300) {
+						ncomp = (short) (Math.floor(ntype / 300.0));
+					} else if (ntype < 2100) {
+						ncomp = (short) (Math.floor(ntype / 400.0));
+					} else {
+						ncomp = (short) (Math.floor(ntype / 500.0));
+					}
+					ncomp = ncomp == 0 ? -1 : (ncomp > 6 ? 6 : ncomp);
+				}
+				rule.initializeWeight(type, (short) ncomp, (short) -1); 
+			}
 			uRuleTable.addCount(rule, 1.0);
 			break;
 		}
 		case 2: {
-			short idLeftChild = children.get(0).getLabel().getId();
-			short idRightChild = children.get(1).getLabel().getId();
-			GrammarRule rule = new BinaryGrammarRule(idParent, idLeftChild, idRightChild);
-			if (!bRuleTable.containsKey(rule)) { rule.initializeWeight(GrammarRule.LRBRULE); }
+			short idlChild = children.get(0).getLabel().getId();
+			short idrChild = children.get(1).getLabel().getId();
+			GrammarRule rule = new BinaryGrammarRule(idParent, idlChild, idrChild);
+			if (!bRuleTable.containsKey(rule)) { 
+				int ntype, ncomp = (short) -1;
+				if (useRef) {
+					ntype = refSubTypes.get(idParent) * refSubTypes.get(idlChild) * refSubTypes.get(idrChild);
+					if (ntype < 600) {
+						ncomp = (short) (Math.floor(ntype / 250.0));
+					} else if (ntype < 1300) {
+						ncomp = (short) (Math.floor(ntype / 300.0));
+					} else if (ntype < 2100) {
+						ncomp = (short) (Math.floor(ntype / 400.0));
+					} else if (ntype < 3100) {
+						ncomp = (short) (Math.floor(ntype / 500.0));
+					} else if (ntype < 4300) {
+						ncomp = (short) (Math.floor(ntype / 600.0));
+					} else if (ntype < 5700) {
+						ncomp = (short) (Math.floor(ntype / 700.0));
+					} else if (ntype < 7300) {
+						ncomp = (short) (Math.floor(ntype / 800.0));
+					} else {
+						ncomp = (short) (Math.floor(ntype / 900.0));
+					}
+					ncomp = ncomp == 0 ? -1 : (ncomp > 10 ? 10 : ncomp);
+				}
+				rule.initializeWeight(GrammarRule.LRBRULE, (short) ncomp, (short) -1); 
+			}
 			bRuleTable.addCount(rule, 1.0);
 			break;
 		}
@@ -205,29 +247,37 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 
 	@Override
 	public String toString() {
-		int count = 0, ncol = 1;
+		int count = 0, ncol = 1, ncomp = 0;
 		StringBuffer sb = new StringBuffer();
 		sb.append("Grammar [nTag=" + ntag + "]\n");
 		for (int i = 0; i < numberer.size(); i++) {
 			sb.append("Tag " + i + "\t" +  (String) numberer.object(i) + "\n");
 		}
 		
-		sb.append("---Unary Grammar Rules. Total: " + uRuleTable.size() + "\n");
+		int nurule = uRuleTable.size();
+		sb.append("---Unary Grammar Rules. Total: " + nurule + "\n");
 		for (GrammarRule rule : uRuleTable.keySet()) {
-			sb.append(rule + "\t" + uRuleTable.getCount(rule).getBias());
+			ncomp += rule.weight.ncomponent();
+			sb.append(rule + "\t" + uRuleTable.getCount(rule).getBias() + "\t" + rule.weight.ncomponent());
 			if (++count % ncol == 0) {
 				sb.append("\n");
 			}
 		}
+		sb.append("---Unary Grammar Rules. Total: " + nurule + ", average ncomp: " + ((double) ncomp / nurule) + "\n");
 		
 		sb.append("\n");
-		sb.append("---Binary Grammar Rules. Total: " + bRuleTable.size() + "\n");
+		
+		ncomp = 0;
+		int nbrule = bRuleTable.size();
+		sb.append("---Binary Grammar Rules. Total: " + nbrule + "\n");
 		for (GrammarRule rule : bRuleTable.keySet()) {
-			sb.append(rule + "\t" + bRuleTable.getCount(rule).getBias());
+			ncomp += rule.weight.ncomponent();
+			sb.append(rule + "\t" + bRuleTable.getCount(rule).getBias() + "\t" + rule.weight.ncomponent());
 			if (++count % ncol == 0) {
 				sb.append("\n");
 			}
 		}
+		sb.append("---Binary Grammar Rules. Total: " + nbrule + ", average ncomp: " + ((double) ncomp / nbrule) + "\n");
 		
 		return sb.toString();
 	}

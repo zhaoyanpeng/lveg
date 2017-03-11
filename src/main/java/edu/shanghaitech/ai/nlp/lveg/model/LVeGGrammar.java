@@ -34,6 +34,9 @@ public abstract class LVeGGrammar extends Recorder implements Serializable {
 	public Numberer numberer;
 	public int ntag;
 	
+	protected boolean useRef;
+	protected Map<Short, Short> refSubTypes;
+	
 	/**
 	 * Needed when we want to find a rule and access its statistics.
 	 * we first construct a rule, which is used as the key, and use 
@@ -81,7 +84,7 @@ public abstract class LVeGGrammar extends Recorder implements Serializable {
 			// when calculating inside and outside scores, we do not want the rule weight to be null, so just set it to zero
 			// if the given query rule is not valid (never appears in the training set).
 			logger.warn("\nBinary Rule NOT Found: [P: " + idParent + ", LC: " + idlChild + ", RC: " + idrChild + "]\n");
-			GaussianMixture weight = GrammarRule.rndRuleWeight(GrammarRule.LRBRULE);
+			GaussianMixture weight = GrammarRule.rndRuleWeight(GrammarRule.LRBRULE, (short) -1, (short) -1);
 			/*weight.setWeights(Double.NEGATIVE_INFINITY);*/
 			weight.setWeights(LVeGLearner.minmw);
 			return weight;
@@ -97,7 +100,7 @@ public abstract class LVeGGrammar extends Recorder implements Serializable {
 		} 
 		if (!context) {
 			logger.warn("\nUnary Rule NOT Found: [P: " + idParent + ", UC: " + idChild + ", TYPE: " + type + "]\n");
-			GaussianMixture weight = GrammarRule.rndRuleWeight(type);
+			GaussianMixture weight = GrammarRule.rndRuleWeight(type, (short) -1, (short) -1);
 			/*weight.setWeights(Double.NEGATIVE_INFINITY);*/
 			weight.setWeights(LVeGLearner.minmw);
 			return weight;

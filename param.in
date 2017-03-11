@@ -55,12 +55,13 @@
 -maxramdom, 1,
 -maxmw, 4,
 -nwratio, 0.8,
--maxmu, 1,
+-maxmu, 0.2,
 -nmratio, 0.5,
 -maxvar, 5,
 -nvratio, 0.8,
 -ncomponent, 1,
 -dim, 4,
+-useref, true,
 
 -eratio, -0.1, 
 -eonlylen, 15,
@@ -80,7 +81,7 @@
 -ef1ontrain, false,
 -ef1imwrite, false,
 
--runtag, test_lveg,
+-runtag, test_lveg_ref,
 -logroot, log/,
 -logtype, true,
 -verbose, false,

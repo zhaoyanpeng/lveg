@@ -64,6 +64,7 @@ public class LearnerConfig extends Recorder {
 	public static ObjectPool<Short, GaussianMixture> mogPool;
 	public static ObjectPool<Short, GaussianDistribution> gaussPool;
 	
+	public static Map<Short, Short> refSubTypes = null;
 	public static String reference = "ROOT=1 S^g=22 @S^g=29 PP^g=40 IN=34 NP^g=57 @NP^g=61 DT=21 NNP=53 CD=27 NN=59 ``=1 "
 			+ "''=1 POS=2 PRN^g=5 @PRN^g=8 -LRB-=2 VBN=35 NNS=51 VP^g=47 @VP^g=47 VBP=19 ,=1 CC=7 -RRB-=2 VBD=28 ADVP^g=28 "
 			+ "RB=41 TO=1 .=3 VBZ=18 NNPS=6 SBAR^g=18 PRP=3 PRP$=5 VB=31 ADJP^g=26 JJ=56 QP^g=13 @PP^g=11 MD=3 UCP^g=2 @UCP^g=3 "
@@ -236,6 +237,8 @@ public class LearnerConfig extends Recorder {
 		public short ncomponent = 2;
 		@Option(name = "-dim", usage = "dimension of the gaussian (default: 2)")
 		public short dim = 2;
+		@Option(name = "-useref", usage = "refer the # of subtypes of nonterminals of berkeley parser (true) or not (false) (default: false)")
+		public boolean useref = false;
 		/* training-configurations section ends */
 		
 		/* evaluation section begins */
@@ -450,6 +453,10 @@ public class LearnerConfig extends Recorder {
 		trees.put(ID_TEST, testTrees);
 		trees.put(ID_DEV, devTrees);
 		
+		if (opts.useref) {
+		 makeSubTypes(numberer); // specify number of sub-types for each nonterminal
+		}
+		
 		if (opts.saveCorpus && opts.outCorpus != null) {
 			logger.info("\n-------saving corpus file...");
 			CorpusFile corpus = new CorpusFile(trainTrees, testTrees, devTrees, numberer);
@@ -461,6 +468,19 @@ public class LearnerConfig extends Recorder {
 			}
 		}
 		return trees;
+	}
+	
+	protected static void makeSubTypes(Numberer numberer) {
+		int size = numberer.size();
+		String entrySep = " ", kvSep = "=";
+		refSubTypes = new HashMap<Short, Short>(size, 1);
+		String[] entries = reference.split(entrySep);
+		for (String entry : entries) {
+			if (entry.length() > 1 && entry.contains(kvSep)) {
+				String[] keyValue = entry.split(kvSep);
+				refSubTypes.put((short) numberer.number(keyValue[0]), Short.valueOf(keyValue[1]));
+			}
+		}
 	}
 	
 	protected static List<Tree<String>> loadStringTree(String path, Options opts) {
