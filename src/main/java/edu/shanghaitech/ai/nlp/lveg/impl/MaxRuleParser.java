@@ -115,12 +115,12 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 		}
 //		logger.trace("\nInside score...\n"); // DEBUG
 		Inferencer.insideScore(chart, sentence, nword, iosprune);
-//		FunUtil.debugChart(chart.getChart(true), (short) -1, tree.getYield().size()); // DEBUG
+		FunUtil.debugChart(chart.getChart(true), (short) -1, tree.getYield().size()); // DEBUG
 
 //		logger.trace("\nOutside score...\n"); // DEBUG
 		Inferencer.setRootOutsideScore(chart);
 		Inferencer.outsideScore(chart, sentence, nword, iosprune);
-//		FunUtil.debugChart(chart.getChart(false), (short) -1, tree.getYield().size()); // DEBUG
+		FunUtil.debugChart(chart.getChart(false), (short) -1, tree.getYield().size()); // DEBUG
 		
 		return chart;
 	}

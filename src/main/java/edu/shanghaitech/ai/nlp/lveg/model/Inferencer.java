@@ -2,6 +2,7 @@ package edu.shanghaitech.ai.nlp.lveg.model;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -61,12 +62,12 @@ public abstract class Inferencer extends Recorder implements Serializable {
 			List<GrammarRule> rules = lexicon.getRulesWithWord(sentence.get(i));
 			// preterminals
 			for (GrammarRule rule : rules) {
-				chart.addInsideScore(rule.lhs, iCell, rule.getWeight().copy(true), (short) 0, prune);
+				chart.addInsideScore(rule.lhs, iCell, rule.getWeight().copy(true), (short) 0, false);
 			}
 			// DEBUG unary grammar rules
 //			logger.trace("Cell [" + i + ", " + (i + 0) + "]="+ iCell + "\t is being estimated. # " );
 //			long start = System.currentTimeMillis();
-			insideScoreForUnaryRule(chart, iCell, chainurule, prune);
+			insideScoreForUnaryRule(chart, iCell, chainurule, false);
 //			long ttime = System.currentTimeMillis() - start;
 //			logger.trace("\tafter chain unary\t" + chart.size(iCell, true) + "\ttime: " + ttime / 1000 + "\n");
 		}		
@@ -93,14 +94,16 @@ public abstract class Inferencer extends Recorder implements Serializable {
 							
 							pinScore = ruleScore.mulForInsideOutside(linScore, GrammarRule.Unit.LC, true);
 							pinScore = pinScore.mulForInsideOutside(rinScore, GrammarRule.Unit.RC, false);
-							chart.addInsideScore(rule.lhs, c2, pinScore, (short) 0, prune);
+							chart.addInsideScore(rule.lhs, c2, pinScore, (short) 0, false);
 						}
 					}
 				}
 				// DEBUG unary grammar rules
 //				logger.trace("Cell [" + left + ", " + (left + ilayer) + "]="+ c2 + "\t is being estimated. # ");
 //				long start = System.currentTimeMillis();
-				insideScoreForUnaryRule(chart, c2, chainurule, prune);
+				if (prune) { chart.pruneInsideScore(c2, (short) 0); }
+				insideScoreForUnaryRule(chart, c2, chainurule, false);
+				if (prune) { chart.pruneInsideScore(c2, (short) -1); }
 //				long ttime = System.currentTimeMillis() - start;
 //				logger.trace("\tafter chain unary\t" + chart.size(c2, true) + "\ttime: " + ttime / 1000 + "\n");
 			}
@@ -141,7 +144,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 							
 							loutScore = ruleScore.mulForInsideOutside(poutScore, GrammarRule.Unit.P, true);
 							loutScore = loutScore.mulForInsideOutside(rinScore, GrammarRule.Unit.RC, false);
-							chart.addOutsideScore(rule.lchild, c2, loutScore, (short) 0, prune);
+							chart.addOutsideScore(rule.lchild, c2, loutScore, (short) 0, false);
 						}
 					}
 				}
@@ -164,19 +167,22 @@ public abstract class Inferencer extends Recorder implements Serializable {
 							
 							routScore = ruleScore.mulForInsideOutside(poutScore, GrammarRule.Unit.P, true);
 							routScore = routScore.mulForInsideOutside(linScore, GrammarRule.Unit.LC, false);
-							chart.addOutsideScore(rule.rchild, c2, routScore, (short) 0, prune);
+							chart.addOutsideScore(rule.rchild, c2, routScore, (short) 0, false);
 						}
 					}
 				}
 				// DEBUG unary grammar rules
 //				logger.trace("Cell [" + left + ", " + (left + ilayer) + "]="+ c2 + "\t is being estimated. # ");
 //				long start = System.currentTimeMillis();
-				outsideScoreForUnaryRule(chart, c2, chainurule, prune);
+				if (prune) { chart.pruneOutsideScore(c2, (short) 0); }
+				outsideScoreForUnaryRule(chart, c2, chainurule, false);
+				if (prune) { chart.pruneOutsideScore(c2, (short) -1); }
 //				long ttime = System.currentTimeMillis() - start;
 //				logger.trace("\tafter chain unary\t" + chart.size(c2, false) + "\ttime: " + ttime / 1000 + "\n");
 			}
 		}
 	}
+	
 	
 	private static void outsideScoreForUnaryRule(Chart chart, int idx, ChainUrule identifier, boolean prune) {
 		switch (identifier) {
@@ -440,6 +446,22 @@ public abstract class Inferencer extends Recorder implements Serializable {
 			return ochart.get(idx).getScore(key);
 		}
 		
+		public void pruneOutsideScore(int idx, short level) {
+			if (level < 0) {
+				ochart.get(idx).pruneScore();
+			} else {
+				ochart.get(idx).pruneScore(level);
+			}
+		}
+		
+		public void pruneInsideScore(int idx, short level) {
+			if (level < 0) {
+				ichart.get(idx).pruneScore();
+			} else {
+				ichart.get(idx).pruneScore(level);
+			}
+		}
+		
 		/**
 		 * @deprecated
 		 */
@@ -519,8 +541,8 @@ public abstract class Inferencer extends Recorder implements Serializable {
 		public Cell(boolean maxrule) {
 			this();
 			if (maxrule) {
-				this.maxRuleCnts = new HashMap<Short, Map<Short, Double>>(5, 1);
-				this.maxRuleSons = new HashMap<Short, Map<Short, Integer>>(5, 1);
+				this.maxRuleCnts = new HashMap<Short, Map<Short, Double>>(3, 1);
+				this.maxRuleSons = new HashMap<Short, Map<Short, Integer>>(3, 1);
 				this.maxRulePos = new HashMap<Short, Short>();
 				this.maxRuleSon = new HashMap<Short, Integer>(); // low 2 bytes are used
 				this.splitPoint = new HashMap<Short, Short>();
@@ -557,6 +579,23 @@ public abstract class Inferencer extends Recorder implements Serializable {
 		
 		protected boolean containsKey(short key, short level) {
 			return scores.get(level) == null ? false : scores.get(level).containsKey(key);
+		}
+		
+		protected void pruneScore() {
+			Collection<GaussianMixture> scores = totals.values();
+			for (GaussianMixture score : scores) {
+				score.delTrivia();
+			}
+		}
+		
+		protected void pruneScore(short level) {
+			Map<Short, GaussianMixture> lscores = scores.get(level);
+			if (lscores != null) {
+				Collection<GaussianMixture> lscore = lscores.values();
+				for (GaussianMixture score : lscore) {
+					score.delTrivia();
+				}
+			}
 		}
 		
 		protected void addMaxRuleCount(short key, double count, int sons, Short splitpoint, short level) {

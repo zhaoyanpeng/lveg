@@ -103,8 +103,35 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 				base = sorted.size();
 				base = base > defMaxNbig ? (defMaxNbig + (int) (defRetainRatio * base)) : defMaxNbig;
 			} else {
-				base = (int) Math.round(sorted.size() / 30.0);
-				base = base > 2 ? (defMaxNbig + (int) (defRiseRate * (base - 2))) : defMaxNbig;
+				base = sorted.size();
+				if (base < defMaxNbig + 1) {
+					base = 0;
+				} else if (base < 160) {
+					base = (int) (Math.floor(base / 30.0));
+				} else if (base < 360) { // 3, 7
+					base = (int) (Math.floor(base / 50.0));
+				} else if (base < 640) { // 5, 9
+					base = (int) (Math.floor(base / 70.0));
+				} else if (base < 1000) { // 7, 11
+					base = (int) (Math.floor(base / 90.0));
+				} else if (base < 1440) { // 9, 13
+					base = (int) (Math.floor(base / 110.0));
+				} else if (base < 1960) { // 11, 15
+					base = (int) (Math.floor(base / 130.0));
+				} else if (base < 2560) { // 13, 17
+					base = (int) (Math.floor(base / 150.0));
+				} else if (base < 3240) { // 15, 19
+					base = (int) (Math.floor(base / 170.0));
+				} else if (base < 4000) { // 17, 21
+					base = (int) (Math.floor(base / 190.0));
+				} else if (base < 4840) { // 19, 23
+					base = (int) (Math.floor(base / 210.0));
+				} else { // 21, 
+					base = (int) (Math.floor(base / 230.0));
+				}
+				base = base + defMaxNbig;
+				base = base > 60 ? 60 : base; // hard coding for debugging
+				/*base = base > 2 ? (defMaxNbig + (int) (defRiseRate * (base - 2))) : defMaxNbig;*/
 			}
 			components.clear();
 			if (sorted.size() > base) {
