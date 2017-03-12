@@ -31,7 +31,7 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 	public void testIntegrationComp2Dim2() {
 		Random rnd = new Random(0);
 		short ncomp = 2, ndim = 2;
-		GaussianMixture.config((short) -1, 1e-6, 4, ncomp, 0.5, -1.0, -1.0, rnd, null);
+		GaussianMixture.config((short) -1, 1e-6, 4, ncomp, 0.5, -1.0, -1.0, true, rnd, null);
 		GaussianDistribution.config(1, 5, ndim, 0.5, 0.8, rnd, null);
 		
 		GrammarRule ur01 = new UnaryGrammarRule((short) 0, (short) 1, GrammarRule.RHSPACE, true);	
@@ -165,7 +165,7 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 	public void testIntegrationComp2Dim1() {
 		Random rnd = new Random(0);
 		short ncomp = 2, ndim = 1;
-		GaussianMixture.config((short) -1, 1e-6, 4, ncomp, 0.5, -1.0, -1.0, rnd, null);
+		GaussianMixture.config((short) -1, 1e-6, 4, ncomp, 0.5, -1.0, -1.0, true, rnd, null);
 		GaussianDistribution.config(1, 5, ndim, 0.5, 0.8, rnd, null);
 		
 		GrammarRule ur01 = new UnaryGrammarRule((short) 0, (short) 1, GrammarRule.RHSPACE, true);	
@@ -295,7 +295,7 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 	public void testIntegrationComp1Dim2() {
 		Random rnd = new Random(0);
 		short ncomp = 1, ndim = 2;
-		GaussianMixture.config((short) -1, 1e-6, 4, ncomp, 0.5, -1.0, -1.0, rnd, null);
+		GaussianMixture.config((short) -1, 1e-6, 4, ncomp, 0.5, -1.0, -1.0, true, rnd, null);
 		GaussianDistribution.config(1, 5, ndim, 0.5, 0.8, rnd, null);
 		
 		GrammarRule ur01 = new UnaryGrammarRule((short) 0, (short) 1, GrammarRule.RHSPACE, true);	
@@ -443,7 +443,7 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 	public void testIntegrationComp1Dim1() {
 		Random rnd = new Random(0);
 		short ncomp = 1, ndim = 1;
-		GaussianMixture.config((short) -1, 1e-6, 4, ncomp, 0.5, -1.0, -1.0, rnd, null);
+		GaussianMixture.config((short) -1, 1e-6, 4, ncomp, 0.5, -1.0, -1.0, true, rnd, null);
 		GaussianDistribution.config(1, 5, ndim, 0.5, 0.8, rnd, null);
 		
 		GrammarRule ur01 = new UnaryGrammarRule((short) 0, (short) 1, GrammarRule.RHSPACE, true);	
@@ -578,7 +578,7 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 	public void testIntegrationComp1Dim1V() {
 		Random rnd = new Random(0);
 		short ncomp = 1, ndim = 1;
-		GaussianMixture.config((short) -1, 1e-6, 4, ncomp, 0.5, -1.0, -1.0, rnd, null);
+		GaussianMixture.config((short) -1, 1e-6, 4, ncomp, 0.5, -1.0, -1.0, true, rnd, null);
 		GaussianDistribution.config(1, 5, ndim, 0.5, 0.8, rnd, null);
 		
 		GrammarRule ur01 = new UnaryGrammarRule((short) 0, (short) 1, GrammarRule.RHSPACE, true);	
@@ -721,7 +721,7 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 	public void testIntegrationComp1Dim1Ana() {
 		Random rnd = new Random(0);
 		short ncomp = 1, ndim = 1;
-		GaussianMixture.config((short) -1, 1e-6, 4, ncomp, 0.5, -1.0, -1.0, rnd, null);
+		GaussianMixture.config((short) -1, 1e-6, 4, ncomp, 0.5, -1.0, -1.0, true, rnd, null);
 		GaussianDistribution.config(1, 5, ndim, 0.5, 0.8, rnd, null);
 		
 		GrammarRule ur01 = new UnaryGrammarRule((short) 0, (short) 1, GrammarRule.RHSPACE, true);	

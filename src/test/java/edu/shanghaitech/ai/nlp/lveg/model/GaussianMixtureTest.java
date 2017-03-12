@@ -33,7 +33,7 @@ public class GaussianMixtureTest {
 	static {
 		Random rnd = new Random(0);
 		short ncomp = 2, ndim = 2;
-		GaussianMixture.config((short) -1, 1e-6, 4, ncomp, 0.5, -1.0, -1.0, rnd, null);
+		GaussianMixture.config((short) -1, 1e-6, 4, ncomp, 0.5, -1.0, -1.0, true, rnd, null);
 		GaussianDistribution.config(1, 5, ndim, 0.5, 0.8, rnd, null);
 		
 		gm0 = new DiagonalGaussianMixture(LVeGLearner.ncomponent);

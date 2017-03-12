@@ -39,6 +39,7 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	protected static double defRetainRatio;
 	protected static double defNegWRatio;
 	protected static double defRiseRate;
+	protected static boolean defHardCut;
 	protected static ObjectPool<Short, GaussianMixture> defObjectPool;
 	protected static Random defRnd;
 	
@@ -69,11 +70,12 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	 * 
 	 */
 	public static void config(short maxnbig, double expzero, double maxmw, short ncomponent, double negwratio, 
-			double riserate, double retainratio, Random rnd, ObjectPool<Short, GaussianMixture> pool) {
+			double riserate, double retainratio, boolean hardcut, Random rnd, ObjectPool<Short, GaussianMixture> pool) {
 		EXP_ZERO = Math.log(expzero);
 		defMaxNbig = maxnbig;
 		defRnd = rnd;
 		defMaxmw = maxmw;
+		defHardCut = hardcut;
 		defRiseRate = riserate;
 		defNegWRatio = negwratio;
 		defRetainRatio = retainratio;
@@ -97,9 +99,11 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	public void delTrivia() {
 		if (ncomponent <= 1) { return; }
 		PriorityQueue<Component> sorted = sort();
-		if (defMaxNbig > 0 && (defRetainRatio > 0 || defRiseRate > 0)) {
+		if (defMaxNbig > 0 && (defHardCut || defRetainRatio > 0 || defRiseRate > 0)) {
 			int base = 0;
-			if (defRetainRatio > 0) {
+			if (defHardCut) {
+				base = defMaxNbig;
+			} else if (defRetainRatio > 0) {
 				base = sorted.size();
 				base = base > defMaxNbig ? (defMaxNbig + (int) (defRetainRatio * base)) : defMaxNbig;
 			} else {

@@ -203,6 +203,8 @@ public class LearnerConfig extends Recorder {
 		public short maxnbig = 100;
 		@Option(name = "-rtratio", usage = "ratio of # of retained components to total number of components (default: 0.2)")
 		public double rtratio = 0.2;
+		@Option(name = "-hardcut", usage = "just take K first biggest component (true) or not (false) (default: true)")
+		public boolean hardcut = true;
 		@Option(name = "-expzero", usage = "relative magnitude calculated as a / b = exp(log(a) - log(b)) (default: 1e-6)")
 		public double expzero = 1e-6;
 		@Option(name = "-bsize", usage = "# of the samples in a batch (default: 128)")

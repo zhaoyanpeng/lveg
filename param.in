@@ -44,6 +44,7 @@
 -riserate, 2,
 -maxnbig, 30,
 -rtratio, -0.2,
+-hardcut, false,
 -expzero, 1e-3,
 -bsize, 3,
 -nepoch, 30,
@@ -81,7 +82,7 @@
 -ef1ontrain, false,
 -ef1imwrite, false,
 
--runtag, test_lveg_0311,
+-runtag, test_lveg,
 -logroot, log/,
 -logtype, true,
 -verbose, false,

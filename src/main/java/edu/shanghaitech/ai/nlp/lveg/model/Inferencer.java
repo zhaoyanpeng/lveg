@@ -67,7 +67,9 @@ public abstract class Inferencer extends Recorder implements Serializable {
 			// DEBUG unary grammar rules
 //			logger.trace("Cell [" + i + ", " + (i + 0) + "]="+ iCell + "\t is being estimated. # " );
 //			long start = System.currentTimeMillis();
-			insideScoreForUnaryRule(chart, iCell, chainurule, false);
+			if (prune) { chart.pruneInsideScore(iCell, (short) 0); }
+			insideScoreForUnaryRule(chart, iCell, chainurule, prune);
+			if (prune) { chart.pruneInsideScore(iCell, (short) -1); }
 //			long ttime = System.currentTimeMillis() - start;
 //			logger.trace("\tafter chain unary\t" + chart.size(iCell, true) + "\ttime: " + ttime / 1000 + "\n");
 		}		
@@ -102,7 +104,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 //				logger.trace("Cell [" + left + ", " + (left + ilayer) + "]="+ c2 + "\t is being estimated. # ");
 //				long start = System.currentTimeMillis();
 				if (prune) { chart.pruneInsideScore(c2, (short) 0); }
-				insideScoreForUnaryRule(chart, c2, chainurule, false);
+				insideScoreForUnaryRule(chart, c2, chainurule, prune);
 				if (prune) { chart.pruneInsideScore(c2, (short) -1); }
 //				long ttime = System.currentTimeMillis() - start;
 //				logger.trace("\tafter chain unary\t" + chart.size(c2, true) + "\ttime: " + ttime / 1000 + "\n");
@@ -175,7 +177,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 //				logger.trace("Cell [" + left + ", " + (left + ilayer) + "]="+ c2 + "\t is being estimated. # ");
 //				long start = System.currentTimeMillis();
 				if (prune) { chart.pruneOutsideScore(c2, (short) 0); }
-				outsideScoreForUnaryRule(chart, c2, chainurule, false);
+				outsideScoreForUnaryRule(chart, c2, chainurule, prune);
 				if (prune) { chart.pruneOutsideScore(c2, (short) -1); }
 //				long ttime = System.currentTimeMillis() - start;
 //				logger.trace("\tafter chain unary\t" + chart.size(c2, false) + "\ttime: " + ttime / 1000 + "\n");
@@ -222,9 +224,10 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				while (iterator.hasNext()) { // CHECK
 					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
 					coutScore = rule.weight.mulForInsideOutside(poutScore, rmKey, true);
-					chart.addOutsideScore((short) rule.rhs, idx, coutScore, level, prune);
+					chart.addOutsideScore((short) rule.rhs, idx, coutScore, level, false);
 				}
 			}
+			if (prune) { chart.pruneOutsideScore(idx, level); }
 		}
 		while(level < LENGTH_UCHAIN && (set = chart.keySet(idx, false, level)) != null) {
 			for (Short idTag : set) {
@@ -234,10 +237,11 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				while (iterator.hasNext()) {
 					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
 					coutScore = rule.weight.mulForInsideOutside(poutScore, rmKey, true);
-					chart.addOutsideScore((short) rule.rhs, idx, coutScore, (short) (level + 1), prune);
+					chart.addOutsideScore((short) rule.rhs, idx, coutScore, (short) (level + 1), false);
 				}
 			}
 			level++;
+			if (prune) { chart.pruneOutsideScore(idx, level); }
 		}
 	}
 	
@@ -257,10 +261,11 @@ public abstract class Inferencer extends Recorder implements Serializable {
 					if (idx != 0 && rule.type == GrammarRule.RHSPACE) { continue; } // ROOT is allowed only when it is in cell 0 and is in level 1 or 2
 					rmKey = rule.type == GrammarRule.RHSPACE ? GrammarRule.Unit.C : GrammarRule.Unit.UC;
 					pinScore = rule.weight.mulForInsideOutside(cinScore, rmKey, true);
-					chart.addInsideScore(rule.lhs, idx, pinScore, (short) (level + 1), prune);
+					chart.addInsideScore(rule.lhs, idx, pinScore, (short) (level + 1), false);
 				}
 			}
 			level++;
+			if (prune) { chart.pruneInsideScore(idx, level); }
 		}
 		// have to process ROOT node specifically, ROOT is in cell 0 and is in level 3
 		if (idx == 0 && (set = chart.keySet(idx, true, LENGTH_UCHAIN)) != null) {
@@ -272,9 +277,10 @@ public abstract class Inferencer extends Recorder implements Serializable {
 					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
 					if (rule.type != GrammarRule.RHSPACE) { continue; } // only consider ROOT in level 3
 					pinScore = rule.weight.mulForInsideOutside(cinScore, GrammarRule.Unit.C, true);
-					chart.addInsideScore(rule.lhs, idx, pinScore, (short) (LENGTH_UCHAIN + 1), prune);
+					chart.addInsideScore(rule.lhs, idx, pinScore, (short) (LENGTH_UCHAIN + 1), false);
 				}
 			}
+			if (prune) { chart.pruneInsideScore(idx, (short) (LENGTH_UCHAIN + 1)); }
 		}
 	}
 	
