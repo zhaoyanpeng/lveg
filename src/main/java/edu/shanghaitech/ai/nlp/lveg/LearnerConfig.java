@@ -8,6 +8,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.Random;
 
 import org.apache.commons.pool2.impl.GenericKeyedObjectPoolConfig;
@@ -61,6 +62,7 @@ public class LearnerConfig extends Recorder {
 	public static int precision = 3;
 	public static Random random = new Random(randomseed);
 	public static Random rnd4shuffle = new Random(11);
+	protected static PriorityQueue<Tree<State>> sorter;
 	
 	public static ObjectPool<Short, GaussianMixture> mogPool;
 	public static ObjectPool<Short, GaussianDistribution> gaussPool;
@@ -569,6 +571,13 @@ public class LearnerConfig extends Recorder {
 			logger.trace((cnt - 1) + "\t" + strTree + "\n");
 			*/
 			// logger.trace((cnt - 1) + "\t" + FunUtil.debugTree(tree, false, (short) -1, numberer, true) + "\n");
+		}
+		// sort the samples by descending sentence length
+		sorter.clear();
+		sorter.addAll(container);
+		container.clear();
+		while (!sorter.isEmpty()) {
+			container.add(sorter.poll());
 		}
 	}
 	

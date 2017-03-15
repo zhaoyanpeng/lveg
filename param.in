@@ -30,7 +30,7 @@
 -ntgrad, 6,
 -nteval, 6,
 -nttest, 6,
--pclose, false,
+-pclose, true,
 -pbatch, true,
 -peval, true,
 -pgrad, true,
@@ -83,7 +83,7 @@
 -ef1ontrain, false,
 -ef1imwrite, false,
 
--runtag, 0315_trainer_test_parallel,
+-runtag, 0315_trainer_test_serial,
 -logroot, log/,
 -logtype, true,
 -verbose, false,

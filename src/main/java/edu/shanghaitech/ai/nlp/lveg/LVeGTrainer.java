@@ -41,7 +41,6 @@ public class LVeGTrainer extends LearnerConfig {
 	 */
 	private static final long serialVersionUID = 1249878080098056557L;
 	
-	protected static PriorityQueue<Tree<State>> sorter;
 	protected static List<Tree<State>> ftrainTrees;
 	
 	protected static StateTreeList trainTrees;
@@ -245,12 +244,14 @@ public class LVeGTrainer extends LearnerConfig {
 			iend = diff;
 		}
 		// sort the samples by descending sentence length
+		
 		sorter.clear();
 		sorter.addAll(batch);
 		batch.clear();
 		while (!sorter.isEmpty()) {
 			batch.add(sorter.poll());
 		}
+		
 		/*
 		for (Tree<State> tree : batch) {
 			System.out.println(tree.getYield().size() + "\t" + ibegin + "\t" + diff + "\t" + nsample);
@@ -529,17 +530,9 @@ public class LVeGTrainer extends LearnerConfig {
 	public static double parallelLL(Options opts, ThreadPool valuator, StateTreeList stateTreeList, Numberer numberer, boolean istrain) {
 		double ll = 0, sumll = 0;
 		int nUnparsable = 0, cnt = 0;
-		int maxlen = istrain ? opts.eonlylen : (opts.eonextradev ? opts.eonlylen + 5 : opts.eonlylen);
-		for (Tree<State> tree : stateTreeList) {
-			if (opts.eonlylen > 0) {
-				if (tree.getYield().size() > maxlen) { continue; }
-			}
-			if (istrain && opts.eratio > 0) {
-				if (random.nextDouble() > opts.eratio) { continue; }
-			}
-			if (opts.efirstk > 0) {
-				if (++cnt > opts.efirstk) { break; } // DEBUG
-			}
+		List<Tree<State>> trees = new ArrayList<Tree<State>>(stateTreeList.size());
+		filterTrees(opts, stateTreeList, trees, numberer, istrain);
+		for (Tree<State> tree : trees) {
 //			Tree<String> stringTree = StateTreeList.stateTreeToStringTree(tree, numberer);
 //			logger.trace("\n" + cnt + "\t" + stringTree);
 			valuator.execute(tree);
@@ -551,6 +544,7 @@ public class LVeGTrainer extends LearnerConfig {
 					sumll += ll;
 				}
 			}
+			cnt++;
 		}
 		while (!valuator.isDone()) {
 			while (valuator.hasNext()) {
@@ -571,17 +565,9 @@ public class LVeGTrainer extends LearnerConfig {
 	public static double serialLL(Options opts, Valuator<?, ?> valuator, StateTreeList stateTreeList, Numberer numberer, boolean istrain) {
 		double ll = 0, sumll = 0;
 		int nUnparsable = 0, cnt = 0;
-		int maxlen = istrain ? /*1*/opts.eonlylen : (opts.eonextradev ? opts.eonlylen + 5 : opts.eonlylen);
-		for (Tree<State> tree : stateTreeList) {
-			if (opts.eonlylen > 0) {
-				if (tree.getYield().size() > maxlen) { continue; }
-			}
-			if (istrain && opts.eratio > 0) {
-				if (random.nextDouble() > opts.eratio) { continue; }
-			}
-			if (opts.efirstk > 0) {
-				if (++cnt > opts.efirstk) { break; } // DEBUG
-			}
+		List<Tree<State>> trees = new ArrayList<Tree<State>>(stateTreeList.size());
+		filterTrees(opts, stateTreeList, trees, numberer, istrain);
+		for (Tree<State> tree : trees) {
 //			Tree<String> stringTree = StateTreeList.stateTreeToStringTree(tree, numberer);
 //			logger.trace("\n" + cnt + "\t" + stringTree + "\n");
 			ll = valuator.probability(tree);
@@ -592,6 +578,7 @@ public class LVeGTrainer extends LearnerConfig {
 			} else {
 				sumll += ll;
 			}
+			cnt++;
 		}
 		logger.trace("\n[in calculating log likelihood " + nUnparsable + " unparsable sample(s) of " + stateTreeList.size() + "(" + cnt + ") samples]\n");
 		return sumll;
