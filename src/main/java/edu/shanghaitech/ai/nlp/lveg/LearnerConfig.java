@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -260,6 +261,8 @@ public class LearnerConfig extends Recorder {
 		public boolean ellprune = false;
 		@Option(name = "-ellimwrite", usage = "write parse tree to image (true) or not (false) when evaluating ll (default: false)")
 		public boolean ellimwrite = false;
+		@Option(name = "-epochskipk", usage = "first k epoches in which evaluation is not performed for time saving (default: 3)")
+		public short epochskipk = 3;
 		@Option(name = "-enbatchdev", usage = "# of batches after which the grammar is evaluated on the development dataset (default: 5)")
 		public short enbatchdev = 5;
 		/* evaluation section ends */
@@ -545,5 +548,35 @@ public class LearnerConfig extends Recorder {
 		  byte[] encoded = Files.readAllBytes(Paths.get(path));
 		  return new String(encoded, encoding);
 	}
+	
+	public static void filterTrees(Options opts, StateTreeList stateTreeList, List<Tree<State>> container, Numberer numberer, boolean istrain) {
+		int cnt = 0;
+		if (container != null) { container.clear(); }
+		int maxlen = istrain ? /*1*/opts.eonlylen : (opts.eonextradev ? opts.eonlylen + 5 : opts.eonlylen);
+		for (Tree<State> tree : stateTreeList) {
+			if (opts.eonlylen > 0) {
+				if (tree.getYield().size() > maxlen) { continue; }
+			}
+			if (istrain && opts.eratio > 0) {
+				if (random.nextDouble() > opts.eratio) { continue; }
+			}
+			if (opts.efirstk > 0) {
+				if (++cnt > opts.efirstk) { break; } // DEBUG
+			}
+			container.add(tree);
+			/*
+			Tree<String> strTree = strTree2stateTree(Tree<State> tree, Numberer numberer)
+			logger.trace((cnt - 1) + "\t" + strTree + "\n");
+			*/
+			// logger.trace((cnt - 1) + "\t" + FunUtil.debugTree(tree, false, (short) -1, numberer, true) + "\n");
+		}
+	}
+	
+	protected static Comparator<Tree<State>> wcomparator = new Comparator<Tree<State>>() {
+		@Override
+		public int compare(Tree<State> o1, Tree<State> o2) {
+			return o2.getYield().size() - o1.getYield().size();
+		}
+	};
 	
 }

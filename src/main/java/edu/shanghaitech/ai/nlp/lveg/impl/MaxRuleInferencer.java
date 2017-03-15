@@ -112,6 +112,7 @@ public class MaxRuleInferencer extends Inferencer {
 	/**
 	 * Discriminate unary rules in the chain.
 	 */
+	@SuppressWarnings("unused")
 	private void maxRuleCountForUnaryRuleLevel(Chart chart, int idx, double scoreS) {
 		double count, newcnt, maxcnt;
 		GaussianMixture outScore, cinScore, ruleW;
@@ -178,7 +179,6 @@ public class MaxRuleInferencer extends Inferencer {
 	/**
 	 * Treat the chain unary rule as a unary rule.
 	 */
-	@SuppressWarnings("unused")
 	private void maxRuleCountForUnaryRuleChain(Chart chart, int idx, double scoreS) {
 		double count, newcnt, maxcnt;
 		GaussianMixture outScore, cinScore, w0, w1;
@@ -250,8 +250,8 @@ public class MaxRuleInferencer extends Inferencer {
 		}
 		
 		// chain unary rule of length 2
-//		maxRuleCountForUnaryRuleChain(chart, idx, scoreS);
-		maxRuleCountForUnaryRuleLevel(chart, idx, scoreS);
+		maxRuleCountForUnaryRuleChain(chart, idx, scoreS);
+//		maxRuleCountForUnaryRuleLevel(chart, idx, scoreS);
 		
 		// ROOT treated as a specific 'binary' rule, I think we should not consider ROOT in the above two cases, and 
 		// only consider it in the following case, only in this way will we keep the count calculation consist. Here

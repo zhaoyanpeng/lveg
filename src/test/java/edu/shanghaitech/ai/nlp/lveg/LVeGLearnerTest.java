@@ -28,7 +28,8 @@ public class LVeGLearnerTest extends Recorder {
 	public void testLVeGLearner() {
 		String[] args = {"param.in"};
 		try {
-			LVeGLearner.main(args);
+//			LVeGLearner.main(args);
+			LVeGTrainer.main(args);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

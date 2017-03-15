@@ -704,31 +704,31 @@ public abstract class Inferencer extends Recorder implements Serializable {
 		protected void clear() {
 			status = false;
 			if (scores != null) {
-				for (Map.Entry<Short, Map<Short, GaussianMixture>> level : scores.entrySet()) {
-					for (Map.Entry<Short, GaussianMixture> entry : level.getValue().entrySet()) {
-						if (entry.getValue() != null) { 
-							entry.getValue().clear(); 
-//							GaussianMixture.returnObject(entry.getValue()); // POOL
-						}
-					}
-					level.getValue().clear();
-				}
+//				for (Map.Entry<Short, Map<Short, GaussianMixture>> level : scores.entrySet()) {
+//					for (Map.Entry<Short, GaussianMixture> entry : level.getValue().entrySet()) {
+//						if (entry.getValue() != null) { 
+//							entry.getValue().clear(); 
+////							GaussianMixture.returnObject(entry.getValue()); // POOL
+//						}
+//					}
+//					level.getValue().clear();
+//				}
 				scores.clear();
 			}
 			if (totals != null) {
-				for (Map.Entry<Short, GaussianMixture> entry : totals.entrySet()) {
-					if (entry.getValue() != null) { 
-						entry.getValue().clear(); 
-//						GaussianMixture.returnObject(entry.getValue()); // POOL
-					}
-				}
+//				for (Map.Entry<Short, GaussianMixture> entry : totals.entrySet()) {
+//					if (entry.getValue() != null) { 
+//						entry.getValue().clear(); 
+////						GaussianMixture.returnObject(entry.getValue()); // POOL
+//					}
+//				}
 				totals.clear();
 			}
 			// the following is for max rule parser
 			if (maxRuleCnts != null) {
-				for (Map.Entry<Short, Map<Short, Double>> entry : maxRuleCnts.entrySet()) {
-					if (entry.getValue() != null) { entry.getValue().clear(); }
-				}
+//				for (Map.Entry<Short, Map<Short, Double>> entry : maxRuleCnts.entrySet()) {
+//					if (entry.getValue() != null) { entry.getValue().clear(); }
+//				}
 				maxRuleCnts.clear();
 			}
 			if (maxRuleSon != null) { maxRuleSon.clear(); }
