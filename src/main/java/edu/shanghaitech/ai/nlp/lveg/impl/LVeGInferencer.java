@@ -71,14 +71,15 @@ public class LVeGInferencer extends Inferencer {
 				GaussianMixture ruleScore, cinScore, pinScore;
 				State child = children.get(0).getLabel();
 				cinScore = child.getInsideScore();
+				pinScore = parent.getInsideScore();
 				short idChild = child.getId();
 				
 				if (idParent != 0) {
 					ruleScore = grammar.getURuleWeight(idParent, idChild, GrammarRule.LRURULE, false);
-					pinScore = ruleScore.mulForInsideOutside(cinScore, GrammarRule.Unit.UC, true);
+					pinScore = ruleScore.mulAndMarginalize(cinScore, pinScore, GrammarRule.Unit.UC, true);
 				} else { // root, inside score of the root node is a constant in double
 					ruleScore = grammar.getURuleWeight(idParent, idChild, GrammarRule.RHSPACE, false);
-					pinScore = ruleScore.mulForInsideOutside(cinScore, GrammarRule.Unit.C, true);
+					pinScore = ruleScore.mulAndMarginalize(cinScore, pinScore, GrammarRule.Unit.C, true);
 				}
 				parent.setInsideScore(pinScore);
 				break;
@@ -92,10 +93,11 @@ public class LVeGInferencer extends Inferencer {
 				
 				linScore = lchild.getInsideScore();
 				rinScore = rchild.getInsideScore();
+				pinScore = parent.getInsideScore();
 				ruleScore = grammar.getBRuleWeight(idParent, idlChild, idrChild, false);
 				
-				pinScore = ruleScore.mulForInsideOutside(linScore, GrammarRule.Unit.LC, true);
-				pinScore = pinScore.mulForInsideOutside(rinScore, GrammarRule.Unit.RC, false);
+				pinScore = ruleScore.mulAndMarginalize(linScore, pinScore, GrammarRule.Unit.LC, true);
+				pinScore = pinScore.mulAndMarginalize(rinScore, pinScore, GrammarRule.Unit.RC, false);
 				parent.setInsideScore(pinScore);
 				break;
 			}
@@ -129,18 +131,16 @@ public class LVeGInferencer extends Inferencer {
 			case 1: {
 				GaussianMixture ruleScore, coutScore;
 				State child = children.get(0).getLabel();
+				coutScore = child.getOutsideScore();
 				short idChild = child.getId();
 				
 				if (idParent != 0) {
 					ruleScore = grammar.getURuleWeight(idParent, idChild, GrammarRule.LRURULE, false);
-					coutScore = ruleScore.mulForInsideOutside(poutScore, GrammarRule.Unit.P, true);
+					coutScore = ruleScore.mulAndMarginalize(poutScore, coutScore, GrammarRule.Unit.P, true);
 				} else { // root
 					ruleScore = grammar.getURuleWeight(idParent, idChild, GrammarRule.RHSPACE, false);
 					coutScore = ruleScore.copy(true); // since OS(ROOT) = 1
 				}
-				// rule: p(root->nonterminal) does not contain "P" part, so no removing occurs when
-				// the current parent node is the root node
-				// coutScore = ruleScore.mulForInsideOutside(poutScore, GrammarRule.Unit.P, true);
 				child.setOutsideScore(coutScore);
 				break;
 			}
@@ -154,13 +154,15 @@ public class LVeGInferencer extends Inferencer {
 				
 				linScore = lchild.getInsideScore();
 				rinScore = rchild.getInsideScore();
+				loutScore = lchild.getOutsideScore();
+				routScore = rchild.getOutsideScore();
 				ruleScore = grammar.getBRuleWeight(idParent, idlChild, idrChild, false);
 				
-				loutScore = ruleScore.mulForInsideOutside(poutScore, GrammarRule.Unit.P, true);
-				loutScore = loutScore.mulForInsideOutside(rinScore, GrammarRule.Unit.RC, false);
+				loutScore = ruleScore.mulAndMarginalize(poutScore, loutScore, GrammarRule.Unit.P, true);
+				loutScore = loutScore.mulAndMarginalize(rinScore, loutScore, GrammarRule.Unit.RC, false);
 				
-				routScore = ruleScore.mulForInsideOutside(poutScore, GrammarRule.Unit.P, true);
-				routScore = routScore.mulForInsideOutside(linScore, GrammarRule.Unit.LC, false);
+				routScore = ruleScore.mulAndMarginalize(poutScore, routScore, GrammarRule.Unit.P, true);
+				routScore = routScore.mulAndMarginalize(linScore, routScore, GrammarRule.Unit.LC, false);
 				lchild.setOutsideScore(loutScore);
 				rchild.setOutsideScore(routScore);
 				break;

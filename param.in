@@ -83,7 +83,7 @@
 -ef1ontrain, false,
 -ef1imwrite, false,
 
--runtag, 0315_trainer_serial_reproduce,
+-runtag, 0315_trainer_serial_reproduce_2,
 -logroot, log/,
 -logtype, true,
 -verbose, false,

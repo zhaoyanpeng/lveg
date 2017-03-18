@@ -451,7 +451,7 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	 * 
 	 */
 	public GaussianMixture mulForInsideOutside(GaussianMixture gm, String key, boolean deep) {
-		GaussianMixture amixture = this.copy(deep);
+		GaussianMixture amixture = deep ? this.copy(deep) : this;
 		// calculating inside score can always remove some portions, but calculating outside score
 		// can not, because the rule ROOT->N has the dummy outside score for ROOT (one component but
 		// without gaussians) and the rule weight does not contain "P" portion. Here is hardcoding
@@ -1262,10 +1262,23 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	}
 	
 	
+	public void clear(boolean deep) {
+		if (deep) {
+			clear();
+		} else {
+			this.bias = 0.0;
+			this.ncomponent = 0;
+			if (components != null) {
+				components.clear();
+			}
+		}
+	}
+	
+	
 	/**
 	 * Memory clean.
 	 */
-	public void clear() {
+	private void clear() {
 		this.bias = 0.0;
 		this.ncomponent = 0;
 		if (components != null) {

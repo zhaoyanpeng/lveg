@@ -117,23 +117,21 @@ public class DiagonalGaussianMixture extends GaussianMixture {
 	
 	@Override
 	public GaussianMixture mulAndMarginalize(GaussianMixture gm, GaussianMixture des, String key, boolean deep) {
+		// 'des' is exactly the same as 'this' when deep is false
 		if (des != null) { // placeholder
-			des.clear();
-			copy(des, deep);
+			if (deep) { 
+				des.clear(false); 
+				copy(des, true);
+			} 
 		} else { // new memo space
-			des = copy(deep);
+			des = deep ? copy(true) : this;
 		}
-		// calculating inside score can always remove some portions, but calculating outside score
-		// can not, because the rule ROOT->N has the dummy outside score for ROOT (one component but
-		// without gaussians) and the rule weight does not contain "P" portion. Here is hardcoding
-		/*if (gm.ncomponent() == 1 && gm.size(0) == 0) {
-			return des;
-		}*/
 		// the following is the general case
 		for (Component comp : des.components()) {
 			double logsum = Double.NEGATIVE_INFINITY;
 			GaussianDistribution gd = comp.squeeze(key);
-			if (gd == null) { continue; } // see the above comments
+			// w(ROOT->X) has no P portion in computing outside score
+			if (gd == null) { continue; } 
 			for (Component comp1 : gm.components()) {
 				GaussianDistribution gd1 = comp1.squeeze(null);
 				double logcomp = comp1.getWeight() + gd.mulAndMarginalize(gd1);

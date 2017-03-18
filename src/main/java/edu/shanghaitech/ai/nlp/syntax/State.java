@@ -2,7 +2,6 @@ package edu.shanghaitech.ai.nlp.syntax;
 
 import java.io.Serializable;
 
-import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.util.Numberer;
 
@@ -117,11 +116,11 @@ public class State implements Serializable {
 	
 	private void resetScore() {
 		if (insideScore != null) { 
-			insideScore.clear(); 
+			insideScore.clear(true); 
 //			GaussianMixture.returnObject(insideScore); // POOL
 		}
 		if (outsideScore != null) { 
-			outsideScore.clear(); 
+			outsideScore.clear(true); 
 //			GaussianMixture.returnObject(outsideScore); // POOL
 		}
 		this.insideScore = null;
