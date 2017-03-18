@@ -218,12 +218,14 @@ public abstract class Inferencer extends Recorder implements Serializable {
 		// have to process ROOT node specifically
 		if (idx == 0 && (set = chart.keySet(idx, false, (short) (LENGTH_UCHAIN + 1))) != null) {
 			for (Short idTag : set) { // can only contain ROOT
+				if (idTag != ROOT) { continue; }
 				rules = grammar.getURuleWithP(idTag);
 				Iterator<GrammarRule> iterator = rules.iterator(); // see set ROOT's outside score
 				poutScore = chart.getOutsideScore(idTag, idx, (short) (LENGTH_UCHAIN + 1)); // 1
 				while (iterator.hasNext()) { // CHECK
 					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
-					coutScore = rule.weight.mulForInsideOutside(poutScore, rmKey, true);
+					coutScore = rule.weight.copy(true); // since OS(ROOT) = 1
+					// coutScore = rule.weight.mulForInsideOutside(poutScore, rmKey, true);
 					chart.addOutsideScore((short) rule.rhs, idx, coutScore, level, false);
 				}
 			}

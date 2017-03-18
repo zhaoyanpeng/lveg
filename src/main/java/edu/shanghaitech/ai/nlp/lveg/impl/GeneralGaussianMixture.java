@@ -38,4 +38,9 @@ public class GeneralGaussianMixture extends GaussianMixture {
 	protected void initialize() {
 	}
 
+	@Override
+	public GaussianMixture mulAndMarginalize(GaussianMixture gm, GaussianMixture des, String key, boolean deep) {
+		return null;
+	}
+
 }

@@ -133,12 +133,14 @@ public class LVeGInferencer extends Inferencer {
 				
 				if (idParent != 0) {
 					ruleScore = grammar.getURuleWeight(idParent, idChild, GrammarRule.LRURULE, false);
+					coutScore = ruleScore.mulForInsideOutside(poutScore, GrammarRule.Unit.P, true);
 				} else { // root
 					ruleScore = grammar.getURuleWeight(idParent, idChild, GrammarRule.RHSPACE, false);
+					coutScore = ruleScore.copy(true); // since OS(ROOT) = 1
 				}
 				// rule: p(root->nonterminal) does not contain "P" part, so no removing occurs when
 				// the current parent node is the root node
-				coutScore = ruleScore.mulForInsideOutside(poutScore, GrammarRule.Unit.P, true);
+				// coutScore = ruleScore.mulForInsideOutside(poutScore, GrammarRule.Unit.P, true);
 				child.setOutsideScore(coutScore);
 				break;
 			}
