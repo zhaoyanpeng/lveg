@@ -22,14 +22,15 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 	
 	
 	private MaxRuleParser(MaxRuleParser<?, ?> parser) {
-		super(parser.maxLenParsing, parser.reuse, parser.iosprune);
+		super(parser.maxLenParsing, parser.nthread, parser.parallel, parser.reuse, parser.iosprune);
 		this.inferencer = parser.inferencer;
 		this.chart = parser.reuse ? new Chart(maxLenParsing, true) : null;
 	}
 	
 	
-	public MaxRuleParser(LVeGGrammar grammar, LVeGLexicon lexicon, short maxLenParsing, boolean reuse, boolean iosprune) {
-		super(maxLenParsing, reuse, iosprune);
+	public MaxRuleParser(LVeGGrammar grammar, LVeGLexicon lexicon, short maxLenParsing, short nthread, 
+			boolean parallel, boolean reuse, boolean iosprune) {
+		super(maxLenParsing, nthread, parallel, reuse, iosprune);
 		this.inferencer = new MaxRuleInferencer(grammar, lexicon);
 		this.chart = reuse ? new Chart(maxLenParsing, true) : null;
 	}
@@ -114,13 +115,21 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 			chart = new Chart(nword, true);
 		}
 //		logger.trace("\nInside score...\n"); // DEBUG
-		Inferencer.insideScore(chart, sentence, nword, iosprune);
-//		FunUtil.debugChart(chart.getChart(true), (short) -1, tree.getYield().size()); // DEBUG
+		if (parallel) {
+			cpool.reset();
+			Inferencer.insideScore(chart, sentence, nword, iosprune, cpool);
+			Inferencer.setRootOutsideScore(chart);
+			cpool.reset();
+			Inferencer.outsideScore(chart, sentence, nword, iosprune, cpool);
+		} else {
+			Inferencer.insideScore(chart, sentence, nword, iosprune);
+//			FunUtil.debugChart(chart.getChart(true), (short) -1, tree.getYield().size()); // DEBUG
 
-//		logger.trace("\nOutside score...\n"); // DEBUG
-		Inferencer.setRootOutsideScore(chart);
-		Inferencer.outsideScore(chart, sentence, nword, iosprune);
-//		FunUtil.debugChart(chart.getChart(false), (short) -1, tree.getYield().size()); // DEBUG
+//			logger.trace("\nOutside score...\n"); // DEBUG
+			Inferencer.setRootOutsideScore(chart);
+			Inferencer.outsideScore(chart, sentence, nword, iosprune);
+//			FunUtil.debugChart(chart.getChart(false), (short) -1, tree.getYield().size()); // DEBUG
+		}
 		
 		return chart;
 	}

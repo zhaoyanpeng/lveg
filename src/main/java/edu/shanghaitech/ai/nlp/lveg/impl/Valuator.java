@@ -21,14 +21,15 @@ public class Valuator<I, O> extends Parser<I, O> {
 	
 	
 	private Valuator(Valuator<?, ?> valuator) {
-		super(valuator.maxLenParsing, valuator.reuse, valuator.iosprune);
+		super(valuator.maxLenParsing, valuator.nthread, valuator.parallel, valuator.reuse, valuator.iosprune);
 		this.inferencer = valuator.inferencer;
 		this.chart = valuator.reuse ? new Chart(maxLenParsing, false) : null;
 	}
 	
 	
-	public Valuator(LVeGGrammar grammar, LVeGLexicon lexicon, short maxLenParsing, boolean reuse, boolean iosprune) {
-		super(maxLenParsing, reuse, iosprune);
+	public Valuator(LVeGGrammar grammar, LVeGLexicon lexicon, short maxLenParsing, short nthread, 
+			boolean parallel, boolean reuse, boolean iosprune) {
+		super(maxLenParsing, nthread, parallel, reuse, iosprune);
 		this.inferencer = new LVeGInferencer(grammar, lexicon);
 		this.chart = reuse ? new Chart(maxLenParsing, false) : null;
 	}
@@ -102,7 +103,12 @@ public class Valuator<I, O> extends Parser<I, O> {
 			if (chart != null) { chart.clear(-1); }
 			chart = new Chart(nword, false);
 		}
-		Inferencer.insideScore(chart, sentence, nword, iosprune);
+		if (parallel) {
+			cpool.reset();
+			Inferencer.insideScore(chart, sentence, nword, iosprune, cpool);
+		} else {
+			Inferencer.insideScore(chart, sentence, nword, iosprune);
+		}
 		GaussianMixture gm = chart.getInsideScore((short) 0, Chart.idx(0, 1));
 		double score = gm.eval(null, true);
 //		FunUtil.debugChart(chart.getChart(true), (short) -1, nword); // DEBUG

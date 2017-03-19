@@ -147,9 +147,12 @@ public class LVeGTrainer extends LearnerConfig {
 		lexicon.labelTrees(testTrees); // save the search time cost by finding a specific tag-word
 		lexicon.labelTrees(devTrees); // pair in in Lexicon.score(...)
 		
-		lvegParser = new LVeGParser<Tree<State>, List<Double>>(grammar, lexicon, opts.maxLenParsing, opts.reuse, opts.iosprune, opts.cntprune);
-		mrParser = new MaxRuleParser<Tree<State>, Tree<String>>(grammar, lexicon, opts.maxLenParsing, opts.reuse, opts.ef1prune);
-		valuator = new Valuator<Tree<State>, Double>(grammar, lexicon, opts.maxLenParsing, opts.reuse, opts.ellprune);
+		lvegParser = new LVeGParser<Tree<State>, List<Double>>(grammar, lexicon, opts.maxLenParsing, 
+				opts.ntcyker, opts.pcyker, opts.reuse, opts.iosprune, opts.cntprune);
+		mrParser = new MaxRuleParser<Tree<State>, Tree<String>>(grammar, lexicon, opts.maxLenParsing, 
+				opts.ntcyker, opts.pcyker, opts.reuse, opts.ef1prune);
+		valuator = new Valuator<Tree<State>, Double>(grammar, lexicon, opts.maxLenParsing, 
+				opts.ntcyker, opts.pcyker, opts.reuse, opts.ellprune);
 		mvaluator = new ThreadPool(valuator, opts.nteval);
 		trainer = new ThreadPool(lvegParser, opts.ntbatch);
 		double ll = Double.NEGATIVE_INFINITY;

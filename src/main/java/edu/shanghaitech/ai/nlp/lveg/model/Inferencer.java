@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.Set;
 
 import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
@@ -14,7 +15,9 @@ import edu.shanghaitech.ai.nlp.lveg.impl.BinaryGrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.impl.DiagonalGaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.impl.UnaryGrammarRule;
 import edu.shanghaitech.ai.nlp.syntax.State;
+import edu.shanghaitech.ai.nlp.util.Executor;
 import edu.shanghaitech.ai.nlp.util.Recorder;
+import edu.shanghaitech.ai.nlp.util.ThreadPool;
 
 public abstract class Inferencer extends Recorder implements Serializable {
 	/**
@@ -42,6 +45,104 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	public void evalGradients(List<Double> scores) {
 		grammar.evalGradients(scores);
 		lexicon.evalGradients(scores);
+	}
+	
+	
+	/**
+	 * Compute the inside score given the sentence and grammar rules.
+	 * 
+	 * @param chart [in/out]-side score container
+	 * @param tree  in which only the sentence is used
+	 * @param nword # of words in the sentence
+	 */
+	public static void insideScore(Chart chart, List<State> sentence, int nword, boolean prune, ThreadPool cpool) {
+		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBRuleMap();
+		for (int i = 0; i < nword; i++) {
+			int iCell = Chart.idx(i, nword);
+			List<GrammarRule> rules = lexicon.getRulesWithWord(sentence.get(i));
+			// preterminals
+			for (GrammarRule rule : rules) {
+				chart.addInsideScore(rule.lhs, iCell, rule.getWeight().copy(true), (short) 0, false);
+			}
+			// DEBUG unary grammar rules
+//			logger.trace("Cell [" + i + ", " + (i + 0) + "]="+ iCell + "\t is being estimated. # " );
+//			long start = System.currentTimeMillis();
+			if (prune) { chart.pruneInsideScore(iCell, (short) 0); }
+			insideScoreForUnaryRule(chart, iCell, chainurule, prune);
+			if (prune) { chart.pruneInsideScore(iCell, (short) -1); }
+//			long ttime = System.currentTimeMillis() - start;
+//			logger.trace("\tafter chain unary\t" + chart.size(iCell, true) + "\ttime: " + ttime / 1000 + "\n");
+		}		
+		
+		// inside score
+		for (int ilayer = 1; ilayer < nword; ilayer++) {
+			for (int left = 0; left < nword - ilayer; left++) {
+				int c2 = Chart.idx(left, nword - ilayer);
+				Cell cell = chart.get(c2, true); 
+				
+				// binary grammar rules
+				for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
+					InputToSubCYKer input = new InputToSubCYKer(ilayer, left, nword, cell, chart, rmap.getValue(), true);
+					cpool.execute(input);
+					while (cpool.hasNext()) {
+						cpool.getNext();
+					}
+				}
+				while (!cpool.isDone()) {
+					while (cpool.hasNext()) {
+						cpool.getNext();
+					}
+				}
+				// DEBUG unary grammar rules
+//				logger.trace("Cell [" + left + ", " + (left + ilayer) + "]="+ c2 + "\t is being estimated. # ");
+//				long start = System.currentTimeMillis();
+				if (prune) { chart.pruneInsideScore(c2, (short) 0); }
+				insideScoreForUnaryRule(chart, c2, chainurule, prune);
+				if (prune) { chart.pruneInsideScore(c2, (short) -1); }
+//				long ttime = System.currentTimeMillis() - start;
+//				logger.trace("\tafter chain unary\t" + chart.size(c2, true) + "\ttime: " + ttime / 1000 + "\n");
+			}
+		}
+	}
+	
+	
+	/**
+	 * Compute the outside score given the sentence and grammar rules.
+	 * 
+	 * @param chart [in/out]-side score container
+	 * @param tree  in which only the sentence is used.
+	 * @param nword # of words in the sentence
+	 */
+	public static void outsideScore(Chart chart, List<State> sentence, int nword, boolean prune, ThreadPool cpool) {
+		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBRuleMap();
+		for (int ilayer = nword - 1; ilayer >= 0; ilayer--) {
+			for (int left = 0; left < nword - ilayer; left++) {
+				int c2 = Chart.idx(left, nword - ilayer);
+				Cell cell = chart.get(c2, false); 
+				
+				// binary grammar rules
+				for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
+					InputToSubCYKer input = new InputToSubCYKer(ilayer, left, nword, cell, chart, rmap.getValue(), false);
+					cpool.execute(input);
+					while (cpool.hasNext()) {
+						cpool.getNext();
+					}
+				}
+				while (!cpool.isDone()) {
+					while (cpool.hasNext()) {
+						cpool.getNext();
+					}
+				}
+				// DEBUG unary grammar rules
+//				logger.trace("Cell [" + left + ", " + (left + ilayer) + "]="+ c2 + "\t is being estimated. # ");
+//				long start = System.currentTimeMillis();
+				if (prune) { chart.pruneOutsideScore(c2, (short) 0); }
+				outsideScoreForUnaryRule(chart, c2, chainurule, prune);
+				if (prune) { chart.pruneOutsideScore(c2, (short) -1); }
+//				long ttime = System.currentTimeMillis() - start;
+//				logger.trace("\tafter chain unary\t" + chart.size(c2, false) + "\ttime: " + ttime / 1000 + "\n");
+			}
+		}
 	}
 	
 	
@@ -295,6 +396,137 @@ public abstract class Inferencer extends Recorder implements Serializable {
 		gm.marginalizeToOne();
 		chart.addOutsideScore((short) 0, Chart.idx(0, 1), gm, (short) (LENGTH_UCHAIN + 1), false);
 	}
+	
+	
+	public static class InputToSubCYKer {
+		protected int ilayer;
+		protected int nword;
+		protected int left;
+		protected Chart chart;
+		protected Cell cell;
+		protected boolean inside;
+		protected GrammarRule rule;
+		public InputToSubCYKer(int ilayer, int left, int nword,
+				Cell cell, Chart chart, GrammarRule rule, boolean inside) {
+			this.inside = inside;
+			this.ilayer = ilayer;
+			this.nword = nword;
+			this.chart = chart;
+			this.left = left;
+			this.cell = cell;
+			this.rule = rule;
+		}
+	}
+	
+	public static class SubCYKer<I, O> implements Executor<I, O> {
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 3714235072505026471L;
+		protected int idx;
+		
+		protected I task;
+		protected int itask;
+		protected PriorityQueue<Meta<O>> caches;
+		
+		public SubCYKer() {}
+		private SubCYKer(SubCYKer<?, ?> subCYKer) {}
+
+		@Override
+		public synchronized Object call() throws Exception {
+			if (task == null) { return null; }
+			InputToSubCYKer input = (InputToSubCYKer) task;
+			int x0, x1, y0, y1, c0, c1;
+			int left = input.left, ilayer = input.ilayer, nword = input.nword;
+			if (input.inside) { // inside scores with binary rules
+				x0 = left;
+				y1 = left + ilayer;
+				GaussianMixture pinScore, linScore, rinScore, ruleScore;
+				BinaryGrammarRule rule = (BinaryGrammarRule) (input.rule);
+				for (int right = left; right < left + ilayer; right++) {
+					y0 = right;
+					x1 = right + 1;
+					c0 = Chart.idx(x0, nword - (y0 - x0));
+					c1 = Chart.idx(x1, nword - (y1 - x1));
+				
+					if (input.chart.containsKey(rule.lchild, c0, true) && input.chart.containsKey(rule.rchild, c1, true)) {
+						ruleScore = rule.getWeight();
+						linScore = input.chart.getInsideScore(rule.lchild, c0);
+						rinScore = input.chart.getInsideScore(rule.rchild, c1);
+						
+						pinScore = ruleScore.mulForInsideOutside(linScore, GrammarRule.Unit.LC, true);
+						pinScore = pinScore.mulForInsideOutside(rinScore, GrammarRule.Unit.RC, false);
+						input.cell.addScore(rule.lhs, pinScore, (short) 0, false);
+					}
+				}
+			} else { // outside scores with binary rules
+				x0 = left;
+				x1 = left + ilayer + 1; 
+				GaussianMixture poutScore, linScore, rinScore, loutScore, routScore, ruleScore;
+				BinaryGrammarRule rule = (BinaryGrammarRule) (input.rule);
+				for (int right = left + ilayer + 1; right < nword; right++) {
+					y0 = right;
+					y1 = right;
+					c0 = Chart.idx(x0, nword - (y0 - x0));
+					c1 = Chart.idx(x1, nword - (y1 - x1));
+				
+					if (input.chart.containsKey(rule.lhs, c0, false) && input.chart.containsKey(rule.rchild, c1, true)) {
+						ruleScore = rule.getWeight();
+						poutScore = input.chart.getOutsideScore(rule.lhs, c0);
+						rinScore = input.chart.getInsideScore(rule.rchild, c1);
+						
+						loutScore = ruleScore.mulForInsideOutside(poutScore, GrammarRule.Unit.P, true);
+						loutScore = loutScore.mulForInsideOutside(rinScore, GrammarRule.Unit.RC, false);
+						input.cell.addScore(rule.lchild, loutScore, (short) 0, false);
+					}
+				}
+				y0 = left + ilayer;
+				y1 = left - 1;
+				for (int right = 0; right < left; right++) {
+					x0 = right; 
+					x1 = right;
+					c0 = Chart.idx(x0, nword - (y0 - x0));
+					c1 = Chart.idx(x1, nword - (y1 - x1));
+					
+					if (input.chart.containsKey(rule.lhs, c0, false) && input.chart.containsKey(rule.lchild, c1, true)) {
+						ruleScore = rule.getWeight();
+						poutScore = input.chart.getOutsideScore(rule.lhs, c0);
+						linScore = input.chart.getInsideScore(rule.lchild, c1);
+						
+						routScore = ruleScore.mulForInsideOutside(poutScore, GrammarRule.Unit.P, true);
+						routScore = routScore.mulForInsideOutside(linScore, GrammarRule.Unit.LC, false);
+						input.cell.addScore(rule.rchild, routScore, (short) 0, false); 
+					}
+				}
+			}
+			Meta<O> cache = new Meta(itask, true); // currently nothing returns, may add try...catch.. clause
+			synchronized (caches) {
+				caches.add(cache);
+				caches.notifyAll();
+			}
+			task = null;
+			return null;
+		}
+
+		@Override
+		public Executor<?, ?> newInstance() {
+			return new SubCYKer<I, O>(this);
+		}
+
+		@Override
+		public void setNextTask(int itask, I task) {
+			this.task = task;
+			this.itask = itask;
+		}
+
+		@Override
+		public void setIdx(int idx, PriorityQueue<edu.shanghaitech.ai.nlp.util.Executor.Meta<O>> caches) {
+			this.idx = idx;
+			this.caches = caches;
+		}
+		
+	}
+	
 	
 	/**
 	 * Manage cells in the chart.
@@ -662,7 +894,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 			return split == null ? -1 : split;
 		}
 		
-		protected void addScore(short key, GaussianMixture gm, short level, boolean prune) {
+		protected synchronized void addScore(short key, GaussianMixture gm, short level, boolean prune) {
 			Map<Short, GaussianMixture> lscore = scores.get(level);
 			if (lscore == null) {
 				lscore = new HashMap<Short, GaussianMixture>();
@@ -677,7 +909,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 			addScore(key, gm, prune);
 		}
 		
-		private void addScore(short key, GaussianMixture gm, boolean prune) {
+		private synchronized void addScore(short key, GaussianMixture gm, boolean prune) {
 			if (containsKey(key)) { 
 				// gm is passed into this method by addScore(short, GaussianMixture, short, boolean),
 				// before that it has been added into Cell.scores, and is filtered when 

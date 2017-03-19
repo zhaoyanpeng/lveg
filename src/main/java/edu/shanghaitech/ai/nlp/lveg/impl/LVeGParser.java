@@ -5,7 +5,6 @@ import java.util.List;
 
 import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
-import edu.shanghaitech.ai.nlp.lveg.model.Inferencer;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
 import edu.shanghaitech.ai.nlp.lveg.model.Parser;
 import edu.shanghaitech.ai.nlp.lveg.model.Inferencer.Chart;
@@ -26,15 +25,15 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 	
 	
 	private LVeGParser(LVeGParser<?, ?> parser) {
-		super(parser.maxLenParsing, parser.reuse, parser.iosprune, parser.cntprune);
+		super(parser.maxLenParsing, parser.nthread, parser.parallel, parser.reuse, parser.iosprune, parser.cntprune);
 		this.inferencer = parser.inferencer;
 		this.chart = parser.reuse ? new Chart(maxLenParsing, false) : null;
 	}
 	
 	
-	public LVeGParser(LVeGGrammar grammar, LVeGLexicon lexicon, short maxLenParsing, 
-			boolean reuse, boolean iosprune, boolean cntprune) {
-		super(maxLenParsing, reuse, iosprune, cntprune);
+	public LVeGParser(LVeGGrammar grammar, LVeGLexicon lexicon, short maxLenParsing, short nthread, 
+			boolean parallel, boolean reuse, boolean iosprune, boolean cntprune) {
+		super(maxLenParsing, nthread, parallel, reuse, iosprune, cntprune);
 		this.inferencer = new LVeGInferencer(grammar, lexicon);
 		this.chart = reuse ? new Chart(maxLenParsing, false) : null;
 	}
@@ -121,13 +120,21 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 			chart = new Chart(nword, false);
 		}
 //		logger.trace("\nInside score...\n"); // DEBUG
-		LVeGInferencer.insideScore(chart, sentence, nword, iosprune);
-//		FunUtil.debugChart(Chart.iGetChart(), (short) 2); // DEBUG
-
-//		logger.trace("\nOutside score...\n"); // DEBUG
-		LVeGInferencer.setRootOutsideScore(chart);
-		LVeGInferencer.outsideScore(chart, sentence, nword, iosprune);
-//		FunUtil.debugChart(Chart.oGetChart(), (short) 2); // DEBUG
+		if (parallel) {
+			cpool.reset();
+			LVeGInferencer.insideScore(chart, sentence, nword, iosprune, cpool);
+			LVeGInferencer.setRootOutsideScore(chart);
+			cpool.reset();
+			LVeGInferencer.outsideScore(chart, sentence, nword, iosprune, cpool);
+		} else {
+			LVeGInferencer.insideScore(chart, sentence, nword, iosprune);
+//			FunUtil.debugChart(Chart.iGetChart(), (short) 2); // DEBUG
+	
+//			logger.trace("\nOutside score...\n"); // DEBUG
+			LVeGInferencer.setRootOutsideScore(chart);
+			LVeGInferencer.outsideScore(chart, sentence, nword, iosprune);
+//			FunUtil.debugChart(Chart.oGetChart(), (short) 2); // DEBUG
+		}
 		
 		GaussianMixture score = chart.getInsideScore((short) 0, Chart.idx(0, 1));
 		double scoreS = score.eval(null, true);

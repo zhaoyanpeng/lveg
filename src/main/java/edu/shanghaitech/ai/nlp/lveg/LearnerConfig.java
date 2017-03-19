@@ -169,6 +169,8 @@ public class LearnerConfig extends Recorder {
 		/* grammar-data section ends */
 		
 		/* parallel configurations section begins */
+		@Option(name = "-ntcyker", usage = "# of threads for computing in/out-side scores with binary rules (default: 1)")
+		public short ntcyker = 1;
 		@Option(name = "-ntbatch", usage = "# of threads for minibatch training (default: 1)")
 		public short ntbatch = 1;
 		@Option(name = "-ntgrad", usage = "# of threads for gradient calculation (default: 1)")
@@ -179,9 +181,11 @@ public class LearnerConfig extends Recorder {
 		public short nttest = 1;
 		@Option(name = "-pclose", usage = "close all parallel switches (default: false)")
 		public boolean pclose = false;
-		@Option(name = "-pbatch", usage = "parallizing training in the minibatch (true) or not (false) (default: false)")
+		@Option(name = "-pcyker", usage = "parallizing cyk algorithm (true) or not (false) (default: true)")
+		public boolean pcyker = true;
+		@Option(name = "-pbatch", usage = "parallizing training in the minibatch (true) or not (false) (default: true)")
 		public boolean pbatch = true;
-		@Option(name = "-peval", usage = "parallizing evaluation section (true) or not (false) (default: false)")
+		@Option(name = "-peval", usage = "parallizing evaluation section (true) or not (false) (default: true)")
 		public boolean peval = true;
 		@Option(name = "-pgrad", usage = "parallizeing gradient calculation (true) or not (false) (default: true)")
 		public boolean pgrad = true;
