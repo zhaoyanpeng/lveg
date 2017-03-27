@@ -66,9 +66,11 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 	
 	public void postInitialize() {
 		for (GrammarRule rule : uRuleTable.keySet()) {
+			rule.getWeight().setBias(uRuleTable.getCount(rule).getBias());
 			addURule((UnaryGrammarRule) rule);
 		}
 		for (GrammarRule rule : bRuleTable.keySet()) {
+			rule.getWeight().setBias(bRuleTable.getCount(rule).getBias());
 			addBRule((BinaryGrammarRule) rule);
 		}
 //		computeChainUnaryRule();
@@ -258,7 +260,8 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 		sb.append("---Unary Grammar Rules. Total: " + nurule + "\n");
 		for (GrammarRule rule : uRuleTable.keySet()) {
 			ncomp += rule.weight.ncomponent();
-			sb.append(rule + "\t" + uRuleTable.getCount(rule).getBias() + "\t" + rule.weight.ncomponent());
+			sb.append(rule + "\t\t" + uRuleTable.getCount(rule).getBias() + "\t\t" 
+					+ rule.weight.ncomponent() + "\t\t" + Math.exp(rule.weight.getWeight(0)));
 			if (++count % ncol == 0) {
 				sb.append("\n");
 			}
@@ -272,7 +275,8 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 		sb.append("---Binary Grammar Rules. Total: " + nbrule + "\n");
 		for (GrammarRule rule : bRuleTable.keySet()) {
 			ncomp += rule.weight.ncomponent();
-			sb.append(rule + "\t" + bRuleTable.getCount(rule).getBias() + "\t" + rule.weight.ncomponent());
+			sb.append(rule + "\t\t" + bRuleTable.getCount(rule).getBias() + "\t\t"
+					+ rule.weight.ncomponent() + "\t\t" + Math.exp(rule.weight.getWeight(0)));
 			if (++count % ncol == 0) {
 				sb.append("\n");
 			}

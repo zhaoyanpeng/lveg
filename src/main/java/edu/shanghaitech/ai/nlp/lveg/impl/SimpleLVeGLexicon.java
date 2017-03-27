@@ -73,6 +73,7 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 			uRulesWithC[i] = new ArrayList<GrammarRule>(5);
 		}
 		for (GrammarRule rule : uRuleTable.keySet()) {
+			rule.getWeight().setBias(uRuleTable.getCount(rule).getBias());
 			addURule((UnaryGrammarRule) rule);
 		}
 	}
@@ -213,7 +214,8 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 			sb.append("Tag " + i + "\t[" + numberer.object(i) + "] has " + rules.size() + " rules\n" );
 			for (GrammarRule rule : rules) {
 				ncomp += rule.weight.ncomponent();
-				sb.append(rule + "\t" + uRuleTable.getCount(rule).getBias() + "\t" + rule.weight.ncomponent());
+				sb.append(rule + "\t\t" + uRuleTable.getCount(rule).getBias() + "\t\t" 
+						+ rule.weight.ncomponent() + "\t\t" + Math.exp(rule.weight.getWeight(0)));
 				if (++count % ncol == 0) {
 					sb.append("\n");
 				}

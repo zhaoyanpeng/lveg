@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -25,6 +26,9 @@ import edu.shanghaitech.ai.nlp.lveg.impl.MoGFactory;
 import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGLexicon;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
+import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
 import edu.shanghaitech.ai.nlp.optimization.Optimizer.OptChoice;
 import edu.shanghaitech.ai.nlp.optimization.ParallelOptimizer.ParallelMode;
 import edu.shanghaitech.ai.nlp.syntax.State;
@@ -248,6 +252,8 @@ public class LearnerConfig extends Recorder {
 		public short dim = 2;
 		@Option(name = "-useref", usage = "refer the # of subtypes of nonterminals of berkeley parser (true) or not (false) (default: false)")
 		public boolean useref = false;
+		@Option(name = "-resetw", usage = "reset the mixing weight according to the treebank grammars (default: false)")
+		public boolean resetw = false;
 		/* training-configurations section ends */
 		
 		/* evaluation section begins */
@@ -293,8 +299,8 @@ public class LearnerConfig extends Recorder {
 		/* logger configurations section begins */
 		@Option(name = "-runtag", usage = "the flag assigned to a run specially (default: lveg)")
 		public String runtag = "lveg";
-		@Option(name = "-logtype", usage = "console (false) or file and console (true) (default: true)")
-		public boolean logtype = false;
+		@Option(name = "-logtype", usage = "file (1) or console (< 0) or file and console (0) (default: -1)")
+		public int logtype = -1;
 		@Option(name = "-logroot", usage = "log file name (default: log/log)")
 		public String logroot = "log/";
 		@Option(name = "-nbatch", usage = "# of batches after which the grammar evaluation is conducted (default: 1)")
@@ -386,8 +392,10 @@ public class LearnerConfig extends Recorder {
 			logfile = opts.logroot + "/" + suffix;
 			FunUtil.mkdir(sublogroot);
 		}
-		if (opts.logtype) {
+		if (opts.logtype == 0) {
 			logger = logUtil.getBothLogger(logfile);
+		} else if (opts.logtype == 1) {
+			logger = logUtil.getFileLogger(logfile);
 		} else {
 			logger = logUtil.getConsoleLogger();
 		}
@@ -591,5 +599,32 @@ public class LearnerConfig extends Recorder {
 			return o2.getYield().size() - o1.getYield().size();
 		}
 	};
+	
+	protected static void resetRuleWeight(LVeGGrammar grammar, LVeGLexicon lexicon, Numberer numberer) {
+		int ntag = numberer.size(), nrule, count;
+		List<GrammarRule> gUruleWithP, gBruleWithP, lUruleWithP;
+		double prob;
+		GaussianMixture ruleW;
+		for (int i = 0; i < ntag; i++) {
+			count = 0;
+			gUruleWithP = grammar.getURuleWithP(i);
+			gBruleWithP = grammar.getBRuleWithP(i);
+			lUruleWithP = lexicon.getURuleWithP(i);
+			nrule = gUruleWithP.size() + gBruleWithP.size() + lUruleWithP.size();
+			List<GrammarRule> rules = new ArrayList<GrammarRule>(nrule + 5);
+			rules.addAll(gUruleWithP);
+			rules.addAll(gBruleWithP);
+			rules.addAll(lUruleWithP);
+			for (GrammarRule rule : rules) {
+				count += rule.getWeight().getBias();
+			}
+			
+			for (GrammarRule rule : rules) {
+				ruleW = rule.getWeight();
+				prob = Math.log(ruleW.getBias() / count);
+				ruleW.setWeight(0, prob);
+			}
+		}
+	}
 	
 }

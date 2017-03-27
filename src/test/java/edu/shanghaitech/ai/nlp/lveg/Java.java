@@ -84,6 +84,12 @@ public class Java {
 	
 	
 	@Test
+	public void testTest() {
+		int a = 3, b = 3;
+		assert(a != b);
+	}
+	
+//	@Test
 	public void testDate() {
 		String timeStamp = new SimpleDateFormat(".yyyyMMddHHmmss").format(new Date());
 		System.out.println(timeStamp);

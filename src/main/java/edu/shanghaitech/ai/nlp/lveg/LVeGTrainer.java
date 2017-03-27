@@ -138,6 +138,11 @@ public class LVeGTrainer extends LearnerConfig {
 			lexicon.postInitialize();
 			logger.trace("post-initializing is over.\n");
 		}
+		// reset the rule weight
+		if (opts.resetw) {
+			logger.trace("--->Reset rule weights according to treebank grammars...\n");
+			resetRuleWeight(grammar, lexicon, numberer);
+		}
 		/*
 		logger.trace(grammar);
 		logger.trace(lexicon);
