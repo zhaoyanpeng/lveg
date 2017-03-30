@@ -141,7 +141,7 @@ public class LVeGTrainer extends LearnerConfig {
 		// reset the rule weight
 		if (opts.resetw) {
 			logger.trace("--->Reset rule weights according to treebank grammars...\n");
-			resetRuleWeight(grammar, lexicon, numberer);
+			resetRuleWeight(grammar, lexicon, numberer, opts.mwfactor);
 		}
 		/*
 		logger.trace(grammar);
@@ -282,6 +282,10 @@ public class LVeGTrainer extends LearnerConfig {
 			epochBTime = System.currentTimeMillis();
 			while (true) {
 				ibatch++;
+				if ((iepoch > opts.epochskipk - 1) && (opts.nbatch == 0 || ((ibatch % opts.nbatch) == 0))) {
+					exit = opts.nbatch == 0 ? true : peep(ibatch, iepoch, numberer, trllist, dellist, false);
+					if (exit) { break; }
+				}
 				nfailed = 0;
 				iprebeg = ibegin;
 				ibegin = getBatch(ibegin, batch);
@@ -312,10 +316,6 @@ public class LVeGTrainer extends LearnerConfig {
 				eTime = System.currentTimeMillis();
 				logger.trace((eTime - bTime) / 1000.0 + "... batch time: " + (batchETime - batchBTime) / 1000.0 + "\n");
 				
-				if ((iepoch > opts.epochskipk - 1) && ((ibatch % opts.nbatch) == 0)) {
-					exit = peep(ibatch, iepoch, numberer, trllist, dellist, false);
-					if (exit) { break; }
-				}
 				if (ibegin < iprebeg) {
 					break; // epoch ends
 				}
@@ -344,6 +344,10 @@ public class LVeGTrainer extends LearnerConfig {
 			epochBTime = System.currentTimeMillis();
 			while (true) {
 				ibatch++;
+				if ((iepoch > opts.epochskipk - 1) && (opts.nbatch == 0 || ((ibatch % opts.nbatch) == 0))) {
+					exit = opts.nbatch == 0 ? true : peep(ibatch, iepoch, numberer, trllist, dellist, false);
+					if (exit) { break; }
+				}
 				isample = 0;
 				iprebeg = ibegin;
 				ibegin = getBatch(ibegin, batch);
@@ -387,11 +391,6 @@ public class LVeGTrainer extends LearnerConfig {
 				
 				eTime = System.currentTimeMillis();
 				logger.trace((eTime - bTime) / 1000.0 + "... batch time: " + (batchETime - batchBTime) / 1000.0 + "\n");
-				
-				if ((iepoch > opts.epochskipk - 1) && ((ibatch % opts.nbatch) == 0)) {
-					exit = peep(ibatch, iepoch, numberer, trllist, dellist, false);
-					if (exit) { break; }
-				}
 				if (ibegin < iprebeg) {
 					break; // epoch ends
 				}

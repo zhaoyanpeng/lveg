@@ -254,6 +254,8 @@ public class LearnerConfig extends Recorder {
 		public boolean useref = false;
 		@Option(name = "-resetw", usage = "reset the mixing weight according to the treebank grammars (default: false)")
 		public boolean resetw = false;
+		@Option(name = "-mwfactor", usage = "multiply a factor when reseting the mixint weight to the treebank grammars (default: 1)")
+		public double mwfactor = 1.0;
 		/* training-configurations section ends */
 		
 		/* evaluation section begins */
@@ -600,7 +602,7 @@ public class LearnerConfig extends Recorder {
 		}
 	};
 	
-	protected static void resetRuleWeight(LVeGGrammar grammar, LVeGLexicon lexicon, Numberer numberer) {
+	protected static void resetRuleWeight(LVeGGrammar grammar, LVeGLexicon lexicon, Numberer numberer, double factor) {
 		int ntag = numberer.size(), nrule, count;
 		List<GrammarRule> gUruleWithP, gBruleWithP, lUruleWithP;
 		double prob;
@@ -621,7 +623,7 @@ public class LearnerConfig extends Recorder {
 			
 			for (GrammarRule rule : rules) {
 				ruleW = rule.getWeight();
-				prob = Math.log(ruleW.getBias() / count);
+				prob = Math.log(ruleW.getBias() / count * factor);
 				ruleW.setWeight(0, prob);
 			}
 		}
