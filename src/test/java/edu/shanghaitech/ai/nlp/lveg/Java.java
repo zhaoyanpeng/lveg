@@ -2,15 +2,20 @@ package edu.shanghaitech.ai.nlp.lveg;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
 
 import org.junit.Test;
 
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture.Component;
+import edu.shanghaitech.ai.nlp.util.FunUtil;
 
 public class Java {
 	
@@ -86,7 +91,45 @@ public class Java {
 	@Test
 	public void testTest() {
 		int a = 3, b = 3;
-		assert(a != b);
+		assert(a == b);
+		
+//		double d0 = -15.332610488842343;
+//		double d1 = -8.00196935333965;
+//		double d2 = -14.834674151593733;
+//		
+//		double x = FunUtil.logAdd(d0, d1);
+//		x = FunUtil.logAdd(x, d2);
+//		System.out.println(x);
+//		
+//		double y = Math.log(Math.exp(d0) + Math.exp(d1) + Math.exp(d2));
+//		System.out.println(y);
+		
+		Map<Integer, Double> map = new HashMap<Integer, Double>();
+		map.put(0, 3.0);
+		map.put(4, 1.0);
+		map.put(2, 2.0);
+		map.put(3, 9.0);
+		map.put(7, 5.0);
+		map.put(8, 6.0);
+		int k = 4;
+		Collection<Double> values = map.values();
+		PriorityQueue<Double> queue = new PriorityQueue<Double>();
+		for (Double d : values) {
+			queue.offer(d);
+			if (queue.size() > k) { queue.poll(); }
+		}
+		double val = queue.peek();
+		System.out.println(val);
+		while (!queue.isEmpty()) {
+			System.out.println(queue.poll());
+		}
+		System.out.println();
+		queue.clear();
+		queue.addAll(values);
+		while (!queue.isEmpty()) {
+			System.out.println(queue.poll());
+		}
+//		Collections.sort(values);
 	}
 	
 //	@Test

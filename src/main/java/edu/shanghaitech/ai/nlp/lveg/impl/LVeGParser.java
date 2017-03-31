@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import edu.berkeley.nlp.syntax.Tree;
+import edu.shanghaitech.ai.nlp.lveg.LVeGTrainer;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
 import edu.shanghaitech.ai.nlp.lveg.model.Parser;
@@ -25,17 +26,17 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 	
 	
 	private LVeGParser(LVeGParser<?, ?> parser) {
-		super(parser.maxLenParsing, parser.nthread, parser.parallel, parser.reuse, parser.iosprune, parser.cntprune);
+		super(parser.maxLenParsing, parser.nthread, parser.parallel, parser.reuse, parser.iosprune, parser.usemasks, parser.cntprune);
 		this.inferencer = parser.inferencer;
-		this.chart = parser.reuse ? new Chart(maxLenParsing, false) : null;
+		this.chart = parser.reuse ? new Chart(maxLenParsing, false, usemasks) : null;
 	}
 	
 	
 	public LVeGParser(LVeGGrammar grammar, LVeGLexicon lexicon, short maxLenParsing, short nthread, 
-			boolean parallel, boolean reuse, boolean iosprune, boolean cntprune) {
-		super(maxLenParsing, nthread, parallel, reuse, iosprune, cntprune);
+			boolean parallel, boolean reuse, boolean iosprune, boolean usemasks, boolean cntprune) {
+		super(maxLenParsing, nthread, parallel, reuse, iosprune, usemasks, cntprune);
 		this.inferencer = new LVeGInferencer(grammar, lexicon);
-		this.chart = reuse ? new Chart(maxLenParsing, false) : null;
+		this.chart = reuse ? new Chart(maxLenParsing, false, usemasks) : null;
 	}
 	
 	
@@ -117,22 +118,27 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 			chart.clear(nword);
 		} else {
 			if (chart != null) { chart.clear(-1); }
-			chart = new Chart(nword, false);
+			chart = new Chart(nword, false, usemasks);
+		}
+		if (usemasks) {
+			LVeGInferencer.insideScoreMask(chart, sentence, nword, true, LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
+			LVeGInferencer.setRootOutsideScoreMask(chart);
+			LVeGInferencer.outsideScoreMask(chart, sentence, nword, true,  LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
 		}
 //		logger.trace("\nInside score...\n"); // DEBUG
 		if (parallel) {
 			cpool.reset();
-			LVeGInferencer.insideScore(chart, sentence, nword, iosprune, cpool);
+			LVeGInferencer.insideScore(chart, sentence, nword, iosprune, cpool, usemasks);
 			LVeGInferencer.setRootOutsideScore(chart);
 			cpool.reset();
-			LVeGInferencer.outsideScore(chart, sentence, nword, iosprune, cpool);
+			LVeGInferencer.outsideScore(chart, sentence, nword, iosprune, cpool, usemasks);
 		} else {
-			LVeGInferencer.insideScore(chart, sentence, nword, iosprune);
+			LVeGInferencer.insideScore(chart, sentence, nword, iosprune, usemasks);
 //			FunUtil.debugChart(Chart.iGetChart(), (short) 2); // DEBUG
 	
 //			logger.trace("\nOutside score...\n"); // DEBUG
 			LVeGInferencer.setRootOutsideScore(chart);
-			LVeGInferencer.outsideScore(chart, sentence, nword, iosprune);
+			LVeGInferencer.outsideScore(chart, sentence, nword, iosprune, usemasks);
 //			FunUtil.debugChart(Chart.oGetChart(), (short) 2); // DEBUG
 		}
 		

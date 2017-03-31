@@ -145,11 +145,11 @@ public class LVeGLearner extends LearnerConfig {
 		lexicon.labelTrees(devTrees); // pair in in Lexicon.score(...)
 		
 		lvegParser = new LVeGParser<Tree<State>, List<Double>>(grammar, lexicon, opts.maxLenParsing, 
-				opts.ntcyker, opts.pcyker, opts.reuse, opts.iosprune, opts.cntprune);
+				opts.ntcyker, opts.pcyker, opts.reuse, opts.iosprune, opts.usemasks, opts.cntprune);
 		mrParser = new MaxRuleParser<Tree<State>, Tree<String>>(grammar, lexicon, opts.maxLenParsing, 
-				opts.ntcyker, opts.pcyker, opts.reuse, opts.ef1prune);
+				opts.ntcyker, opts.pcyker, opts.reuse, opts.ef1prune, opts.usemasks);
 		valuator = new Valuator<Tree<State>, Double>(grammar, lexicon, opts.maxLenParsing, 
-				opts.ntcyker, opts.pcyker, opts.reuse, opts.ellprune);
+				opts.ntcyker, opts.pcyker, opts.reuse, opts.ellprune, opts.usemasks);
 		mvaluator = new ThreadPool(valuator, opts.nteval);
 		trainer = new ThreadPool(lvegParser, opts.ntbatch);
 		double ll = Double.NEGATIVE_INFINITY;

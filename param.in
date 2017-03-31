@@ -67,6 +67,9 @@
 -useref, false,
 -resetw, true,
 -mwfactor, 10.0,
+-usemasks, true,
+-tgbase, 3,
+-tgratio, 0.2,
 
 -eratio, -0.1, 
 -eonlylen, 3,
@@ -87,7 +90,7 @@
 -ef1ontrain, false,
 -ef1imwrite, false,
 
--runtag, 0330_test_grammar,
+-runtag, 0331_test_usemasks,
 -logroot, log/,
 -logtype, 0,
 -verbose, false,

@@ -22,6 +22,7 @@ public abstract class Parser<I, O> extends Recorder implements Executor<I, O> {
 	protected boolean parallel;
 	protected boolean iosprune;
 	protected boolean cntprune;
+	protected boolean usemasks;
 	
 	protected I task;
 	protected int itask;
@@ -30,9 +31,10 @@ public abstract class Parser<I, O> extends Recorder implements Executor<I, O> {
 	
 	protected transient ThreadPool cpool;
 	
-	protected Parser(short maxLenParsing, short nthread, boolean parallel, boolean reuse, boolean iosprune) {
+	protected Parser(short maxLenParsing, short nthread, boolean parallel, boolean reuse, boolean iosprune, boolean usemasks) {
 		this.maxLenParsing = maxLenParsing;
 		this.iosprune = iosprune;
+		this.usemasks = usemasks;
 		this.parallel = parallel;
 		this.reuse = reuse;
 		this.nthread = nthread < 0 ? 1 : nthread;
@@ -42,10 +44,11 @@ public abstract class Parser<I, O> extends Recorder implements Executor<I, O> {
 		}
 	}
 	
-	protected Parser(short maxLenParsing, short nthread, boolean parallel, boolean reuse, boolean iosprune, boolean cntprune) {
+	protected Parser(short maxLenParsing, short nthread, boolean parallel, boolean reuse, boolean iosprune, boolean usemasks, boolean cntprune) {
 		this.maxLenParsing = maxLenParsing;
 		this.iosprune = iosprune;
 		this.cntprune = cntprune;
+		this.usemasks = usemasks;
 		this.parallel = parallel;
 		this.reuse = reuse;
 		this.nthread = nthread < 0 ? 1 : nthread;

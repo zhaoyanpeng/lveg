@@ -58,6 +58,9 @@ public class LearnerConfig extends Recorder {
 	public static double besttrain = Double.NEGATIVE_INFINITY;
 	public static double bestscore = Double.NEGATIVE_INFINITY;
 	
+	public static int tgBase = 3;
+	public static double tgRatio = 0.3;
+	
 	public static short dim = 2;
 	public static short ncomponent = 2;
 	public static short maxlength = 7;
@@ -256,6 +259,12 @@ public class LearnerConfig extends Recorder {
 		public boolean resetw = false;
 		@Option(name = "-mwfactor", usage = "multiply a factor when reseting the mixint weight to the treebank grammars (default: 1)")
 		public double mwfactor = 1.0;
+		@Option(name = "-usemasks", usage = "use masks from treebank grammars to prune the nonterminals (default: false)")
+		public boolean usemasks = false;
+		@Option(name = "-tgbase", usage = "minimum number of nonterminals (default: 3)")
+		public int tgbase = 3;
+		@Option(name = "-tgratio", usage = "tgbase + size * tgratio (default: 0.3)")
+		public double tgratio = 0.3;
 		/* training-configurations section ends */
 		
 		/* evaluation section begins */
@@ -418,6 +427,8 @@ public class LearnerConfig extends Recorder {
 		randomseed = opts.rndomseed;
 		ncomponent = opts.ncomponent;
 		random = new Random(randomseed);
+		tgBase = opts.tgbase;
+		tgRatio = opts.tgratio;
 		Params.config(opts);
 		
 		GenericKeyedObjectPoolConfig config = new GenericKeyedObjectPoolConfig();
@@ -625,6 +636,7 @@ public class LearnerConfig extends Recorder {
 				ruleW = rule.getWeight();
 				prob = Math.log(ruleW.getBias() / count * factor);
 				ruleW.setWeight(0, prob);
+				ruleW.setProb(prob);
 			}
 		}
 	}

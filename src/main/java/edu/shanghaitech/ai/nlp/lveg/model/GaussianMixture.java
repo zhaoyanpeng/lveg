@@ -49,10 +49,12 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	 * @deprecated 
 	 */
 	protected double bias;
+	protected double prob;
 	protected int ncomponent;
 	
 	protected GaussianMixture(short ncomponent) {
 		this.bias = 0;
+		this.prob = 0;
 		this.key = -2;
 		this.ncomponent = ncomponent;
 		this.components = new PriorityQueue<Component>(defNcomponent + 1, wcomparator);
@@ -1297,6 +1299,16 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	
 	public void setKey(short key) {
 		this.key = key;
+	}
+	
+	
+	public double getProb() {
+		return prob;
+	}
+	
+	
+	public void setProb(double prob) {
+		this.prob = prob;
 	}
 	
 	
