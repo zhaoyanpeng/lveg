@@ -259,7 +259,7 @@ public class LearnerConfig extends Recorder {
 		public boolean resetw = false;
 		@Option(name = "-mwfactor", usage = "multiply a factor when reseting the mixint weight to the treebank grammars (default: 1)")
 		public double mwfactor = 1.0;
-		@Option(name = "-usemasks", usage = "use masks from treebank grammars to prune the nonterminals (default: false)")
+		@Option(name = "-usemasks", usage = "must close this option in MaxRuleParser, use masks from treebank grammars to prune the nonterminals (default: false)")
 		public boolean usemasks = false;
 		@Option(name = "-tgbase", usage = "minimum number of nonterminals (default: 3)")
 		public int tgbase = 3;
@@ -396,12 +396,12 @@ public class LearnerConfig extends Recorder {
 			sublogroot = opts.logroot + "/" + opts.runtag + "/";
 			logfile = opts.logroot + "/" + opts.runtag;
 			FunUtil.mkdir(subdatadir);
-			FunUtil.mkdir(sublogroot);
+			if (opts.ellimwrite) { FunUtil.mkdir(sublogroot); }
 		} else {
 			String suffix = opts.ef1tag.equals("") ? opts.runtag + "_f1" : opts.runtag + "_f1_" + opts.ef1tag;
 			sublogroot = opts.logroot + "/" + suffix + "/";
 			logfile = opts.logroot + "/" + suffix;
-			FunUtil.mkdir(sublogroot);
+			if (opts.ef1imwrite) { FunUtil.mkdir(sublogroot); }
 		}
 		if (opts.logtype == 0) {
 			logger = logUtil.getBothLogger(logfile);

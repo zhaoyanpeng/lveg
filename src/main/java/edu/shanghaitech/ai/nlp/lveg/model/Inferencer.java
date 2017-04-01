@@ -1296,7 +1296,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 		}
 		
 		protected double getScoreMask(short key, short level) {
-			return mscores.get(level) == null ? null : mscores.get(level).get(key);
+			return mscores.get(level) == null ? Double.NEGATIVE_INFINITY : mscores.get(level).get(key);
 		}
 		
 		protected GaussianMixture getScore(short key, short level) {

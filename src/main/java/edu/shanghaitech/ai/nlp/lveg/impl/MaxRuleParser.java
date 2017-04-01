@@ -116,9 +116,9 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 			chart = new Chart(nword, true, usemasks);
 		}
 		if (usemasks) {
-			LVeGInferencer.insideScoreMask(chart, sentence, nword, true,  LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
-			LVeGInferencer.setRootOutsideScoreMask(chart);
-			LVeGInferencer.outsideScoreMask(chart, sentence, nword, true,  LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
+			Inferencer.insideScoreMask(chart, sentence, nword, true,  LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
+			Inferencer.setRootOutsideScoreMask(chart);
+			Inferencer.outsideScoreMask(chart, sentence, nword, true,  LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
 		}
 //		logger.trace("\nInside score...\n"); // DEBUG
 		if (parallel) {

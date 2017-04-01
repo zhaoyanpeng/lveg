@@ -139,7 +139,7 @@ public class LVeGTrainer extends LearnerConfig {
 			logger.trace("post-initializing is over.\n");
 		}
 		// reset the rule weight
-		if (opts.resetw) {
+		if (opts.resetw || opts.usemasks) {
 			logger.trace("--->Reset rule weights according to treebank grammars...\n");
 			resetRuleWeight(grammar, lexicon, numberer, opts.mwfactor);
 		}
@@ -155,9 +155,9 @@ public class LVeGTrainer extends LearnerConfig {
 		lvegParser = new LVeGParser<Tree<State>, List<Double>>(grammar, lexicon, opts.maxLenParsing, 
 				opts.ntcyker, opts.pcyker, opts.reuse, opts.iosprune, opts.usemasks, opts.cntprune);
 		mrParser = new MaxRuleParser<Tree<State>, Tree<String>>(grammar, lexicon, opts.maxLenParsing, 
-				opts.ntcyker, opts.pcyker, opts.reuse, opts.ef1prune, opts.usemasks);
+				opts.ntcyker, opts.pcyker, opts.reuse, opts.ef1prune, false);
 		valuator = new Valuator<Tree<State>, Double>(grammar, lexicon, opts.maxLenParsing, 
-				opts.ntcyker, opts.pcyker, opts.reuse, opts.ellprune, opts.usemasks);
+				opts.ntcyker, opts.pcyker, opts.reuse, opts.ellprune, false);
 		mvaluator = new ThreadPool(valuator, opts.nteval);
 		trainer = new ThreadPool(lvegParser, opts.ntbatch);
 		double ll = Double.NEGATIVE_INFINITY;

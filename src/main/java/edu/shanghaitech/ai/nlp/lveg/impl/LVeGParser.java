@@ -6,6 +6,7 @@ import java.util.List;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.lveg.LVeGTrainer;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
+import edu.shanghaitech.ai.nlp.lveg.model.Inferencer;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
 import edu.shanghaitech.ai.nlp.lveg.model.Parser;
 import edu.shanghaitech.ai.nlp.lveg.model.Inferencer.Chart;
@@ -121,24 +122,24 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 			chart = new Chart(nword, false, usemasks);
 		}
 		if (usemasks) {
-			LVeGInferencer.insideScoreMask(chart, sentence, nword, true, LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
-			LVeGInferencer.setRootOutsideScoreMask(chart);
-			LVeGInferencer.outsideScoreMask(chart, sentence, nword, true,  LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
+			Inferencer.insideScoreMask(chart, sentence, nword, true, LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
+			Inferencer.setRootOutsideScoreMask(chart);
+			Inferencer.outsideScoreMask(chart, sentence, nword, true,  LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
 		}
 //		logger.trace("\nInside score...\n"); // DEBUG
 		if (parallel) {
 			cpool.reset();
-			LVeGInferencer.insideScore(chart, sentence, nword, iosprune, cpool, usemasks);
-			LVeGInferencer.setRootOutsideScore(chart);
+			Inferencer.insideScore(chart, sentence, nword, iosprune, cpool, usemasks);
+			Inferencer.setRootOutsideScore(chart);
 			cpool.reset();
-			LVeGInferencer.outsideScore(chart, sentence, nword, iosprune, cpool, usemasks);
+			Inferencer.outsideScore(chart, sentence, nword, iosprune, cpool, usemasks);
 		} else {
-			LVeGInferencer.insideScore(chart, sentence, nword, iosprune, usemasks);
+			Inferencer.insideScore(chart, sentence, nword, iosprune, usemasks);
 //			FunUtil.debugChart(Chart.iGetChart(), (short) 2); // DEBUG
 	
 //			logger.trace("\nOutside score...\n"); // DEBUG
-			LVeGInferencer.setRootOutsideScore(chart);
-			LVeGInferencer.outsideScore(chart, sentence, nword, iosprune, usemasks);
+			Inferencer.setRootOutsideScore(chart);
+			Inferencer.outsideScore(chart, sentence, nword, iosprune, usemasks);
 //			FunUtil.debugChart(Chart.oGetChart(), (short) 2); // DEBUG
 		}
 		
