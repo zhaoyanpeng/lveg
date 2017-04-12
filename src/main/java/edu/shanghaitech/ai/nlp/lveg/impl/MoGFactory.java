@@ -1,8 +1,8 @@
 package edu.shanghaitech.ai.nlp.lveg.impl;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.PriorityQueue;
 import java.util.Random;
 import java.util.Set;
 
@@ -38,7 +38,7 @@ public class MoGFactory implements KeyedPooledObjectFactory<Short, GaussianMixtu
 	@Override
 	public void activateObject(Short key, PooledObject<GaussianMixture> po) throws Exception {
 		short ncomp = key == -1 ? ncomponent : key;
-		PriorityQueue<Component> components = po.getObject().components();
+		List<Component> components = po.getObject().components();
 		for (int i = 0; i < ncomp; i++) {
 			double weight = (rnd.nextDouble() - nwratio) * maxmw;
 			Map<String, Set<GaussianDistribution>> multivnd = new HashMap<String, Set<GaussianDistribution>>();

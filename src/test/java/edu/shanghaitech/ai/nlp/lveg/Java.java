@@ -71,11 +71,13 @@ public class Java {
 	}
 	
 	
-//	@Test
+	@Test
 	public void testQueue() {
+		List<Integer> list = new ArrayList<Integer>(5);
 		PriorityQueue<Integer> sorted = new PriorityQueue<Integer>(5);
 		for (int i = 0; i < 5; i++) {
 			sorted.add(i);
+			list.add(i);
 		}
 		System.out.println(sorted);
 		for (Integer it : sorted) {
@@ -85,10 +87,18 @@ public class Java {
 			sorted.remove(it); // this is a bad coding example
 		}
 		System.out.println(sorted);
+		
+//		for (int i = 1; i < 5; i++) {
+//			list.remove(i);
+//		}
+		list.subList(0, list.size()).clear();
+		list.add(4);
+		list.subList(1, list.size()).clear();
+		System.out.println(list);
 	}
 	
 	
-	@Test
+//	@Test
 	public void testTest() {
 		int a = 3, b = 3;
 		assert(a == b);

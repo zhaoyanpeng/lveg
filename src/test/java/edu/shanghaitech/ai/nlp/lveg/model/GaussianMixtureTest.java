@@ -189,7 +189,7 @@ public class GaussianMixtureTest {
 		map.put(Unit.P, list0);
 		gmc.add(0.0, map);
 		
-		PriorityQueue<Component> components = gmc.components();
+		List<Component> components = gmc.components();
 		System.out.println("after adding-" + components.size());
 		for (Component com : components) {
 			System.out.println(com);
