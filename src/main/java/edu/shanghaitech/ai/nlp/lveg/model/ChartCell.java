@@ -10,7 +10,7 @@ import java.util.Set;
 import edu.shanghaitech.ai.nlp.util.FunUtil;
 import edu.shanghaitech.ai.nlp.util.Numberer;
 
-public class InsideOutsideChart {	
+public class ChartCell {	
 	
 	public static class LVeGCell {
 		private boolean status;

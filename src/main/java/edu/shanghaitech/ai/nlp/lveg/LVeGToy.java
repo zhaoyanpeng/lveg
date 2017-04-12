@@ -61,7 +61,7 @@ public class LVeGToy extends LearnerConfig {
 	protected static String treeFile;
 	
 	protected static Options opts;
-	protected static int ntree = 100;
+	protected static int ntree = 2;
 	
 	public static void main(String[] args) throws Exception {
 		String fparams = args[0];
