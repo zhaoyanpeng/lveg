@@ -60,6 +60,7 @@ public class LearnerConfig extends Recorder {
 	
 	public static int tgBase = 3;
 	public static double tgRatio = 0.3;
+	public static double tgProb = 1e-10;
 	
 	public static short dim = 2;
 	public static short ncomponent = 2;
@@ -265,6 +266,8 @@ public class LearnerConfig extends Recorder {
 		public int tgbase = 3;
 		@Option(name = "-tgratio", usage = "tgbase + size * tgratio (default: 0.3)")
 		public double tgratio = 0.3;
+		@Option(name = "-tgprob", usage = "the tag is pruned if its posterior probability is below this bound (default: 1e-10)")
+		public double tgprob = 1e-10;
 		/* training-configurations section ends */
 		
 		/* evaluation section begins */
@@ -362,6 +365,7 @@ public class LearnerConfig extends Recorder {
 		
 		@Option(name = "-binarization", usage = "Left/Right binarization (Default: RIGHT)")
 		public Binarization binarization = Binarization.RIGHT;
+//		public Binarization binarization = Binarization.LEFT;
 		
 		@Option(name = "-horizontalMarkovization", usage = "Horizontal markovization (Default: 0)")
 		public int horizontalMarkovization = 0;
@@ -429,6 +433,7 @@ public class LearnerConfig extends Recorder {
 		random = new Random(randomseed);
 		tgBase = opts.tgbase;
 		tgRatio = opts.tgratio;
+		tgProb = Math.log(opts.tgprob); // in logarithmic form
 		Params.config(opts);
 		
 		GenericKeyedObjectPoolConfig config = new GenericKeyedObjectPoolConfig();
@@ -618,11 +623,32 @@ public class LearnerConfig extends Recorder {
 		List<GrammarRule> gUruleWithP, gBruleWithP, lUruleWithP;
 		double prob;
 		GaussianMixture ruleW;
+		/*
+		// probabilities of lexicon rules
+		// since LHS tags of lexicon rules and CNF rules do not overlap
+		// we do not need to specifically initialize the probabilities of lexicon rules
+		for (int i = 0; i < ntag; i++) {
+			count = 0;
+			lUruleWithP = lexicon.getURuleWithP(i);
+			for (GrammarRule rule : lUruleWithP) {
+				count += rule.getWeight().getBias();
+			}
+			for (GrammarRule rule : lUruleWithP) {
+				ruleW = rule.getWeight();
+				prob = Math.log(ruleW.getBias() / count * factor);
+				ruleW.setWeight(0, prob);
+				ruleW.setProb(prob);
+			}
+			logger.debug(i + "\t: " + count + "\n");
+		}
+		*/
+		// for nonterminal rules
 		for (int i = 0; i < ntag; i++) {
 			count = 0;
 			gUruleWithP = grammar.getURuleWithP(i);
 			gBruleWithP = grammar.getBRuleWithP(i);
 			lUruleWithP = lexicon.getURuleWithP(i);
+			nrule = gUruleWithP.size() + gBruleWithP.size();
 			nrule = gUruleWithP.size() + gBruleWithP.size() + lUruleWithP.size();
 			List<GrammarRule> rules = new ArrayList<GrammarRule>(nrule + 5);
 			rules.addAll(gUruleWithP);
@@ -638,6 +664,7 @@ public class LearnerConfig extends Recorder {
 				ruleW.setWeight(0, prob);
 				ruleW.setProb(prob);
 			}
+//			logger.debug(i + "\t: " + count + "\n");
 		}
 	}
 	

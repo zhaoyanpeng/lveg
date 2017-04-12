@@ -31,6 +31,7 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	private static final double LOG_ZERO = -1.0e10;
 	private static double EXP_ZERO = /*-Math.log(-LOG_ZERO)*/Math.log(1e-6);
 	protected PriorityQueue<Component> components;
+	
 	protected short key; // from the object pool (>=-1) or not (<-1)
 	
 	protected static short defMaxNbig;

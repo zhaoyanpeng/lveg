@@ -118,13 +118,16 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 		if (reuse) {
 			chart.clear(nword);
 		} else {
-			if (chart != null) { chart.clear(-1); }
+			if (chart != null) { chart.clear(nword); }
 			chart = new Chart(nword, false, usemasks);
 		}
 		if (usemasks) {
-			Inferencer.insideScoreMask(chart, sentence, nword, true, LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
+			Inferencer.insideScoreMask(chart, sentence, nword, false, LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
 			Inferencer.setRootOutsideScoreMask(chart);
-			Inferencer.outsideScoreMask(chart, sentence, nword, true,  LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
+			Inferencer.outsideScoreMask(chart, sentence, nword, false,  LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
+			
+			double scoreS = chart.getInsideScoreMask((short) 0, Chart.idx(0, 1));
+			Inferencer.makeMask(nword, chart, scoreS, LVeGTrainer.tgProb);
 		}
 //		logger.trace("\nInside score...\n"); // DEBUG
 		if (parallel) {

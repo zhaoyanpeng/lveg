@@ -59,6 +59,10 @@ public class LVeGTester extends LearnerConfig {
 		// configurations
 		initialize(opts, true); // logger can only be used after the initialization
 		logger.info("Calling with " + optionParser.getParsedOptions() + "\n");
+		/*
+		loadToyTrees(opts);
+		System.exit(0);
+		*/
 		// loading data
 		Numberer wrapper = new Numberer();
 		Map<String, StateTreeList> trees = loadData(wrapper, opts);
@@ -193,8 +197,12 @@ public class LVeGTester extends LearnerConfig {
 //		mrParser.parse(statetree);
 		
 		int nUnparsable = 0, idx = 0;
+		
 		List<Tree<State>> trees = new ArrayList<Tree<State>>(stateTreeList.size());
 		filterTrees(opts, stateTreeList, trees, numberer, istrain);
+		
+//		List<Tree<State>> trees = getToyTrees(numberer);
+		
 		/*
 		int cnt = 0;
 		for (Tree<State> tree : trees) {
@@ -257,4 +265,31 @@ public class LVeGTester extends LearnerConfig {
 		}
 	}
 	
+	
+	public static List<Tree<State>> getToyTrees(Numberer numberer) {
+		List<Tree<String>> trees = loadStringTree(opts.datadir + "wsj_toy_tree_scope", opts);
+		List<Tree<State>> stateTrees = new ArrayList<Tree<State>>(trees.size());
+		for (Tree<String> tree : trees) {
+			Tree<State> statetree = StateTreeList.stringTreeToStateTree(tree, numberer);
+			stateTrees.add(statetree);
+		}
+		return stateTrees;
+	}
+	
+	
+	public static void loadToyTrees(Options opts) throws Exception {
+		List<Tree<String>> trees = loadStringTree(opts.datadir + "wsj_toy_tree_scope", opts);
+		int idx = 0;
+		String name, prefix = sublogroot + opts.imgprefix + "_a";
+		for (Tree<String> tree : trees) {
+			name = prefix + "_" + idx;
+			System.out.println(idx + "\t" + tree);
+			FunUtil.saveTree2image(null, name, tree, null);
+			Tree<String> gold = TreeAnnotations.unAnnotateTree(tree, false);
+			name += "_ud";
+			System.out.println(idx + "\t" + gold);
+			FunUtil.saveTree2image(null, name, gold, null);
+			idx++;
+		}
+	}
 }

@@ -11,10 +11,12 @@ import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
 
+import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
 import edu.shanghaitech.ai.nlp.lveg.impl.BinaryGrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.impl.DiagonalGaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.impl.UnaryGrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.Inferencer.Chart;
 import edu.shanghaitech.ai.nlp.syntax.State;
 import edu.shanghaitech.ai.nlp.util.Executor;
 import edu.shanghaitech.ai.nlp.util.FunUtil;
@@ -254,6 +256,40 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	}
 	
 	
+	public static void makeMask(int nword, Chart chart, double scoreS, double threshold) {
+		int idx;
+		short level;
+		Set<Short> set;
+		double oscore, iscore, count;
+		
+		for (int ilayer = nword - 1; ilayer >= 0; ilayer--) {
+			for (int left = 0; left < nword - ilayer; left++) {
+				level = 0;
+				idx = Chart.idx(left, nword - ilayer);
+				
+				
+				
+				while (level < (LENGTH_UCHAIN + 1) && (set = chart.keySetMask(idx, false, level)) != null) {
+					for (Short idTag : set) {
+						oscore = chart.getOutsideScoreMask(idTag, idx, level);
+						iscore = chart.getInsideScoreMask(idTag, idx, (short) (LENGTH_UCHAIN - level));
+						if (oscore != Double.NEGATIVE_INFINITY && iscore != Double.NEGATIVE_INFINITY) {
+							count = iscore + oscore - scoreS; // in logarithmic form
+							if (count > threshold) {
+								chart.addMask(idTag, idx, level); // top-down from perspective of outside scores
+							}
+						}						
+					}
+					level++;
+				}
+				
+				
+				
+			}
+		}
+	}
+	
+	
 	/**
 	 * Compute the inside score given the sentence and grammar rules.
 	 * 
@@ -271,7 +307,10 @@ public abstract class Inferencer extends Recorder implements Serializable {
 			List<GrammarRule> rules = lexicon.getRulesWithWord(sentence.get(i));
 			// preterminals
 			for (GrammarRule rule : rules) {
-				if (usemasks) { if (!chart.isAllowed(rule.lhs, iCell, true)) { continue; } } // CHECK
+//				if (usemasks) { if (!chart.isAllowed(rule.lhs, iCell, true)) { continue; } } // CHECK
+				
+				if (usemasks) { if (!chart.isAllowed(rule.lhs, iCell, LENGTH_UCHAIN)) { continue; } } // CHECK
+				
 				chart.addInsideScore(rule.lhs, iCell, rule.getWeight().copy(true), (short) 0, false);
 			}
 			// DEBUG unary grammar rules
@@ -293,7 +332,10 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				// binary grammar rules
 				for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
 					BinaryGrammarRule rule = (BinaryGrammarRule) rmap.getValue();
-					if (usemasks) { if (!chart.isAllowed(rule.lhs, c2, true)) { continue; } } // CHECK
+//					if (usemasks) { if (!chart.isAllowed(rule.lhs, c2, true)) { continue; } } // CHECK
+					
+					if (usemasks) { if (!chart.isAllowed(rule.lhs, c2, LENGTH_UCHAIN)) { continue; } } // CHECK
+					
 					for (int right = left; right < left + ilayer; right++) {
 						y0 = right;
 						x1 = right + 1;
@@ -344,7 +386,10 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				// binary grammar rules
 				for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
 					BinaryGrammarRule rule = (BinaryGrammarRule) rmap.getValue();
-					if (usemasks) { if (!chart.isAllowed(rule.lchild, c2, false)) { continue; } } // CHECK
+//					if (usemasks) { if (!chart.isAllowed(rule.lchild, c2, false)) { continue; } } // CHECK
+					
+					if (usemasks) { if (!chart.isAllowed(rule.lchild, c2, (short) 0)) { continue; } } // CHECK
+					
 					for (int right = left + ilayer + 1; right < nword; right++) {
 						y0 = right;
 						y1 = right;
@@ -368,7 +413,10 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				// binary grammar rules
 				for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
 					BinaryGrammarRule rule = (BinaryGrammarRule) rmap.getValue();
-					if (usemasks) { if (!chart.isAllowed(rule.rchild, c2, false)) { continue; } } // CHECK
+//					if (usemasks) { if (!chart.isAllowed(rule.rchild, c2, false)) { continue; } } // CHECK
+					
+					if (usemasks) { if (!chart.isAllowed(rule.rchild, c2, (short) 0)) { continue; } } // CHECK
+					
 					for (int right = 0; right < left; right++) {
 						x0 = right; 
 						x1 = right;
@@ -473,7 +521,10 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				poutScore = chart.getOutsideScore(idTag, idx, (short) (LENGTH_UCHAIN + 1)); // 1
 				while (iterator.hasNext()) { // CHECK
 					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
-					if (usemasks) { if (!chart.isAllowed((short) rule.rhs, idx, false)) { continue; } } // CHECK
+//					if (usemasks) { if (!chart.isAllowed((short) rule.rhs, idx, false)) { continue; } } // CHECK
+
+					if (usemasks) { if (!chart.isAllowed((short) rule.rhs, idx, (short) level)) { continue; } } // CHECK
+					
 					coutScore = rule.weight.copy(true); // since OS(ROOT) = 1
 					// coutScore = rule.weight.mulForInsideOutside(poutScore, rmKey, true);
 					chart.addOutsideScore((short) rule.rhs, idx, coutScore, level, false);
@@ -488,7 +539,10 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				poutScore = chart.getOutsideScore(idTag, idx, level);
 				while (iterator.hasNext()) {
 					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
-					if (usemasks) { if (!chart.isAllowed((short) rule.rhs, idx, false)) { continue; } } // CHECK
+//					if (usemasks) { if (!chart.isAllowed((short) rule.rhs, idx, false)) { continue; } } // CHECK
+					
+					if (usemasks) { if (!chart.isAllowed((short) rule.rhs, idx, (short) (level + 1))) { continue; } } // CHECK
+					
 					coutScore = rule.weight.mulForInsideOutside(poutScore, rmKey, true);
 					chart.addOutsideScore((short) rule.rhs, idx, coutScore, (short) (level + 1), false);
 				}
@@ -548,7 +602,10 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				cinScore = chart.getInsideScore(idTag, idx, level);
 				while (iterator.hasNext()) {
 					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
-					if (usemasks) { if (!chart.isAllowed(rule.lhs, idx, true)) { continue; } } // CHECK
+//					if (usemasks) { if (!chart.isAllowed(rule.lhs, idx, true)) { continue; } } // CHECK
+					
+					if (usemasks) { if (!chart.isAllowed(rule.lhs, idx, (short) (LENGTH_UCHAIN - level - 1))) { continue; } } // CHECK
+					
 					if (idx != 0 && rule.type == GrammarRule.RHSPACE) { continue; } // ROOT is allowed only when it is in cell 0 and is in level 1 or 2
 					rmKey = rule.type == GrammarRule.RHSPACE ? GrammarRule.Unit.C : GrammarRule.Unit.UC;
 					pinScore = rule.weight.mulForInsideOutside(cinScore, rmKey, true);
@@ -737,6 +794,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 		
 		private List<Cell> omasks = null; // for treebank grammars
 		private List<Cell> imasks = null;
+		private List<Cell> tmasks = null; // tag mask
 		
 		private PriorityQueue<Double> queue = null; // owned by this chart, need to make it thread safe
 		
@@ -776,9 +834,11 @@ public abstract class Inferencer extends Recorder implements Serializable {
 			if (usemask) {
 				imasks = new ArrayList<Cell>(size);
 				omasks = new ArrayList<Cell>(size);
+				tmasks = new ArrayList<Cell>(size);
 				for (int i = 0; i < size; i++) {
 					imasks.add(new Cell(maxrule, usemask));
 					omasks.add(new Cell(maxrule, usemask));
+					tmasks.add(new Cell(maxrule, usemask));
 				}
 			}
 		}
@@ -973,6 +1033,14 @@ public abstract class Inferencer extends Recorder implements Serializable {
 			}
 		}
 		
+		public boolean isAllowed(short key, int idx, short level) {
+			return tmasks.get(idx).isAllowed(key, level);
+		}
+		
+		public void addMask(short key, int idx, short level) {
+			tmasks.get(idx).addMask(key, level);
+		}
+		
 		/**
 		 * @deprecated
 		 */
@@ -1029,6 +1097,13 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				}
 				if (n < 0) { omasks.clear(); }
 			}
+			if (tmasks != null) {
+				cnt = 0;
+				for (Cell cell : tmasks) {
+					if (++cnt > max) { break; }
+					if (cell != null) { cell.clear(); }
+				}
+			}
 		}
 		
 		@Override
@@ -1060,6 +1135,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 		// using masks
 		private Set<Short> masks; 
 		private Map<Short, Double> mtotals;
+		private Map<Short, Set<Short>> mtags;
 		private Map<Short, Map<Short, Double>> mscores;
 		
 		
@@ -1084,8 +1160,10 @@ public abstract class Inferencer extends Recorder implements Serializable {
 //			this(maxrule); // CHECK
 			if (usemask) {
 				this.masks = new HashSet<Short>();
+				this.mtags = new HashMap<Short, Set<Short>>();
 				this.mtotals = new HashMap<Short, Double>();
 				this.mscores = new HashMap<Short, Map<Short, Double>>();
+				
 			}
 		}
 		
@@ -1141,6 +1219,14 @@ public abstract class Inferencer extends Recorder implements Serializable {
 			return masks.contains(key);
 		}
 		
+		protected boolean isAllowed(short key, short level) {
+			Set<Short> keys = mtags.get(level);
+			if (keys != null && keys.contains(key)) {
+				return true;
+			}
+			return false;
+		}
+		
 		protected void pruneScoreMask(PriorityQueue<Double> queue, int base, double ratio) {
 			if (mtotals.size() > base) {
 				int k = (int) (base + Math.floor(mtotals.size() * ratio));
@@ -1180,6 +1266,15 @@ public abstract class Inferencer extends Recorder implements Serializable {
 					score.delTrivia();
 				}
 			}
+		}
+		
+		protected void addMask(short key, short level) {
+			Set<Short> keys = mtags.get(level);
+			if (keys == null) {
+				keys = new HashSet<Short>();
+				mtags.put(level, keys);
+			}
+			keys.add(key);
 		}
 		
 		protected void addMaxRuleCount(short key, double count, int sons, Short splitpoint, short level) {
@@ -1341,12 +1436,20 @@ public abstract class Inferencer extends Recorder implements Serializable {
 //				}
 				maxRuleCnts.clear();
 			}
+			if (maxRuleSons != null) {
+//				for (Map.Entry<Short, Map<Short, Integer>> entry : maxRuleSons.entrySet()) {
+//					if (entry.getValue() != null) { entry.getValue().clear(); }
+//				}
+				maxRuleSons.clear();
+			}
 			if (maxRuleSon != null) { maxRuleSon.clear(); }
 			if (maxRulePos != null) { maxRulePos.clear(); }
 			if (splitPoint != null) { splitPoint.clear(); }
 			
 			if (mscores != null) { mscores.clear(); }
 			if (mtotals != null) { mtotals.clear(); }
+			if (masks != null) { masks.clear(); }
+			if (mtags != null) { mtags.clear(); }
 		}
 		
 		public String toString(boolean simple, int nfirst, boolean quantity) {

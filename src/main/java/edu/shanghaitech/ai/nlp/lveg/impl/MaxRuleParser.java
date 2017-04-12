@@ -112,7 +112,7 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 		if (reuse) {
 			chart.clear(nword);
 		} else {
-			if (chart != null) { chart.clear(-1); }
+			if (chart != null) { chart.clear(nword); }
 			chart = new Chart(nword, true, usemasks);
 		}
 		if (usemasks) {
