@@ -291,12 +291,15 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	 * @return
 	 */
 	public Component getComponent(short iComponent) {
+		/*
 		for (Component comp : components) {
 			if (comp.id == iComponent) {
 				return comp;
 			}
 		}
 		return null;
+		*/
+		return components.get(iComponent);
 	}
 	
 	public abstract GaussianMixture instance(short ncomponent, boolean init);

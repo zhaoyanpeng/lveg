@@ -62,7 +62,7 @@
 -maxvar, 5,
 -nvratio, 0.8,
 -ncomponent, 2,
--dim, 2,
+-dim, 1,
 -useref, false,
 -resetw, false,
 -mwfactor, 1.0,
@@ -91,7 +91,7 @@
 -ef1ontrain, false,
 -ef1imwrite, false,
 
--runtag, toy_0412_2_2_ek3_complex_chart,
+-runtag, toy_0412_2_1_ek3_complex_GM_getComponent,
 -logroot, log/,
 -logtype, 0,
 -verbose, false,
