@@ -91,7 +91,7 @@
 -ef1ontrain, false,
 -ef1imwrite, false,
 
--runtag, 0412_reproduce_stage4_chart,
+-runtag, 0412_reproduce_stage4_getComponent,
 -logroot, log/,
 -logtype, 0,
 -verbose, false,
