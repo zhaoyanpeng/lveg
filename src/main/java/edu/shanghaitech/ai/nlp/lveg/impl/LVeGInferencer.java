@@ -39,7 +39,6 @@ public class LVeGInferencer extends Inferencer {
 	public LVeGInferencer(LVeGGrammar agrammar, LVeGLexicon alexicon) {
 		grammar = agrammar;
 		lexicon = alexicon;
-		chainurule = ChainUrule.DEFAULT;
 	}
 	
 	

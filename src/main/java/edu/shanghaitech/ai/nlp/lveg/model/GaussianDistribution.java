@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
-import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
+import edu.shanghaitech.ai.nlp.lveg.LVeGTrainer;
 import edu.shanghaitech.ai.nlp.util.FunUtil;
 import edu.shanghaitech.ai.nlp.util.ObjectPool;
 import edu.shanghaitech.ai.nlp.util.Recorder;
@@ -341,8 +341,8 @@ public abstract class GaussianDistribution extends Recorder implements Comparabl
 
 	@Override
 	public String toString() {
-		return "GD [dim=" + dim + ", mus=" + FunUtil.double2str(mus, LVeGLearner.precision, -1, false, true) + 
-				", stds=" + FunUtil.double2str(vars, LVeGLearner.precision, -1, true, true) + "]";
+		return "GD [dim=" + dim + ", mus=" + FunUtil.double2str(mus, LVeGTrainer.precision, -1, false, true) + 
+				", stds=" + FunUtil.double2str(vars, LVeGTrainer.precision, -1, true, true) + "]";
 	}
 
 }

@@ -3,18 +3,16 @@ package edu.shanghaitech.ai.nlp.lveg.model;
 import static org.junit.Assert.*;
 
 import java.util.ArrayList;
-import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.PriorityQueue;
 import java.util.Random;
 import java.util.Set;
 
 import org.junit.Test;
 
-import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
+import edu.shanghaitech.ai.nlp.lveg.LVeGTrainer;
 import edu.shanghaitech.ai.nlp.lveg.impl.DiagonalGaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.impl.DiagonalGaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
@@ -36,37 +34,37 @@ public class GaussianMixtureTest {
 		GaussianMixture.config((short) -1, 1e-6, 4, ncomp, 0.5, -1.0, -1.0, true, rnd, null);
 		GaussianDistribution.config(1, 5, ndim, 0.5, 0.8, rnd, null);
 		
-		gm0 = new DiagonalGaussianMixture(LVeGLearner.ncomponent);
-		gm1 = new DiagonalGaussianMixture(LVeGLearner.ncomponent);
-		gm2 = new DiagonalGaussianMixture(LVeGLearner.ncomponent);
+		gm0 = new DiagonalGaussianMixture(LVeGTrainer.ncomponent);
+		gm1 = new DiagonalGaussianMixture(LVeGTrainer.ncomponent);
+		gm2 = new DiagonalGaussianMixture(LVeGTrainer.ncomponent);
 		
-		for (int i = 0; i < LVeGLearner.ncomponent; i++) {
+		for (int i = 0; i < LVeGTrainer.ncomponent; i++) {
 			Map<String, Set<GaussianDistribution>> map = new HashMap<String, Set<GaussianDistribution>>();
 			Set<GaussianDistribution> list0 = new HashSet<GaussianDistribution>();
 			Set<GaussianDistribution> list1 = new HashSet<GaussianDistribution>();
-			list0.add(new DiagonalGaussianDistribution(LVeGLearner.dim));
-			list1.add(new DiagonalGaussianDistribution(LVeGLearner.dim));
+			list0.add(new DiagonalGaussianDistribution(LVeGTrainer.dim));
+			list1.add(new DiagonalGaussianDistribution(LVeGTrainer.dim));
 			map.put(Unit.P, list0);
 			map.put(Unit.UC, list1);
 			gm0.add(i, map);
 		}
 		System.out.println("gm0---" + gm0);
 		
-		for (int i = 0; i < LVeGLearner.ncomponent; i++) {
+		for (int i = 0; i < LVeGTrainer.ncomponent; i++) {
 			Map<String, Set<GaussianDistribution>> map = new HashMap<String, Set<GaussianDistribution>>();
 			Set<GaussianDistribution> list0 = new HashSet<GaussianDistribution>();
 			Set<GaussianDistribution> list1 = new HashSet<GaussianDistribution>();
-			list0.add(new DiagonalGaussianDistribution(LVeGLearner.dim));
-			list1.add(new DiagonalGaussianDistribution(LVeGLearner.dim));
+			list0.add(new DiagonalGaussianDistribution(LVeGTrainer.dim));
+			list1.add(new DiagonalGaussianDistribution(LVeGTrainer.dim));
 			map.put(Unit.P, list0);
 			map.put(Unit.UC, list1);
 			gm1.add(i, map);
 		}
 		System.out.println("gm1---" + gm1);
 		
-		for (int i = 0; i < LVeGLearner.ncomponent; i++) {
+		for (int i = 0; i < LVeGTrainer.ncomponent; i++) {
 			Set<GaussianDistribution> list = new HashSet<GaussianDistribution>();
-			list.add(new DiagonalGaussianDistribution(LVeGLearner.dim));
+			list.add(new DiagonalGaussianDistribution(LVeGTrainer.dim));
 			gm2.add(i, Unit.UC, list);
 		}
 		System.out.println("gm2---" + gm2);
@@ -101,8 +99,8 @@ public class GaussianMixtureTest {
 		Set<GaussianDistribution> set0 = new HashSet<GaussianDistribution>();
 		Set<GaussianDistribution> set1 = new HashSet<GaussianDistribution>();
 		short n = 3;
-		GaussianDistribution gd0 = new DiagonalGaussianDistribution(LVeGLearner.dim);
-		GaussianDistribution gd1 = new DiagonalGaussianDistribution(LVeGLearner.dim);
+		GaussianDistribution gd0 = new DiagonalGaussianDistribution(LVeGTrainer.dim);
+		GaussianDistribution gd1 = new DiagonalGaussianDistribution(LVeGTrainer.dim);
 		GaussianDistribution gd2 = gd0.copy();
 		
 		set0.add(gd0);
@@ -185,7 +183,7 @@ public class GaussianMixtureTest {
 		System.out.println("addmap-gmc---" + gmc);
 		Map<String, Set<GaussianDistribution>> map = new HashMap<String, Set<GaussianDistribution>>();
 		Set<GaussianDistribution> list0 = new HashSet<GaussianDistribution>();
-		list0.add(new DiagonalGaussianDistribution(LVeGLearner.dim));
+		list0.add(new DiagonalGaussianDistribution(LVeGTrainer.dim));
 		map.put(Unit.P, list0);
 		gmc.add(0.0, map);
 		
@@ -304,7 +302,7 @@ public class GaussianMixtureTest {
 		
 		int n = 1500;
 		List<Double> weights = new ArrayList<Double>();
-		FunUtil.randomInitList(LVeGLearner.random, weights, Double.class, n, 10, 0.5, false, true);
+		FunUtil.randomInitList(LVeGTrainer.random, weights, Double.class, n, 10, 0.5, false, true);
 //		gm0.setWeights(weights);
 		
 		System.out.println("n = " + n);

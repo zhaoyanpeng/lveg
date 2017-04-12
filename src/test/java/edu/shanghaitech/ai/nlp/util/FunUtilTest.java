@@ -9,7 +9,7 @@ import java.util.Random;
 
 import org.junit.Test;
 
-import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
+import edu.shanghaitech.ai.nlp.lveg.LVeGTrainer;
 import edu.shanghaitech.ai.nlp.lveg.LearnerConfig;
 
 public class FunUtilTest {
@@ -26,11 +26,11 @@ public class FunUtilTest {
 		FunUtil.printArray(arrayDouble);
 		
 		List<Integer> listInt = new ArrayList<Integer>();
-		FunUtil.randomInitList(LVeGLearner.random, listInt, Integer.class, 5, maxint, 0.5, false, true);
+		FunUtil.randomInitList(LVeGTrainer.random, listInt, Integer.class, 5, maxint, 0.5, false, true);
 		FunUtil.printList(listInt);
 		
 		List<Double> listDouble = new ArrayList<Double>();
-		FunUtil.randomInitList(LVeGLearner.random, listDouble, Double.class, 5, 1, 0.5, false, true);
+		FunUtil.randomInitList(LVeGTrainer.random, listDouble, Double.class, 5, 1, 0.5, false, true);
 		FunUtil.printList(listDouble);
 		
 		int[] arrayint = new int[5];
@@ -54,7 +54,7 @@ public class FunUtilTest {
 //	@Test
 	public void testShuffle() {
 		List<Integer> listInt = new ArrayList<Integer>();
-		FunUtil.randomInitList(LVeGLearner.random, listInt, Integer.class, 5, 2, 0.5, false, true);
+		FunUtil.randomInitList(LVeGTrainer.random, listInt, Integer.class, 5, 2, 0.5, false, true);
 		System.out.println("---shuffle test---");
 		System.out.println(listInt);
 		Collections.shuffle(listInt, new Random(0));

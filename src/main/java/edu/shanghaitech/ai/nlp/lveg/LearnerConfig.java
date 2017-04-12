@@ -43,9 +43,9 @@ public class LearnerConfig extends Recorder {
 	 * 
 	 */
 	private static final long serialVersionUID = -5745194882841709365L;
-	protected final static String ID_TRAIN = "train";
-	protected final static String ID_TEST = "test";
-	protected final static String ID_DEV = "dev";
+	public final static String ID_TRAIN = "train";
+	public final static String ID_TEST = "test";
+	public final static String ID_DEV = "dev";
 	
 	protected static String subdatadir;
 	protected static String sublogroot;
@@ -389,7 +389,7 @@ public class LearnerConfig extends Recorder {
 		public boolean verbose = false;
 	}
 	
-	protected static void initialize(Options opts, boolean test) {
+	public static void initialize(Options opts, boolean test) {
 		if (opts.outGrammar == null) {
 			throw new IllegalArgumentException("Output file is required.");
 		}
@@ -452,7 +452,7 @@ public class LearnerConfig extends Recorder {
 		gaussPool = new ObjectPool<Short, GaussianDistribution>(gfactory, config);
 	}
 	
-	protected static  Map<String, StateTreeList> loadData(Numberer wrapper, Options opts) {
+	public static  Map<String, StateTreeList> loadData(Numberer wrapper, Options opts) {
 		Numberer numberer = null;
 		StateTreeList trainTrees, testTrees, devTrees;
 		Map<String, StateTreeList> trees = new HashMap<String, StateTreeList>(3, 1);

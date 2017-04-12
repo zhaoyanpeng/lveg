@@ -2,23 +2,17 @@ package edu.shanghaitech.ai.nlp.lveg.model;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
 
-import edu.berkeley.nlp.syntax.Tree;
-import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
 import edu.shanghaitech.ai.nlp.lveg.impl.BinaryGrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.impl.DiagonalGaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.impl.UnaryGrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.ChartCell.Cell;
 import edu.shanghaitech.ai.nlp.lveg.model.ChartCell.CellType;
-import edu.shanghaitech.ai.nlp.lveg.model.Inferencer.Chart;
 import edu.shanghaitech.ai.nlp.syntax.State;
 import edu.shanghaitech.ai.nlp.util.Executor;
 import edu.shanghaitech.ai.nlp.util.FunUtil;
@@ -32,14 +26,9 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	private static final long serialVersionUID = 3449371510125004187L;
 	protected final static short ROOT = 0;
 	protected final static short LENGTH_UCHAIN = 2;
-	protected static ChainUrule chainurule;
 	
 	public static LVeGLexicon lexicon;
 	public static LVeGGrammar grammar;
-	
-	public enum ChainUrule {
-		ALL_POSSIBLE_PATH, PRE_COMPUTE_CHAIN, NOT_PRE_ADD_INTER, NOT_PRE_NOT_INTER, DEFAULT,
-	}
 	
 	
 	/**
@@ -55,7 +44,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	
 	
 	/**
-	 * Compute the inside score given the sentence and grammar rules.
+	 * Compute the inside score given the sentence and grammar rules, parallel version.
 	 * 
 	 * @param chart [in/out]-side score container
 	 * @param tree  in which only the sentence is used
@@ -70,14 +59,9 @@ public abstract class Inferencer extends Recorder implements Serializable {
 			for (GrammarRule rule : rules) {
 				chart.addInsideScore(rule.lhs, iCell, rule.getWeight().copy(true), (short) 0, false);
 			}
-			// DEBUG unary grammar rules
-//			logger.trace("Cell [" + i + ", " + (i + 0) + "]="+ iCell + "\t is being estimated. # " );
-//			long start = System.currentTimeMillis();
 			if (prune) { chart.pruneInsideScore(iCell, (short) 0); }
-			insideScoreForUnaryRule(chart, iCell, chainurule, prune, usemasks);
+			insideScoreForUnaryRule(chart, iCell, prune, usemasks);
 			if (prune) { chart.pruneInsideScore(iCell, (short) -1); }
-//			long ttime = System.currentTimeMillis() - start;
-//			logger.trace("\tafter chain unary\t" + chart.size(iCell, true) + "\ttime: " + ttime / 1000 + "\n");
 		}		
 		
 		// inside score
@@ -99,21 +83,16 @@ public abstract class Inferencer extends Recorder implements Serializable {
 						cpool.getNext();
 					}
 				}
-				// DEBUG unary grammar rules
-//				logger.trace("Cell [" + left + ", " + (left + ilayer) + "]="+ c2 + "\t is being estimated. # ");
-//				long start = System.currentTimeMillis();
 				if (prune) { chart.pruneInsideScore(c2, (short) 0); }
-				insideScoreForUnaryRule(chart, c2, chainurule, prune, usemasks);
+				insideScoreForUnaryRule(chart, c2, prune, usemasks);
 				if (prune) { chart.pruneInsideScore(c2, (short) -1); }
-//				long ttime = System.currentTimeMillis() - start;
-//				logger.trace("\tafter chain unary\t" + chart.size(c2, true) + "\ttime: " + ttime / 1000 + "\n");
 			}
 		}
 	}
 	
 	
 	/**
-	 * Compute the outside score given the sentence and grammar rules.
+	 * Compute the outside score given the sentence and grammar rules, parallel version.
 	 * 
 	 * @param chart [in/out]-side score container
 	 * @param tree  in which only the sentence is used.
@@ -139,14 +118,9 @@ public abstract class Inferencer extends Recorder implements Serializable {
 						cpool.getNext();
 					}
 				}
-				// DEBUG unary grammar rules
-//				logger.trace("Cell [" + left + ", " + (left + ilayer) + "]="+ c2 + "\t is being estimated. # ");
-//				long start = System.currentTimeMillis();
 				if (prune) { chart.pruneOutsideScore(c2, (short) 0); }
-				outsideScoreForUnaryRule(chart, c2, chainurule, prune, usemasks);
+				outsideScoreForUnaryRule(chart, c2, prune, usemasks);
 				if (prune) { chart.pruneOutsideScore(c2, (short) -1); }
-//				long ttime = System.currentTimeMillis() - start;
-//				logger.trace("\tafter chain unary\t" + chart.size(c2, false) + "\ttime: " + ttime / 1000 + "\n");
 			}
 		}
 	}
@@ -319,7 +293,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 //			logger.trace("Cell [" + i + ", " + (i + 0) + "]="+ iCell + "\t is being estimated. # " );
 //			long start = System.currentTimeMillis();
 			if (prune) { chart.pruneInsideScore(iCell, (short) 0); }
-			insideScoreForUnaryRule(chart, iCell, chainurule, prune, usemasks);
+			insideScoreForUnaryRule(chart, iCell, prune, usemasks);
 			if (prune) { chart.pruneInsideScore(iCell, (short) -1); }
 //			long ttime = System.currentTimeMillis() - start;
 //			logger.trace("\tafter chain unary\t" + chart.size(iCell, true) + "\ttime: " + ttime / 1000 + "\n");
@@ -359,7 +333,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 //				logger.trace("Cell [" + left + ", " + (left + ilayer) + "]="+ c2 + "\t is being estimated. # ");
 //				long start = System.currentTimeMillis();
 				if (prune) { chart.pruneInsideScore(c2, (short) 0); }
-				insideScoreForUnaryRule(chart, c2, chainurule, prune, usemasks);
+				insideScoreForUnaryRule(chart, c2, prune, usemasks);
 				if (prune) { chart.pruneInsideScore(c2, (short) -1); }
 //				long ttime = System.currentTimeMillis() - start;
 //				logger.trace("\tafter chain unary\t" + chart.size(c2, true) + "\ttime: " + ttime / 1000 + "\n");
@@ -440,35 +414,11 @@ public abstract class Inferencer extends Recorder implements Serializable {
 //				logger.trace("Cell [" + left + ", " + (left + ilayer) + "]="+ c2 + "\t is being estimated. # ");
 //				long start = System.currentTimeMillis();
 				if (prune) { chart.pruneOutsideScore(c2, (short) 0); }
-				outsideScoreForUnaryRule(chart, c2, chainurule, prune, usemasks);
+				outsideScoreForUnaryRule(chart, c2, prune, usemasks);
 				if (prune) { chart.pruneOutsideScore(c2, (short) -1); }
 //				long ttime = System.currentTimeMillis() - start;
 //				logger.trace("\tafter chain unary\t" + chart.size(c2, false) + "\ttime: " + ttime / 1000 + "\n");
 			}
-		}
-	}
-	
-	
-	private static void outsideScoreForUnaryRule(Chart chart, int idx, ChainUrule identifier, boolean prune, boolean usemasks) {
-		switch (identifier) {
-		case DEFAULT: {
-			outsideScoreForUnaryRuleDefault(chart, idx, prune, usemasks);
-			break;
-		}
-		default:
-			logger.error("Invalid unary-rule-processing-method. ");
-		}
-	}
-	
-	
-	private static void insideScoreForUnaryRule(Chart chart, int idx, ChainUrule identifier, boolean prune, boolean usemasks) {
-		switch (identifier) {
-		case DEFAULT: {
-			insideScoreForUnaryRuleDefault(chart, idx, prune, usemasks);
-			break;
-		}
-		default:
-			logger.error("Invalid unary-rule-processing-method. ");
 		}
 	}
 	
@@ -508,7 +458,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 		}
 	}
 	
-	private static void outsideScoreForUnaryRuleDefault(Chart chart, int idx, boolean prune, boolean usemasks) {
+	private static void outsideScoreForUnaryRule(Chart chart, int idx, boolean prune, boolean usemasks) {
 		Set<Short> set;
 		short level = 0;
 		List<GrammarRule> rules;
@@ -591,7 +541,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 		}
 	}
 	
-	private static void insideScoreForUnaryRuleDefault(Chart chart, int idx, boolean prune, boolean usemasks) {
+	private static void insideScoreForUnaryRule(Chart chart, int idx, boolean prune, boolean usemasks) {
 		String rmKey;
 		Set<Short> set;
 		short level = 0;
@@ -812,14 +762,11 @@ public abstract class Inferencer extends Recorder implements Serializable {
 			for (int i = 0; i < size; i++) {
 				ochart.add(ChartCell.getCell(CellType.DEFAULT));
 				ichart.add(ChartCell.getCell(CellType.DEFAULT));
-//				ochart.add(new Cell());
-//				ichart.add(new Cell());
 			}
 			if (maxrule) {
 				mchart = new ArrayList<Cell>(size);
 				for (int i = 0; i < size; i++) {
 					mchart.add(ChartCell.getCell(CellType.MAX_RULE));
-//					mchart.add(new Cell(maxrule));
 				}
 			}
 			if (usemask) {
@@ -830,9 +777,6 @@ public abstract class Inferencer extends Recorder implements Serializable {
 					imasks.add(ChartCell.getCell(CellType.PCFG));
 					omasks.add(ChartCell.getCell(CellType.PCFG));
 					tmasks.add(ChartCell.getCell(CellType.PCFG));
-//					imasks.add(new Cell(maxrule, usemask));
-//					omasks.add(new Cell(maxrule, usemask));
-//					tmasks.add(new Cell(maxrule, usemask));
 				}
 			}
 		}
@@ -1091,395 +1035,4 @@ public abstract class Inferencer extends Recorder implements Serializable {
 			return "Chart [ichart=" + ichart + ", ochart=" + ochart + "]";
 		}
 	}
-	
-	
-	/**
-	 * Cells of the chart used in calculating inside and outside scores.
-	 * 
-	 * @author Yanpeng Zhao
-	 *
-	 */
-//	public static class Cell {
-//		// key word "private" does not make any difference, outer class can access all the fields 
-//		// of the inner class through the instance of the inner class or in the way of the static 
-//		// fields accessing.
-//		private boolean status;
-//		private Map<Short, GaussianMixture> totals;
-//		private Map<Short, Map<Short, GaussianMixture>> scores;
-//		
-//		private Map<Short, Map<Short, Double>> maxRuleCnts;
-//		private Map<Short, Map<Short, Integer>> maxRuleSons;
-//		private Map<Short, Integer> maxRuleSon;
-//		private Map<Short, Short> maxRulePos;
-//		private Map<Short, Short> splitPoint;
-//		// using masks
-//		private Set<Short> masks; 
-//		private Map<Short, Double> mtotals;
-//		private Map<Short, Set<Short>> mtags;
-//		private Map<Short, Map<Short, Double>> mscores;
-//		
-//		
-//		private Cell() {
-//			this.status = false;
-//			this.totals = new HashMap<Short, GaussianMixture>();
-//			this.scores = new HashMap<Short, Map<Short, GaussianMixture>>();
-//		}
-//		
-//		public Cell(boolean maxrule) {
-////			this(); // CHECK
-//			if (maxrule) {
-//				this.maxRuleCnts = new HashMap<Short, Map<Short, Double>>(3, 1);
-//				this.maxRuleSons = new HashMap<Short, Map<Short, Integer>>(3, 1);
-//				this.maxRulePos = new HashMap<Short, Short>();
-//				this.maxRuleSon = new HashMap<Short, Integer>(); // low 2 bytes are used
-//				this.splitPoint = new HashMap<Short, Short>();
-//			}
-//		}
-//		
-//		public Cell(boolean maxrule, boolean usemask) {
-////			this(maxrule); // CHECK
-//			if (usemask) {
-//				this.masks = new HashSet<Short>();
-//				this.mtags = new HashMap<Short, Set<Short>>();
-//				this.mtotals = new HashMap<Short, Double>();
-//				this.mscores = new HashMap<Short, Map<Short, Double>>();
-//				
-//			}
-//		}
-//		
-//		protected void setStatus(boolean status) {
-//			this.status = status;
-//		}
-//		
-//		protected boolean getStatus() {
-//			return status;
-//		}
-//		
-//		protected int size() {
-//			return totals.size();
-//		}
-//		
-//		protected Set<Short> keySetMask() {
-//			return mtotals.keySet();
-//		}
-//		
-//		protected Set<Short> keySet() {
-//			return totals.keySet();
-//		}
-//		
-//		protected Set<Short> keySetMask(short level) {
-//			return mscores.get(level) == null ? null : mscores.get(level).keySet();
-//		}
-//		
-//		protected Set<Short> keySet(short level) {
-//			return scores.get(level) == null ? null : scores.get(level).keySet();
-//		}
-//		
-//		protected Set<Short> keySetMaxRule(short level) {
-//			return maxRuleCnts.get(level) == null ? null : maxRuleCnts.get(level).keySet();
-//		}
-//		
-//		protected boolean containsKeyMask(short key) {
-//			return mtotals.containsKey(key);
-//		}
-//		
-//		protected boolean containsKey(short key) {
-//			return totals.containsKey(key);
-//		}
-//		
-//		protected boolean containsKeyMask(short key, short level) {
-//			return mscores.get(level) == null ? false : mscores.get(level).containsKey(key);
-//		}
-//		
-//		protected boolean containsKey(short key, short level) {
-//			return scores.get(level) == null ? false : scores.get(level).containsKey(key);
-//		}
-//		
-//		protected boolean isAllowed(short key) {
-//			return masks.contains(key);
-//		}
-//		
-//		protected boolean isAllowed(short key, short level) {
-//			Set<Short> keys = mtags.get(level);
-//			if (keys != null && keys.contains(key)) {
-//				return true;
-//			}
-//			return false;
-//		}
-//		
-//		protected void pruneScoreMask(PriorityQueue<Double> queue, int base, double ratio) {
-//			if (mtotals.size() > base) {
-//				int k = (int) (base + Math.floor(mtotals.size() * ratio));
-//				double kval;
-//				queue.clear();
-//				Collection<Double> scores = mtotals.values();
-//				for (Double d : scores) { 
-//					queue.offer(d);
-//					if (queue.size() > k) { queue.poll(); }
-//				}
-//				kval = queue.peek(); // k-th largest value
-//				for (Map.Entry<Short, Double> score : mtotals.entrySet()) {
-//					if (score.getValue() >= kval) { masks.add(score.getKey()); }
-//				}
-//				
-//			} else {
-//				masks.addAll(mtotals.keySet());
-//			}
-//		}
-//		
-//		protected void pruneScore() {
-//			Collection<GaussianMixture> scores = totals.values();
-//			for (GaussianMixture score : scores) {
-//				score.delTrivia();
-//			}
-//		}
-//		
-//		protected void pruneScoreMask(short level, PriorityQueue<Double> queue, int base, double ratio) {
-//			// TODO
-//		}
-//		
-//		protected void pruneScore(short level) {
-//			Map<Short, GaussianMixture> lscores = scores.get(level);
-//			if (lscores != null) {
-//				Collection<GaussianMixture> lscore = lscores.values();
-//				for (GaussianMixture score : lscore) {
-//					score.delTrivia();
-//				}
-//			}
-//		}
-//		
-//		protected void addMask(short key, short level) {
-//			Set<Short> keys = mtags.get(level);
-//			if (keys == null) {
-//				keys = new HashSet<Short>();
-//				mtags.put(level, keys);
-//			}
-//			keys.add(key);
-//		}
-//		
-//		protected void addMaxRuleCount(short key, double count, int sons, Short splitpoint, short level) {
-//			// cnts for the same nonterminals in different levels
-//			Map<Short, Double> lcnts = maxRuleCnts.get(level);
-//			if (lcnts == null) {
-//				lcnts = new HashMap<Short, Double>();
-//				maxRuleCnts.put(level, lcnts);
-//			}
-//			Double cnt = lcnts.get(key); // double check
-//			if (cnt != null && cnt > count) { return; }
-//			lcnts.put(key, count);
-//			// sons for the same nonterminals in different levels
-//			Map<Short, Integer> lsons = maxRuleSons.get(level);
-//			if (lsons == null) {
-//				lsons = new HashMap<Short, Integer>();
-//				maxRuleSons.put(level, lsons);
-//			}
-//			lsons.put(key, sons);
-//			// the max one
-//			maxRulePos.put(key, level);
-//			maxRuleSon.put(key, sons);
-//			if (level == 0) { // binary rules or ROOT
-//				splitPoint.put(key, splitpoint);
-//			}
-//		}
-//		
-//		protected double getMaxRuleCount(short key, short level) {
-//			Double cnt = maxRuleCnts.get(level) == null ? null : maxRuleCnts.get(level).get(key);
-//			return cnt == null ? Double.NEGATIVE_INFINITY : cnt;
-//		}
-//		
-//		protected double getMaxRuleCount(short key) {
-//			Short lkey = maxRulePos.get(key);
-//			return lkey == null ? Double.NEGATIVE_INFINITY : maxRuleCnts.get(lkey).get(key);
-//		}
-//		
-//		protected int getMaxRuleSon(short key, short level) {
-//			Integer son = maxRuleSons.get(level) == null ? null : maxRuleSons.get(level).get(key);
-//			return son == null ? -1 : son;
-//			/*
-//			Map<Short, Integer> lsons = null;
-//			if ((lsons = maxRuleSons.get(level)) != null) {
-//				return lsons.get(key);
-//			}
-//			return -1;
-//			*/
-//		}
-//		
-//		protected int getMaxRuleSon(short key) {
-//			return maxRuleSon.get(key);
-//		}
-//		
-//		protected short getSplitPoint(short key) {
-//			Short split = splitPoint.get(key);
-//			return split == null ? -1 : split;
-//		}
-//		
-//		
-//		protected synchronized void addScoreMask(short key, double score, short level, boolean prune) {
-//			Map<Short, Double> lscore = mscores.get(level);
-//			if (lscore == null) {
-//				lscore = new HashMap<Short, Double>();
-//				mscores.put(level, lscore);
-//			}
-//			Double ascore = lscore.get(key);
-//			if (ascore == null) {
-//				lscore.put(key, score);
-//			} else {
-//				lscore.put(key, FunUtil.logAdd(ascore, score));
-//			}
-//			addScoreMask(key, score, prune);
-//		}
-//		
-//		private synchronized void addScoreMask(short key, double score, boolean prune) {
-//			if (containsKeyMask(key)) {
-//				mtotals.put(key, FunUtil.logAdd(mtotals.get(key), score));
-//			} else {
-//				mtotals.put(key, score);
-//			}
-//		}
-//		
-//		protected synchronized void addScore(short key, GaussianMixture gm, short level, boolean prune) {
-//			Map<Short, GaussianMixture> lscore = scores.get(level);
-//			if (lscore == null) {
-//				lscore = new HashMap<Short, GaussianMixture>();
-//				scores.put(level, lscore);
-//			}
-//			GaussianMixture agm = lscore.get(key);
-//			if (agm == null) {
-//				lscore.put(key, gm);
-//			} else {
-//				agm.add(gm, prune);
-//			}
-//			addScore(key, gm, prune);
-//		}
-//		
-//		private synchronized void addScore(short key, GaussianMixture gm, boolean prune) {
-//			if (containsKey(key)) { 
-//				// gm is passed into this method by addScore(short, GaussianMixture, short, boolean),
-//				// before that it has been added into Cell.scores, and is filtered when 
-//				// GaussianMixture.add(GaussianMixture, boolean) is called. Here gm may be filtered
-//				// again by calling totals.get(key).add(...), in which some components of gm may be 
-//				// cleared through the reference and further modify Cell.scores. The safe practice is
-//				// copying gm and adding into Cell.totals, but that results in unnecessary memory
-//				// overhead, so I choose not to clear the filtered component in GaussianMixture.add()
-//				totals.get(key).add(gm, prune);
-//				/*totals.get(key).add(gm.copy(true), prune);*/
-//			} else {
-//				// it should own its own memory space, so that the score in a 
-//				// specific level could not be modified through the reference
-//				totals.put(key, gm.copy(true));
-//			}
-//		}
-//		
-//		protected double getScoreMask(short key, short level) {
-//			return mscores.get(level) == null ? Double.NEGATIVE_INFINITY : mscores.get(level).get(key);
-//		}
-//		
-//		protected GaussianMixture getScore(short key, short level) {
-//			return scores.get(level) == null ? null : scores.get(level).get(key);
-//		}
-//		
-//		protected double getScoreMask(short key) {
-//			return mtotals.get(key);
-//		}
-//		
-//		protected GaussianMixture getScore(short key) {
-//			return totals.get(key);
-//		}
-//		
-//		protected void clear() {
-//			status = false;
-//			if (scores != null) {
-////				for (Map.Entry<Short, Map<Short, GaussianMixture>> level : scores.entrySet()) {
-////					for (Map.Entry<Short, GaussianMixture> entry : level.getValue().entrySet()) {
-////						if (entry.getValue() != null) { 
-////							entry.getValue().clear(); 
-//////							GaussianMixture.returnObject(entry.getValue()); // POOL
-////						}
-////					}
-////					level.getValue().clear();
-////				}
-//				scores.clear();
-//			}
-//			if (totals != null) {
-////				for (Map.Entry<Short, GaussianMixture> entry : totals.entrySet()) {
-////					if (entry.getValue() != null) { 
-////						entry.getValue().clear(); 
-//////						GaussianMixture.returnObject(entry.getValue()); // POOL
-////					}
-////				}
-//				totals.clear();
-//			}
-//			// the following is for max rule parser
-//			if (maxRuleCnts != null) {
-////				for (Map.Entry<Short, Map<Short, Double>> entry : maxRuleCnts.entrySet()) {
-////					if (entry.getValue() != null) { entry.getValue().clear(); }
-////				}
-//				maxRuleCnts.clear();
-//			}
-//			if (maxRuleSons != null) {
-////				for (Map.Entry<Short, Map<Short, Integer>> entry : maxRuleSons.entrySet()) {
-////					if (entry.getValue() != null) { entry.getValue().clear(); }
-////				}
-//				maxRuleSons.clear();
-//			}
-//			if (maxRuleSon != null) { maxRuleSon.clear(); }
-//			if (maxRulePos != null) { maxRulePos.clear(); }
-//			if (splitPoint != null) { splitPoint.clear(); }
-//			
-//			if (mscores != null) { mscores.clear(); }
-//			if (mtotals != null) { mtotals.clear(); }
-//			if (masks != null) { masks.clear(); }
-//			if (mtags != null) { mtags.clear(); }
-//		}
-//		
-//		public String toString(boolean simple, int nfirst, boolean quantity) {
-//			if (simple) {
-//				String name;
-//				StringBuffer sb = new StringBuffer();
-//				sb.append("Cell [status=" + status + ", size=" + totals.size());
-//				
-//				for (Map.Entry<Short, GaussianMixture> score : totals.entrySet()) {
-//					name = (String) grammar.numberer.object(score.getKey());
-//					if (quantity) {
-//						sb.append(", " + name + "(nc)=" + score.getValue().ncomponent);
-//					} else {
-//						sb.append(", " + name + "=" + score.getValue().toString(simple, nfirst));
-//					}
-//				}
-//				
-//				sb.append("]");
-//				
-//				sb.append("\n\n--- details in each level---\n");
-//				for (Map.Entry<Short, Map<Short, GaussianMixture>> level : scores.entrySet()) {
-//					sb.append("\n------>level " + level.getKey() + " ntag = " + level.getValue().size() + "\n");
-//					for (Map.Entry<Short, GaussianMixture> detail : level.getValue().entrySet()) {
-//						name = (String) grammar.numberer.object(detail.getKey());
-//						if (quantity) {
-//							sb.append("\nid=" + detail.getKey() + ", " + name + "(nc)=" + detail.getValue().ncomponent);
-//						} else {
-//							sb.append("\nid=" + detail.getKey() + ", " + name + "=" + detail.getValue().toString(simple, nfirst));
-//						}
-//					}
-//					sb.append("\n");
-//				}
-//				
-//				return sb.toString();
-//			} else {
-//				return toString();
-//			}
-//		}
-//		
-//		@Override
-//		public String toString() {
-//			String name;
-//			StringBuffer sb = new StringBuffer();
-//			sb.append("Cell [status=" + status + ", size=" + totals.size());
-//			for (Map.Entry<Short, GaussianMixture> score : totals.entrySet()) {
-//				name = (String) grammar.numberer.object(score.getKey());
-//				sb.append(", " + name + "=" + score.getValue());
-//			}
-//			sb.append("]");
-//			return sb.toString();
-//		}
-//	}
 }

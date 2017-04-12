@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.Set;
 
 import edu.berkeley.nlp.syntax.Tree;
-import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
+import edu.shanghaitech.ai.nlp.lveg.LVeGTrainer;
 import edu.shanghaitech.ai.nlp.lveg.impl.BinaryGrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.impl.RuleTable;
 import edu.shanghaitech.ai.nlp.lveg.impl.UnaryGrammarRule;
@@ -86,7 +86,7 @@ public abstract class LVeGGrammar extends Recorder implements Serializable {
 			logger.warn("\nBinary Rule NOT Found: [P: " + idParent + ", LC: " + idlChild + ", RC: " + idrChild + "]\n");
 			GaussianMixture weight = GrammarRule.rndRuleWeight(GrammarRule.LRBRULE, (short) -1, (short) -1);
 			/*weight.setWeights(Double.NEGATIVE_INFINITY);*/
-			weight.setWeights(LVeGLearner.minmw);
+			weight.setWeights(LVeGTrainer.minmw);
 			return weight;
 		} else { // 
 			return null;
@@ -102,7 +102,7 @@ public abstract class LVeGGrammar extends Recorder implements Serializable {
 			logger.warn("\nUnary Rule NOT Found: [P: " + idParent + ", UC: " + idChild + ", TYPE: " + type + "]\n");
 			GaussianMixture weight = GrammarRule.rndRuleWeight(type, (short) -1, (short) -1);
 			/*weight.setWeights(Double.NEGATIVE_INFINITY);*/
-			weight.setWeights(LVeGLearner.minmw);
+			weight.setWeights(LVeGTrainer.minmw);
 			return weight;
 		} else {
 			return null;

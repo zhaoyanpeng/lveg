@@ -8,7 +8,7 @@ import java.util.Map;
 
 import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.data.StateTreeList;
-import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
+import edu.shanghaitech.ai.nlp.lveg.LVeGTrainer;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
@@ -168,7 +168,7 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 		if (wordIdx == -1) { // double check
 			logger.warn("\nUnknown Word Signature [P: " + itag + ", UC: " + wordIdx + ", word = " + word.getName() + ", sig = (UNK)]\n");
 			GaussianMixture weight = GrammarRule.rndRuleWeight(GrammarRule.LHSPACE, (short) -1, (short) -1);
-			weight.setWeights(LVeGLearner.minmw);
+			weight.setWeights(LVeGTrainer.minmw);
 			return weight;
 		}
 		GrammarRule rule = getURule(itag, wordIdx, GrammarRule.LHSPACE);
@@ -176,7 +176,7 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 			logger.warn("\nUnknown Lexicon Rule [P: " + itag + ", UC: " + wordIdx + ", word = " + word.getName() + ", sig = (UNK)]\n");
 			GaussianMixture weight = GrammarRule.rndRuleWeight(GrammarRule.LHSPACE, (short) -1, (short) -1);
 			/*weight.setWeights(Double.NEGATIVE_INFINITY);*/
-			weight.setWeights(LVeGLearner.minmw);
+			weight.setWeights(LVeGTrainer.minmw);
 			return weight;
 		}
 		return rule.getWeight();

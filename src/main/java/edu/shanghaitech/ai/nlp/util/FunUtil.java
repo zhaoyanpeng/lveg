@@ -6,31 +6,27 @@ import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Formatter;
+import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.Map.Entry;
 
 import javax.imageio.ImageIO;
 
 import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.ui.TreeJPanel;
 import edu.shanghaitech.ai.nlp.data.StateTreeList;
-import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
+import edu.shanghaitech.ai.nlp.lveg.LVeGTrainer;
+import edu.shanghaitech.ai.nlp.lveg.LearnerConfig;
 import edu.shanghaitech.ai.nlp.lveg.LearnerConfig.Options;
 import edu.shanghaitech.ai.nlp.lveg.impl.LVeGParser;
 import edu.shanghaitech.ai.nlp.lveg.impl.UnaryGrammarRule;
@@ -63,7 +59,7 @@ public class FunUtil extends Recorder {
 	public final static NumberFormat formatter = new DecimalFormat("0.###E0");
 	
 	
-	private static Random random = new Random(LVeGLearner.randomseed);
+	private static Random random = new Random(LVeGTrainer.randomseed);
 	private static LVeGGrammar grammar;
 	private static LVeGLexicon lexicon;
 	
@@ -74,7 +70,6 @@ public class FunUtil extends Recorder {
 		Map<GrammarRule, GrammarRule> uRuleMap = grammar.getURuleMap();
 		for (Map.Entry<GrammarRule, GrammarRule> entry : uRuleMap.entrySet()) {
 			gradcheck(grammar, lexicon, entry, lvegParser, valuator, tree, delta, maxsample);
-//			return;
 		}
 		uRuleMap = lexicon.getURuleMap();
 		for (Map.Entry<GrammarRule, GrammarRule> entry : uRuleMap.entrySet()) {
@@ -314,31 +309,31 @@ public class FunUtil extends Recorder {
 		Map<GrammarRule, GrammarRule> uRuleMap = grammar.getURuleMap();
 		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBRuleMap();
 		// unary grammar rules
-		LVeGLearner.logger.trace("\n---Unary Grammar Rules---\n\n");
+		LVeGTrainer.logger.trace("\n---Unary Grammar Rules---\n\n");
 		for (Map.Entry<GrammarRule, GrammarRule> rmap : uRuleMap.entrySet()) {
 			GrammarRule rule = rmap.getValue();
 			Map<Short, List<Map<String, GaussianMixture>>> count = grammar.getCount(rule, false);
-			LVeGLearner.logger.trace(rule + "\tcount=" + count + "\n");
+			LVeGTrainer.logger.trace(rule + "\tcount=" + count + "\n");
 			if (++iiter >= niter) { break; }
 		}
 		
 		iiter = 0;
 		// binary grammar rules
-		LVeGLearner.logger.trace("\n---Binary Grammar Rules---\n\n");
+		LVeGTrainer.logger.trace("\n---Binary Grammar Rules---\n\n");
 		for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
 			GrammarRule rule = rmap.getValue();
 			Map<Short, List<Map<String, GaussianMixture>>> count = grammar.getCount(rule, false);
-			LVeGLearner.logger.trace(rule + "\tcount=" + count + "\n");
+			LVeGTrainer.logger.trace(rule + "\tcount=" + count + "\n");
 			if (++iiter > niter) { break; }
 		}
 		
 		iiter = 0;
 		// unary rules in lexicon
 		Set<GrammarRule> ruleSet = lexicon.getRuleSet();
-		LVeGLearner.logger.trace("\n---Unary Grammar Rules in Lexicon---\n");
+		LVeGTrainer.logger.trace("\n---Unary Grammar Rules in Lexicon---\n");
 		for (GrammarRule rule : ruleSet) {
 			Map<Short, List<Map<String, GaussianMixture>>> count = lexicon.getCount(rule, false);
-			LVeGLearner.logger.trace(rule + "\tcount=" + count + "\n");
+			LVeGTrainer.logger.trace(rule + "\tcount=" + count + "\n");
 			if (++iiter >= niter) { break; }
 		}
 		
@@ -605,7 +600,7 @@ public class FunUtil extends Recorder {
 			Set<Integer> visited = new LinkedHashSet<Integer>();
 			// System.out.println("Tag " + i + "\t");
 			if ((repeated = checkUnaryRuleCircle(i, visited, startWithC)) > 0) {
-				LVeGLearner.logger.error("Repeated item: " + repeated + "\tin the path that begins with " + i + " was found: " + visited + "\n");
+				LVeGTrainer.logger.error("Repeated item: " + repeated + "\tin the path that begins with " + i + " was found: " + visited + "\n");
 				found = true;
 			}
 		}
@@ -1002,5 +997,94 @@ public class FunUtil extends Recorder {
 		}
 		return false;
 	}
+	
+	public static void testLocally() {
+		String[] args = null;
+		String fparams = "param.in";
+		try {
+			args = LearnerConfig.readFile(fparams, StandardCharsets.UTF_8).split(",");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		OptionParser optionParser = new OptionParser(Options.class);
+		Options opts = (Options) optionParser.parse(args, true);
+		// configurations
+		LearnerConfig.initialize(opts, true); // logger can only be used after the initialization
+		logger.info("Calling with " + optionParser.getParsedOptions() + "\n");
+		// loading data
+		Numberer wrapper = new Numberer();
+		Map<String, StateTreeList> trees = LearnerConfig.loadData(wrapper, opts);
+		treeSummary(trees);
+	}
+	
+	
+	public static void treeSummary(Map<String, StateTreeList> trees) {
+		StateTreeList trainTrees = trees.get(LearnerConfig.ID_TRAIN);
+		StateTreeList testTrees = trees.get(LearnerConfig.ID_TEST);
+		StateTreeList devTrees = trees.get(LearnerConfig.ID_DEV);
+		
+		logger.trace("\n---training sentence length summary---\n");
+		lengthSummary(trainTrees);
+		logger.trace("\n---  test sentence length summary  ---\n");
+		lengthSummary(testTrees);
+		logger.trace("\n---   dev sentence length summary   ---\n");
+		lengthSummary(devTrees);
+	}
+	
+	public static void lengthSummary(StateTreeList trees) {
+		Map<Integer, Integer> summary = new HashMap<Integer, Integer>();
+		for (Tree<State> tree : trees) {
+			int len = tree.getTerminalYield().size();
+			if (summary.containsKey(len)) {
+				summary.put(len, summary.get(len) + 1);
+			} else {
+				summary.put(len, 1);
+			}
+		}
+		logger.trace(summary + "\n");
+		logger.trace(summary.keySet() + "\n");
+		logger.trace(summary.values() + "\n");
+		
+		int nbin = 150;
+		Map<Integer, Integer> lens = new HashMap<Integer, Integer>();
+		for (Map.Entry<Integer, Integer> entry : summary.entrySet()) {
+			for (int i = 0; i < nbin ; i += 10) {
+				int len = entry.getKey();
+				if (len < i) {
+					if (lens.containsKey(i)) {
+						lens.put(i, lens.get(i) + entry.getValue());
+					} else {
+						lens.put(i, entry.getValue());
+					}
+				}
+			}
+		}
+		
+		KeyComparator bykey = new KeyComparator(lens);
+		TreeMap<Integer, Integer> sorted = new TreeMap<Integer, Integer>(bykey);
+		sorted.putAll(lens);
+		logger.trace(sorted.keySet() + "\n");
+		logger.trace(sorted.values() + "\n");
+	}
+	
+	
+	static class KeyComparator implements Comparator<Integer> {
+	    Map<Integer, Integer> map;
+	    public KeyComparator(Map<Integer, Integer> map) {
+	        this.map = map;
+	    }
+		@Override
+		public int compare(Integer o1, Integer o2) {
+			return o1 - o2;
+		}
+	}
+	
+	
+	Comparator<Map.Entry<Integer, Integer>> keycomparator = new Comparator<Map.Entry<Integer, Integer>>() {
+		@Override
+		public int compare(Entry<Integer, Integer> o1, Entry<Integer, Integer> o2) {
+			return o1.getKey() - o2.getKey();
+		}
+	};
 
 }

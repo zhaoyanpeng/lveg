@@ -30,7 +30,6 @@ public class MaxRuleInferencer extends Inferencer {
 	public MaxRuleInferencer(LVeGGrammar agrammar, LVeGLexicon alexicon) {
 		grammar = agrammar;
 		lexicon = alexicon;
-		chainurule = ChainUrule.DEFAULT;
 	}
 	
 	

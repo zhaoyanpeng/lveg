@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
+import edu.shanghaitech.ai.nlp.lveg.LVeGTrainer;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.util.FunUtil;
@@ -59,7 +59,7 @@ public class DiagonalGaussianMixture extends GaussianMixture {
 		} catch (Exception e) {
 			logger.error("---------Borrow GM " + e + "\n");
 			try {
-				LVeGLearner.mogPool.invalidateObject(ncomponent, obj);
+				LVeGTrainer.mogPool.invalidateObject(ncomponent, obj);
 			} catch (Exception e1) {
 				logger.error("---------Borrow GM(invalidate) " + e + "\n");
 			}

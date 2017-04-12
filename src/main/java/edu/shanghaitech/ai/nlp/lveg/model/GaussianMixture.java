@@ -12,7 +12,7 @@ import java.util.PriorityQueue;
 import java.util.Random;
 import java.util.Set;
 
-import edu.shanghaitech.ai.nlp.lveg.LVeGLearner;
+import edu.shanghaitech.ai.nlp.lveg.LVeGTrainer;
 import edu.shanghaitech.ai.nlp.lveg.LearnerConfig.Params;
 import edu.shanghaitech.ai.nlp.util.FunUtil;
 import edu.shanghaitech.ai.nlp.util.ObjectPool;
@@ -1304,7 +1304,7 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 			StringBuffer sb = new StringBuffer();
 			sb.append("GM [ncomponent=" + ncomponent + ", weights=" + 
 //					FunUtil.double2str(getWeights(), 16, -1, false, false) + "<->" +
-					FunUtil.double2str(getWeights(), LVeGLearner.precision, nfirst, true, true));
+					FunUtil.double2str(getWeights(), LVeGTrainer.precision, nfirst, true, true));
 			sb.append("]");
 			return sb.toString();
 		} else {
@@ -1317,7 +1317,7 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	public String toString() {
 		return "GM [bias=" + bias + ", ncomponent=" + ncomponent + ", weights=" + 
 //				FunUtil.double2str(getWeights(), 16, -1, false, false) + "<->" +
-				FunUtil.double2str(getWeights(), LVeGLearner.precision, -1, true, true) + ", mixture=" + getMixture() + "]";
+				FunUtil.double2str(getWeights(), LVeGTrainer.precision, -1, true, true) + ", mixture=" + getMixture() + "]";
 	}
 	
 	/*
@@ -1407,7 +1407,7 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 		
 		@Override
 		public String toString() {
-			return "GM [id=" + id + ", weight=" + String.format( "%." + LVeGLearner.precision + "f", weight) + ", multivnd=" + multivnd + "]";
+			return "GM [id=" + id + ", weight=" + String.format( "%." + LVeGTrainer.precision + "f", weight) + ", multivnd=" + multivnd + "]";
 		}
 	}
 	
