@@ -118,7 +118,7 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 		if (reuse) {
 			chart.clear(nword);
 		} else {
-			if (chart != null) { chart.clear(nword); }
+			if (chart != null) { chart.clear(-1); }
 			chart = new Chart(nword, false, usemasks);
 		}
 		if (usemasks) {

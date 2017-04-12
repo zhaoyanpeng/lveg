@@ -21,7 +21,7 @@ public class InferencerTest {
 //		inferencer.insideScore(null, false);
 //		inferencer.outsideScore(null);
 		
-		Inferencer.Chart chart = new Inferencer.Chart(5, false);
+		Inferencer.Chart chart = new Inferencer.Chart(5, false, false);
 //		insideScore(chart, 5, 0, 4);
 		for (int i = 0; i < 5; i++) {
 			outsideScore(chart, 5, i, i);

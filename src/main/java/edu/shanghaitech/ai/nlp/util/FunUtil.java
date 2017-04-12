@@ -35,12 +35,12 @@ import edu.shanghaitech.ai.nlp.lveg.LearnerConfig.Options;
 import edu.shanghaitech.ai.nlp.lveg.impl.LVeGParser;
 import edu.shanghaitech.ai.nlp.lveg.impl.UnaryGrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.impl.Valuator;
+import edu.shanghaitech.ai.nlp.lveg.model.ChartCell.Cell;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
 import edu.shanghaitech.ai.nlp.optimization.Gradient.Grads;
-import edu.shanghaitech.ai.nlp.lveg.model.Inferencer.Cell;
 import edu.shanghaitech.ai.nlp.lveg.model.Inferencer.Chart;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.util.Numberer;
@@ -459,11 +459,11 @@ public class FunUtil extends Recorder {
 	}
 	
 	
-	public static void debugChart(List<Cell> chart, short nfirst, int nword) {
+	public static void debugChart(List<Cell> chart, short nfirst, int nword, Numberer numberer) {
 		int size = nword * (nword + 1) / 2;
 		if (chart != null) {
 			for (int i = 0; i < size; i++) {
-				logger.debug(i + "\t" + chart.get(i).toString(true, nfirst, true) + "\n\n");
+				logger.debug(i + "\t" + chart.get(i).toString(true, nfirst, true, numberer) + "\n\n");
 			}
 		}
 	}
