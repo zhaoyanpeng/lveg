@@ -74,7 +74,7 @@ public class LVeGToy extends LearnerConfig {
 		logger.info("Calling with " + optionParser.getParsedOptions() + "\n");
 		// loading data
 		Numberer wrapper = new Numberer();
-		Map<String, StateTreeList> trees = /*makeData(wrapper, opts)*/ makeComplexData(wrapper, opts);
+		Map<String, StateTreeList> trees = makeData(wrapper, opts) /*makeComplexData(wrapper, opts)*/;
 		// training
 		long startTime = System.currentTimeMillis();
 		train(trees, wrapper);
@@ -124,7 +124,7 @@ public class LVeGToy extends LearnerConfig {
 			logger.trace("post-initializing is over.\n");
 		}
 		
-//		customize(grammar, lexicon); // reset grammar rules
+		customize(grammar, lexicon); // reset grammar rules
 		
 		/*
 		logger.trace(grammar);
