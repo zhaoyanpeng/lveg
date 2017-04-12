@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Set;
 
 import edu.berkeley.nlp.syntax.Tree;
+import edu.shanghaitech.ai.nlp.lveg.model.ChartCell.Chart;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.Inferencer;

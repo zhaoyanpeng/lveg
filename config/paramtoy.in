@@ -91,7 +91,7 @@
 -ef1ontrain, false,
 -ef1imwrite, false,
 
--runtag, toy_0412_2_2_ek3_complex_check2,
+-runtag, toy_0412_2_2_ek3_complex_chart,
 -logroot, log/,
 -logtype, 0,
 -verbose, false,

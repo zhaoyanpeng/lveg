@@ -2,7 +2,7 @@ package edu.shanghaitech.ai.nlp.lveg.model;
 
 import java.util.PriorityQueue;
 
-import edu.shanghaitech.ai.nlp.lveg.model.Inferencer.Chart;
+import edu.shanghaitech.ai.nlp.lveg.model.ChartCell.Chart;
 import edu.shanghaitech.ai.nlp.lveg.model.Inferencer.InputToSubCYKer;
 import edu.shanghaitech.ai.nlp.lveg.model.Inferencer.SubCYKer;
 import edu.shanghaitech.ai.nlp.util.Executor;

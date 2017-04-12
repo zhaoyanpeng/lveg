@@ -1,7 +1,6 @@
 package edu.shanghaitech.ai.nlp.lveg.model;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -12,10 +11,9 @@ import edu.shanghaitech.ai.nlp.lveg.impl.BinaryGrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.impl.DiagonalGaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.impl.UnaryGrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.ChartCell.Cell;
-import edu.shanghaitech.ai.nlp.lveg.model.ChartCell.CellType;
+import edu.shanghaitech.ai.nlp.lveg.model.ChartCell.Chart;
 import edu.shanghaitech.ai.nlp.syntax.State;
 import edu.shanghaitech.ai.nlp.util.Executor;
-import edu.shanghaitech.ai.nlp.util.FunUtil;
 import edu.shanghaitech.ai.nlp.util.Recorder;
 import edu.shanghaitech.ai.nlp.util.ThreadPool;
 
@@ -729,310 +727,310 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	}
 	
 	
-	/**
-	 * Manage cells in the chart.
-	 * </p>
-	 * TODO If we know the maximum length of the sentence, we can pre-allocate 
-	 * the memory space and reuse it. And static type is prefered.
-	 * </p>
-	 * 
-	 * @author Yanpeng Zhao
-	 *
-	 */
-	public static class Chart {
-		private List<Cell> ochart = null;
-		private List<Cell> ichart = null;
-		private List<Cell> mchart = null; // for max-rule parser
-		
-		private List<Cell> omasks = null; // for treebank grammars
-		private List<Cell> imasks = null;
-		private List<Cell> tmasks = null; // tag mask
-		
-		private PriorityQueue<Double> queue = null; // owned by this chart, need to make it thread safe
-		
-		public Chart(int n, boolean maxrule, boolean usemask) {
-			queue = new PriorityQueue<Double>();
-			initialize(n, maxrule, usemask);
-		}
-		
-		private void initialize(int n, boolean maxrule, boolean usemask) {
-			int size = n * (n + 1) / 2;
-			ochart = new ArrayList<Cell>(size);
-			ichart = new ArrayList<Cell>(size);
-			for (int i = 0; i < size; i++) {
-				ochart.add(ChartCell.getCell(CellType.DEFAULT));
-				ichart.add(ChartCell.getCell(CellType.DEFAULT));
-			}
-			if (maxrule) {
-				mchart = new ArrayList<Cell>(size);
-				for (int i = 0; i < size; i++) {
-					mchart.add(ChartCell.getCell(CellType.MAX_RULE));
-				}
-			}
-			if (usemask) {
-				imasks = new ArrayList<Cell>(size);
-				omasks = new ArrayList<Cell>(size);
-				tmasks = new ArrayList<Cell>(size);
-				for (int i = 0; i < size; i++) {
-					imasks.add(ChartCell.getCell(CellType.PCFG));
-					omasks.add(ChartCell.getCell(CellType.PCFG));
-					tmasks.add(ChartCell.getCell(CellType.PCFG));
-				}
-			}
-		}
-		
-		/**
-		 * Map the index to the real memory address. Imagine the upper right 
-		 * triangle chart as the pyramid. E.g., see the pyramid below, which 
-		 * could represent a sentence of length 6.
-		 * <pre>
-		 * + + + + + +
-		 *   + + + + +
-		 *     + + + +
-		 *       + + +
-		 *         + +
-		 *           + 
-		 * </pre>
-		 * 
-		 * @param i      index of the row
-		 * @param ilayer layer in the pyramid, from top (1) to bottom (ilayer), loc = ilayer * (ilayer - 1) / 2 + i;
-		 * 				  loc = (n + n - ilayer + 1) * ilayer / 2 + i if ilayer ranges from bottom (0, 0)->0 to top (ilayer).
-		 * @return
-		 */
-		public static int idx(int i, int ilayer) {
-			return ilayer * (ilayer - 1) / 2 + i;
-		}
-		
-		public void setStatus(int idx, boolean status, boolean inside) {
-			if (inside) {
-				ichart.get(idx).setStatus(status);
-			} else {
-				ochart.get(idx).setStatus(status);
-			}
-		}
-		
-		public void addMaxRuleCount(short key, int idx, double count, int sons, Short splitpoint, short level) {
-			mchart.get(idx).addMaxRuleCount(key, count, sons, splitpoint, level);
-		}
-		
-		public int getMaxRuleSon(short key, int idx, short level) {
-			return mchart.get(idx).getMaxRuleSon(key, level);
-		}
-		
-		public int getMaxRuleSon(short key, int idx) {
-			return mchart.get(idx).getMaxRuleSon(key);
-		}
-		
-		public double getMaxRuleCount(short key, int idx, short level) {
-			return mchart.get(idx).getMaxRuleCount(key, level);
-		}
-		
-		public double getMaxRuleCount(short key, int idx) {
-			return mchart.get(idx).getMaxRuleCount(key);
-		}
-		
-		public short getSplitPoint(short key, int idx) {
-			return mchart.get(idx).getSplitPoint(key);
-		}
-		
-		public Set<Short> keySetMaxRule(int idx, short level) {
-			return mchart.get(idx).keySetMaxRule(level);
-		}
-		
-		public boolean getStatus(int idx, boolean inside) {
-			return inside ? ichart.get(idx).getStatus() : ochart.get(idx).getStatus();
-		}
-		
-		public List<Cell> getChart(boolean inside) {
-			return inside ? ichart : ochart;
-		}
-		
-		public Cell get(int idx, boolean inside) {
-			return inside ? ichart.get(idx) : ochart.get(idx);
-		}
-		
-		public int size(int idx, boolean inside) {
-			return inside ? ichart.get(idx).size() : ochart.get(idx).size();
-		}
-		
-		public Set<Short> keySetMask(int idx, boolean inside, short level) {
-			return inside ? imasks.get(idx).keySetMask(level) : omasks.get(idx).keySetMask(level);
-		}
-		
-		public Set<Short> keySet(int idx, boolean inside, short level) {
-			return inside ? ichart.get(idx).keySet(level) : ochart.get(idx).keySet(level);
-		}
-		
-		public Set<Short> keySetMask(int idx, boolean inside) {
-			return inside ? imasks.get(idx).keySetMask() : omasks.get(idx).keySetMask();
-		}
-		
-		public Set<Short> keySet(int idx, boolean inside) {
-			return inside ? ichart.get(idx).keySet() : ochart.get(idx).keySet();
-		}
-		
-		public boolean containsKeyMask(short key, int idx, boolean inside, short level) {
-			return inside ? imasks.get(idx).containsKeyMask(key, level) : omasks.get(idx).containsKeyMask(key, level);
-		}
-		
-		public boolean containsKey(short key, int idx, boolean inside, short level) {
-			return inside ? ichart.get(idx).containsKey(key, level) : ochart.get(idx).containsKey(key, level);
-		}
-		
-		public boolean containsKeyMask(short key, int idx, boolean inside) {
-			return inside ? imasks.get(idx).containsKeyMask(key) : omasks.get(idx).containsKeyMask(key);
-		}
-		
-		public boolean containsKey(short key, int idx, boolean inside) {
-			return inside ? ichart.get(idx).containsKey(key) : ochart.get(idx).containsKey(key);
-		}
-		
-		public boolean isAllowed(short key, int idx, boolean inside) {
-			return inside ? imasks.get(idx).isAllowed(key) : omasks.get(idx).isAllowed(key);
-		}
-		
-		public void addInsideScoreMask(short key, int idx, double score, short level, boolean prune) {
-			imasks.get(idx).addScoreMask(key, score, level, prune);
-		}
-		
-		public void addInsideScore(short key, int idx, GaussianMixture gm, short level, boolean prune) {
-			ichart.get(idx).addScore(key, gm, level, prune);
-		}
-		
-		public double getInsideScoreMask(short key, int idx, short level) {
-			return imasks.get(idx).getScoreMask(key, level);
-		}
-		
-		public GaussianMixture getInsideScore(short key, int idx, short level) {
-			return ichart.get(idx).getScore(key, level);
-		}
-		
-		public double getInsideScoreMask(short key, int idx) {
-			return imasks.get(idx).getScoreMask(key);
-		}
-		
-		public GaussianMixture getInsideScore(short key, int idx) {
-			return ichart.get(idx).getScore(key);
-		}
-		
-		public void addOutsideScoreMask(short key, int idx, double score, short level, boolean prune) {
-			omasks.get(idx).addScoreMask(key, score, level, prune);
-		}
-		
-		public void addOutsideScore(short key, int idx, GaussianMixture gm, short level, boolean prune) {
-			ochart.get(idx).addScore(key, gm, level, prune);
-		}
-		
-		public double getOutsideScoreMask(short key, int idx, short level) {
-			return omasks.get(idx).getScoreMask(key, level);
-		}
-		
-		public GaussianMixture getOutsideScore(short key, int idx, short level) {
-			return ochart.get(idx).getScore(key, level);
-		}
-		
-		public double getOutsideScoreMask(short key, int idx) {
-			return omasks.get(idx).getScoreMask(key);
-		}
-		
-		public GaussianMixture getOutsideScore(short key, int idx) {
-			return ochart.get(idx).getScore(key);
-		}
-		
-		public void pruneOutsideScoreMask(int idx, short level, int base, double ratio) {
-			if (level < 0) {
-				omasks.get(idx).pruneScoreMask(queue, base, ratio);
-			} else {
-				omasks.get(idx).pruneScoreMask(level, queue, base, ratio);
-			}
-		}
-		
-		public void pruneOutsideScore(int idx, short level) {
-			if (level < 0) {
-				ochart.get(idx).pruneScore();
-			} else {
-				ochart.get(idx).pruneScore(level);
-			}
-		}
-		
-		public void pruneInsideScoreMask(int idx, short level, int base, double ratio) {
-			if (level < 0) {
-				imasks.get(idx).pruneScoreMask(queue, base, ratio);
-			} else {
-				imasks.get(idx).pruneScoreMask(level, queue, base, ratio);
-			}
-		}
-		
-		public void pruneInsideScore(int idx, short level) {
-			if (level < 0) {
-				ichart.get(idx).pruneScore();
-			} else {
-				ichart.get(idx).pruneScore(level);
-			}
-		}
-		
-		public boolean isAllowed(short key, int idx, short level) {
-			return tmasks.get(idx).isAllowed(key, level);
-		}
-		
-		public void addMask(short key, int idx, short level) {
-			tmasks.get(idx).addMask(key, level);
-		}
-		
-		public void clear(int n) {
-			int cnt, max = n > 0 ? (n * (n + 1) / 2) : ichart.size();
-			if (ichart != null) {
-				cnt = 0;
-				for (Cell cell : ichart) {
-					if (++cnt > max) { break; }
-					if (cell != null) { cell.clear(); }
-				}
-				if (n < 0) { ichart.clear(); }
-			}
-			if (ochart != null) {
-				cnt = 0;
-				for (Cell cell : ochart) {
-					if (++cnt > max) { break; }
-					if (cell != null) { cell.clear(); }
-				}
-				if (n < 0) { ochart.clear(); }
-			}
-			if (mchart != null) {
-				cnt = 0;
-				for (Cell cell : mchart) {
-					if (++cnt > max) { break; }
-					if (cell != null) { cell.clear(); }
-				}
-				if (n < 0) { mchart.clear(); }
-			}
-			if (imasks != null) {
-				cnt = 0;
-				for (Cell cell : imasks) {
-					if (++cnt > max) { break; }
-					if (cell != null) { cell.clear(); }
-				}
-				if (n < 0) { imasks.clear(); }
-			}
-			if (omasks != null) {
-				cnt = 0;
-				for (Cell cell : omasks) {
-					if (++cnt > max) { break; }
-					if (cell != null) { cell.clear(); }
-				}
-				if (n < 0) { omasks.clear(); }
-			}
-			if (tmasks != null) {
-				cnt = 0;
-				for (Cell cell : tmasks) {
-					if (++cnt > max) { break; }
-					if (cell != null) { cell.clear(); }
-				}
-			}
-		}
-		
-		@Override
-		public String toString() {
-			return "Chart [ichart=" + ichart + ", ochart=" + ochart + "]";
-		}
-	}
+//	/**
+//	 * Manage cells in the chart.
+//	 * </p>
+//	 * TODO If we know the maximum length of the sentence, we can pre-allocate 
+//	 * the memory space and reuse it. And static type is prefered.
+//	 * </p>
+//	 * 
+//	 * @author Yanpeng Zhao
+//	 *
+//	 */
+//	public static class Chart {
+//		private List<Cell> ochart = null;
+//		private List<Cell> ichart = null;
+//		private List<Cell> mchart = null; // for max-rule parser
+//		
+//		private List<Cell> omasks = null; // for treebank grammars
+//		private List<Cell> imasks = null;
+//		private List<Cell> tmasks = null; // tag mask
+//		
+//		private PriorityQueue<Double> queue = null; // owned by this chart, need to make it thread safe
+//		
+//		public Chart(int n, boolean maxrule, boolean usemask) {
+//			queue = new PriorityQueue<Double>();
+//			initialize(n, maxrule, usemask);
+//		}
+//		
+//		private void initialize(int n, boolean maxrule, boolean usemask) {
+//			int size = n * (n + 1) / 2;
+//			ochart = new ArrayList<Cell>(size);
+//			ichart = new ArrayList<Cell>(size);
+//			for (int i = 0; i < size; i++) {
+//				ochart.add(ChartCell.getCell(CellType.DEFAULT));
+//				ichart.add(ChartCell.getCell(CellType.DEFAULT));
+//			}
+//			if (maxrule) {
+//				mchart = new ArrayList<Cell>(size);
+//				for (int i = 0; i < size; i++) {
+//					mchart.add(ChartCell.getCell(CellType.MAX_RULE));
+//				}
+//			}
+//			if (usemask) {
+//				imasks = new ArrayList<Cell>(size);
+//				omasks = new ArrayList<Cell>(size);
+//				tmasks = new ArrayList<Cell>(size);
+//				for (int i = 0; i < size; i++) {
+//					imasks.add(ChartCell.getCell(CellType.PCFG));
+//					omasks.add(ChartCell.getCell(CellType.PCFG));
+//					tmasks.add(ChartCell.getCell(CellType.PCFG));
+//				}
+//			}
+//		}
+//		
+//		/**
+//		 * Map the index to the real memory address. Imagine the upper right 
+//		 * triangle chart as the pyramid. E.g., see the pyramid below, which 
+//		 * could represent a sentence of length 6.
+//		 * <pre>
+//		 * + + + + + +
+//		 *   + + + + +
+//		 *     + + + +
+//		 *       + + +
+//		 *         + +
+//		 *           + 
+//		 * </pre>
+//		 * 
+//		 * @param i      index of the row
+//		 * @param ilayer layer in the pyramid, from top (1) to bottom (ilayer), loc = ilayer * (ilayer - 1) / 2 + i;
+//		 * 				  loc = (n + n - ilayer + 1) * ilayer / 2 + i if ilayer ranges from bottom (0, 0)->0 to top (ilayer).
+//		 * @return
+//		 */
+//		public static int idx(int i, int ilayer) {
+//			return ilayer * (ilayer - 1) / 2 + i;
+//		}
+//		
+//		public void setStatus(int idx, boolean status, boolean inside) {
+//			if (inside) {
+//				ichart.get(idx).setStatus(status);
+//			} else {
+//				ochart.get(idx).setStatus(status);
+//			}
+//		}
+//		
+//		public void addMaxRuleCount(short key, int idx, double count, int sons, Short splitpoint, short level) {
+//			mchart.get(idx).addMaxRuleCount(key, count, sons, splitpoint, level);
+//		}
+//		
+//		public int getMaxRuleSon(short key, int idx, short level) {
+//			return mchart.get(idx).getMaxRuleSon(key, level);
+//		}
+//		
+//		public int getMaxRuleSon(short key, int idx) {
+//			return mchart.get(idx).getMaxRuleSon(key);
+//		}
+//		
+//		public double getMaxRuleCount(short key, int idx, short level) {
+//			return mchart.get(idx).getMaxRuleCount(key, level);
+//		}
+//		
+//		public double getMaxRuleCount(short key, int idx) {
+//			return mchart.get(idx).getMaxRuleCount(key);
+//		}
+//		
+//		public short getSplitPoint(short key, int idx) {
+//			return mchart.get(idx).getSplitPoint(key);
+//		}
+//		
+//		public Set<Short> keySetMaxRule(int idx, short level) {
+//			return mchart.get(idx).keySetMaxRule(level);
+//		}
+//		
+//		public boolean getStatus(int idx, boolean inside) {
+//			return inside ? ichart.get(idx).getStatus() : ochart.get(idx).getStatus();
+//		}
+//		
+//		public List<Cell> getChart(boolean inside) {
+//			return inside ? ichart : ochart;
+//		}
+//		
+//		public Cell get(int idx, boolean inside) {
+//			return inside ? ichart.get(idx) : ochart.get(idx);
+//		}
+//		
+//		public int size(int idx, boolean inside) {
+//			return inside ? ichart.get(idx).size() : ochart.get(idx).size();
+//		}
+//		
+//		public Set<Short> keySetMask(int idx, boolean inside, short level) {
+//			return inside ? imasks.get(idx).keySetMask(level) : omasks.get(idx).keySetMask(level);
+//		}
+//		
+//		public Set<Short> keySet(int idx, boolean inside, short level) {
+//			return inside ? ichart.get(idx).keySet(level) : ochart.get(idx).keySet(level);
+//		}
+//		
+//		public Set<Short> keySetMask(int idx, boolean inside) {
+//			return inside ? imasks.get(idx).keySetMask() : omasks.get(idx).keySetMask();
+//		}
+//		
+//		public Set<Short> keySet(int idx, boolean inside) {
+//			return inside ? ichart.get(idx).keySet() : ochart.get(idx).keySet();
+//		}
+//		
+//		public boolean containsKeyMask(short key, int idx, boolean inside, short level) {
+//			return inside ? imasks.get(idx).containsKeyMask(key, level) : omasks.get(idx).containsKeyMask(key, level);
+//		}
+//		
+//		public boolean containsKey(short key, int idx, boolean inside, short level) {
+//			return inside ? ichart.get(idx).containsKey(key, level) : ochart.get(idx).containsKey(key, level);
+//		}
+//		
+//		public boolean containsKeyMask(short key, int idx, boolean inside) {
+//			return inside ? imasks.get(idx).containsKeyMask(key) : omasks.get(idx).containsKeyMask(key);
+//		}
+//		
+//		public boolean containsKey(short key, int idx, boolean inside) {
+//			return inside ? ichart.get(idx).containsKey(key) : ochart.get(idx).containsKey(key);
+//		}
+//		
+//		public boolean isAllowed(short key, int idx, boolean inside) {
+//			return inside ? imasks.get(idx).isAllowed(key) : omasks.get(idx).isAllowed(key);
+//		}
+//		
+//		public void addInsideScoreMask(short key, int idx, double score, short level, boolean prune) {
+//			imasks.get(idx).addScoreMask(key, score, level, prune);
+//		}
+//		
+//		public void addInsideScore(short key, int idx, GaussianMixture gm, short level, boolean prune) {
+//			ichart.get(idx).addScore(key, gm, level, prune);
+//		}
+//		
+//		public double getInsideScoreMask(short key, int idx, short level) {
+//			return imasks.get(idx).getScoreMask(key, level);
+//		}
+//		
+//		public GaussianMixture getInsideScore(short key, int idx, short level) {
+//			return ichart.get(idx).getScore(key, level);
+//		}
+//		
+//		public double getInsideScoreMask(short key, int idx) {
+//			return imasks.get(idx).getScoreMask(key);
+//		}
+//		
+//		public GaussianMixture getInsideScore(short key, int idx) {
+//			return ichart.get(idx).getScore(key);
+//		}
+//		
+//		public void addOutsideScoreMask(short key, int idx, double score, short level, boolean prune) {
+//			omasks.get(idx).addScoreMask(key, score, level, prune);
+//		}
+//		
+//		public void addOutsideScore(short key, int idx, GaussianMixture gm, short level, boolean prune) {
+//			ochart.get(idx).addScore(key, gm, level, prune);
+//		}
+//		
+//		public double getOutsideScoreMask(short key, int idx, short level) {
+//			return omasks.get(idx).getScoreMask(key, level);
+//		}
+//		
+//		public GaussianMixture getOutsideScore(short key, int idx, short level) {
+//			return ochart.get(idx).getScore(key, level);
+//		}
+//		
+//		public double getOutsideScoreMask(short key, int idx) {
+//			return omasks.get(idx).getScoreMask(key);
+//		}
+//		
+//		public GaussianMixture getOutsideScore(short key, int idx) {
+//			return ochart.get(idx).getScore(key);
+//		}
+//		
+//		public void pruneOutsideScoreMask(int idx, short level, int base, double ratio) {
+//			if (level < 0) {
+//				omasks.get(idx).pruneScoreMask(queue, base, ratio);
+//			} else {
+//				omasks.get(idx).pruneScoreMask(level, queue, base, ratio);
+//			}
+//		}
+//		
+//		public void pruneOutsideScore(int idx, short level) {
+//			if (level < 0) {
+//				ochart.get(idx).pruneScore();
+//			} else {
+//				ochart.get(idx).pruneScore(level);
+//			}
+//		}
+//		
+//		public void pruneInsideScoreMask(int idx, short level, int base, double ratio) {
+//			if (level < 0) {
+//				imasks.get(idx).pruneScoreMask(queue, base, ratio);
+//			} else {
+//				imasks.get(idx).pruneScoreMask(level, queue, base, ratio);
+//			}
+//		}
+//		
+//		public void pruneInsideScore(int idx, short level) {
+//			if (level < 0) {
+//				ichart.get(idx).pruneScore();
+//			} else {
+//				ichart.get(idx).pruneScore(level);
+//			}
+//		}
+//		
+//		public boolean isAllowed(short key, int idx, short level) {
+//			return tmasks.get(idx).isAllowed(key, level);
+//		}
+//		
+//		public void addMask(short key, int idx, short level) {
+//			tmasks.get(idx).addMask(key, level);
+//		}
+//		
+//		public void clear(int n) {
+//			int cnt, max = n > 0 ? (n * (n + 1) / 2) : ichart.size();
+//			if (ichart != null) {
+//				cnt = 0;
+//				for (Cell cell : ichart) {
+//					if (++cnt > max) { break; }
+//					if (cell != null) { cell.clear(); }
+//				}
+//				if (n < 0) { ichart.clear(); }
+//			}
+//			if (ochart != null) {
+//				cnt = 0;
+//				for (Cell cell : ochart) {
+//					if (++cnt > max) { break; }
+//					if (cell != null) { cell.clear(); }
+//				}
+//				if (n < 0) { ochart.clear(); }
+//			}
+//			if (mchart != null) {
+//				cnt = 0;
+//				for (Cell cell : mchart) {
+//					if (++cnt > max) { break; }
+//					if (cell != null) { cell.clear(); }
+//				}
+//				if (n < 0) { mchart.clear(); }
+//			}
+//			if (imasks != null) {
+//				cnt = 0;
+//				for (Cell cell : imasks) {
+//					if (++cnt > max) { break; }
+//					if (cell != null) { cell.clear(); }
+//				}
+//				if (n < 0) { imasks.clear(); }
+//			}
+//			if (omasks != null) {
+//				cnt = 0;
+//				for (Cell cell : omasks) {
+//					if (++cnt > max) { break; }
+//					if (cell != null) { cell.clear(); }
+//				}
+//				if (n < 0) { omasks.clear(); }
+//			}
+//			if (tmasks != null) {
+//				cnt = 0;
+//				for (Cell cell : tmasks) {
+//					if (++cnt > max) { break; }
+//					if (cell != null) { cell.clear(); }
+//				}
+//			}
+//		}
+//		
+//		@Override
+//		public String toString() {
+//			return "Chart [ichart=" + ichart + ", ochart=" + ochart + "]";
+//		}
+//	}
 }

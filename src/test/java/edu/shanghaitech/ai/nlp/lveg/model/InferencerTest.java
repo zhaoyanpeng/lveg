@@ -1,16 +1,9 @@
 package edu.shanghaitech.ai.nlp.lveg.model;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Queue;
-
 import org.junit.Test;
 
 import edu.shanghaitech.ai.nlp.lveg.impl.LVeGInferencer;
-import edu.shanghaitech.ai.nlp.lveg.model.Inferencer;
-import edu.shanghaitech.ai.nlp.lveg.model.Inferencer.Chart;
-import edu.shanghaitech.ai.nlp.syntax.State;
+import edu.shanghaitech.ai.nlp.lveg.model.ChartCell.Chart;
 
 public class InferencerTest {
 	
@@ -21,7 +14,7 @@ public class InferencerTest {
 //		inferencer.insideScore(null, false);
 //		inferencer.outsideScore(null);
 		
-		Inferencer.Chart chart = new Inferencer.Chart(5, false, false);
+		Chart chart = new Chart(5, false, false);
 //		insideScore(chart, 5, 0, 4);
 		for (int i = 0; i < 5; i++) {
 			outsideScore(chart, 5, i, i);
