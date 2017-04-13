@@ -48,7 +48,7 @@
 -bsize, 1,
 -nepoch, 3,
 -maxsample, 1,
--maxLenParsing, 50,
+-maxslen, 50,
 -nAllowedDrop, 6,
 -nratio, 0.5,
 -maxramdom, 1,
@@ -88,7 +88,7 @@
 -ef1ontrain, false,
 -ef1imwrite, false,
 
--runtag, toy_0412_1_2_ek3_simple_test3,
+-runtag, toy_0412_1_2_ek3_simple_test5,
 -logroot, log/,
 -logtype, 0,
 -verbose, false,

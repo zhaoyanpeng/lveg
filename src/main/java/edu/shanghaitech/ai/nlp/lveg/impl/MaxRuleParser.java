@@ -22,9 +22,9 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 	
 	
 	private MaxRuleParser(MaxRuleParser<?, ?> parser) {
-		super(parser.maxLenParsing, parser.nthread, parser.parallel, parser.iosprune, false);
+		super(parser.maxslen, parser.nthread, parser.parallel, parser.iosprune, false);
 		this.inferencer = parser.inferencer;
-		this.chart = new Chart(parser.maxLenParsing, true, true, false);
+		this.chart = new Chart(parser.maxslen, true, true, false);
 	}
 	
 	

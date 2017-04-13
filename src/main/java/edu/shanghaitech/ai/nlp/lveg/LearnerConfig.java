@@ -224,8 +224,8 @@ public class LearnerConfig extends Recorder {
 		public int nepoch = 10;
 		@Option(name = "-maxsample", usage = "maximum sampling time when approximating gradients (default: 3)")
 		public int maxsample = 3;
-		@Option(name = "-maxLenParsing", usage = "which is used to initialize the size of the chart used in CYK and [inside, outside] score calculation (default: 120)")
-		public short maxLenParsing = 120;
+		@Option(name = "-maxslen", usage = "which is used to initialize the size of the chart used in CYK and [inside, outside] score calculation (default: 120)")
+		public short maxslen = 120;
 		@Option(name = "-nAllowedDrop", usage = "# of allowed iterations in which the validation likelihood drops (default: 6)")
 		public short nAllowedDrop = 6;
 		@Option(name = "-nratio", usage = "fraction of negative values when initializing MoG parameters (Default: 0.5)")

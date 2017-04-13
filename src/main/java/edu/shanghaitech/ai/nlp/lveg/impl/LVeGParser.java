@@ -27,9 +27,9 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 	
 	
 	private LVeGParser(LVeGParser<?, ?> parser) {
-		super(parser.maxLenParsing, parser.nthread, parser.parallel, parser.iosprune, parser.usemasks);
+		super(parser.maxslen, parser.nthread, parser.parallel, parser.iosprune, parser.usemask);
 		this.inferencer = parser.inferencer;
-		this.chart = new Chart(parser.maxLenParsing, true, false, parser.usemasks);
+		this.chart = new Chart(parser.maxslen, true, false, parser.usemask);
 	}
 	
 	
@@ -113,38 +113,40 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 		if (chart != null) {
 			chart.clear(nword);
 		} else {
-			chart = new Chart(maxLenParsing, true, false, usemasks);
+			chart = new Chart(maxslen, true, false, usemask);
 		}
-		if (usemasks) {
-			PCFGInferencer.insideScore(chart, sentence, nword, false, LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
+		if (usemask) {
+//			logger.trace("\nInside score masks...\n"); // DEBUG
+			PCFGInferencer.insideScore(chart, sentence, nword, true, LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
+//			FunUtil.debugChart(chart.getChartMask(true), (short) -1, tree.getYield().size(), Inferencer.grammar.numberer); // DEBUG
+			
+//			logger.trace("\nOutside score masks...\n"); // DEBUG
 			PCFGInferencer.setRootOutsideScore(chart);
-			PCFGInferencer.outsideScore(chart, sentence, nword, false,  LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
+			PCFGInferencer.outsideScore(chart, sentence, nword, true,  LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
+//			FunUtil.debugChart(chart.getChartMask(false), (short) -1, tree.getYield().size(), Inferencer.grammar.numberer); // DEBUG
 			
 //			double scoreS = chart.getInsideScoreMask((short) 0, Chart.idx(0, 1));
 //			PCFGInferencer.makeMask(nword, chart, scoreS, LVeGTrainer.tgProb);
 		}
 		if (parallel) {
 			cpool.reset();
-			Inferencer.insideScore(chart, sentence, nword, iosprune, cpool, usemasks);
+			Inferencer.insideScore(chart, sentence, nword, iosprune, cpool, usemask);
 			Inferencer.setRootOutsideScore(chart);
 			cpool.reset();
-			Inferencer.outsideScore(chart, sentence, nword, iosprune, cpool, usemasks);
+			Inferencer.outsideScore(chart, sentence, nword, iosprune, cpool, usemask);
 		} else {
 //			logger.trace("\nInside score...\n"); // DEBUG
-			Inferencer.insideScore(chart, sentence, nword, iosprune, usemasks);
-//			FunUtil.debugChart(Chart.iGetChart(), (short) 2); // DEBUG
+			Inferencer.insideScore(chart, sentence, nword, iosprune, usemask);
+//			FunUtil.debugChart(chart.getChart(true), (short) -1, tree.getYield().size(), Inferencer.grammar.numberer); // DEBUG
 	
 //			logger.trace("\nOutside score...\n"); // DEBUG
 			Inferencer.setRootOutsideScore(chart);
-			Inferencer.outsideScore(chart, sentence, nword, iosprune, usemasks);
-//			FunUtil.debugChart(Chart.oGetChart(), (short) 2); // DEBUG
+			Inferencer.outsideScore(chart, sentence, nword, iosprune, usemask);
+//			FunUtil.debugChart(chart.getChart(false), (short) -1, tree.getYield().size(), Inferencer.grammar.numberer); // DEBUG
 		}
 		
 		GaussianMixture score = chart.getInsideScore((short) 0, Chart.idx(0, 1));
 		double scoreS = score.eval(null, true);
-		
-//		logger.trace("Sentence score in logarithm: " + scoreS + ", Margin: " + score.marginalize(false) + "\n"); // DEBUG
-//		logger.trace("\nEval rule count with the sentence...\n"); // DEBUG
 		
 		if (Double.isInfinite(scoreS) || Double.isNaN(scoreS)) {
 			System.err.println("Fatal Error: Sentence score is smaller than zero: " + scoreS);

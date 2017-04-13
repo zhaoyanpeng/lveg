@@ -166,6 +166,10 @@ public class ChartCell {
 			return inside ? ichart.get(idx).getStatus() : ochart.get(idx).getStatus();
 		}
 		
+		public List<Cell> getChartMask(boolean inside) {
+			return inside ? imasks : omasks;
+		}
+		
 		public List<Cell> getChart(boolean inside) {
 			return inside ? ichart : ochart;
 		}
@@ -214,12 +218,12 @@ public class ChartCell {
 			return inside ? imasks.get(idx).isAllowed(key) : omasks.get(idx).isAllowed(key);
 		}
 		
-		public void addInsideScoreMask(short key, int idx, double score, short level, boolean prune) {
-			imasks.get(idx).addScoreMask(key, score, level, prune);
+		public void addInsideScoreMask(short key, int idx, double score, short level) {
+			imasks.get(idx).addScoreMask(key, score, level);
 		}
 		
-		public void addInsideScore(short key, int idx, GaussianMixture gm, short level, boolean prune) {
-			ichart.get(idx).addScore(key, gm, level, prune);
+		public void addInsideScore(short key, int idx, GaussianMixture gm, short level) {
+			ichart.get(idx).addScore(key, gm, level);
 		}
 		
 		public double getInsideScoreMask(short key, int idx, short level) {
@@ -238,12 +242,12 @@ public class ChartCell {
 			return ichart.get(idx).getScore(key);
 		}
 		
-		public void addOutsideScoreMask(short key, int idx, double score, short level, boolean prune) {
-			omasks.get(idx).addScoreMask(key, score, level, prune);
+		public void addOutsideScoreMask(short key, int idx, double score, short level) {
+			omasks.get(idx).addScoreMask(key, score, level);
 		}
 		
-		public void addOutsideScore(short key, int idx, GaussianMixture gm, short level, boolean prune) {
-			ochart.get(idx).addScore(key, gm, level, prune);
+		public void addOutsideScore(short key, int idx, GaussianMixture gm, short level) {
+			ochart.get(idx).addScore(key, gm, level);
 		}
 		
 		public double getOutsideScoreMask(short key, int idx, short level) {
@@ -442,7 +446,7 @@ public class ChartCell {
 			keys.add(key);
 		}
 		
-		protected synchronized void addScoreMask(short key, double score, short level, boolean prune) {
+		protected synchronized void addScoreMask(short key, double score, short level) {
 			Map<Short, Double> lscore = mscores.get(level);
 			if (lscore == null) {
 				lscore = new HashMap<Short, Double>();
@@ -454,10 +458,10 @@ public class ChartCell {
 			} else {
 				lscore.put(key, FunUtil.logAdd(ascore, score));
 			}
-			addScoreMask(key, score, prune);
+			addScoreMask(key, score);
 		}
 		
-		private synchronized void addScoreMask(short key, double score, boolean prune) {
+		private synchronized void addScoreMask(short key, double score) {
 			if (containsKeyMask(key)) {
 				mtotals.put(key, FunUtil.logAdd(mtotals.get(key), score));
 			} else {
@@ -577,7 +581,7 @@ public class ChartCell {
 			return split == null ? -1 : split;
 		}
 		
-		protected synchronized void addScore(short key, GaussianMixture gm, short level, boolean prune) {
+		protected synchronized void addScore(short key, GaussianMixture gm, short level) {
 			Map<Short, GaussianMixture> lscore = scores.get(level);
 			if (lscore == null) {
 				lscore = new HashMap<Short, GaussianMixture>();
@@ -587,12 +591,12 @@ public class ChartCell {
 			if (agm == null) {
 				lscore.put(key, gm);
 			} else {
-				agm.add(gm, prune);
+				agm.add(gm, false);
 			}
-			addScore(key, gm, prune);
+			addScore(key, gm);
 		}
 		
-		private synchronized void addScore(short key, GaussianMixture gm, boolean prune) {
+		private synchronized void addScore(short key, GaussianMixture gm) {
 			if (containsKey(key)) { 
 				// gm is passed into this method by addScore(short, GaussianMixture, short, boolean),
 				// before that it has been added into Cell.scores, and is filtered when 
@@ -601,7 +605,7 @@ public class ChartCell {
 				// cleared through the reference and further modify Cell.scores. The safe practice is
 				// copying gm and adding into Cell.totals, but that results in unnecessary memory
 				// overhead, so I choose not to clear the filtered component in GaussianMixture.add()
-				totals.get(key).add(gm, prune);
+				totals.get(key).add(gm, false);
 				/*totals.get(key).add(gm.copy(true), prune);*/
 			} else {
 				// it should own its own memory space, so that the score in a 
@@ -639,31 +643,49 @@ public class ChartCell {
 			if (simple) {
 				String name;
 				StringBuffer sb = new StringBuffer();
-				sb.append("Cell [status=" + status + ", size=" + totals.size());
+				if (totals != null) {
+					sb.append("Cell [status=" + status + ", size=" + totals.size());
+					
+					for (Map.Entry<Short, GaussianMixture> score : totals.entrySet()) {
+						name = (String) numberer.object(score.getKey());
+						if (quantity) {
+							sb.append(", " + name + "(nc)=" + score.getValue().ncomponent);
+						} else {
+							sb.append(", " + name + "=" + score.getValue().toString(simple, nfirst));
+						}
+					}
+					
+					sb.append("]");
+				}
 				
-				for (Map.Entry<Short, GaussianMixture> score : totals.entrySet()) {
-					name = (String) numberer.object(score.getKey());
-					if (quantity) {
-						sb.append(", " + name + "(nc)=" + score.getValue().ncomponent);
-					} else {
-						sb.append(", " + name + "=" + score.getValue().toString(simple, nfirst));
+				if (scores != null) {
+					sb.append("\n\n--- details in each level---\n");
+					for (Map.Entry<Short, Map<Short, GaussianMixture>> level : scores.entrySet()) {
+						sb.append("\n------>level " + level.getKey() + " ntag = " + level.getValue().size() + "\n");
+						for (Map.Entry<Short, GaussianMixture> detail : level.getValue().entrySet()) {
+							name = (String) numberer.object(detail.getKey());
+							if (quantity) {
+								sb.append("\nid=" + detail.getKey() + ", " + name + "(nc)=" + detail.getValue().ncomponent);
+							} else {
+								sb.append("\nid=" + detail.getKey() + ", " + name + "=" + detail.getValue().toString(simple, nfirst));
+							}
+						}
+						sb.append("\n");
 					}
 				}
 				
-				sb.append("]");
-				
-				sb.append("\n\n--- details in each level---\n");
-				for (Map.Entry<Short, Map<Short, GaussianMixture>> level : scores.entrySet()) {
-					sb.append("\n------>level " + level.getKey() + " ntag = " + level.getValue().size() + "\n");
-					for (Map.Entry<Short, GaussianMixture> detail : level.getValue().entrySet()) {
-						name = (String) numberer.object(detail.getKey());
-						if (quantity) {
-							sb.append("\nid=" + detail.getKey() + ", " + name + "(nc)=" + detail.getValue().ncomponent);
-						} else {
-							sb.append("\nid=" + detail.getKey() + ", " + name + "=" + detail.getValue().toString(simple, nfirst));
-						}
+				if (masks != null) {
+					sb.append("\n\n--- masks of this cell---\n");
+					sb.append("[size=" + masks.size());
+					for (Short tag : masks) {
+						sb.append(", " + tag);
 					}
-					sb.append("\n");
+					sb.append("]\nScores [size=" + mtotals.size());
+					for (Map.Entry<Short, Double> score : mtotals.entrySet()) {
+						name = (String) numberer.object(score.getKey());
+						sb.append(", id=" + score.getKey() + ", " + name + "=" + score.getValue() );
+					}
+					sb.append("]\n");
 				}
 				
 				return sb.toString();

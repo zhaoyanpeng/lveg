@@ -162,11 +162,11 @@ public class LVeGTrainer extends LearnerConfig {
 		lexicon.labelTrees(testTrees); // save the search time cost by finding a specific tag-word
 		lexicon.labelTrees(devTrees); // pair in in Lexicon.score(...)
 		
-		lvegParser = new LVeGParser<Tree<State>, List<Double>>(grammar, lexicon, opts.maxLenParsing, 
+		lvegParser = new LVeGParser<Tree<State>, List<Double>>(grammar, lexicon, opts.maxslen, 
 				opts.ntcyker, opts.pcyker, opts.iosprune, opts.usemasks);
-		mrParser = new MaxRuleParser<Tree<State>, Tree<String>>(grammar, lexicon, opts.maxLenParsing, 
+		mrParser = new MaxRuleParser<Tree<State>, Tree<String>>(grammar, lexicon, opts.maxslen, 
 				opts.ntcyker, opts.pcyker, opts.ef1prune, false);
-		valuator = new Valuator<Tree<State>, Double>(grammar, lexicon, opts.maxLenParsing, 
+		valuator = new Valuator<Tree<State>, Double>(grammar, lexicon, opts.maxslen, 
 				opts.ntcyker, opts.pcyker, opts.ellprune, false);
 		mvaluator = new ThreadPool(valuator, opts.nteval);
 		trainer = new ThreadPool(lvegParser, opts.ntbatch);

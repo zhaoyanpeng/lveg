@@ -50,17 +50,17 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	 * @param tree  in which only the sentence is used
 	 * @param nword # of words in the sentence
 	 */
-	public static void insideScore(Chart chart, List<State> sentence, int nword, boolean prune, ThreadPool cpool, boolean usemasks) {
+	public static void insideScore(Chart chart, List<State> sentence, int nword, boolean prune, ThreadPool cpool, boolean usemask) {
 		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBRuleMap();
 		for (int i = 0; i < nword; i++) {
 			int iCell = Chart.idx(i, nword);
 			List<GrammarRule> rules = lexicon.getRulesWithWord(sentence.get(i));
 			// preterminals
 			for (GrammarRule rule : rules) {
-				chart.addInsideScore(rule.lhs, iCell, rule.getWeight().copy(true), (short) 0, false);
+				chart.addInsideScore(rule.lhs, iCell, rule.getWeight().copy(true), (short) 0);
 			}
 			if (prune) { chart.pruneInsideScore(iCell, (short) 0); }
-			insideScoreForUnaryRule(chart, iCell, prune, false);
+			insideScoreForUnaryRule(chart, iCell, prune, usemask);
 			if (prune) { chart.pruneInsideScore(iCell, (short) -1); }
 		}		
 		
@@ -84,7 +84,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 					}
 				}
 				if (prune) { chart.pruneInsideScore(c2, (short) 0); }
-				insideScoreForUnaryRule(chart, c2, prune, false);
+				insideScoreForUnaryRule(chart, c2, prune, usemask);
 				if (prune) { chart.pruneInsideScore(c2, (short) -1); }
 			}
 		}
@@ -98,7 +98,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	 * @param tree  in which only the sentence is used.
 	 * @param nword # of words in the sentence
 	 */
-	public static void outsideScore(Chart chart, List<State> sentence, int nword, boolean prune, ThreadPool cpool, boolean usemasks) {
+	public static void outsideScore(Chart chart, List<State> sentence, int nword, boolean prune, ThreadPool cpool, boolean usemask) {
 		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBRuleMap();
 		for (int ilayer = nword - 1; ilayer >= 0; ilayer--) {
 			for (int left = 0; left < nword - ilayer; left++) {
@@ -119,7 +119,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 					}
 				}
 				if (prune) { chart.pruneOutsideScore(c2, (short) 0); }
-				outsideScoreForUnaryRule(chart, c2, prune, false);
+				outsideScoreForUnaryRule(chart, c2, prune, usemask);
 				if (prune) { chart.pruneOutsideScore(c2, (short) -1); }
 			}
 		}
@@ -133,7 +133,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	 * @param tree  in which only the sentence is used
 	 * @param nword # of words in the sentence
 	 */
-	public static void insideScore(Chart chart, List<State> sentence, int nword, boolean prune, boolean usemasks) {
+	public static void insideScore(Chart chart, List<State> sentence, int nword, boolean prune, boolean usemask) {
 		int x0, y0, x1, y1, c0, c1, c2;
 		GaussianMixture pinScore, linScore, rinScore, ruleScore;
 		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBRuleMap();
@@ -143,15 +143,16 @@ public abstract class Inferencer extends Recorder implements Serializable {
 			List<GrammarRule> rules = lexicon.getRulesWithWord(sentence.get(i));
 			// preterminals
 			for (GrammarRule rule : rules) {
-//				if (false) { if (!chart.isAllowed(rule.lhs, iCell, true)) { continue; } } // CHECK
 				
-				if (false) { if (!chart.isAllowed(rule.lhs, iCell, LENGTH_UCHAIN)) { continue; } } // CHECK
+				if (usemask) { if (!chart.isAllowed(rule.lhs, iCell, true)) { continue; } } // CHECK
 				
-				chart.addInsideScore(rule.lhs, iCell, rule.getWeight().copy(true), (short) 0, false);
+//				if (false) { if (!chart.isAllowed(rule.lhs, iCell, LENGTH_UCHAIN)) { continue; } } // CHECK
+				
+				chart.addInsideScore(rule.lhs, iCell, rule.getWeight().copy(true), (short) 0);
 			}
 			
 			if (prune) { chart.pruneInsideScore(iCell, (short) 0); }
-			insideScoreForUnaryRule(chart, iCell, prune, false);
+			insideScoreForUnaryRule(chart, iCell, prune, usemask);
 			if (prune) { chart.pruneInsideScore(iCell, (short) -1); }
 		}		
 		
@@ -164,9 +165,10 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				// binary grammar rules
 				for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
 					BinaryGrammarRule rule = (BinaryGrammarRule) rmap.getValue();
-//					if (false) { if (!chart.isAllowed(rule.lhs, c2, true)) { continue; } } // CHECK
+					// skip ROOT cell
+					if (usemask && c2 != 0) { if (!chart.isAllowed(rule.lhs, c2, true)) { continue; } } // CHECK
 					
-					if (false) { if (!chart.isAllowed(rule.lhs, c2, LENGTH_UCHAIN)) { continue; } } // CHECK
+//					if (false) { if (!chart.isAllowed(rule.lhs, c2, LENGTH_UCHAIN)) { continue; } } // CHECK
 					
 					for (int right = left; right < left + ilayer; right++) {
 						y0 = right;
@@ -181,13 +183,13 @@ public abstract class Inferencer extends Recorder implements Serializable {
 							
 							pinScore = ruleScore.mulForInsideOutside(linScore, GrammarRule.Unit.LC, true);
 							pinScore = pinScore.mulForInsideOutside(rinScore, GrammarRule.Unit.RC, false);
-							chart.addInsideScore(rule.lhs, c2, pinScore, (short) 0, false);
+							chart.addInsideScore(rule.lhs, c2, pinScore, (short) 0);
 						}
 					}
 				}
 				
 				if (prune) { chart.pruneInsideScore(c2, (short) 0); }
-				insideScoreForUnaryRule(chart, c2, prune, false);
+				insideScoreForUnaryRule(chart, c2, prune, usemask);
 				if (prune) { chart.pruneInsideScore(c2, (short) -1); }
 			}
 		}
@@ -201,7 +203,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	 * @param tree  in which only the sentence is used.
 	 * @param nword # of words in the sentence
 	 */
-	public static void outsideScore(Chart chart, List<State> sentence, int nword, boolean prune, boolean usemasks) {
+	public static void outsideScore(Chart chart, List<State> sentence, int nword, boolean prune, boolean usemask) {
 		int x0, y0, x1, y1, c0, c1, c2;
 		GaussianMixture poutScore, linScore, rinScore, loutScore, routScore, ruleScore;
 		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBRuleMap();
@@ -214,9 +216,10 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				// binary grammar rules
 				for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
 					BinaryGrammarRule rule = (BinaryGrammarRule) rmap.getValue();
-//					if (false) { if (!chart.isAllowed(rule.lchild, c2, false)) { continue; } } // CHECK
 					
-					if (false) { if (!chart.isAllowed(rule.lchild, c2, (short) 0)) { continue; } } // CHECK
+					if (usemask) { if (!chart.isAllowed(rule.lchild, c2, false)) { continue; } } // CHECK
+					
+//					if (false) { if (!chart.isAllowed(rule.lchild, c2, (short) 0)) { continue; } } // CHECK
 					
 					for (int right = left + ilayer + 1; right < nword; right++) {
 						y0 = right;
@@ -231,7 +234,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 							
 							loutScore = ruleScore.mulForInsideOutside(poutScore, GrammarRule.Unit.P, true);
 							loutScore = loutScore.mulForInsideOutside(rinScore, GrammarRule.Unit.RC, false);
-							chart.addOutsideScore(rule.lchild, c2, loutScore, (short) 0, false);
+							chart.addOutsideScore(rule.lchild, c2, loutScore, (short) 0);
 						}
 					}
 				}
@@ -241,9 +244,10 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				// binary grammar rules
 				for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
 					BinaryGrammarRule rule = (BinaryGrammarRule) rmap.getValue();
-//					if (false) { if (!chart.isAllowed(rule.rchild, c2, false)) { continue; } } // CHECK
 					
-					if (false) { if (!chart.isAllowed(rule.rchild, c2, (short) 0)) { continue; } } // CHECK
+					if (usemask) { if (!chart.isAllowed(rule.rchild, c2, false)) { continue; } } // CHECK
+					
+//					if (false) { if (!chart.isAllowed(rule.rchild, c2, (short) 0)) { continue; } } // CHECK
 					
 					for (int right = 0; right < left; right++) {
 						x0 = right; 
@@ -258,20 +262,20 @@ public abstract class Inferencer extends Recorder implements Serializable {
 							
 							routScore = ruleScore.mulForInsideOutside(poutScore, GrammarRule.Unit.P, true);
 							routScore = routScore.mulForInsideOutside(linScore, GrammarRule.Unit.LC, false);
-							chart.addOutsideScore(rule.rchild, c2, routScore, (short) 0, false);
+							chart.addOutsideScore(rule.rchild, c2, routScore, (short) 0);
 						}
 					}
 				}
 				
 				if (prune) { chart.pruneOutsideScore(c2, (short) 0); }
-				outsideScoreForUnaryRule(chart, c2, prune, false);
+				outsideScoreForUnaryRule(chart, c2, prune, usemask);
 				if (prune) { chart.pruneOutsideScore(c2, (short) -1); }
 			}
 		}
 	}
 	
 	
-	private static void outsideScoreForUnaryRule(Chart chart, int idx, boolean prune, boolean usemasks) {
+	private static void outsideScoreForUnaryRule(Chart chart, int idx, boolean prune, boolean usemask) {
 		Set<Short> set;
 		short level = 0;
 		List<GrammarRule> rules;
@@ -286,12 +290,13 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				poutScore = chart.getOutsideScore(idTag, idx, (short) (LENGTH_UCHAIN + 1)); // 1
 				while (iterator.hasNext()) { // CHECK
 					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
-//					if (false) { if (!chart.isAllowed((short) rule.rhs, idx, false)) { continue; } } // CHECK
+					
+					if (usemask) { if (!chart.isAllowed((short) rule.rhs, idx, false)) { continue; } } // CHECK
 
-					if (false) { if (!chart.isAllowed((short) rule.rhs, idx, (short) level)) { continue; } } // CHECK
+//					if (false) { if (!chart.isAllowed((short) rule.rhs, idx, (short) level)) { continue; } } // CHECK
 					
 					coutScore = rule.weight.copy(true); // since OS(ROOT) = 1
-					chart.addOutsideScore((short) rule.rhs, idx, coutScore, level, false);
+					chart.addOutsideScore((short) rule.rhs, idx, coutScore, level);
 				}
 			}
 			if (prune) { chart.pruneOutsideScore(idx, level); }
@@ -303,12 +308,13 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				poutScore = chart.getOutsideScore(idTag, idx, level);
 				while (iterator.hasNext()) {
 					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
-//					if (false) { if (!chart.isAllowed((short) rule.rhs, idx, false)) { continue; } } // CHECK
 					
-					if (false) { if (!chart.isAllowed((short) rule.rhs, idx, (short) (level + 1))) { continue; } } // CHECK
+					if (usemask) { if (!chart.isAllowed((short) rule.rhs, idx, false)) { continue; } } // CHECK
+					
+//					if (false) { if (!chart.isAllowed((short) rule.rhs, idx, (short) (level + 1))) { continue; } } // CHECK
 					
 					coutScore = rule.weight.mulForInsideOutside(poutScore, rmKey, true);
-					chart.addOutsideScore((short) rule.rhs, idx, coutScore, (short) (level + 1), false);
+					chart.addOutsideScore((short) rule.rhs, idx, coutScore, (short) (level + 1));
 				}
 			}
 			level++;
@@ -317,7 +323,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	}
 	
 	
-	private static void insideScoreForUnaryRule(Chart chart, int idx, boolean prune, boolean usemasks) {
+	private static void insideScoreForUnaryRule(Chart chart, int idx, boolean prune, boolean usemask) {
 		String rmKey;
 		Set<Short> set;
 		short level = 0;
@@ -330,14 +336,15 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				cinScore = chart.getInsideScore(idTag, idx, level);
 				while (iterator.hasNext()) {
 					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
-//					if (false) { if (!chart.isAllowed(rule.lhs, idx, true)) { continue; } } // CHECK
+					// skip ROOT cell
+					if (usemask && idx != 0) { if (!chart.isAllowed(rule.lhs, idx, true)) { continue; } } // CHECK
 					
-					if (false) { if (!chart.isAllowed(rule.lhs, idx, (short) (LENGTH_UCHAIN - level - 1))) { continue; } } // CHECK
+//					if (false) { if (!chart.isAllowed(rule.lhs, idx, (short) (LENGTH_UCHAIN - level - 1))) { continue; } } // CHECK
 					
 					if (idx != 0 && rule.type == GrammarRule.RHSPACE) { continue; } // ROOT is allowed only when it is in cell 0 and is in level 1 or 2
 					rmKey = rule.type == GrammarRule.RHSPACE ? GrammarRule.Unit.C : GrammarRule.Unit.UC;
 					pinScore = rule.weight.mulForInsideOutside(cinScore, rmKey, true);
-					chart.addInsideScore(rule.lhs, idx, pinScore, (short) (level + 1), false);
+					chart.addInsideScore(rule.lhs, idx, pinScore, (short) (level + 1));
 				}
 			}
 			level++;
@@ -353,7 +360,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
 					if (rule.type != GrammarRule.RHSPACE) { continue; } // only consider ROOT in level 3
 					pinScore = rule.weight.mulForInsideOutside(cinScore, GrammarRule.Unit.C, true);
-					chart.addInsideScore(rule.lhs, idx, pinScore, (short) (LENGTH_UCHAIN + 1), false);
+					chart.addInsideScore(rule.lhs, idx, pinScore, (short) (LENGTH_UCHAIN + 1));
 				}
 			}
 			if (prune) { chart.pruneInsideScore(idx, (short) (LENGTH_UCHAIN + 1)); }
@@ -367,7 +374,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	public static void setRootOutsideScore(Chart chart) {
 		GaussianMixture gm = new DiagonalGaussianMixture((short) 1);
 		gm.marginalizeToOne();
-		chart.addOutsideScore((short) 0, Chart.idx(0, 1), gm, (short) (LENGTH_UCHAIN + 1), false);
+		chart.addOutsideScore((short) 0, Chart.idx(0, 1), gm, (short) (LENGTH_UCHAIN + 1));
 	}
 	
 	
@@ -429,7 +436,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 						
 						pinScore = ruleScore.mulForInsideOutside(linScore, GrammarRule.Unit.LC, true);
 						pinScore = pinScore.mulForInsideOutside(rinScore, GrammarRule.Unit.RC, false);
-						input.cell.addScore(rule.lhs, pinScore, (short) 0, false);
+						input.cell.addScore(rule.lhs, pinScore, (short) 0);
 					}
 				}
 			} else { // outside scores with binary rules
@@ -450,7 +457,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 						
 						loutScore = ruleScore.mulForInsideOutside(poutScore, GrammarRule.Unit.P, true);
 						loutScore = loutScore.mulForInsideOutside(rinScore, GrammarRule.Unit.RC, false);
-						input.cell.addScore(rule.lchild, loutScore, (short) 0, false);
+						input.cell.addScore(rule.lchild, loutScore, (short) 0);
 					}
 				}
 				y0 = left + ilayer;
@@ -468,7 +475,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 						
 						routScore = ruleScore.mulForInsideOutside(poutScore, GrammarRule.Unit.P, true);
 						routScore = routScore.mulForInsideOutside(linScore, GrammarRule.Unit.LC, false);
-						input.cell.addScore(rule.rchild, routScore, (short) 0, false); 
+						input.cell.addScore(rule.rchild, routScore, (short) 0); 
 					}
 				}
 			}

@@ -20,9 +20,9 @@ public class Valuator<I, O> extends Parser<I, O> {
 	
 	
 	private Valuator(Valuator<?, ?> valuator) {
-		super(valuator.maxLenParsing, valuator.nthread, valuator.parallel, valuator.iosprune, false);
+		super(valuator.maxslen, valuator.nthread, valuator.parallel, valuator.iosprune, false);
 		this.inferencer = valuator.inferencer;
-		this.chart = new Chart(valuator.maxLenParsing, true, false, false);
+		this.chart = new Chart(valuator.maxslen, true, false, false);
 	}
 	
 	

@@ -21,9 +21,9 @@ public class PCFGParser<I, O> extends Parser<I, O> {
 	
 	
 	private PCFGParser(PCFGParser<?, ?> parser) {
-		super(parser.maxLenParsing, parser.nthread, parser.parallel, parser.iosprune, parser.usemasks);
-		this.inferencer = parser.inferencer; // shared by multiply threads
-		this.chart = new Chart(parser.maxLenParsing, false, true, false);
+		super(parser.maxslen, parser.nthread, parser.parallel, parser.iosprune, parser.usemask);
+		this.inferencer = parser.inferencer; // shared by multiple threads
+		this.chart = new Chart(parser.maxslen, false, true, false);
 	}
 	
 	

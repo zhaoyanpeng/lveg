@@ -108,7 +108,7 @@ public class LVeGTester extends LearnerConfig {
 		scorer = new EnglishPennTreebankParseEvaluator.LabeledConstituentEval<String>(
 				new HashSet<String>(Arrays.asList(new String[] { "ROOT", "PSEUDO" })), 
 				new HashSet<String>(Arrays.asList(new String[] { "''", "``", ".", ":", "," })));
-		mrParser = new MaxRuleParser<Tree<State>, Tree<String>>(grammar, lexicon, opts.maxLenParsing, 
+		mrParser = new MaxRuleParser<Tree<State>, Tree<String>>(grammar, lexicon, opts.maxslen, 
 				opts.ntcyker, opts.pcyker, opts.ef1prune, false);
 		mparser = new ThreadPool(mrParser, opts.nttest);
 		

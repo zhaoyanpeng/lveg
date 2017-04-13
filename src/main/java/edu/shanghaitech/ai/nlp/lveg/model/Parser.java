@@ -14,14 +14,14 @@ public abstract class Parser<I, O> extends Recorder implements Executor<I, O> {
 	 * 
 	 */
 	private static final long serialVersionUID = -7112164011234304607L;
-	protected short maxLenParsing = 120;
+	protected short maxslen = 120;
 	
 	protected int idx;
 	protected short nthread;
 	protected boolean parallel;
 	protected boolean iosprune;
 	protected boolean cntprune;
-	protected boolean usemasks;
+	protected boolean usemask;
 	
 	protected I task;
 	protected int itask;
@@ -30,10 +30,10 @@ public abstract class Parser<I, O> extends Recorder implements Executor<I, O> {
 	
 	protected transient ThreadPool cpool;
 	
-	protected Parser(short maxLenParsing, short nthread, boolean parallel, boolean iosprune, boolean usemasks) {
-		this.maxLenParsing = maxLenParsing;
+	protected Parser(short maxslen, short nthread, boolean parallel, boolean iosprune, boolean usemask) {
+		this.maxslen = maxslen;
 		this.iosprune = iosprune;
-		this.usemasks = usemasks;
+		this.usemask = usemask;
 		this.parallel = parallel;
 		this.nthread = nthread < 0 ? 1 : nthread;
 		if (parallel) {

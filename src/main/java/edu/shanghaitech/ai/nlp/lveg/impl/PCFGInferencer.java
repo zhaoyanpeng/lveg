@@ -1,12 +1,10 @@
 package edu.shanghaitech.ai.nlp.lveg.impl;
 
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.Inferencer;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
@@ -26,7 +24,7 @@ public class PCFGInferencer extends Inferencer {
 	}
 
 
-	public static void insideScore(Chart chart, List<State> sentence, int nword, boolean prune, int base, double ratio) {
+	public static void insideScore(Chart chart, List<State> sentence, int nword, boolean mask, int base, double ratio) {
 		int x0, y0, x1, y1, c0, c1, c2;
 		double ruleScore, linScore, rinScore, pinScore;
 		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBRuleMap();
@@ -34,10 +32,10 @@ public class PCFGInferencer extends Inferencer {
 			int iCell = Chart.idx(i, nword);
 			List<GrammarRule> rules = lexicon.getRulesWithWord(sentence.get(i));
 			for (GrammarRule rule : rules) {
-				chart.addInsideScoreMask(rule.lhs, iCell, rule.weight.getProb(), (short) 0, false);
+				chart.addInsideScoreMask(rule.lhs, iCell, rule.weight.getProb(), (short) 0);
 			}
-			insideScoreForUnaryRule(chart, iCell);
-			if (prune) { chart.pruneInsideScoreMask(iCell, (short) -1, base, ratio); }
+			insideScoreForUnaryRule(chart, iCell, mask);
+			if (mask) { chart.pruneInsideScoreMask(iCell, (short) -1, base, ratio); }
 		}
 		
 		for (int ilayer = 1; ilayer < nword; ilayer++) {
@@ -60,18 +58,18 @@ public class PCFGInferencer extends Inferencer {
 							rinScore = chart.getInsideScoreMask(rule.rchild, c1);
 							
 							pinScore = linScore + ruleScore + rinScore; // in logarithmic form
-							chart.addInsideScoreMask(rule.lhs, c2, pinScore, (short) 0, false);
+							chart.addInsideScoreMask(rule.lhs, c2, pinScore, (short) 0);
 						}
 					}
 				}
-				insideScoreForUnaryRule(chart, c2);
-				if (prune) { chart.pruneInsideScoreMask(c2, (short) -1, base, ratio); }
+				insideScoreForUnaryRule(chart, c2, mask);
+				if (mask) { chart.pruneInsideScoreMask(c2, (short) -1, base, ratio); }
 			}
 		}
 	}
 	
 	
-	public static void outsideScore(Chart chart, List<State> sentence, int nword, boolean prune, int base, double ratio) {
+	public static void outsideScore(Chart chart, List<State> sentence, int nword, boolean mask, int base, double ratio) {
 		int x0, y0, x1, y1, c0, c1, c2;
 		double poutScore, linScore, rinScore, loutScore, routScore, ruleScore;
 		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBRuleMap();
@@ -96,7 +94,7 @@ public class PCFGInferencer extends Inferencer {
 							rinScore = chart.getInsideScoreMask(rule.rchild, c1);
 							
 							loutScore = ruleScore + poutScore + rinScore;
-							chart.addOutsideScoreMask(rule.lchild, c2, loutScore, (short) 0, false);
+							chart.addOutsideScoreMask(rule.lchild, c2, loutScore, (short) 0);
 						}
 					}
 				}
@@ -118,19 +116,19 @@ public class PCFGInferencer extends Inferencer {
 							linScore = chart.getInsideScoreMask(rule.lchild, c1);
 							
 							routScore = ruleScore + poutScore + linScore;
-							chart.addOutsideScoreMask(rule.rchild, c2, routScore, (short) 0, false);
+							chart.addOutsideScoreMask(rule.rchild, c2, routScore, (short) 0);
 						}
 					}
 				}
-				outsideScoreForUnaryRule(chart, c2);
-				if (prune) { chart.pruneOutsideScoreMask(c2, (short) -1, base, ratio); }	
+				outsideScoreForUnaryRule(chart, c2, mask);
+				if (mask) { chart.pruneOutsideScoreMask(c2, (short) -1, base, ratio); }	
 			}
 		}
 	}
 	
 	
 	
-	private static void insideScoreForUnaryRule(Chart chart, int idx) {
+	private static void insideScoreForUnaryRule(Chart chart, int idx, boolean mask) {
 		Set<Short> set;
 		short level = 0;
 		List<GrammarRule> rules;
@@ -144,7 +142,7 @@ public class PCFGInferencer extends Inferencer {
 					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
 					if (idx != 0 && rule.type == GrammarRule.RHSPACE) { continue; } // ROOT is allowed only when it is in cell 0 and is in level 1 or 2
 					pinScore = rule.weight.getProb() + cinScore;
-					chart.addInsideScoreMask(rule.lhs, idx, pinScore, (short) (level + 1), false);
+					chart.addInsideScoreMask(rule.lhs, idx, pinScore, (short) (level + 1));
 				}
 			}
 			level++;
@@ -159,14 +157,14 @@ public class PCFGInferencer extends Inferencer {
 					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
 					if (rule.type != GrammarRule.RHSPACE) { continue; } // only consider ROOT in level 3
 					pinScore = rule.weight.getProb() + cinScore;
-					chart.addInsideScoreMask(rule.lhs, idx, pinScore, (short) (LENGTH_UCHAIN + 1), false);
+					chart.addInsideScoreMask(rule.lhs, idx, pinScore, (short) (LENGTH_UCHAIN + 1));
 				}
 			}
 		}
 	}
 	
 	
-	private static void outsideScoreForUnaryRule(Chart chart, int idx) {
+	private static void outsideScoreForUnaryRule(Chart chart, int idx, boolean mask) {
 		Set<Short> set;
 		short level = 0;
 		List<GrammarRule> rules;
@@ -181,7 +179,7 @@ public class PCFGInferencer extends Inferencer {
 				while (iterator.hasNext()) { // CHECK
 					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
 					coutScore = rule.weight.getProb(); // since OS(ROOT) = 1
-					chart.addOutsideScoreMask((short) rule.rhs, idx, coutScore, level, false);
+					chart.addOutsideScoreMask((short) rule.rhs, idx, coutScore, level);
 				}
 			}
 		}
@@ -193,7 +191,7 @@ public class PCFGInferencer extends Inferencer {
 				while (iterator.hasNext()) {
 					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
 					coutScore = rule.weight.getProb() + poutScore;
-					chart.addOutsideScoreMask((short) rule.rhs, idx, coutScore, (short) (level + 1), false);
+					chart.addOutsideScoreMask((short) rule.rhs, idx, coutScore, (short) (level + 1));
 				}
 			}
 			level++;
@@ -328,7 +326,7 @@ public class PCFGInferencer extends Inferencer {
 	
 	
 	public static void setRootOutsideScore(Chart chart) {
-		chart.addOutsideScoreMask((short) 0, Chart.idx(0, 1), 0, (short) (LENGTH_UCHAIN + 1), false);
+		chart.addOutsideScoreMask((short) 0, Chart.idx(0, 1), 0, (short) (LENGTH_UCHAIN + 1));
 	}
 	
 }
