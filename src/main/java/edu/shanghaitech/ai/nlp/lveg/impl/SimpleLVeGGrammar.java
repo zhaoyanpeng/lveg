@@ -117,15 +117,7 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 				int ntype, ncomp = (short) -1;
 				if (useRef) {
 					ntype = refSubTypes.get(idParent) * refSubTypes.get(idChild);
-					if (ntype < 600) {
-						ncomp = (short) (Math.floor(ntype / 250.0));
-					} else if (ntype < 1300) {
-						ncomp = (short) (Math.floor(ntype / 300.0));
-					} else if (ntype < 2100) {
-						ncomp = (short) (Math.floor(ntype / 400.0));
-					} else {
-						ncomp = (short) (Math.floor(ntype / 500.0));
-					}
+					ncomp = (int) (Math.round(Math.pow(ntype, 0.2)));
 					ncomp = ncomp == 0 ? -1 : (ncomp > 6 ? 6 : ncomp);
 				}
 				rule.initializeWeight(type, (short) ncomp, (short) -1); 
@@ -141,23 +133,7 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 				int ntype, ncomp = (short) -1;
 				if (useRef) {
 					ntype = refSubTypes.get(idParent) * refSubTypes.get(idlChild) * refSubTypes.get(idrChild);
-					if (ntype < 600) {
-						ncomp = (short) (Math.floor(ntype / 250.0));
-					} else if (ntype < 1300) {
-						ncomp = (short) (Math.floor(ntype / 300.0));
-					} else if (ntype < 2100) {
-						ncomp = (short) (Math.floor(ntype / 400.0));
-					} else if (ntype < 3100) {
-						ncomp = (short) (Math.floor(ntype / 500.0));
-					} else if (ntype < 4300) {
-						ncomp = (short) (Math.floor(ntype / 600.0));
-					} else if (ntype < 5700) {
-						ncomp = (short) (Math.floor(ntype / 700.0));
-					} else if (ntype < 7300) {
-						ncomp = (short) (Math.floor(ntype / 800.0));
-					} else {
-						ncomp = (short) (Math.floor(ntype / 900.0));
-					}
+					ncomp = (int) (Math.round(Math.pow(ntype, 0.2)));
 					ncomp = ncomp == 0 ? -1 : (ncomp > 10 ? 10 : ncomp);
 				}
 				rule.initializeWeight(GrammarRule.LRBRULE, (short) ncomp, (short) -1); 

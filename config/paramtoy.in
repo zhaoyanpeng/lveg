@@ -91,7 +91,7 @@
 -ef1ontrain, false,
 -ef1imwrite, false,
 
--runtag, toy_0412_1_2_ek3_simple_customized_GM_getComponent_discarded,
+-runtag, toy_0412_1_2_ek3_simple_test1,
 -logroot, log/,
 -logtype, 0,
 -verbose, false,

@@ -25,7 +25,7 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 	private MaxRuleParser(MaxRuleParser<?, ?> parser) {
 		super(parser.maxLenParsing, parser.nthread, parser.parallel, parser.reuse, parser.iosprune, parser.usemasks);
 		this.inferencer = parser.inferencer;
-		this.chart = parser.reuse ? new Chart(maxLenParsing, true, usemasks) : null;
+		this.chart = parser.reuse ? new Chart(maxLenParsing, true, true, usemasks) : null;
 	}
 	
 	
@@ -33,7 +33,7 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 			boolean parallel, boolean reuse, boolean iosprune, boolean usemasks) {
 		super(maxLenParsing, nthread, parallel, reuse, iosprune, usemasks);
 		this.inferencer = new MaxRuleInferencer(grammar, lexicon);
-		this.chart = reuse ? new Chart(maxLenParsing, true, usemasks) : null;
+		this.chart = reuse ? new Chart(maxLenParsing, true, true, usemasks) : null;
 	}
 	
 
@@ -113,7 +113,7 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 			chart.clear(nword);
 		} else {
 			if (chart != null) { chart.clear(-1); }
-			chart = new Chart(nword, true, usemasks);
+			chart = new Chart(nword, true, true, usemasks);
 		}
 		if (usemasks) {
 			Inferencer.insideScoreMask(chart, sentence, nword, true,  LVeGTrainer.tgBase, LVeGTrainer.tgRatio);

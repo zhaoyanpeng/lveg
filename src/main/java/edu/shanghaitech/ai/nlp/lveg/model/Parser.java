@@ -44,20 +44,6 @@ public abstract class Parser<I, O> extends Recorder implements Executor<I, O> {
 		}
 	}
 	
-	protected Parser(short maxLenParsing, short nthread, boolean parallel, boolean reuse, boolean iosprune, boolean usemasks, boolean cntprune) {
-		this.maxLenParsing = maxLenParsing;
-		this.iosprune = iosprune;
-		this.cntprune = cntprune;
-		this.usemasks = usemasks;
-		this.parallel = parallel;
-		this.reuse = reuse;
-		this.nthread = nthread < 0 ? 1 : nthread;
-		if (parallel) {
-			SubCYKer<?, ?> subCYKer = new SubCYKer<InputToSubCYKer, Boolean>();
-			this.cpool = new ThreadPool(subCYKer, nthread);
-		}
-	}
-	
 	@Override
 	public void setIdx(int idx, PriorityQueue<Meta<O>> caches) {
 		this.idx = idx;

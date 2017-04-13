@@ -84,18 +84,20 @@ public class ChartCell {
 		
 		private PriorityQueue<Double> queue = null; // owned by this chart, need to make it thread safe
 		
-		public Chart(int n, boolean maxrule, boolean usemask) {
+		public Chart(int n, boolean defchoice, boolean maxrule, boolean usemask) {
 			queue = new PriorityQueue<Double>();
-			initialize(n, maxrule, usemask);
+			initialize(n, defchoice, maxrule, usemask);
 		}
 		
-		private void initialize(int n, boolean maxrule, boolean usemask) {
+		private void initialize(int n, boolean defchoice, boolean maxrule, boolean usemask) {
 			int size = n * (n + 1) / 2;
-			ochart = new ArrayList<Cell>(size);
-			ichart = new ArrayList<Cell>(size);
-			for (int i = 0; i < size; i++) {
-				ochart.add(getCell(CellType.DEFAULT));
-				ichart.add(getCell(CellType.DEFAULT));
+			if (defchoice) {
+				ochart = new ArrayList<Cell>(size);
+				ichart = new ArrayList<Cell>(size);
+				for (int i = 0; i < size; i++) {
+					ochart.add(getCell(CellType.DEFAULT));
+					ichart.add(getCell(CellType.DEFAULT));
+				}
 			}
 			if (maxrule) {
 				mchart = new ArrayList<Cell>(size);

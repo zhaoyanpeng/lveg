@@ -40,7 +40,6 @@
 
 -reuse, true,
 -iosprune, true,
--cntprune, false,
 -sampling, false,
 -riserate, 2,
 -maxnbig, 15,
@@ -91,7 +90,7 @@
 -ef1ontrain, false,
 -ef1imwrite, false,
 
--runtag, 0412_reproduce_stage4_getComponent,
+-runtag, 0412_reproduce_stage5_test,
 -logroot, log/,
 -logtype, 0,
 -verbose, false,

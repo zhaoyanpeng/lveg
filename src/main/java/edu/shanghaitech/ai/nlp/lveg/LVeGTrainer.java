@@ -7,6 +7,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import edu.berkeley.nlp.PCFGLA.TreeAnnotations;
 import edu.berkeley.nlp.syntax.Tree;
@@ -98,6 +100,7 @@ public class LVeGTrainer extends LearnerConfig {
 		testTrees = trees.get(ID_TEST);
 		devTrees = trees.get(ID_DEV);
 		
+		int iepoch = 0;
 		treeFile = sublogroot + opts.imgprefix;
 		
 		Numberer numberer = wrapper.getGlobalNumberer(KEY_TAG_SET);
@@ -118,6 +121,13 @@ public class LVeGTrainer extends LearnerConfig {
 			lexicon = gfile.getLexicon();
 			goptimizer = grammar.getOptimizer();
 			loptimizer = grammar.getOptimizer();
+			
+			String regx = ".*?(\\d+)";
+			Pattern pat = Pattern.compile(regx);
+			Matcher matcher = pat.matcher(opts.inGrammar);
+			if (matcher.find()) { // training continued starting from the input grammar
+				iepoch = Integer.valueOf(matcher.group(1).trim()) + 1;
+			}
 		} else {
 			goptimizer = new ParallelOptimizer(opts.ntgrad, opts.pgrad, opts.pmode, opts.pverbose);
 			loptimizer = new ParallelOptimizer(opts.ntgrad, opts.pgrad, opts.pmode, opts.pverbose);
@@ -153,7 +163,7 @@ public class LVeGTrainer extends LearnerConfig {
 		lexicon.labelTrees(devTrees); // pair in in Lexicon.score(...)
 		
 		lvegParser = new LVeGParser<Tree<State>, List<Double>>(grammar, lexicon, opts.maxLenParsing, 
-				opts.ntcyker, opts.pcyker, opts.reuse, opts.iosprune, opts.usemasks, opts.cntprune);
+				opts.ntcyker, opts.pcyker, opts.reuse, opts.iosprune, opts.usemasks);
 		mrParser = new MaxRuleParser<Tree<State>, Tree<String>>(grammar, lexicon, opts.maxLenParsing, 
 				opts.ntcyker, opts.pcyker, opts.reuse, opts.ef1prune, false);
 		valuator = new Valuator<Tree<State>, Double>(grammar, lexicon, opts.maxLenParsing, 
@@ -206,9 +216,9 @@ public class LVeGTrainer extends LearnerConfig {
 		sorter = new PriorityQueue<Tree<State>>(opts.bsize + 5, wcomparator);
 		
 		if (opts.pbatch) {
-			parallelInBatch(numberer);
+			parallelInBatch(numberer, iepoch);
 		} else {
-			serialInBatch(numberer);
+			serialInBatch(numberer, iepoch);
 		}
 		// kill threads
 		grammar.shutdown();
@@ -269,9 +279,9 @@ public class LVeGTrainer extends LearnerConfig {
 	}
 	
 	
-	public static void parallelInBatch(Numberer numberer) throws Exception {
+	public static void parallelInBatch(Numberer numberer, int iepoch) throws Exception {
 		long bTime, eTime, epochBTime, batchBTime, batchETime;
-		int iprebeg, ibegin = 0, nfailed, iepoch = 0, ibatch = 0;
+		int iprebeg, ibegin = 0, nfailed, ibatch = 0;
 		List<Double> trllist = new ArrayList<Double>();
 		List<Double> dellist = new ArrayList<Double>();
 		List<Double> scoresOfST = new ArrayList<Double>(3);
@@ -331,9 +341,9 @@ public class LVeGTrainer extends LearnerConfig {
 	}
 	
 	
-	public static void serialInBatch(Numberer numberer) throws Exception {
+	public static void serialInBatch(Numberer numberer, int iepoch) throws Exception {
 		long bTime, eTime, epochBTime, batchBTime, batchETime;
-		int iprebeg, ibegin = 0, iepoch = 0, ibatch = 0, length, isample = 0;
+		int iprebeg, ibegin = 0, ibatch = 0, length, isample = 0;
 		List<Double> trllist = new ArrayList<Double>();
 		List<Double> dellist = new ArrayList<Double>();
 		List<Double> scoresOfST = new ArrayList<Double>(3);

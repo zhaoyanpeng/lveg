@@ -27,17 +27,17 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 	
 	
 	private LVeGParser(LVeGParser<?, ?> parser) {
-		super(parser.maxLenParsing, parser.nthread, parser.parallel, parser.reuse, parser.iosprune, parser.usemasks, parser.cntprune);
+		super(parser.maxLenParsing, parser.nthread, parser.parallel, parser.reuse, parser.iosprune, parser.usemasks);
 		this.inferencer = parser.inferencer;
-		this.chart = parser.reuse ? new Chart(maxLenParsing, false, usemasks) : null;
+		this.chart = parser.reuse ? new Chart(maxLenParsing, true, false, usemasks) : null;
 	}
 	
 	
 	public LVeGParser(LVeGGrammar grammar, LVeGLexicon lexicon, short maxLenParsing, short nthread, 
-			boolean parallel, boolean reuse, boolean iosprune, boolean usemasks, boolean cntprune) {
-		super(maxLenParsing, nthread, parallel, reuse, iosprune, usemasks, cntprune);
+			boolean parallel, boolean reuse, boolean iosprune, boolean usemasks) {
+		super(maxLenParsing, nthread, parallel, reuse, iosprune, usemasks);
 		this.inferencer = new LVeGInferencer(grammar, lexicon);
-		this.chart = reuse ? new Chart(maxLenParsing, false, usemasks) : null;
+		this.chart = reuse ? new Chart(maxLenParsing, true, false, usemasks) : null;
 	}
 	
 	
@@ -119,7 +119,7 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 			chart.clear(nword);
 		} else {
 			if (chart != null) { chart.clear(-1); }
-			chart = new Chart(nword, false, usemasks);
+			chart = new Chart(nword, true, false, usemasks);
 		}
 		if (usemasks) {
 			Inferencer.insideScoreMask(chart, sentence, nword, false, LVeGTrainer.tgBase, LVeGTrainer.tgRatio);

@@ -22,7 +22,7 @@ public class Valuator<I, O> extends Parser<I, O> {
 	private Valuator(Valuator<?, ?> valuator) {
 		super(valuator.maxLenParsing, valuator.nthread, valuator.parallel, valuator.reuse, valuator.iosprune, valuator.usemasks);
 		this.inferencer = valuator.inferencer;
-		this.chart = valuator.reuse ? new Chart(maxLenParsing, false, usemasks) : null;
+		this.chart = valuator.reuse ? new Chart(maxLenParsing, true, false, usemasks) : null;
 	}
 	
 	
@@ -30,7 +30,7 @@ public class Valuator<I, O> extends Parser<I, O> {
 			boolean parallel, boolean reuse, boolean iosprune, boolean usemasks) {
 		super(maxLenParsing, nthread, parallel, reuse, iosprune, usemasks);
 		this.inferencer = new LVeGInferencer(grammar, lexicon);
-		this.chart = reuse ? new Chart(maxLenParsing, false, usemasks) : null;
+		this.chart = reuse ? new Chart(maxLenParsing, true, false, usemasks) : null;
 	}
 
 	
@@ -100,7 +100,7 @@ public class Valuator<I, O> extends Parser<I, O> {
 			chart.clear(nword);
 		} else {
 			if (chart != null) { chart.clear(-1); }
-			chart = new Chart(nword, false, usemasks);
+			chart = new Chart(nword, true, false, usemasks);
 		}
 		if (usemasks) {
 //			LVeGInferencer.insideScoreMask(chart, sentence, nword, true); // CHECK

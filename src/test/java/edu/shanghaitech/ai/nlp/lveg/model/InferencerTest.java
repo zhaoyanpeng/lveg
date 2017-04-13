@@ -14,7 +14,7 @@ public class InferencerTest {
 //		inferencer.insideScore(null, false);
 //		inferencer.outsideScore(null);
 		
-		Chart chart = new Chart(5, false, false);
+		Chart chart = new Chart(5, true, false, false);
 //		insideScore(chart, 5, 0, 4);
 		for (int i = 0; i < 5; i++) {
 			outsideScore(chart, 5, i, i);

@@ -11,6 +11,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.junit.Test;
 
@@ -70,8 +72,20 @@ public class Java {
 		}
 	}
 	
-	
 	@Test
+	public void testRegx() {
+		String regx = ".*?(\\d+)";
+		String line = "lveg_4.gr";
+		
+		Pattern pat = Pattern.compile(regx);
+		Matcher matcher;
+		matcher = pat.matcher(line);
+		if (matcher.find()) {
+			System.out.println(matcher.group(1) + "\t" + matcher.groupCount());
+		}
+	}
+	
+//	@Test
 	public void testQueue() {
 		List<Integer> list = new ArrayList<Integer>(5);
 		PriorityQueue<Integer> sorted = new PriorityQueue<Integer>(5);
