@@ -42,7 +42,7 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 		Tree<State> sample = (Tree<State>) task;
 		evalMaxRuleCount(sample);
 		Tree<String> tree = StateTreeList.stateTreeToStringTree(sample, Inferencer.grammar.numberer);
-		tree = inferencer.extractBestMaxRuleParse(chart, tree.getYield());
+		tree = Inferencer.extractBestMaxRuleParse(chart, tree.getYield());
 		/*
 		synchronized (inferencer) {
 			tree = inferencer.extractBestMaxRuleParse(chart, tree.getYield());
@@ -72,7 +72,7 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 		Tree<String> strTree = StateTreeList.stateTreeToStringTree(tree, Inferencer.grammar.numberer);
 		
 //		logger.trace("extract max rule parse tree...");
-		Tree<String> parseTree = inferencer.extractBestMaxRuleParse(chart, strTree.getYield());
+		Tree<String> parseTree = Inferencer.extractBestMaxRuleParse(chart, strTree.getYield());
 //		logger.trace("over\n");
 		
 		return parseTree;

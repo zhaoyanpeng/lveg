@@ -39,7 +39,7 @@ import edu.shanghaitech.ai.nlp.util.Numberer;
 public class ChartCell {	
 	
 	public enum CellType {
-		DEFAULT, MAX_RULE, PCFG
+		DEFAULT, MAX_RULE, PCFG, MASK
 	}
 	
 	public static Cell getCell(CellType type) {
@@ -58,6 +58,11 @@ public class ChartCell {
 			cell.mtags = new HashMap<Short, Set<Short>>(3, 1);
 			cell.mtotals = new HashMap<Short, Double>();
 			cell.mscores = new HashMap<Short, Map<Short, Double>>(3, 1);
+			break;
+		}
+		case MASK: {
+			cell.masks = new HashSet<Short>();
+			cell.mtags = new HashMap<Short, Set<Short>>(3, 1);
 			break;
 		}
 		case DEFAULT: {
@@ -112,7 +117,7 @@ public class ChartCell {
 				for (int i = 0; i < size; i++) {
 					imasks.add(getCell(CellType.PCFG));
 					omasks.add(getCell(CellType.PCFG));
-					tmasks.add(getCell(CellType.PCFG));
+					tmasks.add(getCell(CellType.MASK));
 				}
 			}
 		}

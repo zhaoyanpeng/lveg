@@ -51,15 +51,10 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 		scores.add(scoreT);
 		scores.add(scoreS);
 		scores.add((double) sample.getYield().size());
-//		logger.trace("\no---id=" + Thread.currentThread().getId() + ", itask=" + itask + " " + 
-//				FunUtil.double2str(scores, 3, -1, false, true) + " comes...\n"); // DEBUG
 		synchronized (inferencer) {
-//			logger.trace("\ni---id=" + Thread.currentThread().getId() + ", itask=" + itask + " enters...\n"); // DEBUG
 			inferencer.evalRuleCountWithTree(sample, (short) 0);
 			inferencer.evalRuleCount(sample, chart, (short) 0, cntprune);
 			inferencer.evalGradients(scores);
-//			logger.trace("\ni---id=" + Thread.currentThread().getId() + ", itask=" + itask + " " + 
-//					FunUtil.double2str(scores, 3, -1, false, true) + " leaves...\n"); // DEBUG
 		}
 		Meta<O> cache = new Meta(itask, scores);
 		synchronized (caches) {
@@ -121,14 +116,13 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 			chart = new Chart(maxLenParsing, true, false, usemasks);
 		}
 		if (usemasks) {
-			PCFGInferencer.insideScoreMask(chart, sentence, nword, false, LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
-			PCFGInferencer.setRootOutsideScoreMask(chart);
-			PCFGInferencer.outsideScoreMask(chart, sentence, nword, false,  LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
+			PCFGInferencer.insideScore(chart, sentence, nword, false, LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
+			PCFGInferencer.setRootOutsideScore(chart);
+			PCFGInferencer.outsideScore(chart, sentence, nword, false,  LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
 			
-			double scoreS = chart.getInsideScoreMask((short) 0, Chart.idx(0, 1));
-			PCFGInferencer.makeMask(nword, chart, scoreS, LVeGTrainer.tgProb);
+//			double scoreS = chart.getInsideScoreMask((short) 0, Chart.idx(0, 1));
+//			PCFGInferencer.makeMask(nword, chart, scoreS, LVeGTrainer.tgProb);
 		}
-//		logger.trace("\nInside score...\n"); // DEBUG
 		if (parallel) {
 			cpool.reset();
 			Inferencer.insideScore(chart, sentence, nword, iosprune, cpool, usemasks);
@@ -136,6 +130,7 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 			cpool.reset();
 			Inferencer.outsideScore(chart, sentence, nword, iosprune, cpool, usemasks);
 		} else {
+//			logger.trace("\nInside score...\n"); // DEBUG
 			Inferencer.insideScore(chart, sentence, nword, iosprune, usemasks);
 //			FunUtil.debugChart(Chart.iGetChart(), (short) 2); // DEBUG
 	

@@ -311,8 +311,6 @@ public class LVeGInferencer extends Inferencer {
 			// have to process unary rules containing LEXICONS specifically
 			rules = lexicon.getRulesWithWord(word);
 			for (GrammarRule rule : rules) {
-//				if (chart.containsKey(rule.lhs, idx, true, (short) 0) && chart.containsKey(rule.lhs, idx, false)) {
-//					cinScore = chart.getInsideScore(rule.lhs, idx, (short) 0); // pay attention to this bug
 				if (chart.containsKey(rule.lhs, idx, false)) {
 					Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>(2, 1);
 					cinScore = lexicon.score(word, rule.lhs);

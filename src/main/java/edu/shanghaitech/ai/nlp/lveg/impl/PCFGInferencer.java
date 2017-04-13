@@ -1,12 +1,16 @@
 package edu.shanghaitech.ai.nlp.lveg.impl;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.Inferencer;
+import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
+import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
 import edu.shanghaitech.ai.nlp.lveg.model.ChartCell.Chart;
 import edu.shanghaitech.ai.nlp.syntax.State;
 
@@ -15,9 +19,14 @@ public class PCFGInferencer extends Inferencer {
 	 * 
 	 */
 	private static final long serialVersionUID = -7545305823426970355L;
+	
+	public PCFGInferencer(LVeGGrammar agrammar, LVeGLexicon alexicon) {
+		grammar = agrammar;
+		lexicon = alexicon;
+	}
 
 
-	public static void insideScoreMask(Chart chart, List<State> sentence, int nword, boolean prune, int base, double ratio) {
+	public static void insideScore(Chart chart, List<State> sentence, int nword, boolean prune, int base, double ratio) {
 		int x0, y0, x1, y1, c0, c1, c2;
 		double ruleScore, linScore, rinScore, pinScore;
 		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBRuleMap();
@@ -27,8 +36,7 @@ public class PCFGInferencer extends Inferencer {
 			for (GrammarRule rule : rules) {
 				chart.addInsideScoreMask(rule.lhs, iCell, rule.weight.getProb(), (short) 0, false);
 			}
-//			if (prune) { chart.pruneInsideScoreMask(iCell, (short) 0); }
-			insideScoreForUnaryRuleMask(chart, iCell, prune);
+			insideScoreForUnaryRule(chart, iCell);
 			if (prune) { chart.pruneInsideScoreMask(iCell, (short) -1, base, ratio); }
 		}
 		
@@ -56,15 +64,14 @@ public class PCFGInferencer extends Inferencer {
 						}
 					}
 				}
-//				if (prune) { chart.pruneInsideScoreMask(c2, (short) 0); }
-				insideScoreForUnaryRuleMask(chart, c2, prune);
+				insideScoreForUnaryRule(chart, c2);
 				if (prune) { chart.pruneInsideScoreMask(c2, (short) -1, base, ratio); }
 			}
 		}
 	}
 	
 	
-	public static void outsideScoreMask(Chart chart, List<State> sentence, int nword, boolean prune, int base, double ratio) {
+	public static void outsideScore(Chart chart, List<State> sentence, int nword, boolean prune, int base, double ratio) {
 		int x0, y0, x1, y1, c0, c1, c2;
 		double poutScore, linScore, rinScore, loutScore, routScore, ruleScore;
 		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBRuleMap();
@@ -115,8 +122,7 @@ public class PCFGInferencer extends Inferencer {
 						}
 					}
 				}
-//				if (prune) { chart.pruneOutsideScoreMask(c2, (short) 0); }
-				outsideScoreForUnaryRuleMask(chart, c2, prune);
+				outsideScoreForUnaryRule(chart, c2);
 				if (prune) { chart.pruneOutsideScoreMask(c2, (short) -1, base, ratio); }	
 			}
 		}
@@ -124,7 +130,7 @@ public class PCFGInferencer extends Inferencer {
 	
 	
 	
-	private static void insideScoreForUnaryRuleMask(Chart chart, int idx, boolean prune) {
+	private static void insideScoreForUnaryRule(Chart chart, int idx) {
 		Set<Short> set;
 		short level = 0;
 		List<GrammarRule> rules;
@@ -142,7 +148,6 @@ public class PCFGInferencer extends Inferencer {
 				}
 			}
 			level++;
-//			if (prune) { chart.pruneInsideScore(idx, level); } // CHECK
 		}
 		// have to process ROOT node specifically, ROOT is in cell 0 and is in level 3
 		if (idx == 0 && (set = chart.keySetMask(idx, true, LENGTH_UCHAIN)) != null) {
@@ -157,12 +162,11 @@ public class PCFGInferencer extends Inferencer {
 					chart.addInsideScoreMask(rule.lhs, idx, pinScore, (short) (LENGTH_UCHAIN + 1), false);
 				}
 			}
-//			if (prune) { chart.pruneInsideScore(idx, (short) (LENGTH_UCHAIN + 1)); } // CHECK
 		}
 	}
 	
 	
-	private static void outsideScoreForUnaryRuleMask(Chart chart, int idx, boolean prune) {
+	private static void outsideScoreForUnaryRule(Chart chart, int idx) {
 		Set<Short> set;
 		short level = 0;
 		List<GrammarRule> rules;
@@ -180,7 +184,6 @@ public class PCFGInferencer extends Inferencer {
 					chart.addOutsideScoreMask((short) rule.rhs, idx, coutScore, level, false);
 				}
 			}
-//			if (prune) { chart.pruneOutsideScore(idx, level); } // CHECK
 		}
 		while(level < LENGTH_UCHAIN && (set = chart.keySetMask(idx, false, level)) != null) {
 			for (Short idTag : set) {
@@ -194,7 +197,6 @@ public class PCFGInferencer extends Inferencer {
 				}
 			}
 			level++;
-//			if (prune) { chart.pruneOutsideScore(idx, level); } // CHECK
 		}
 	}
 	
@@ -233,7 +235,99 @@ public class PCFGInferencer extends Inferencer {
 	}
 	
 	
-	public static void setRootOutsideScoreMask(Chart chart) {
+	protected void viterbiParsing(Chart chart, List<State> sentence, int nword) {
+		int x0, y0, x1, y1, c0, c1, c2;
+		double lprob, rprob, maxprob, newprob;
+		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBRuleMap();
+		
+		for (int i = 0; i < nword; i++) {
+			State word = sentence.get(i);
+			int iCell = Chart.idx(i, nword);
+			List<GrammarRule> rules = lexicon.getRulesWithWord(word);
+			for (GrammarRule rule : rules) {
+				newprob = rule.getWeight().getProb();
+				chart.addMaxRuleCount(rule.lhs, iCell, newprob, 0, (short) -1, (short) 0);
+			}
+			viterbiForUnaryRule(chart, iCell);
+		}
+		
+		for (int ilayer = 1; ilayer < nword; ilayer++) {
+			for (int left = 0; left < nword - ilayer; left++) {
+				x0 = left;
+				y1 = left + ilayer;
+				c2 = Chart.idx(left, nword - ilayer);
+				for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
+					BinaryGrammarRule rule = (BinaryGrammarRule) rmap.getValue();
+					for (int right = left; right < left + ilayer; right++) {
+						y0 = right;
+						x1 = right + 1;
+						c0 = Chart.idx(x0, nword - (y0 - x0));
+						c1 = Chart.idx(x1, nword - (y1 - x1));
+						if ((lprob = chart.getMaxRuleCount(rule.lchild, c0)) == Double.NEGATIVE_INFINITY ||
+								(rprob = chart.getMaxRuleCount(rule.rchild, c1)) == Double.NEGATIVE_INFINITY) {
+							continue;
+						}
+						newprob = lprob + rprob;
+						if ((maxprob = chart.getMaxRuleCount(rule.lhs, c2)) > newprob) { continue; }
+						newprob = newprob + rule.weight.getProb();
+						if (newprob > maxprob) {
+							int sons = (1 << 31) + (rule.lchild << 16) + rule.rchild;
+							chart.addMaxRuleCount(rule.lhs, c2, newprob, sons, (short) right, (short) 0);
+						}
+					}
+				}
+				viterbiForUnaryRule(chart, c2);
+			}
+		}
+	}
+	
+	
+	protected void viterbiForUnaryRule(Chart chart, int idx) {
+		short level = 0;
+		Set<Short> mkeyLevel;
+		List<GrammarRule> rules;
+		double prob, newprob, maxprob;
+		
+		while (level < LENGTH_UCHAIN && (mkeyLevel = chart.keySetMaxRule(idx, level)) != null) {
+			for (short mkey : mkeyLevel) {
+				if ((prob = chart.getMaxRuleCount(mkey, idx, level)) == Double.NEGATIVE_INFINITY) { continue; }
+				rules = grammar.getURuleWithC(mkey);
+				for (GrammarRule arule : rules) {
+					UnaryGrammarRule rule = (UnaryGrammarRule) arule;
+					if (rule.type == GrammarRule.RHSPACE) { continue; }
+					if ((maxprob = chart.getMaxRuleCount(rule.lhs, idx)) > prob) { continue; }
+					newprob = prob + rule.weight.getProb();
+					if (newprob > maxprob) {
+						int son = mkey;
+						if (level == 1) {
+							son = chart.getMaxRuleSon(mkey, idx, (short) 1);
+							son = (son << 16) + mkey;
+						}
+						chart.addMaxRuleCount(rule.lhs, idx, newprob, son, (short) -1, (short) (level + 1));
+					}
+				}
+			}
+			level++;
+		}
+		
+		if (idx == 0) {
+			rules = grammar.getURuleWithP(ROOT);
+			for (GrammarRule arule : rules) {
+				UnaryGrammarRule rule = (UnaryGrammarRule) arule;
+				if ((prob = chart.getMaxRuleCount((short) rule.rhs, idx)) == Double.NEGATIVE_INFINITY || 
+						(maxprob = chart.getMaxRuleCount(ROOT, idx)) > prob) {
+					continue;
+				}
+				newprob = prob + rule.weight.getProb();
+				if (newprob > maxprob) {
+					chart.addMaxRuleCount(ROOT, idx, newprob, rule.rhs, (short) -1, (short) 0);
+				}
+			}
+		}
+	}
+	
+	
+	public static void setRootOutsideScore(Chart chart) {
 		chart.addOutsideScoreMask((short) 0, Chart.idx(0, 1), 0, (short) (LENGTH_UCHAIN + 1), false);
 	}
 	

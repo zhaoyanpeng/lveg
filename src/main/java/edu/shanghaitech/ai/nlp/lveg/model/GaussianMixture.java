@@ -883,7 +883,7 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	 * @param scoreS     score of the sentence, should be in non-logarithmic form
 	 * @param gradst     intermediate values (with parse tree) from {@link #derivative(Map, Component, List, List)}
 	 * @param gradss     intermediate values (with sentence) from {@link #derivative(Map, Component, List, List)}
-	 * @param grads      which holder gradients of mu & sigma
+	 * @param grads      which holds gradients of mu & sigma
 	 */
 	protected void derivative(Component comp, boolean cumulative, boolean zeroflagt, boolean zeroflags, double scoreT, double scoreS,
 			Map<String, List<Double>> gradst, Map<String, List<Double>> gradss, Map<String, List<Double>> grads) {

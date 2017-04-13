@@ -2,13 +2,7 @@ package edu.shanghaitech.ai.nlp.lveg;
 
 import org.junit.Test;
 
-import edu.shanghaitech.ai.nlp.util.Recorder;
-
-public class LVeGLearnerTest extends Recorder {
-	/**
-	 * 
-	 */
-	private static final long serialVersionUID = 952298389200776594L;
+public class LVeGLearnerTest {
 
 	@Test
 	public void testLVeGLearner() {

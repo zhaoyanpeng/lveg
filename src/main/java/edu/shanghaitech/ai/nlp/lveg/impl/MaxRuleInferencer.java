@@ -1,13 +1,11 @@
 package edu.shanghaitech.ai.nlp.lveg.impl;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.lveg.model.ChartCell.Chart;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
@@ -274,95 +272,6 @@ public class MaxRuleInferencer extends Inferencer {
 				}
 			}	
 		}
-	}
-	
-	protected Tree<String> extractBestMaxRuleParse(Chart chart, List<String> sentence) {
-		return extractBestMaxRuleParse(chart, 0, sentence.size() - 1, sentence.size(), (short) 0, sentence);
-	}
-	
-	/**
-	 * @param chart
-	 * @param left     0
-	 * @param right    sentence.size() - 1
-	 * @param nword
-	 * @param sentence the sentence
-	 * @return
-	 */
-	protected Tree<String> extractBestMaxRuleParse(Chart chart, int left, int right, int nword, List<String> sentence) {
-		return extractBestMaxRuleParse(chart, left, right, nword, (short) 0, sentence);
-	}
-	
-	/**
-	 * @param chart
-	 * @param left     0
-	 * @param right    sentence.size() - 1
-	 * @param nword
-	 * @param idtag
-	 * @param sentence the sentence
-	 * @return
-	 */
-	private Tree<String> extractBestMaxRuleParse(Chart chart, int left, int right, int nword, short idtag, List<String> sentence) {
-		int idx = Chart.idx(left, nword - (right - left));
-		int son = chart.getMaxRuleSon(idtag, idx);
-		if (son <= 0) { // sons = (1 << 31) + (rule.lchild << 16) + rule.rchild; or sons = 0;
-			return extractBestMaxRuleParseBinary(chart, left, right, nword, idtag, sentence);
-		} else {
-			short idGrandson = (short) (son >>> 16);
-			short idChild = (short) ((son << 16) >>> 16);
-			List<Tree<String>> child = new ArrayList<Tree<String>>();
-			String pname = (String) grammar.numberer.object(idtag);
-			if (pname.endsWith("^g")) { pname = pname.substring(0, pname.length() - 2); }
-			if (idx == 0 && idtag == 0) { // ROOT->A->B->C; ROOT->B->C; ROOT->C;
-				if (idGrandson != 0) { logger.error("There must be something wrong in the max rule parse\n."); }
-				child.add(extractBestMaxRuleParse(chart, left, right, nword, idChild, sentence));
-				return new Tree<String>(pname, child);
-			}
-			if (idGrandson == 0) {
-				child.add(extractBestMaxRuleParseBinary(chart, left, right, nword, idChild, sentence));
-				return new Tree<String>(pname, child);
-			} else {
-				child.add(extractBestMaxRuleParseBinary(chart, left, right, nword, idGrandson, sentence));
-				List<Tree<String>> chainChild = new ArrayList<Tree<String>>();
-				String cname = (String) grammar.numberer.object(idChild);
-				if (cname.endsWith("^g")) { cname = cname.substring(0, cname.length() - 2); }
-				chainChild.add(new Tree<String>(cname, child));
-				return new Tree<String>(pname, chainChild);
-			}
-		}
-	}
-	
-	private Tree<String> extractBestMaxRuleParseBinary(Chart chart, int left, int right, int nword, short idtag, List<String> sentence) {
-		List<Tree<String>> children = new ArrayList<Tree<String>>();
-		String pname = (String) grammar.numberer.object(idtag);
-		if (pname.endsWith("^g")) { pname = pname.substring(0, pname.length() - 2); }
-		int idx = Chart.idx(left, nword - (right - left));
-		int son = chart.getMaxRuleSon(idtag, idx, (short) 0); // can only exist in level 0
-		if (right  == left) {
-			if (son == 0) {
-				children.add(new Tree<String>(sentence.get(left)));
-			} else {
-				logger.error("must be somthing wrong.\n");
-			}
-		} else {
-			int splitpoint = chart.getSplitPoint(idtag, idx);
-			if (splitpoint == -1) {
-				logger.error("\n---holly shit---\n");
-				logger.error("it is not the binary rule since there is no split point.\n");
-				return new Tree<String>("ROOT");
-			}
-			if (son > 0) {
-				logger.error("it is not the binary rule since son is larger than 0.\n");
-				return new Tree<String>("ROOT");
-			}
-			son = ((son << 1) >>> 1);
-			short lchild = (short) (son >>> 16);
-			short rchild = (short) ((son << 16) >> 16);
-			Tree<String> lchildTree = extractBestMaxRuleParse(chart, left, splitpoint, nword, lchild, sentence);
-			Tree<String> rchildTree = extractBestMaxRuleParse(chart, splitpoint + 1, right, nword, rchild, sentence);
-			children.add(lchildTree);
-			children.add(rchildTree);
-		}
-		return new Tree<String>(pname, children);
 	}
 	
 }
