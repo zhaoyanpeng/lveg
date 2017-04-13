@@ -537,7 +537,6 @@ public class FunUtil extends Recorder {
 						saveTree2image(tree, treeFileName + maxLength + "_" + count, null, numberer);
 						System.out.println("The tree has been saved to " + treeFileName + maxLength);
 					} catch (Exception e) {
-						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
 				}

@@ -1374,7 +1374,6 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 					for (GaussianDistribution gd : value) {
 						if (gd != null) { 
 							gd.clear(); 
-//							GaussianDistribution.returnObject(gd); // POOL
 						}
 					}
 					value.clear();

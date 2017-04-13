@@ -139,10 +139,10 @@ public class LearnerConfig extends Recorder {
 		/* optimization-parameter section begins*/
 		@Option(name = "-lr", usage = "learning rate (default: 1.0)")
 		public double lr = 0.02;
-		@Option(name = "-reg", usage = "using regularization (true) or not (false) (default: true)")
-		public boolean reg = true;
-		@Option(name = "-clip", usage = "clipping the gradients (true) or not (false) (default: true)")
-		public boolean clip = true;
+		@Option(name = "-reg", usage = "using regularization (true) or not (false) (default: false)")
+		public boolean reg = false;
+		@Option(name = "-clip", usage = "clipping the gradients (true) or not (false) (default: false)")
+		public boolean clip = false;
 		@Option(name = "-absmax", usage = "threshold for clipping gradients (default: 5.0)")
 		public double absmax = 5.0;
 		@Option(name = "-wdecay", usage = "weight decay rate (default: 0.02)")
@@ -150,7 +150,7 @@ public class LearnerConfig extends Recorder {
 		@Option(name = "-l1", usage = "using l1 regularization (true) or l2 regularization (false) (default: true)")
 		public boolean l1 = true;
 		@Option(name = "-minmw", usage = "minimum mixing weight (default: 1e-6)")
-		public double minmw = 1e-6;
+		public double minmw = 1e-20;
 		@Option(name = "-epsilon", usage = "a small constant to avoid the division by zero (default: 1e-8)")
 		public double epsilon = 1e-8;
 		@Option(name = "-choice", usage = "optimization methods: NORMALIZED, SGD, ADAGRAD, RMSPROP, ADADELTA, ADAM (default: ADAM)")
@@ -204,12 +204,8 @@ public class LearnerConfig extends Recorder {
 		/* parallel-configurations section ends */
 		
 		/* training configurations section begins */
-		@Option(name = "-reuse", usage = "whether reuse the chart for CYK and inside-outside score (true) or not (false) (default: true)")
-		public boolean reuse = true;
 		@Option(name = "-iosprune", usage = "when evaluating inside-outside score, avoid adding trivial components if the mixing weights are equal to zero (default: false)")
 		public boolean iosprune = false;
-		@Option(name = "-cntprune", usage = "[DISCARDED] when evaluating expected counts, avoid adding trivial components if the mixing weights are equal to zero (default: false)")
-		public boolean cntprune = false;
 		@Option(name = "-sampling", usage = "whether use sampling techniques (true) in evaluating gradients or not (false) (default: false)")
 		public boolean sampling = false;
 		@Option(name = "-riserate", usage = "# of components allowed to be increased for every 100 more components (default: 2.0)")
@@ -232,8 +228,6 @@ public class LearnerConfig extends Recorder {
 		public short maxLenParsing = 120;
 		@Option(name = "-nAllowedDrop", usage = "# of allowed iterations in which the validation likelihood drops (default: 6)")
 		public short nAllowedDrop = 6;
-		@Option(name = "-relativediff", usage = "maximum relative difference between the neighboring iterations (default: 1e-6)")
-		public double relativerror = 1e-6;
 		@Option(name = "-nratio", usage = "fraction of negative values when initializing MoG parameters (Default: 0.5)")
 		public double nratio = 0.5;
 		@Option(name = "-maxramdom", usage = "maximum random double (int) value of the exponent part of MoG parameters (Default: 1)")
@@ -395,6 +389,7 @@ public class LearnerConfig extends Recorder {
 		}
 		// make directories
 		String logfile = null;
+		FunUtil.mkdir(opts.datadir);
 		subdatadir = opts.datadir + "/" + opts.runtag + "/";
 		if (!test) {
 			sublogroot = opts.logroot + "/" + opts.runtag + "/";

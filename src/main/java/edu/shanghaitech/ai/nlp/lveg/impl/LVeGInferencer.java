@@ -15,21 +15,6 @@ import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
 import edu.shanghaitech.ai.nlp.syntax.State;
 
-/**
- * Compute the inside and outside scores and store them in a chart. 
- * Imagine the upper right triangle chart as the pyramid. E.g., see
- * the pyramid below, which could represent a sentence of length 6.
- * <pre>
- * + + + + + +
- *   + + + + +
- *     + + + +
- *       + + +
- *         + +
- *           + 
- * </pre>
- * @author Yanpeng Zhao
- *
- */
 public class LVeGInferencer extends Inferencer {
 	/**
 	 * 
@@ -360,7 +345,6 @@ public class LVeGInferencer extends Inferencer {
 	 */
 	protected static void setRootOutsideScore(Tree<State> tree) {
 		GaussianMixture gm = new DiagonalGaussianMixture((short) 1);
-//		GaussianMixture gm = DiagonalGaussianMixture.borrowObject((short) 1); // POOL
 		gm.marginalizeToOne();
 		tree.getLabel().setOutsideScore(gm);
 	}

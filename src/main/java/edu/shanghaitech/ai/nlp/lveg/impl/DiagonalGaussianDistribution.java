@@ -71,7 +71,6 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 	@Override
 	public DiagonalGaussianDistribution copy() {
 		DiagonalGaussianDistribution gd = new DiagonalGaussianDistribution();
-//		DiagonalGaussianDistribution gd = borrowObject((short) 0); // POOL
 		copy(gd);
 		return gd;
 	}

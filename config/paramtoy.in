@@ -38,9 +38,7 @@
 -pmode, THREAD_POOL,
 -pverbose, false,
 
--reuse, true,
 -iosprune, false,
--cntprune, false,
 -sampling, false,
 -riserate, 2,
 -maxnbig, -30,
@@ -52,7 +50,6 @@
 -maxsample, 1,
 -maxLenParsing, 50,
 -nAllowedDrop, 6,
--relativediff, 1e-6,
 -nratio, 0.5,
 -maxramdom, 1,
 -maxmw, 4,
@@ -91,7 +88,7 @@
 -ef1ontrain, false,
 -ef1imwrite, false,
 
--runtag, toy_0412_1_2_ek3_simple_test1,
+-runtag, toy_0412_1_2_ek3_simple_test2,
 -logroot, log/,
 -logtype, 0,
 -verbose, false,

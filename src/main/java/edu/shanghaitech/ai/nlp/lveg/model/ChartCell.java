@@ -469,8 +469,10 @@ public class ChartCell {
 		}
 		
 		
-		
-		
+		/*******************************************/
+		/*                                         */
+		/*                                         */
+		/*******************************************/
 		
 		protected void setStatus(boolean status) {
 			this.status = status;

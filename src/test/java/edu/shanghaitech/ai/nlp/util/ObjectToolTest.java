@@ -89,7 +89,6 @@ public class ObjectToolTest {
 //				gaussPool.borrowObject((short) i);
 				System.out.println(mog);
 			} catch (Exception e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}

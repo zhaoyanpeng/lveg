@@ -82,7 +82,6 @@ public class DiagonalGaussianMixture extends GaussianMixture {
 	@Override
 	public DiagonalGaussianMixture copy(boolean deep) {
 		DiagonalGaussianMixture gm = new DiagonalGaussianMixture();
-//		DiagonalGaussianMixture gm = DiagonalGaussianMixture.borrowObject((short) 0); // POOL
 		copy(gm, deep);
 		return gm;
 	}
@@ -91,7 +90,6 @@ public class DiagonalGaussianMixture extends GaussianMixture {
 	@Override
 	public DiagonalGaussianMixture replaceKeys(Map<String, String> keys) {
 		DiagonalGaussianMixture gm = new DiagonalGaussianMixture();
-//		DiagonalGaussianMixture gm = DiagonalGaussianMixture.borrowObject((short) 0); // POOL
 		replaceKeys(gm, keys);
 		return gm;
 	}
@@ -100,7 +98,6 @@ public class DiagonalGaussianMixture extends GaussianMixture {
 	@Override
 	public DiagonalGaussianMixture replaceAllKeys(String newkey) {
 		DiagonalGaussianMixture gm = new DiagonalGaussianMixture();
-//		DiagonalGaussianMixture gm = DiagonalGaussianMixture.borrowObject((short) 0); // POOL
 		replaceAllKeys(gm, newkey);
 		return gm;
 	}
@@ -109,7 +106,6 @@ public class DiagonalGaussianMixture extends GaussianMixture {
 	@Override
 	public DiagonalGaussianMixture multiply(GaussianMixture multiplier) {
 		DiagonalGaussianMixture gm = new DiagonalGaussianMixture();
-//		DiagonalGaussianMixture gm = DiagonalGaussianMixture.borrowObject((short) 0); // POOL
 		multiply(gm, multiplier);
 		return gm;
 	}

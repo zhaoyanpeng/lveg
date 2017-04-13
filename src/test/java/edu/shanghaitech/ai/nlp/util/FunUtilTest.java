@@ -75,7 +75,6 @@ public class FunUtilTest {
 				System.out.println(i + " | " + arr[i].trim() + ")");
 			}
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}

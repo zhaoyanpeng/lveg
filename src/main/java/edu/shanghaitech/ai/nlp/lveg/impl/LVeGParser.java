@@ -27,17 +27,17 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 	
 	
 	private LVeGParser(LVeGParser<?, ?> parser) {
-		super(parser.maxLenParsing, parser.nthread, parser.parallel, parser.reuse, parser.iosprune, parser.usemasks);
+		super(parser.maxLenParsing, parser.nthread, parser.parallel, parser.iosprune, parser.usemasks);
 		this.inferencer = parser.inferencer;
-		this.chart = parser.reuse ? new Chart(maxLenParsing, true, false, usemasks) : null;
+		this.chart = new Chart(parser.maxLenParsing, true, false, parser.usemasks);
 	}
 	
 	
 	public LVeGParser(LVeGGrammar grammar, LVeGLexicon lexicon, short maxLenParsing, short nthread, 
-			boolean parallel, boolean reuse, boolean iosprune, boolean usemasks) {
-		super(maxLenParsing, nthread, parallel, reuse, iosprune, usemasks);
+			boolean parallel, boolean iosprune, boolean usemasks) {
+		super(maxLenParsing, nthread, parallel, iosprune, usemasks);
 		this.inferencer = new LVeGInferencer(grammar, lexicon);
-		this.chart = reuse ? new Chart(maxLenParsing, true, false, usemasks) : null;
+		this.chart = new Chart(maxLenParsing, true, false, usemasks);
 	}
 	
 	
@@ -115,19 +115,18 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 	public double doInsideOutside(Tree<State> tree) {
 		List<State> sentence = tree.getYield();
 		int nword = sentence.size();
-		if (reuse) {
+		if (chart != null) {
 			chart.clear(nword);
 		} else {
-			if (chart != null) { chart.clear(-1); }
-			chart = new Chart(nword, true, false, usemasks);
+			chart = new Chart(maxLenParsing, true, false, usemasks);
 		}
 		if (usemasks) {
-			Inferencer.insideScoreMask(chart, sentence, nword, false, LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
-			Inferencer.setRootOutsideScoreMask(chart);
-			Inferencer.outsideScoreMask(chart, sentence, nword, false,  LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
+			PCFGInferencer.insideScoreMask(chart, sentence, nword, false, LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
+			PCFGInferencer.setRootOutsideScoreMask(chart);
+			PCFGInferencer.outsideScoreMask(chart, sentence, nword, false,  LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
 			
 			double scoreS = chart.getInsideScoreMask((short) 0, Chart.idx(0, 1));
-			Inferencer.makeMask(nword, chart, scoreS, LVeGTrainer.tgProb);
+			PCFGInferencer.makeMask(nword, chart, scoreS, LVeGTrainer.tgProb);
 		}
 //		logger.trace("\nInside score...\n"); // DEBUG
 		if (parallel) {

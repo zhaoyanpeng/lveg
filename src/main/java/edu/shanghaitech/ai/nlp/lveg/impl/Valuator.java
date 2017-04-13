@@ -20,17 +20,17 @@ public class Valuator<I, O> extends Parser<I, O> {
 	
 	
 	private Valuator(Valuator<?, ?> valuator) {
-		super(valuator.maxLenParsing, valuator.nthread, valuator.parallel, valuator.reuse, valuator.iosprune, valuator.usemasks);
+		super(valuator.maxLenParsing, valuator.nthread, valuator.parallel, valuator.iosprune, false);
 		this.inferencer = valuator.inferencer;
-		this.chart = valuator.reuse ? new Chart(maxLenParsing, true, false, usemasks) : null;
+		this.chart = new Chart(valuator.maxLenParsing, true, false, false);
 	}
 	
 	
 	public Valuator(LVeGGrammar grammar, LVeGLexicon lexicon, short maxLenParsing, short nthread, 
-			boolean parallel, boolean reuse, boolean iosprune, boolean usemasks) {
-		super(maxLenParsing, nthread, parallel, reuse, iosprune, usemasks);
+			boolean parallel, boolean iosprune, boolean usemasks) {
+		super(maxLenParsing, nthread, parallel, iosprune, false);
 		this.inferencer = new LVeGInferencer(grammar, lexicon);
-		this.chart = reuse ? new Chart(maxLenParsing, true, false, usemasks) : null;
+		this.chart = new Chart(maxLenParsing, true, false, false);
 	}
 
 	
@@ -38,7 +38,6 @@ public class Valuator<I, O> extends Parser<I, O> {
 	public Valuator<?, ?> newInstance() {
 		return new Valuator<I, O>(this);
 	}
-	
 	
 	
 	@Override
@@ -96,20 +95,16 @@ public class Valuator<I, O> extends Parser<I, O> {
 	protected double scoreSentence(Tree<State> tree) {
 		List<State> sentence = tree.getYield();
 		int nword = sentence.size();
-		if (reuse) {
+		if (chart != null) {
 			chart.clear(nword);
 		} else {
-			if (chart != null) { chart.clear(-1); }
-			chart = new Chart(nword, true, false, usemasks);
-		}
-		if (usemasks) {
-//			LVeGInferencer.insideScoreMask(chart, sentence, nword, true); // CHECK
+			chart = new Chart(nword, true, false, false);
 		}
 		if (parallel) {
 			cpool.reset();
-			Inferencer.insideScore(chart, sentence, nword, iosprune, cpool, usemasks);
+			Inferencer.insideScore(chart, sentence, nword, iosprune, cpool, false);
 		} else {
-			Inferencer.insideScore(chart, sentence, nword, iosprune, usemasks);
+			Inferencer.insideScore(chart, sentence, nword, iosprune, false);
 		}
 		GaussianMixture gm = chart.getInsideScore((short) 0, Chart.idx(0, 1));
 		double score = gm.eval(null, true);

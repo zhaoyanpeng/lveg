@@ -117,11 +117,9 @@ public class State implements Serializable {
 	private void resetScore() {
 		if (insideScore != null) { 
 			insideScore.clear(true); 
-//			GaussianMixture.returnObject(insideScore); // POOL
 		}
 		if (outsideScore != null) { 
 			outsideScore.clear(true); 
-//			GaussianMixture.returnObject(outsideScore); // POOL
 		}
 		this.insideScore = null;
 		this.outsideScore = null;

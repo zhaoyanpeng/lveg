@@ -4,7 +4,6 @@ import java.util.List;
 
 import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.data.StateTreeList;
-import edu.shanghaitech.ai.nlp.lveg.LVeGTrainer;
 import edu.shanghaitech.ai.nlp.lveg.model.ChartCell.Chart;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.Inferencer;
@@ -23,17 +22,17 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 	
 	
 	private MaxRuleParser(MaxRuleParser<?, ?> parser) {
-		super(parser.maxLenParsing, parser.nthread, parser.parallel, parser.reuse, parser.iosprune, parser.usemasks);
+		super(parser.maxLenParsing, parser.nthread, parser.parallel, parser.iosprune, false);
 		this.inferencer = parser.inferencer;
-		this.chart = parser.reuse ? new Chart(maxLenParsing, true, true, usemasks) : null;
+		this.chart = new Chart(parser.maxLenParsing, true, true, false);
 	}
 	
 	
 	public MaxRuleParser(LVeGGrammar grammar, LVeGLexicon lexicon, short maxLenParsing, short nthread, 
-			boolean parallel, boolean reuse, boolean iosprune, boolean usemasks) {
-		super(maxLenParsing, nthread, parallel, reuse, iosprune, usemasks);
+			boolean parallel, boolean iosprune, boolean usemasks) {
+		super(maxLenParsing, nthread, parallel, iosprune, usemasks);
 		this.inferencer = new MaxRuleInferencer(grammar, lexicon);
-		this.chart = reuse ? new Chart(maxLenParsing, true, true, usemasks) : null;
+		this.chart = new Chart(maxLenParsing, true, true, false);
 	}
 	
 
@@ -104,40 +103,28 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 	}
 	
 	
-	/**
-	 * @param tree the parse tree
-	 * @return
-	 */
-	private Chart doInsideOutside(Tree<State> tree, List<State> sentence, int nword) {
-		if (reuse) {
+	private void doInsideOutside(Tree<State> tree, List<State> sentence, int nword) {
+		if (chart != null) {
 			chart.clear(nword);
 		} else {
-			if (chart != null) { chart.clear(-1); }
-			chart = new Chart(nword, true, true, usemasks);
+			chart = new Chart(nword, true, true, false);
 		}
-		if (usemasks) {
-			Inferencer.insideScoreMask(chart, sentence, nword, true,  LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
-			Inferencer.setRootOutsideScoreMask(chart);
-			Inferencer.outsideScoreMask(chart, sentence, nword, true,  LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
-		}
-//		logger.trace("\nInside score...\n"); // DEBUG
 		if (parallel) {
 			cpool.reset();
-			Inferencer.insideScore(chart, sentence, nword, iosprune, cpool, usemasks);
+			Inferencer.insideScore(chart, sentence, nword, iosprune, cpool, false);
 			Inferencer.setRootOutsideScore(chart);
 			cpool.reset();
-			Inferencer.outsideScore(chart, sentence, nword, iosprune, cpool, usemasks);
+			Inferencer.outsideScore(chart, sentence, nword, iosprune, cpool, false);
 		} else {
-			Inferencer.insideScore(chart, sentence, nword, iosprune, usemasks);
+//			logger.trace("\nInside score...\n"); // DEBUG
+			Inferencer.insideScore(chart, sentence, nword, iosprune, false);
 //			FunUtil.debugChart(chart.getChart(true), (short) -1, tree.getYield().size()); // DEBUG
 
-//			logger.trace("\nOutside score...\n"); // DEBUG
 			Inferencer.setRootOutsideScore(chart);
-			Inferencer.outsideScore(chart, sentence, nword, iosprune, usemasks);
+//			logger.trace("\nOutside score...\n"); // DEBUG
+			Inferencer.outsideScore(chart, sentence, nword, iosprune, false);
 //			FunUtil.debugChart(chart.getChart(false), (short) -1, tree.getYield().size()); // DEBUG
 		}
-		
-		return chart;
 	}
 	
 }
