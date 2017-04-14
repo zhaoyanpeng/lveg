@@ -166,6 +166,10 @@ public class ChartCell {
 			return inside ? ichart.get(idx).getStatus() : ochart.get(idx).getStatus();
 		}
 		
+		public List<Cell> getChartTmask() {
+			return tmasks;
+		}
+		
 		public List<Cell> getChartMask(boolean inside) {
 			return inside ? imasks : omasks;
 		}
@@ -262,10 +266,10 @@ public class ChartCell {
 			return ochart.get(idx).getScore(key);
 		}
 		
-		public void pruneOutsideScoreMask(int idx, short level, int base, double ratio) {
+		public void pruneOutsideScoreMask(int idx, short level, int base, double ratio, boolean retainall) {
 			synchronized (queue) {
 				if (level < 0) {
-					omasks.get(idx).pruneScoreMask(queue, base, ratio);
+					omasks.get(idx).pruneScoreMask(queue, base, ratio, retainall);
 				} else {
 					omasks.get(idx).pruneScoreMask(level, queue, base, ratio);
 				}
@@ -280,10 +284,10 @@ public class ChartCell {
 			}
 		}
 		
-		public void pruneInsideScoreMask(int idx, short level, int base, double ratio) {
+		public void pruneInsideScoreMask(int idx, short level, int base, double ratio, boolean retainall) {
 			synchronized (queue) {
 				if (level < 0) {
-					imasks.get(idx).pruneScoreMask(queue, base, ratio);
+					imasks.get(idx).pruneScoreMask(queue, base, ratio, retainall);
 				} else {
 					imasks.get(idx).pruneScoreMask(level, queue, base, ratio);
 				}
@@ -425,8 +429,8 @@ public class ChartCell {
 			return false;
 		}
 		
-		protected void pruneScoreMask(PriorityQueue<Double> queue, int base, double ratio) {
-			if (mtotals.size() > base) {
+		protected void pruneScoreMask(PriorityQueue<Double> queue, int base, double ratio, boolean retainall) {
+			if (!retainall && mtotals.size() > base) {
 				int k = (int) (base + Math.floor(mtotals.size() * ratio));
 				double kval;
 				queue.clear();
@@ -439,7 +443,6 @@ public class ChartCell {
 				for (Map.Entry<Short, Double> score : mtotals.entrySet()) {
 					if (score.getValue() >= kval) { masks.add(score.getKey()); }
 				}
-				
 			} else {
 				masks.addAll(mtotals.keySet());
 			}
@@ -495,8 +498,8 @@ public class ChartCell {
 		
 		
 		/*******************************************/
-		/*                                         */
-		/*                                         */
+		/**            Hello, Master!             **/
+		/**                                       **/
 		/*******************************************/
 		
 		protected void setStatus(boolean status) {
@@ -696,12 +699,15 @@ public class ChartCell {
 					for (Short tag : masks) {
 						sb.append(", " + tag);
 					}
-					sb.append("]\nScores [size=" + mtotals.size());
-					for (Map.Entry<Short, Double> score : mtotals.entrySet()) {
-						name = (String) numberer.object(score.getKey());
-						sb.append(", id=" + score.getKey() + ", " + name + "=" + score.getValue() );
+					sb.append("]");
+					if (mtotals != null) {
+						sb.append("\nScores [size=" + mtotals.size());
+						for (Map.Entry<Short, Double> score : mtotals.entrySet()) {
+							name = (String) numberer.object(score.getKey());
+							sb.append(", id=" + score.getKey() + ", " + name + "=" + score.getValue() );
+						}
+						sb.append("]\n");
 					}
-					sb.append("]\n");
 				}
 				
 				return sb.toString();

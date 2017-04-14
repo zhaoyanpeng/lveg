@@ -61,7 +61,7 @@ public class LearnerConfig extends Recorder {
 	public static int tgBase = 3;
 	public static double tgRatio = 0.3;
 	public static double tgProb = 1e-10;
-	public static boolean tgMask = true;
+	public static boolean iomask = false;
 	
 	public static short dim = 2;
 	public static short ncomponent = 2;
@@ -263,8 +263,8 @@ public class LearnerConfig extends Recorder {
 		public double tgratio = 0.3;
 		@Option(name = "-tgprob", usage = "the tag is pruned if its posterior probability is below this bound (default: 1e-10)")
 		public double tgprob = 1e-10;
-		@Option(name = "-tgmask", usage = "which type of mask we would like to use, false: IO mask, true: posterior mask (default: false)")
-		public boolean tgmask = false;
+		@Option(name = "-iomask", usage = "which type of mask we would like to use, false: IO mask, true: posterior mask (default: false)")
+		public boolean iomask = false;
 		/* training-configurations section ends */
 		
 		/* evaluation section begins */
@@ -432,6 +432,7 @@ public class LearnerConfig extends Recorder {
 		tgBase = opts.tgbase;
 		tgRatio = opts.tgratio;
 		tgProb = Math.log(opts.tgprob); // in logarithmic form
+		iomask = opts.iomask;
 		Params.config(opts);
 		
 		GenericKeyedObjectPoolConfig config = new GenericKeyedObjectPoolConfig();

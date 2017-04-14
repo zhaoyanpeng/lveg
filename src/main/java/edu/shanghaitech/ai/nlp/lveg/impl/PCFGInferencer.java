@@ -24,18 +24,20 @@ public class PCFGInferencer extends Inferencer {
 	}
 
 
-	public static void insideScore(Chart chart, List<State> sentence, int nword, boolean mask, int base, double ratio) {
+	public static void insideScore(Chart chart, List<State> sentence, int nword, boolean iomask, int base, double ratio) {
+		boolean retainall;
 		int x0, y0, x1, y1, c0, c1, c2;
 		double ruleScore, linScore, rinScore, pinScore;
 		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBRuleMap();
 		for (int i = 0; i < nword; i++) {
 			int iCell = Chart.idx(i, nword);
+			retainall = iCell == 0;
 			List<GrammarRule> rules = lexicon.getRulesWithWord(sentence.get(i));
 			for (GrammarRule rule : rules) {
 				chart.addInsideScoreMask(rule.lhs, iCell, rule.weight.getProb(), (short) 0);
 			}
-			insideScoreForUnaryRule(chart, iCell, mask);
-			if (mask) { chart.pruneInsideScoreMask(iCell, (short) -1, base, ratio); }
+			insideScoreForUnaryRule(chart, iCell, iomask);
+			if (iomask) { chart.pruneInsideScoreMask(iCell, (short) -1, base, ratio, retainall); }
 		}
 		
 		for (int ilayer = 1; ilayer < nword; ilayer++) {
@@ -43,6 +45,7 @@ public class PCFGInferencer extends Inferencer {
 				x0 = left;
 				y1 = left + ilayer;
 				c2 = Chart.idx(left, nword - ilayer);
+				retainall = c2 == 0;
 				// binary grammar rules
 				for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
 					BinaryGrammarRule rule = (BinaryGrammarRule) rmap.getValue();
@@ -62,14 +65,15 @@ public class PCFGInferencer extends Inferencer {
 						}
 					}
 				}
-				insideScoreForUnaryRule(chart, c2, mask);
-				if (mask) { chart.pruneInsideScoreMask(c2, (short) -1, base, ratio); }
+				insideScoreForUnaryRule(chart, c2, iomask);
+				if (iomask) { chart.pruneInsideScoreMask(c2, (short) -1, base, ratio, retainall); }
 			}
 		}
 	}
 	
 	
-	public static void outsideScore(Chart chart, List<State> sentence, int nword, boolean mask, int base, double ratio) {
+	public static void outsideScore(Chart chart, List<State> sentence, int nword, boolean iomask, int base, double ratio) {
+		boolean retainall;
 		int x0, y0, x1, y1, c0, c1, c2;
 		double poutScore, linScore, rinScore, loutScore, routScore, ruleScore;
 		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBRuleMap();
@@ -79,6 +83,7 @@ public class PCFGInferencer extends Inferencer {
 				x0 = left;
 				x1 = left + ilayer + 1; 
 				c2 = Chart.idx(left, nword - ilayer);
+				retainall = c2 == 0;
 				for (int right = left + ilayer + 1; right < nword; right++) {
 					y0 = right;
 					y1 = right;
@@ -120,15 +125,15 @@ public class PCFGInferencer extends Inferencer {
 						}
 					}
 				}
-				outsideScoreForUnaryRule(chart, c2, mask);
-				if (mask) { chart.pruneOutsideScoreMask(c2, (short) -1, base, ratio); }	
+				outsideScoreForUnaryRule(chart, c2, iomask);
+				if (iomask) { chart.pruneOutsideScoreMask(c2, (short) -1, base, ratio, retainall); }	
 			}
 		}
 	}
 	
 	
 	
-	private static void insideScoreForUnaryRule(Chart chart, int idx, boolean mask) {
+	private static void insideScoreForUnaryRule(Chart chart, int idx, boolean iomask) {
 		Set<Short> set;
 		short level = 0;
 		List<GrammarRule> rules;
@@ -164,7 +169,7 @@ public class PCFGInferencer extends Inferencer {
 	}
 	
 	
-	private static void outsideScoreForUnaryRule(Chart chart, int idx, boolean mask) {
+	private static void outsideScoreForUnaryRule(Chart chart, int idx, boolean iomask) {
 		Set<Short> set;
 		short level = 0;
 		List<GrammarRule> rules;
@@ -201,22 +206,24 @@ public class PCFGInferencer extends Inferencer {
 	
 	public static void createPosteriorMask(int nword, Chart chart, double scoreS, double threshold) {
 		int idx;
+		boolean retainall;
 		Set<Short> iset, oset;
 		double oscore, iscore, posterior;
 		
 		for (int ilayer = nword - 1; ilayer >= 0; ilayer--) {
 			for (int left = 0; left < nword - ilayer; left++) {
 				idx = Chart.idx(left, nword - ilayer);
+				retainall = idx == 0;
 				iset = chart.keySetMask(idx, true);
 				oset = chart.keySetMask(idx, false);
-				iset.retainAll(oset);
 				for (Short ikey : iset) {
-					if ((iscore = chart.getInsideScoreMask(ikey, idx)) != Double.NEGATIVE_INFINITY || 
-							(oscore = chart.getOutsideScoreMask(ikey, idx)) != Double.NEGATIVE_INFINITY) {
+					if (!oset.contains(ikey)) { continue; } // intersection
+					if ((iscore = chart.getInsideScoreMask(ikey, idx)) == Double.NEGATIVE_INFINITY || 
+							(oscore = chart.getOutsideScoreMask(ikey, idx)) == Double.NEGATIVE_INFINITY) {
 						continue;
 					}
 					posterior = iscore + oscore - scoreS; // in logarithmic form
-					if (posterior > threshold) {
+					if (retainall || posterior > threshold) {
 						chart.addPosteriorMask(ikey, idx);
 					}		
 				}

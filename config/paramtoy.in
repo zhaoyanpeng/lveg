@@ -67,6 +67,7 @@
 -tgbase, 3,
 -tgratio, 0.2,
 -tgprob, 1e-8,
+-iomask, true,
 
 -eratio, -0.1, 
 -eonlylen, -1,
@@ -88,7 +89,7 @@
 -ef1ontrain, false,
 -ef1imwrite, false,
 
--runtag, toy_0412_1_2_ek3_simple_test7,
+-runtag, toy_0412_1_2_ek3_simple_test8,
 -logroot, log/,
 -logtype, 0,
 -verbose, false,

@@ -101,18 +101,18 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 		}
 		if (parallel) {
 			cpool.reset();
-			Inferencer.insideScore(chart, sentence, nword, iosprune, cpool, false);
+			Inferencer.insideScore(chart, sentence, nword, iosprune, cpool);
 			Inferencer.setRootOutsideScore(chart);
 			cpool.reset();
-			Inferencer.outsideScore(chart, sentence, nword, iosprune, cpool, false);
+			Inferencer.outsideScore(chart, sentence, nword, iosprune, cpool);
 		} else {
 //			logger.trace("\nInside score...\n"); // DEBUG
-			Inferencer.insideScore(chart, sentence, nword, iosprune, false);
+			Inferencer.insideScore(chart, sentence, nword, iosprune, false, false);
 //			FunUtil.debugChart(chart.getChart(true), (short) -1, tree.getYield().size()); // DEBUG
 
 			Inferencer.setRootOutsideScore(chart);
 //			logger.trace("\nOutside score...\n"); // DEBUG
-			Inferencer.outsideScore(chart, sentence, nword, iosprune, false);
+			Inferencer.outsideScore(chart, sentence, nword, iosprune, false, false);
 //			FunUtil.debugChart(chart.getChart(false), (short) -1, tree.getYield().size()); // DEBUG
 		}
 		double scoreS = Double.NEGATIVE_INFINITY;
