@@ -58,7 +58,7 @@
 -maxvar, 5,
 -nvratio, 0.8,
 -ncomponent, 1,
--dim, 2,
+-dim, 4,
 -useref, false,
 -resetw, false,
 -mwfactor, 1.0,
@@ -80,7 +80,7 @@
 -enbatchdev, 3,
 
 -pf1, true,
--ef1tag, ,
+-ef1tag, stage1,
 -ef1pthhd, 1e-6,
 -inGrammar, lveg_9.gr,
 -loadGrammar, false,
@@ -89,7 +89,7 @@
 -ef1ontrain, false,
 -ef1imwrite, false,
 
--runtag, 0412_reproduce_stage7,
+-runtag, test_gr,
 -logroot, log/,
 -logtype, 0,
 -verbose, false,

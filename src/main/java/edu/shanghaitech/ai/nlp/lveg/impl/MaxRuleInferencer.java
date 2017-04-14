@@ -41,6 +41,7 @@ public class MaxRuleInferencer extends Inferencer {
 	 * @param scoreS sentence score in logarithmic form
 	 */
 	protected void evalMaxRuleCount(Chart chart, List<State> sentence, int nword, double scoreS) {
+		List<GrammarRule> rules;
 		int x0, y0, x1, y1, c0, c1, c2;
 		double lcount, rcount, maxcnt, newcnt;
 		GaussianMixture linScore, rinScore, outScore, cinScore;
@@ -49,7 +50,7 @@ public class MaxRuleInferencer extends Inferencer {
 		for (int i = 0; i < nword; i++) {
 			State word = sentence.get(i);
 			int iCell = Chart.idx(i, nword);
-			List<GrammarRule> rules = lexicon.getRulesWithWord(word);
+			rules = lexicon.getRulesWithWord(word);
 			for (GrammarRule rule : rules) {
 				if (chart.containsKey(rule.lhs, iCell, false)) {
 					cinScore = lexicon.score(word, rule.lhs);
@@ -70,36 +71,45 @@ public class MaxRuleInferencer extends Inferencer {
 				y1 = left + ilayer;
 				c2 = Chart.idx(left, nword - ilayer);
 				// binary grammar rules
-				for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
-					BinaryGrammarRule rule = (BinaryGrammarRule) rmap.getValue();
-					if ((outScore = chart.getOutsideScore(rule.lhs, c2)) == null) { continue; }
-					for (int right = left; right < left + ilayer; right++) {
-						y0 = right;
-						x1 = right + 1;
-						c0 = Chart.idx(x0, nword - (y0 - x0));
-						c1 = Chart.idx(x1, nword - (y1 - x1));
-						if ((linScore = chart.getInsideScore(rule.lchild, c0)) == null || 
-								(rinScore = chart.getInsideScore(rule.rchild, c1)) == null) {
-							continue;
-						}
-						if ((lcount = chart.getMaxRuleCount(rule.lchild, c0)) == Double.NEGATIVE_INFINITY || 
-								(rcount = chart.getMaxRuleCount(rule.rchild, c1)) == Double.NEGATIVE_INFINITY) {
-							continue;
-						}
-						newcnt = lcount + rcount;
-						if ((maxcnt = chart.getMaxRuleCount(rule.lhs, c2)) > newcnt) { continue; }
-						Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>(3, 1);
-						scores.put(GrammarRule.Unit.P, outScore);
-						scores.put(GrammarRule.Unit.LC, linScore);
-						scores.put(GrammarRule.Unit.RC, rinScore);
-						newcnt = newcnt + rule.weight.mulAndMarginalize(scores) - scoreS;
-						if (newcnt > maxcnt) {
-							// the negative, higher 2 bytes (lchild, sign bit exclusive) <- lower 2 bytes (rchild)
-							int sons = (1 << 31) + (rule.lchild << 16) + rule.rchild;
-							chart.addMaxRuleCount(rule.lhs, c2, newcnt, sons, (short) right, (short) 0);
+//				for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
+//					BinaryGrammarRule rule = (BinaryGrammarRule) rmap.getValue();
+//					if ((outScore = chart.getOutsideScore(rule.lhs, c2)) == null) { continue; }
+				
+				for (short itag = 0; itag < grammar.ntag; itag++) {
+					if ((outScore = chart.getOutsideScore(itag, c2)) == null) { continue; }
+					rules = grammar.getBRuleWithP(itag);
+					for (GrammarRule arule : rules) {
+						BinaryGrammarRule rule = (BinaryGrammarRule) arule;
+						for (int right = left; right < left + ilayer; right++) {
+							y0 = right;
+							x1 = right + 1;
+							c0 = Chart.idx(x0, nword - (y0 - x0));
+							c1 = Chart.idx(x1, nword - (y1 - x1));
+							if ((linScore = chart.getInsideScore(rule.lchild, c0)) == null || 
+									(rinScore = chart.getInsideScore(rule.rchild, c1)) == null) {
+								continue;
+							}
+							if ((lcount = chart.getMaxRuleCount(rule.lchild, c0)) == Double.NEGATIVE_INFINITY || 
+									(rcount = chart.getMaxRuleCount(rule.rchild, c1)) == Double.NEGATIVE_INFINITY) {
+								continue;
+							}
+							newcnt = lcount + rcount;
+							if ((maxcnt = chart.getMaxRuleCount(rule.lhs, c2)) > newcnt) { continue; }
+							Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>(3, 1);
+							scores.put(GrammarRule.Unit.P, outScore);
+							scores.put(GrammarRule.Unit.LC, linScore);
+							scores.put(GrammarRule.Unit.RC, rinScore);
+							newcnt = newcnt + rule.weight.mulAndMarginalize(scores) - scoreS;
+							if (newcnt > maxcnt) {
+								// the negative, higher 2 bytes (lchild, sign bit exclusive) <- lower 2 bytes (rchild)
+								int sons = (1 << 31) + (rule.lchild << 16) + rule.rchild;
+								chart.addMaxRuleCount(rule.lhs, c2, newcnt, sons, (short) right, (short) 0);
+							}
 						}
 					}
 				}
+				
+//				}
 				// unary rules
 				maxRuleCountForUnaryRule(chart, c2, scoreS);
 			}

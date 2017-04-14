@@ -134,13 +134,14 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	 * @param nword # of words in the sentence
 	 */
 	public static void insideScore(Chart chart, List<State> sentence, int nword, boolean prune, boolean usemask, boolean iomask) {
+		List<GrammarRule> rules;
 		int x0, y0, x1, y1, c0, c1, c2;
 		GaussianMixture pinScore, linScore, rinScore, ruleScore;
-		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBRuleMap();
+//		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBRuleMap();
 		
 		for (int i = 0; i < nword; i++) {
 			int iCell = Chart.idx(i, nword);
-			List<GrammarRule> rules = lexicon.getRulesWithWord(sentence.get(i));
+			rules = lexicon.getRulesWithWord(sentence.get(i));
 			for (GrammarRule rule : rules) {
 				if (usemask && iomask) {
 					if (!chart.isAllowed(rule.lhs, iCell, true)) { continue; } 
@@ -163,31 +164,43 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				y1 = left + ilayer;
 				c2 = Chart.idx(left, nword - ilayer);
 				// binary grammar rules
-				for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
-					BinaryGrammarRule rule = (BinaryGrammarRule) rmap.getValue();
+//				for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
+//					BinaryGrammarRule rule = (BinaryGrammarRule) rmap.getValue();
+//					if (usemask && iomask) {
+//						if (!chart.isAllowed(rule.lhs, c2, true)) { continue; } 
+//					} else if (usemask) {
+//						if (!chart.isPosteriorAllowed(rule.lhs, c2)) { continue; }
+//					}
+					
+				for (short itag = 0; itag < grammar.ntag; itag++) {
 					if (usemask && iomask) {
-						if (!chart.isAllowed(rule.lhs, c2, true)) { continue; } 
+						if (!chart.isAllowed(itag, c2, true)) { continue; } 
 					} else if (usemask) {
-						if (!chart.isPosteriorAllowed(rule.lhs, c2)) { continue; }
+						if (!chart.isPosteriorAllowed(itag, c2)) { continue; }
 					}
-					
-					for (int right = left; right < left + ilayer; right++) {
-						y0 = right;
-						x1 = right + 1;
-						c0 = Chart.idx(x0, nword - (y0 - x0));
-						c1 = Chart.idx(x1, nword - (y1 - x1));
-					
-						if (chart.containsKey(rule.lchild, c0, true) && chart.containsKey(rule.rchild, c1, true)) {
-							ruleScore = rule.getWeight();
-							linScore = chart.getInsideScore(rule.lchild, c0);
-							rinScore = chart.getInsideScore(rule.rchild, c1);
-							
-							pinScore = ruleScore.mulForInsideOutside(linScore, GrammarRule.Unit.LC, true);
-							pinScore = pinScore.mulForInsideOutside(rinScore, GrammarRule.Unit.RC, false);
-							chart.addInsideScore(rule.lhs, c2, pinScore, (short) 0);
+					rules = grammar.getBRuleWithP(itag);
+					for (GrammarRule arule : rules) {
+						BinaryGrammarRule rule = (BinaryGrammarRule) arule;
+						for (int right = left; right < left + ilayer; right++) {
+							y0 = right;
+							x1 = right + 1;
+							c0 = Chart.idx(x0, nword - (y0 - x0));
+							c1 = Chart.idx(x1, nword - (y1 - x1));
+						
+							if (chart.containsKey(rule.lchild, c0, true) && chart.containsKey(rule.rchild, c1, true)) {
+								ruleScore = rule.getWeight();
+								linScore = chart.getInsideScore(rule.lchild, c0);
+								rinScore = chart.getInsideScore(rule.rchild, c1);
+								
+								pinScore = ruleScore.mulForInsideOutside(linScore, GrammarRule.Unit.LC, true);
+								pinScore = pinScore.mulForInsideOutside(rinScore, GrammarRule.Unit.RC, false);
+								chart.addInsideScore(rule.lhs, c2, pinScore, (short) 0);
+							}
 						}
 					}
 				}
+				
+//				}
 				
 				if (prune) { chart.pruneInsideScore(c2, (short) 0); }
 				insideScoreForUnaryRule(chart, c2, prune, usemask, iomask);
@@ -205,9 +218,10 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	 * @param nword # of words in the sentence
 	 */
 	public static void outsideScore(Chart chart, List<State> sentence, int nword, boolean prune, boolean usemask, boolean iomask) {
+		List<GrammarRule> rules;
 		int x0, y0, x1, y1, c0, c1, c2;
 		GaussianMixture poutScore, linScore, rinScore, loutScore, routScore, ruleScore;
-		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBRuleMap();
+//		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBRuleMap();
 		
 		for (int ilayer = nword - 1; ilayer >= 0; ilayer--) {
 			for (int left = 0; left < nword - ilayer; left++) {
@@ -215,60 +229,83 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				x1 = left + ilayer + 1; 
 				c2 = Chart.idx(left, nword - ilayer);
 				// binary grammar rules
-				for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
-					BinaryGrammarRule rule = (BinaryGrammarRule) rmap.getValue();
+//				for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
+//					BinaryGrammarRule rule = (BinaryGrammarRule) rmap.getValue();
+//					if (usemask && iomask) {
+//						if (!chart.isAllowed(rule.lchild, c2, false)) { continue; } 
+//					} else if (usemask) {
+//						if (!chart.isPosteriorAllowed(rule.lchild, c2)) { continue; }
+//					}
+				
+				for (short itag = 0; itag < grammar.ntag; itag++) {
 					if (usemask && iomask) {
-						if (!chart.isAllowed(rule.lchild, c2, false)) { continue; } 
+						if (!chart.isAllowed(itag, c2, false)) { continue; } 
 					} else if (usemask) {
-						if (!chart.isPosteriorAllowed(rule.lchild, c2)) { continue; }
+						if (!chart.isPosteriorAllowed(itag, c2)) { continue; }
 					}
-					
-					for (int right = left + ilayer + 1; right < nword; right++) {
-						y0 = right;
-						y1 = right;
-						c0 = Chart.idx(x0, nword - (y0 - x0));
-						c1 = Chart.idx(x1, nword - (y1 - x1));
-					
-						if (chart.containsKey(rule.lhs, c0, false) && chart.containsKey(rule.rchild, c1, true)) {
-							ruleScore = rule.getWeight();
-							poutScore = chart.getOutsideScore(rule.lhs, c0);
-							rinScore = chart.getInsideScore(rule.rchild, c1);
-							
-							loutScore = ruleScore.mulForInsideOutside(poutScore, GrammarRule.Unit.P, true);
-							loutScore = loutScore.mulForInsideOutside(rinScore, GrammarRule.Unit.RC, false);
-							chart.addOutsideScore(rule.lchild, c2, loutScore, (short) 0);
+					rules = grammar.getBRuleWithLC(itag);
+					for (GrammarRule arule : rules) {
+						BinaryGrammarRule rule = (BinaryGrammarRule) arule;
+						for (int right = left + ilayer + 1; right < nword; right++) {
+							y0 = right;
+							y1 = right;
+							c0 = Chart.idx(x0, nword - (y0 - x0));
+							c1 = Chart.idx(x1, nword - (y1 - x1));
+						
+							if (chart.containsKey(rule.lhs, c0, false) && chart.containsKey(rule.rchild, c1, true)) {
+								ruleScore = rule.getWeight();
+								poutScore = chart.getOutsideScore(rule.lhs, c0);
+								rinScore = chart.getInsideScore(rule.rchild, c1);
+								
+								loutScore = ruleScore.mulForInsideOutside(poutScore, GrammarRule.Unit.P, true);
+								loutScore = loutScore.mulForInsideOutside(rinScore, GrammarRule.Unit.RC, false);
+								chart.addOutsideScore(rule.lchild, c2, loutScore, (short) 0);
+							}
 						}
 					}
 				}
 				
+//				}
+				
 				y0 = left + ilayer;
 				y1 = left - 1;
 				// binary grammar rules
-				for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
-					BinaryGrammarRule rule = (BinaryGrammarRule) rmap.getValue();
+//				for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
+//					BinaryGrammarRule rule = (BinaryGrammarRule) rmap.getValue();
+//					if (usemask && iomask) {
+//						if (!chart.isAllowed(rule.rchild, c2, false)) { continue; } 
+//					} else if (usemask) {
+//						if (!chart.isPosteriorAllowed(rule.rchild, c2)) { continue; }
+//					}
+				for (short itag = 0; itag < grammar.ntag; itag++) {
 					if (usemask && iomask) {
-						if (!chart.isAllowed(rule.rchild, c2, false)) { continue; } 
+						if (!chart.isAllowed(itag, c2, false)) { continue; } 
 					} else if (usemask) {
-						if (!chart.isPosteriorAllowed(rule.rchild, c2)) { continue; }
-					}
-					
-					for (int right = 0; right < left; right++) {
-						x0 = right; 
-						x1 = right;
-						c0 = Chart.idx(x0, nword - (y0 - x0));
-						c1 = Chart.idx(x1, nword - (y1 - x1));
-					
-						if (chart.containsKey(rule.lhs, c0, false) && chart.containsKey(rule.lchild, c1, true)) {
-							ruleScore = rule.getWeight();
-							poutScore = chart.getOutsideScore(rule.lhs, c0);
-							linScore = chart.getInsideScore(rule.lchild, c1);
-							
-							routScore = ruleScore.mulForInsideOutside(poutScore, GrammarRule.Unit.P, true);
-							routScore = routScore.mulForInsideOutside(linScore, GrammarRule.Unit.LC, false);
-							chart.addOutsideScore(rule.rchild, c2, routScore, (short) 0);
+						if (!chart.isPosteriorAllowed(itag, c2)) { continue; }
+					}					
+					rules = grammar.getBRuleWithRC(itag);
+					for (GrammarRule arule : rules) {
+						BinaryGrammarRule rule = (BinaryGrammarRule) arule;
+						for (int right = 0; right < left; right++) {
+							x0 = right; 
+							x1 = right;
+							c0 = Chart.idx(x0, nword - (y0 - x0));
+							c1 = Chart.idx(x1, nword - (y1 - x1));
+						
+							if (chart.containsKey(rule.lhs, c0, false) && chart.containsKey(rule.lchild, c1, true)) {
+								ruleScore = rule.getWeight();
+								poutScore = chart.getOutsideScore(rule.lhs, c0);
+								linScore = chart.getInsideScore(rule.lchild, c1);
+								
+								routScore = ruleScore.mulForInsideOutside(poutScore, GrammarRule.Unit.P, true);
+								routScore = routScore.mulForInsideOutside(linScore, GrammarRule.Unit.LC, false);
+								chart.addOutsideScore(rule.rchild, c2, routScore, (short) 0);
+							}
 						}
 					}
 				}
+				
+//				}
 				
 				if (prune) { chart.pruneOutsideScore(c2, (short) 0); }
 				outsideScoreForUnaryRule(chart, c2, prune, usemask, iomask);
