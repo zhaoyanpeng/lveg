@@ -267,10 +267,12 @@ public class ChartCell {
 		}
 		
 		public void pruneOutsideScoreMask(int idx, short level, int base, double ratio) {
-			if (level < 0) {
-				omasks.get(idx).pruneScoreMask(queue, base, ratio);
-			} else {
-				omasks.get(idx).pruneScoreMask(level, queue, base, ratio);
+			synchronized (queue) {
+				if (level < 0) {
+					omasks.get(idx).pruneScoreMask(queue, base, ratio);
+				} else {
+					omasks.get(idx).pruneScoreMask(level, queue, base, ratio);
+				}
 			}
 		}
 		
@@ -283,10 +285,12 @@ public class ChartCell {
 		}
 		
 		public void pruneInsideScoreMask(int idx, short level, int base, double ratio) {
-			if (level < 0) {
-				imasks.get(idx).pruneScoreMask(queue, base, ratio);
-			} else {
-				imasks.get(idx).pruneScoreMask(level, queue, base, ratio);
+			synchronized (queue) {
+				if (level < 0) {
+					imasks.get(idx).pruneScoreMask(queue, base, ratio);
+				} else {
+					imasks.get(idx).pruneScoreMask(level, queue, base, ratio);
+				}
 			}
 		}
 		
@@ -300,6 +304,10 @@ public class ChartCell {
 		
 		public boolean isAllowed(short key, int idx, short level) {
 			return tmasks.get(idx).isAllowed(key, level);
+		}
+		
+		public void addPosteriorMask(short key, int idx) {
+			tmasks.get(idx).addPosteriorMask(key);
 		}
 		
 		public void addMask(short key, int idx, short level) {
@@ -435,6 +443,10 @@ public class ChartCell {
 		
 		protected void pruneScoreMask(short level, PriorityQueue<Double> queue, int base, double ratio) {
 			// TODO
+		}
+		
+		protected void addPosteriorMask(short key) {
+			masks.add(key);
 		}
 		
 		protected void addMask(short key, short level) {

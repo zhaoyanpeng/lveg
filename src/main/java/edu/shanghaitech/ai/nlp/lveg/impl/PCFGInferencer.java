@@ -201,33 +201,28 @@ public class PCFGInferencer extends Inferencer {
 	
 	public static void makeMask(int nword, Chart chart, double scoreS, double threshold) {
 		int idx;
-		short level;
-		Set<Short> set;
-		double oscore, iscore, count;
+		Set<Short> iset, oset;
+		double oscore, iscore, posterior;
 		
 		for (int ilayer = nword - 1; ilayer >= 0; ilayer--) {
 			for (int left = 0; left < nword - ilayer; left++) {
-				level = 0;
 				idx = Chart.idx(left, nword - ilayer);
 				
+				iset = chart.keySetMask(idx, true);
+				oset = chart.keySetMask(idx, false);
+				if (iset.size() == 0 || oset.size() == 0) { continue; }
 				
-				
-				while (level < (LENGTH_UCHAIN + 1) && (set = chart.keySetMask(idx, false, level)) != null) {
-					for (Short idTag : set) {
-						oscore = chart.getOutsideScoreMask(idTag, idx, level);
-						iscore = chart.getInsideScoreMask(idTag, idx, (short) (LENGTH_UCHAIN - level));
-						if (oscore != Double.NEGATIVE_INFINITY && iscore != Double.NEGATIVE_INFINITY) {
-							count = iscore + oscore - scoreS; // in logarithmic form
-							if (count > threshold) {
-								chart.addMask(idTag, idx, level); // top-down from perspective of outside scores
-							}
-						}						
-					}
-					level++;
+				for (Short ikey : iset) {
+					if (!oset.contains(ikey)) { continue; }
+					iscore = chart.getInsideScoreMask(ikey, idx);
+					oscore = chart.getOutsideScoreMask(ikey, idx);
+					if (oscore != Double.NEGATIVE_INFINITY && iscore != Double.NEGATIVE_INFINITY) {
+						posterior = iscore + oscore - scoreS; // in logarithmic form
+						if (posterior > threshold) {
+							chart.addPosteriorMask(ikey, idx);
+						}
+					}						
 				}
-				
-				
-				
 			}
 		}
 	}
