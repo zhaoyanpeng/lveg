@@ -119,7 +119,7 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 			PCFGInferencer.insideScore(chart, sentence, nword, LVeGTrainer.iomask, LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
 //			FunUtil.debugChart(chart.getChartMask(true), (short) -1, tree.getYield().size(), Inferencer.grammar.numberer); // DEBUG
 			
-			logger.trace("\nOutside score masks...\n"); // DEBUG
+//			logger.trace("\nOutside score masks...\n"); // DEBUG
 			PCFGInferencer.setRootOutsideScore(chart);
 			PCFGInferencer.outsideScore(chart, sentence, nword, LVeGTrainer.iomask,  LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
 //			FunUtil.debugChart(chart.getChartMask(false), (short) -1, tree.getYield().size(), Inferencer.grammar.numberer); // DEBUG
