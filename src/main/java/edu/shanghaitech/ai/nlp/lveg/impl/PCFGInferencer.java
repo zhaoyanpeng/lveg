@@ -199,7 +199,7 @@ public class PCFGInferencer extends Inferencer {
 	}
 	
 	
-	public static void makeMask(int nword, Chart chart, double scoreS, double threshold) {
+	public static void createPosteriorMask(int nword, Chart chart, double scoreS, double threshold) {
 		int idx;
 		Set<Short> iset, oset;
 		double oscore, iscore, posterior;
@@ -207,21 +207,18 @@ public class PCFGInferencer extends Inferencer {
 		for (int ilayer = nword - 1; ilayer >= 0; ilayer--) {
 			for (int left = 0; left < nword - ilayer; left++) {
 				idx = Chart.idx(left, nword - ilayer);
-				
 				iset = chart.keySetMask(idx, true);
 				oset = chart.keySetMask(idx, false);
-				if (iset.size() == 0 || oset.size() == 0) { continue; }
-				
+				iset.retainAll(oset);
 				for (Short ikey : iset) {
-					if (!oset.contains(ikey)) { continue; }
-					iscore = chart.getInsideScoreMask(ikey, idx);
-					oscore = chart.getOutsideScoreMask(ikey, idx);
-					if (oscore != Double.NEGATIVE_INFINITY && iscore != Double.NEGATIVE_INFINITY) {
-						posterior = iscore + oscore - scoreS; // in logarithmic form
-						if (posterior > threshold) {
-							chart.addPosteriorMask(ikey, idx);
-						}
-					}						
+					if ((iscore = chart.getInsideScoreMask(ikey, idx)) != Double.NEGATIVE_INFINITY || 
+							(oscore = chart.getOutsideScoreMask(ikey, idx)) != Double.NEGATIVE_INFINITY) {
+						continue;
+					}
+					posterior = iscore + oscore - scoreS; // in logarithmic form
+					if (posterior > threshold) {
+						chart.addPosteriorMask(ikey, idx);
+					}		
 				}
 			}
 		}

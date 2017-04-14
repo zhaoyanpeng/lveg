@@ -59,13 +59,12 @@ public class Valuator<I, O> extends Parser<I, O> {
 	 * sentence, t is the parse tree.
 	 * 
 	 * @param tree the parse tree
-	 * @return
+	 * @return  in logarithm
 	 */
 	public double probability(Tree<State> tree) {
 		double jointdist = scoreTree(tree);
 		double partition = scoreSentence(tree);
-//		logger.trace("\n+++jointdist: " + jointdist + "\tpartition: " + partition + "\n"); // DEBUG
-		double ll = jointdist - partition; // in logarithm
+		double ll = jointdist - partition;
 		return ll;
 	}
 	
@@ -78,11 +77,12 @@ public class Valuator<I, O> extends Parser<I, O> {
 	 */
 	protected double scoreTree(Tree<State> tree) {
 		LVeGInferencer.insideScoreWithTree(tree);
-		GaussianMixture gm = tree.getLabel().getInsideScore();
-		double score = gm.eval(null, true);
-//		FunUtil.debugTree(tree, true, (short) -1, Inferencer.grammar.numberer); // DEBUG
-//		logger.trace("\n" + score + " " + Math.exp(score) + "\n");
-		return score;
+		double scoreT = Double.NEGATIVE_INFINITY;
+		GaussianMixture score = tree.getLabel().getInsideScore();
+		if (score != null) {
+			scoreT = score.eval(null, true);
+		}
+		return scoreT;
 	}
 	
 	
@@ -106,11 +106,12 @@ public class Valuator<I, O> extends Parser<I, O> {
 		} else {
 			Inferencer.insideScore(chart, sentence, nword, iosprune, false);
 		}
-		GaussianMixture gm = chart.getInsideScore((short) 0, Chart.idx(0, 1));
-		double score = gm.eval(null, true);
-//		FunUtil.debugChart(chart.getChart(true), (short) -1, nword); // DEBUG
-//		logger.trace("\n" + score + " " + Math.exp(score) + "\n");
-		return score;
+		double scoreS = Double.NEGATIVE_INFINITY;
+		GaussianMixture score = chart.getInsideScore((short) 0, Chart.idx(0, 1));
+		if (score != null) {
+			scoreS = score.eval(null, true);
+		}
+		return scoreS;
 	}
 
 }

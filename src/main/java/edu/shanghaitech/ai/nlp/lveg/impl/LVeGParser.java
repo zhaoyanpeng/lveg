@@ -51,10 +51,12 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 		scores.add(scoreT);
 		scores.add(scoreS);
 		scores.add((double) sample.getYield().size());
-		synchronized (inferencer) {
-			inferencer.evalRuleCountWithTree(sample, (short) 0);
-			inferencer.evalRuleCount(sample, chart, (short) 0, cntprune);
-			inferencer.evalGradients(scores);
+		if (Double.isFinite(scoreT) && Double.isFinite(scoreS)) {
+			synchronized (inferencer) {
+				inferencer.evalRuleCountWithTree(sample, (short) 0);
+				inferencer.evalRuleCount(sample, chart, (short) 0, cntprune);
+				inferencer.evalGradients(scores);
+			}
 		}
 		Meta<O> cache = new Meta(itask, scores);
 		synchronized (caches) {
@@ -71,35 +73,32 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 		return new LVeGParser<I, O>(this);
 	}
 	
-	
-	public double evalRuleCount(Tree<State> tree, short isample) {
+	public List<Double> evalRuleCounts(Tree<State> tree, short isample) {
+		double scoreT = doInsideOutsideWithTree(tree); 
+//		logger.trace("\nInside/outside scores with the tree...\n\n"); // DEBUG
+//		logger.trace(FunUtil.debugTree(tree, false, (short) 2, Inferencer.grammar.numberer, false) + "\n"); // DEBUG
+		
 		double scoreS = doInsideOutside(tree); 
 //		logger.trace("\nInside scores with the sentence...\n\n"); // DEBUG
 //		FunUtil.debugChart(chart.getChart(true), (short) -1, tree.getYield().size()); // DEBUG
 //		logger.trace("\nOutside scores with the sentence...\n\n"); // DEBUG
 //		FunUtil.debugChart(chart.getChart(false), (short) -1, tree.getYield().size()); // DEBUG
 		
-		inferencer.evalRuleCount(tree, chart, isample, cntprune);
-		
-//		logger.trace("\nCheck rule count with the sentence...\n"); // DEBUG
-//		FunUtil.debugCount(Inferencer.grammar, Inferencer.lexicon, tree, chart); // DEBUG
-//		logger.trace("\nEval count with the sentence over.\n"); // DEBUG
-		return scoreS;
-	}
-	
-	
-	public double evalRuleCountWithTree(Tree<State> tree, short isample) {
-		double scoreT = doInsideOutsideWithTree(tree); 
-//		logger.trace("\nInside/outside scores with the tree...\n\n"); // DEBUG
-//		logger.trace(FunUtil.debugTree(tree, false, (short) 2, Inferencer.grammar.numberer, false) + "\n"); // DEBUG
-
-		// compute the rule counts
-		inferencer.evalRuleCountWithTree(tree, isample);
-		
-//		logger.trace("\nCheck rule count with the tree...\n"); // DEBUG
-//		FunUtil.debugCount(Inferencer.grammar, Inferencer.lexicon, tree); // DEBUG
-//		logger.trace("\nEval count with the tree over.\n"); // DEBUG
-		return scoreT;
+		List<Double> scores = new ArrayList<Double>(3);
+		scores.add(scoreT);
+		scores.add(scoreS);
+		if (Double.isFinite(scoreT) && Double.isFinite(scoreS)) {
+			inferencer.evalRuleCountWithTree(tree, isample);
+//			logger.trace("\nCheck rule count with the tree...\n"); // DEBUG
+//			FunUtil.debugCount(Inferencer.grammar, Inferencer.lexicon, tree); // DEBUG
+//			logger.trace("\nEval count with the tree over.\n"); // DEBUG
+			
+			inferencer.evalRuleCount(tree, chart, isample, cntprune);
+//			logger.trace("\nCheck rule count with the sentence...\n"); // DEBUG
+//			FunUtil.debugCount(Inferencer.grammar, Inferencer.lexicon, tree, chart); // DEBUG
+//			logger.trace("\nEval count with the sentence over.\n"); // DEBUG
+		}
+		return scores;
 	}
 	
 	
@@ -117,12 +116,12 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 		}
 		if (usemask) {
 //			logger.trace("\nInside score masks...\n"); // DEBUG
-			PCFGInferencer.insideScore(chart, sentence, nword, true, LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
+			PCFGInferencer.insideScore(chart, sentence, nword, LVeGTrainer.tgMask, LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
 //			FunUtil.debugChart(chart.getChartMask(true), (short) -1, tree.getYield().size(), Inferencer.grammar.numberer); // DEBUG
 			
 //			logger.trace("\nOutside score masks...\n"); // DEBUG
 			PCFGInferencer.setRootOutsideScore(chart);
-			PCFGInferencer.outsideScore(chart, sentence, nword, true,  LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
+			PCFGInferencer.outsideScore(chart, sentence, nword, LVeGTrainer.tgMask,  LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
 //			FunUtil.debugChart(chart.getChartMask(false), (short) -1, tree.getYield().size(), Inferencer.grammar.numberer); // DEBUG
 			
 //			double scoreS = chart.getInsideScoreMask((short) 0, Chart.idx(0, 1));
@@ -144,13 +143,10 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 			Inferencer.outsideScore(chart, sentence, nword, iosprune, usemask);
 //			FunUtil.debugChart(chart.getChart(false), (short) -1, tree.getYield().size(), Inferencer.grammar.numberer); // DEBUG
 		}
-		
+		double scoreS = Double.NEGATIVE_INFINITY;
 		GaussianMixture score = chart.getInsideScore((short) 0, Chart.idx(0, 1));
-		double scoreS = score.eval(null, true);
-		
-		if (Double.isInfinite(scoreS) || Double.isNaN(scoreS)) {
-			System.err.println("Fatal Error: Sentence score is smaller than zero: " + scoreS);
-			return -0.0;
+		if (score != null) {
+			scoreS = score.eval(null, true);
 		}
 		return scoreS;
 	}
@@ -173,16 +169,13 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 //		FunUtil.debugTree(tree, false, (short) 2); // DEBUG
 		
 		// the parse tree score, which should contain only weights of the components
+		double scoreT = Double.NEGATIVE_INFINITY;
 		GaussianMixture score = tree.getLabel().getInsideScore();
-		double scoreT = score.eval(null, true);
-		
+		if (score != null) {
+			scoreT = score.eval(null, true);
+		}
 //		logger.trace("\nTree score: " + scoreT + "\n"); // DEBUG
 //		logger.trace("\nEval rule count with the tree...\n"); // DEBUG
-		
-		if (Double.isInfinite(scoreT) || Double.isNaN(scoreT)) {
-			System.err.println("Fatal Error: Tree score is smaller than zero: " + scoreT + "\n");
-			return -0.0;
-		}
 		return scoreT;
 	}
 	

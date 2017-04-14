@@ -83,6 +83,27 @@ public class Java {
 		if (matcher.find()) {
 			System.out.println(matcher.group(1) + "\t" + matcher.groupCount());
 		}
+		
+		
+		Set<Integer> set0 = new HashSet<Integer>();
+		Set<Integer> set1 = new HashSet<Integer>();
+		
+		set0.add(1);
+		set0.add(2);
+		set0.add(3);
+		
+		set1.add(2);
+		set1.add(3);
+		set1.add(4);
+		
+		set0.retainAll(set1);
+		System.out.println(set0);
+		
+		double m = 1.0 - Double.NEGATIVE_INFINITY;
+		System.out.println(m);
+		List<Double> x = new ArrayList<Double>();
+		x.add(m);
+		System.out.println("scores: " + FunUtil.double2str(x, 3, -1, false, true));
 	}
 	
 //	@Test

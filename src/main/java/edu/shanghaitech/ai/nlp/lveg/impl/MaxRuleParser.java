@@ -40,15 +40,8 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 	public synchronized Object call() throws Exception {
 		if (task == null) { return null; }
 		Tree<State> sample = (Tree<State>) task;
-		evalMaxRuleCount(sample);
-		Tree<String> tree = StateTreeList.stateTreeToStringTree(sample, Inferencer.grammar.numberer);
-		tree = Inferencer.extractBestMaxRuleParse(chart, tree.getYield());
-		/*
-		synchronized (inferencer) {
-			tree = inferencer.extractBestMaxRuleParse(chart, tree.getYield());
-		}
-		*/
-		Meta<O> cache = new Meta(itask, tree);
+		Tree<String> parsed = parse(sample);
+		Meta<O> cache = new Meta(itask, parsed);
 		synchronized (caches) {
 			caches.add(cache);
 			caches.notifyAll();
@@ -66,44 +59,41 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 	
 	public Tree<String> parse(Tree<State> tree) {
 //		logger.trace("eval max rule counts...");
-		evalMaxRuleCount(tree);
+		boolean valid = evalMaxRuleCount(tree);
 //		logger.trace("over\n");
-
-		Tree<String> strTree = StateTreeList.stateTreeToStringTree(tree, Inferencer.grammar.numberer);
-		
-//		logger.trace("extract max rule parse tree...");
-		Tree<String> parseTree = Inferencer.extractBestMaxRuleParse(chart, strTree.getYield());
-//		logger.trace("over\n");
-		
-		return parseTree;
+		Tree<String> parsed = null;
+		if (valid) {
+			Tree<String> strTree = StateTreeList.stateTreeToStringTree(tree, Inferencer.grammar.numberer);
+//			logger.trace("extract max rule parse tree...");
+			parsed = Inferencer.extractBestMaxRuleParse(chart, strTree.getYield());
+//			logger.trace("over\n");
+		} else {
+			parsed = new Tree<String>("ROOT");
+		}
+		return parsed;
 	}
 	
 	
-	protected void evalMaxRuleCount(Tree<State> tree) {
+	protected boolean evalMaxRuleCount(Tree<State> tree) {
 		List<State> sentence = tree.getYield();
 		int nword = sentence.size();
-		doInsideOutside(tree, sentence, nword);
+		double scoreS = doInsideOutside(tree, sentence, nword);
 //		logger.trace("\nInside scores with the sentence...\n\n"); // DEBUG
 //		FunUtil.debugChart(chart.getChart(true), (short) -1, tree.getYield().size()); // DEBUG
 //		logger.trace("\nOutside scores with the sentence...\n\n"); // DEBUG
 //		FunUtil.debugChart(chart.getChart(false), (short) -1, tree.getYield().size()); // DEBUG
 		
-		GaussianMixture score = chart.getInsideScore((short) 0, Chart.idx(0, 1));
-//		double scoreS = score == null ? Double.MAX_VALUE : score.eval(null, true);
-		double scoreS = score.eval(null, true); // score != null
-		
-//		logger.trace("\nSentence score in logarithm: " + scoreS + ", Margin: " + score.marginalize(false) + "\n"); // DEBUG
-//		logger.trace("\nEval rule count with the sentence...\n"); // DEBUG
-		
-		if (Double.isInfinite(scoreS) || Double.isNaN(scoreS)) {
-			System.err.println("Fatal Error: Sentence score is smaller than zero: " + scoreS);
-			return;
+		if (Double.isFinite(scoreS)) {
+//			logger.trace("\nSentence score in logarithm: " + scoreS + ", Margin: " + score.marginalize(false) + "\n"); // DEBUG
+//			logger.trace("\nEval rule count with the sentence...\n"); // DEBUG
+			inferencer.evalMaxRuleCount(chart, sentence, nword, scoreS);
+			return true;
 		}
-		inferencer.evalMaxRuleCount(chart, sentence, nword, scoreS);
+		return false;
 	}
 	
 	
-	private void doInsideOutside(Tree<State> tree, List<State> sentence, int nword) {
+	private double doInsideOutside(Tree<State> tree, List<State> sentence, int nword) {
 		if (chart != null) {
 			chart.clear(nword);
 		} else {
@@ -125,6 +115,12 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 			Inferencer.outsideScore(chart, sentence, nword, iosprune, false);
 //			FunUtil.debugChart(chart.getChart(false), (short) -1, tree.getYield().size()); // DEBUG
 		}
+		double scoreS = Double.NEGATIVE_INFINITY;
+		GaussianMixture score = chart.getInsideScore((short) 0, Chart.idx(0, 1));
+		if (score != null) {
+			scoreS = score.eval(null, true);
+		}
+		return scoreS;
 	}
 	
 }

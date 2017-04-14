@@ -214,10 +214,6 @@ public class ChartCell {
 			return inside ? ichart.get(idx).containsKey(key) : ochart.get(idx).containsKey(key);
 		}
 		
-		public boolean isAllowed(short key, int idx, boolean inside) {
-			return inside ? imasks.get(idx).isAllowed(key) : omasks.get(idx).isAllowed(key);
-		}
-		
 		public void addInsideScoreMask(short key, int idx, double score, short level) {
 			imasks.get(idx).addScoreMask(key, score, level);
 		}
@@ -302,7 +298,15 @@ public class ChartCell {
 			}
 		}
 		
-		public boolean isAllowed(short key, int idx, short level) {
+		public boolean isAllowed(short key, int idx, boolean inside) {
+			return inside ? imasks.get(idx).isAllowed(key) : omasks.get(idx).isAllowed(key);
+		}
+		
+		public boolean isPosteriorAllowed(short key, int idx) {
+			return tmasks.get(idx).isAllowed(key);
+		}
+		
+		public boolean isPosteriorAllowed(short key, int idx, short level) {
 			return tmasks.get(idx).isAllowed(key, level);
 		}
 		
@@ -310,8 +314,8 @@ public class ChartCell {
 			tmasks.get(idx).addPosteriorMask(key);
 		}
 		
-		public void addMask(short key, int idx, short level) {
-			tmasks.get(idx).addMask(key, level);
+		public void addPosteriorMask(short key, int idx, short level) {
+			tmasks.get(idx).addPosteriorMask(key, level);
 		}
 		
 		public void clear(int n) {
@@ -449,7 +453,7 @@ public class ChartCell {
 			masks.add(key);
 		}
 		
-		protected void addMask(short key, short level) {
+		protected void addPosteriorMask(short key, short level) {
 			Set<Short> keys = mtags.get(level);
 			if (keys == null) {
 				keys = new HashSet<Short>();

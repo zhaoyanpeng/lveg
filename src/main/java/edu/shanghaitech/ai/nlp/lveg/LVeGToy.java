@@ -185,7 +185,7 @@ public class LVeGToy extends LearnerConfig {
 		while (!trainer.isDone()) {
 			while (trainer.hasNext()) {
 				List<Double> score = (List<Double>) trainer.getNext();
-				if (score == null) {
+				if (Double.isInfinite(score.get(0)) || Double.isInfinite(score.get(1))) {
 					nfailed++;
 				} else {
 					logger.trace("\n~~~score: " + FunUtil.double2str(score, precision, -1, false, true) + "\n");
@@ -213,7 +213,7 @@ public class LVeGToy extends LearnerConfig {
 				trainer.execute(tree);
 				while (trainer.hasNext()) { // not really block the main thread
 					List<Double> score = (List<Double>) trainer.getNext();
-					if (score == null) {
+					if (Double.isInfinite(score.get(0)) || Double.isInfinite(score.get(1))) {
 						nfailed++;
 					} else {
 						logger.trace("\n~~~score: " + FunUtil.double2str(score, precision, -1, false, true) + "\n");
@@ -266,7 +266,7 @@ public class LVeGToy extends LearnerConfig {
 	
 	
 	public static void serialInBatch(Numberer numberer, double prell) throws Exception {
-		List<Double> scoresOfST = new ArrayList<Double>(3);
+		List<Double> scoresOfST = null;
 		List<Double> trllist = new ArrayList<Double>();
 		List<Double> dellist = new ArrayList<Double>();
 		int cnt = 0;
@@ -286,15 +286,17 @@ public class LVeGToy extends LearnerConfig {
 				logger.trace("---Sample " + isample + "...\t");
 				beginTime = System.currentTimeMillis();
 				
-				double scoreT = lvegParser.evalRuleCountWithTree(tree, (short) 0);
-				double scoreS = lvegParser.evalRuleCount(tree, (short) 0);
+				scoresOfST = lvegParser.evalRuleCounts(tree, (short) 0);
+				scoresOfST.add(length);
 				
 				endTime = System.currentTimeMillis();
 				logger.trace( + (endTime - beginTime) / 1000.0 + "\t");
 				
-				scoresOfST.add(scoreT);
-				scoresOfST.add(scoreS);
-				scoresOfST.add(length);
+				if (Double.isInfinite(scoresOfST.get(0)) || Double.isInfinite(scoresOfST.get(1))) {
+					logger.trace("scores: " + FunUtil.double2str(scoresOfST, precision, -1, false, true) + "\n");
+					logger.trace("--------- " + StateTreeList.stateTreeToStringTree(tree, numberer) + "\n");
+					continue;
+				}
 				
 				logger.trace("scores: " + FunUtil.double2str(scoresOfST, precision, -1, false, true) + "\teval gradients... ");
 				beginTime = System.currentTimeMillis();

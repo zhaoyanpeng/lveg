@@ -237,7 +237,7 @@ public class LVeGTrainer extends LearnerConfig {
 		while (!trainer.isDone()) {
 			while (trainer.hasNext()) {
 				List<Double> score = (List<Double>) trainer.getNext();
-				if (score == null) {
+				if (Double.isInfinite(score.get(0)) || Double.isInfinite(score.get(1))) {
 					nfailed++;
 				} else {
 					logger.trace("\n~~~score: " + FunUtil.double2str(score, precision, -1, false, true) + "\n");
@@ -304,7 +304,7 @@ public class LVeGTrainer extends LearnerConfig {
 					trainer.execute(tree);
 					while (trainer.hasNext()) {
 						List<Double> score = (List<Double>) trainer.getNext();
-						if (score == null) {
+						if (Double.isInfinite(score.get(0)) || Double.isInfinite(score.get(1))) {
 							nfailed++;
 						} else {
 							logger.trace("\n~~~score: " + FunUtil.double2str(score, precision, -1, false, true) + "\n");
@@ -346,8 +346,8 @@ public class LVeGTrainer extends LearnerConfig {
 		int iprebeg, ibegin = 0, ibatch = 0, length, isample = 0;
 		List<Double> trllist = new ArrayList<Double>();
 		List<Double> dellist = new ArrayList<Double>();
-		List<Double> scoresOfST = new ArrayList<Double>(3);
 		List<Tree<State>> batch = new ArrayList<Tree<State>>(opts.bsize + 5);
+		List<Double> scoresOfST = null;
 		do {
 			logger.trace("\n\n-------epoch " + iepoch + " begins-------\n\n");
 			boolean exit = false;
@@ -368,15 +368,17 @@ public class LVeGTrainer extends LearnerConfig {
 					logger.trace("---Sample " + isample + "...\t");
 					bTime = System.currentTimeMillis();
 					
-					double scoreT = lvegParser.evalRuleCountWithTree(tree, (short) 0);
-					double scoreS = lvegParser.evalRuleCount(tree, (short) 0);
+					scoresOfST = lvegParser.evalRuleCounts(tree, (short) 0);
+					scoresOfST.add((double) length);
 					
 					eTime = System.currentTimeMillis();
 					logger.trace((eTime - bTime) / 1000.0 + "\t");
 					
-					scoresOfST.add(scoreT);
-					scoresOfST.add(scoreS);
-					scoresOfST.add((double) length);
+					if (Double.isInfinite(scoresOfST.get(0)) || Double.isInfinite(scoresOfST.get(1))) {
+						logger.trace("scores: " + FunUtil.double2str(scoresOfST, precision, -1, false, true) + "\n");
+						logger.trace("--------- " + StateTreeList.stateTreeToStringTree(tree, numberer) + "\n");
+						continue;
+					}
 					
 					logger.trace("scores: " + FunUtil.double2str(scoresOfST, precision, -1, false, true) + "\teval gradients... ");
 					bTime = System.currentTimeMillis();
@@ -550,8 +552,6 @@ public class LVeGTrainer extends LearnerConfig {
 		List<Tree<State>> trees = new ArrayList<Tree<State>>(stateTreeList.size());
 		filterTrees(opts, stateTreeList, trees, numberer, istrain);
 		for (Tree<State> tree : trees) {
-//			Tree<String> stringTree = StateTreeList.stateTreeToStringTree(tree, numberer);
-//			logger.trace("\n" + cnt + "\t" + stringTree);
 			valuator.execute(tree);
 			while (valuator.hasNext()) {
 				ll = (double) valuator.getNext();
@@ -585,11 +585,7 @@ public class LVeGTrainer extends LearnerConfig {
 		List<Tree<State>> trees = new ArrayList<Tree<State>>(stateTreeList.size());
 		filterTrees(opts, stateTreeList, trees, numberer, istrain);
 		for (Tree<State> tree : trees) {
-//			Tree<String> stringTree = StateTreeList.stateTreeToStringTree(tree, numberer);
-//			logger.trace("\n" + cnt + "\t" + stringTree + "\n");
 			ll = valuator.probability(tree);
-//			logger.trace("\n" + cnt + "\t" + ll + "\n");
-//			System.exit(0);
 			if (Double.isInfinite(ll) || Double.isNaN(ll) || ll > 0) {
 				nUnparsable++;
 			} else {
