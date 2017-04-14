@@ -115,21 +115,21 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 			chart = new Chart(maxslen, true, false, usemask);
 		}
 		if (usemask) {
-			logger.trace("\nInside score masks...\n"); // DEBUG
+//			logger.trace("\nInside score masks...\n"); // DEBUG
 			PCFGInferencer.insideScore(chart, sentence, nword, LVeGTrainer.iomask, LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
-			FunUtil.debugChart(chart.getChartMask(true), (short) -1, tree.getYield().size(), Inferencer.grammar.numberer); // DEBUG
+//			FunUtil.debugChart(chart.getChartMask(true), (short) -1, tree.getYield().size(), Inferencer.grammar.numberer); // DEBUG
 			
 			logger.trace("\nOutside score masks...\n"); // DEBUG
 			PCFGInferencer.setRootOutsideScore(chart);
 			PCFGInferencer.outsideScore(chart, sentence, nword, LVeGTrainer.iomask,  LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
-			FunUtil.debugChart(chart.getChartMask(false), (short) -1, tree.getYield().size(), Inferencer.grammar.numberer); // DEBUG
+//			FunUtil.debugChart(chart.getChartMask(false), (short) -1, tree.getYield().size(), Inferencer.grammar.numberer); // DEBUG
 			
 			if (!LVeGTrainer.iomask) { // not use inside/outside score masks
 				double scoreS = chart.getInsideScoreMask((short) 0, Chart.idx(0, 1));
 				PCFGInferencer.createPosteriorMask(nword, chart, scoreS, LVeGTrainer.tgProb);
-				logger.trace("\nSENTENCE SCORE: " + scoreS + "\n");
-				logger.trace("\nPosterior masks...\n"); // DEBUG
-				FunUtil.debugChart(chart.getChartTmask(), (short) -1, tree.getYield().size(), Inferencer.grammar.numberer); // DEBUG
+//				logger.trace("\nSENTENCE SCORE: " + scoreS + "\n"); // DEBUG
+//				logger.trace("\nPosterior masks...\n"); // DEBUG
+//				FunUtil.debugChart(chart.getChartTmask(), (short) -1, tree.getYield().size(), Inferencer.grammar.numberer); // DEBUG
 			}
 		}
 		if (parallel) {
@@ -139,17 +139,17 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 			cpool.reset();
 			Inferencer.outsideScore(chart, sentence, nword, iosprune, cpool);
 		} else {
-			logger.trace("\nInside score...\n"); // DEBUG
+//			logger.trace("\nInside score...\n"); // DEBUG
 			Inferencer.insideScore(chart, sentence, nword, iosprune, usemask, LVeGTrainer.iomask);
-			FunUtil.debugChart(chart.getChart(true), (short) -1, tree.getYield().size(), Inferencer.grammar.numberer); // DEBUG
+//			FunUtil.debugChart(chart.getChart(true), (short) -1, tree.getYield().size(), Inferencer.grammar.numberer); // DEBUG
 	
-			logger.trace("\nOutside score...\n"); // DEBUG
+//			logger.trace("\nOutside score...\n"); // DEBUG
 			Inferencer.setRootOutsideScore(chart);
 			Inferencer.outsideScore(chart, sentence, nword, iosprune, usemask, LVeGTrainer.iomask);
-			FunUtil.debugChart(chart.getChart(false), (short) -1, tree.getYield().size(), Inferencer.grammar.numberer); // DEBUG
+//			FunUtil.debugChart(chart.getChart(false), (short) -1, tree.getYield().size(), Inferencer.grammar.numberer); // DEBUG
 		}
 		
-		System.exit(0);
+//		System.exit(0);
 		
 		double scoreS = Double.NEGATIVE_INFINITY;
 		GaussianMixture score = chart.getInsideScore((short) 0, Chart.idx(0, 1));
