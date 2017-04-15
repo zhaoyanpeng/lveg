@@ -85,7 +85,9 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 		if (Double.isFinite(scoreS)) {
 //			logger.trace("\nSentence score in logarithm: " + scoreS + ", Margin: " + score.marginalize(false) + "\n"); // DEBUG
 //			logger.trace("\nEval rule count with the sentence...\n"); // DEBUG
-			inferencer.evalMaxRuleCount(chart, sentence, nword, scoreS);
+			synchronized (inferencer) {
+				inferencer.evalMaxRuleCount(chart, sentence, nword, scoreS);
+			}
 			return true;
 		}
 		return false;

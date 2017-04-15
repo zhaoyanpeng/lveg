@@ -87,15 +87,17 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 		scores.add(scoreT);
 		scores.add(scoreS);
 		if (Double.isFinite(scoreT) && Double.isFinite(scoreS)) {
-			inferencer.evalRuleCountWithTree(tree, isample);
-//			logger.trace("\nCheck rule count with the tree...\n"); // DEBUG
-//			FunUtil.debugCount(Inferencer.grammar, Inferencer.lexicon, tree); // DEBUG
-//			logger.trace("\nEval count with the tree over.\n"); // DEBUG
-			
-			inferencer.evalRuleCount(tree, chart, isample, cntprune);
-//			logger.trace("\nCheck rule count with the sentence...\n"); // DEBUG
-//			FunUtil.debugCount(Inferencer.grammar, Inferencer.lexicon, tree, chart); // DEBUG
-//			logger.trace("\nEval count with the sentence over.\n"); // DEBUG
+			synchronized (inferencer) {
+				inferencer.evalRuleCountWithTree(tree, isample);
+//				logger.trace("\nCheck rule count with the tree...\n"); // DEBUG
+//				FunUtil.debugCount(Inferencer.grammar, Inferencer.lexicon, tree); // DEBUG
+//				logger.trace("\nEval count with the tree over.\n"); // DEBUG
+				
+				inferencer.evalRuleCount(tree, chart, isample, cntprune);
+//				logger.trace("\nCheck rule count with the sentence...\n"); // DEBUG
+//				FunUtil.debugCount(Inferencer.grammar, Inferencer.lexicon, tree, chart); // DEBUG
+//				logger.trace("\nEval count with the sentence over.\n"); // DEBUG
+			}
 		}
 		return scores;
 	}

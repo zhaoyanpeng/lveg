@@ -3,6 +3,7 @@ package edu.shanghaitech.ai.nlp.util;
 import java.io.Serializable;
 import java.util.Comparator;
 import java.util.PriorityQueue;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -50,18 +51,9 @@ public class ThreadPool extends Recorder implements Serializable {
 		synchronized (scores) {
 			while (true) {
 				for (int i = 0; i < nthread; i++) {
-//					boolean a, b;
-//					if (submits[i] == null) {
-//						a = true;
-//						b = true;
-//					} else {
-//						a = false;
-//						b = submits[i].isDone();
-//					}
-					
 					if (submits[i] == null || submits[i].isDone()) {
 						executors[i].setNextTask(lastSubmission++, task);
-//						 logger.trace("\n--->last-submission: " + lastSubmission + "\t" + a + "\t" + b + "\n"); // DEBUG
+//						 logger.trace("\n------>last-submission: " + lastSubmission + "\n"); // DEBUG
 						submits[i] = pool.submit(executors[i]);
 						return;
 					}
@@ -83,7 +75,6 @@ public class ThreadPool extends Recorder implements Serializable {
 		synchronized (scores) {
 			Meta<?> score = scores.poll();
 //			 logger.trace("\n~~~>score: " + score + "\n"); // DEBUG
-			scores.notifyAll();
 			return score.value();
 		}
 	}
@@ -93,7 +84,6 @@ public class ThreadPool extends Recorder implements Serializable {
 		synchronized (scores) {
 			if (scores.isEmpty()) { return false; }
 			Meta<?> score = scores.peek();
-			scores.notifyAll();
 			return score.id == (lastReturn + 1);
 		}
 	}

@@ -115,7 +115,7 @@ public class LVeGTrainer extends LearnerConfig {
 		Optimizer.config(opts.choice, random, opts.maxsample, opts.bsize, opts.minmw, opts.sampling); // FIXME no errors, just alert you...
 				
 		if (opts.loadGrammar && opts.inGrammar != null) {
-			logger.trace("--->Loading grammars from \'" + opts.datadir + opts.inGrammar + "\'...\n");
+			logger.trace("--->Loading grammars from \'" + subdatadir + opts.inGrammar + "\'...\n");
 			GrammarFile gfile = (GrammarFile) GrammarFile.load(subdatadir + opts.inGrammar);
 			grammar = gfile.getGrammar();
 			lexicon = gfile.getLexicon();
@@ -155,11 +155,11 @@ public class LVeGTrainer extends LearnerConfig {
 			lexicon.initializeOptimizer();
 			logger.trace("\n--->Initializing optimizer is over...\n");
 		}
-		/*
+		
 		logger.trace(grammar);
 		logger.trace(lexicon);
-		System.exit(0);
-		*/
+//		System.exit(0);
+		
 		lexicon.labelTrees(trainTrees); // FIXME no errors, just alert you to pay attention to it 
 		lexicon.labelTrees(testTrees); // save the search time cost by finding a specific tag-word
 		lexicon.labelTrees(devTrees); // pair in in Lexicon.score(...)

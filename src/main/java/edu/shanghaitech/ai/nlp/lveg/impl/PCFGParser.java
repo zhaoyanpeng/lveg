@@ -27,11 +27,11 @@ public class PCFGParser<I, O> extends Parser<I, O> {
 	}
 	
 	
-	public PCFGParser(LVeGGrammar grammar, LVeGLexicon lexicon, short maxLenParsing, short nthread,
+	public PCFGParser(LVeGGrammar grammar, LVeGLexicon lexicon, short maxslen, short nthread,
 			boolean parallel, boolean iosprune, boolean usemasks) {
-		super(maxLenParsing, nthread, parallel, iosprune, usemasks);
+		super(maxslen, nthread, parallel, iosprune, usemasks);
 		this.inferencer = new PCFGInferencer(grammar, lexicon);
-		this.chart = new Chart(maxLenParsing, false, true, false);
+		this.chart = new Chart(maxslen, false, true, false);
 	}
 
 	@Override
@@ -40,15 +40,18 @@ public class PCFGParser<I, O> extends Parser<I, O> {
 	}
 
 	@Override
-	public Object call() throws Exception {
+	public synchronized Object call() throws Exception {
 		Tree<State> sample = (Tree<State>) task;
+		
+		Tree<String> tree;
 		viterbiParsing(sample);
-		Tree<String> tree = StateTreeList.stateTreeToStringTree(sample, Inferencer.grammar.numberer);
+		tree = StateTreeList.stateTreeToStringTree(sample, Inferencer.grammar.numberer);
 		tree = Inferencer.extractBestMaxRuleParse(chart, tree.getYield());
+
 		Meta<O> cache = new Meta(itask, tree);
 		synchronized (caches) {
 			caches.add(cache);
-			caches.notifyAll();
+			caches.notify();
 		}
 		task = null;
 		return null;
@@ -64,12 +67,15 @@ public class PCFGParser<I, O> extends Parser<I, O> {
 	protected void viterbiParsing(Tree<State> tree) {
 		List<State> sentence = tree.getYield();
 		int nword = sentence.size();
+		
 		if (chart != null) {
 			chart.clear(nword);
 		} else {
 			chart = new Chart(nword, false, true, false);
 		}
-		inferencer.viterbiParsing(chart, sentence, nword);
+		synchronized (inferencer) {
+			inferencer.viterbiParsing(chart, sentence, nword);
+		}
 	}
 
 }

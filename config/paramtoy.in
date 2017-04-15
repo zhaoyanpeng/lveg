@@ -89,7 +89,7 @@
 -ef1ontrain, false,
 -ef1imwrite, false,
 
--runtag, toy_0412_1_2_ek3_simple_test12,
+-runtag, toy_0412_1_2_ek3_simple_test14,
 -logroot, log/,
 -logtype, 0,
 -verbose, false,

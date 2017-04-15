@@ -115,13 +115,15 @@ public class LVeGToy extends LearnerConfig {
 				grammar.tallyStateTree(tree);
 				
 			}
-			System.out.println("mog : " + mogPool.getNumActive());
-			System.out.println("gd  : " + gaussPool.getNumActive());
-			
 			logger.trace("\n--->Going through the training set is over...");
+			
 			grammar.postInitialize();
 			lexicon.postInitialize();
 			logger.trace("post-initializing is over.\n");
+			
+			grammar.initializeOptimizer();
+			lexicon.initializeOptimizer();
+			logger.trace("\n--->Initializing optimizer is over...\n");
 		}
 		
 		customize(grammar, lexicon); // reset grammar rules
