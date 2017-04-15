@@ -62,6 +62,8 @@ public abstract class LVeGGrammar extends Recorder implements Serializable {
 	
 	public abstract void postInitialize();
 	
+	public abstract void initializeOptimizer();
+	
 	public abstract void tallyStateTree(Tree<State> tree);
 	
 	public abstract void addURule(UnaryGrammarRule rule);	

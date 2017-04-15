@@ -50,58 +50,6 @@ public abstract class GrammarRule implements Serializable {
 	public abstract GrammarRule copy();
 	public abstract void initializeWeight(byte type, short ncomponent, short ndim);
 	
-/*	
-	public static GaussianMixture rndRuleWeight(byte type) {
-		short defaultval = -1;
-		GaussianMixture aweight = DiagonalGaussianMixture.borrowObject(defaultval);
-		switch (type) {
-		case RHSPACE: // rules for the root since it does not have subtypes
-			for (int i = 0; i < aweight.ncomponent; i++) {
-				Set<GaussianDistribution> set = new HashSet<GaussianDistribution>(1, 1);
-				set.add(DiagonalGaussianDistribution.borrowObject(defaultval));
-				aweight.add(i, Unit.C, set);
-			}
-			break;
-		case LHSPACE: // rules in the preterminal layer (discarded)
-			for (int i = 0; i < aweight.ncomponent; i++) {
-				Set<GaussianDistribution> set = new HashSet<GaussianDistribution>(1, 1);
-				set.add(DiagonalGaussianDistribution.borrowObject(defaultval));
-				aweight.add(i, Unit.P, set);
-			}
-			break;
-		case LRURULE: // general unary rules 
-			for (int i = 0; i < aweight.ncomponent; i++) {
-				Map<String, Set<GaussianDistribution>> map = new HashMap<String, Set<GaussianDistribution>>(2, 1);
-				Set<GaussianDistribution> set0 = new HashSet<GaussianDistribution>(1, 1);
-				Set<GaussianDistribution> set1 = new HashSet<GaussianDistribution>(1, 1);
-				set0.add(DiagonalGaussianDistribution.borrowObject(defaultval));
-				set1.add(DiagonalGaussianDistribution.borrowObject(defaultval));
-				map.put(Unit.P, set0);
-				map.put(Unit.UC, set1);
-				aweight.add(i, map);
-			}
-			break;
-		case LRBRULE: // general binary rules
-			for (int i = 0; i < aweight.ncomponent; i++) {
-				Map<String, Set<GaussianDistribution>> map = new HashMap<String, Set<GaussianDistribution>>(3, 1);
-				Set<GaussianDistribution> set0 = new HashSet<GaussianDistribution>(1, 1);
-				Set<GaussianDistribution> set1 = new HashSet<GaussianDistribution>(1, 1);
-				Set<GaussianDistribution> set2 = new HashSet<GaussianDistribution>(1, 1);
-				set0.add(DiagonalGaussianDistribution.borrowObject(defaultval));
-				set1.add(DiagonalGaussianDistribution.borrowObject(defaultval));
-				set2.add(DiagonalGaussianDistribution.borrowObject(defaultval));
-				map.put(Unit.P, set0);
-				map.put(Unit.LC, set1);
-				map.put(Unit.RC, set2);
-				aweight.add(i, map);
-			}
-			break;
-		default:
-			System.err.println("Not consistent with any grammar rule type.");
-		}
-		return aweight;
-	}
-*/	
 	
 	public static GaussianMixture rndRuleWeight(byte type, short ncomponent, short ndim) {
 		short defNcomp = ncomponent > 0 ? ncomponent : GaussianMixture.defNcomponent;

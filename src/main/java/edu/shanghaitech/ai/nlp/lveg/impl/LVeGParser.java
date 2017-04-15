@@ -43,7 +43,6 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 	
 	@Override
 	public synchronized Object call() throws Exception {
-		if (task == null) { return null; }
 		Tree<State> sample = (Tree<State>) task;
 		List<Double> scores = new ArrayList<Double>(3);
 		double scoreT = doInsideOutsideWithTree(sample); 

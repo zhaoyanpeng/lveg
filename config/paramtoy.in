@@ -10,7 +10,6 @@
 -outGrammar, lveg,
 -nbatchSave, 10,
 -saveGrammar, true,
--loadGrammar, false,
 
 -lr, 0.01,
 -reg, false,
@@ -62,6 +61,7 @@
 -dim, 2,
 -useref, false,
 -resetw, false,
+-resetc, false,
 -mwfactor, 1.0,
 -usemasks, false,
 -tgbase, 3,
@@ -82,14 +82,14 @@
 
 -pf1, false,
 -ef1tag, ,
--ef1pthhd, 1e-6,
 -inGrammar, lveg_best.gr,
+-loadGrammar, false,
 -ef1prune, false,
 -ef1ondev, false,
 -ef1ontrain, false,
 -ef1imwrite, false,
 
--runtag, toy_0412_1_2_ek3_simple_test10,
+-runtag, toy_0412_1_2_ek3_simple_test12,
 -logroot, log/,
 -logtype, 0,
 -verbose, false,

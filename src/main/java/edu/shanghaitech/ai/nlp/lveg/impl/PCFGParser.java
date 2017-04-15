@@ -41,7 +41,6 @@ public class PCFGParser<I, O> extends Parser<I, O> {
 
 	@Override
 	public Object call() throws Exception {
-		if (task == null) { return null; }
 		Tree<State> sample = (Tree<State>) task;
 		viterbiParsing(sample);
 		Tree<String> tree = StateTreeList.stateTreeToStringTree(sample, Inferencer.grammar.numberer);

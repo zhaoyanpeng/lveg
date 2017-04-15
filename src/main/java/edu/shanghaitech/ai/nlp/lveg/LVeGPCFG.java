@@ -58,10 +58,7 @@ public class LVeGPCFG extends LearnerConfig {
 		// configurations
 		initialize(opts, true); // logger can only be used after the initialization
 		logger.info("Calling with " + optionParser.getParsedOptions() + "\n");
-		/*
-		loadToyTrees(opts);
-		System.exit(0);
-		*/
+		
 		// loading data
 		Numberer wrapper = new Numberer();
 		Map<String, StateTreeList> trees = loadData(wrapper, opts);

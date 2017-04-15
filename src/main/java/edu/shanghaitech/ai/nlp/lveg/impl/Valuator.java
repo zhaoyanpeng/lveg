@@ -42,7 +42,6 @@ public class Valuator<I, O> extends Parser<I, O> {
 	
 	@Override
 	public synchronized Object call() {
-		if (task == null) { return null; }
 		double ll = probability((Tree<State>) task);
 		Meta<O> cache = new Meta(itask, ll);
 		synchronized (caches) {

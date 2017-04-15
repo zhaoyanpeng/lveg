@@ -197,7 +197,7 @@ public class ParallelOptimizer extends Optimizer {
 				if (future.get()) { nchanged++; }
 				if (future.isDone()) { isdone++; }
 			}
-			// I found 10ms is very useful than 0ms, because it can ensure the pool is terminated but 0ms cannot?
+			// I found 10ms very useful than 0ms, because it can ensure the pool is terminated but 0ms cannot?
 			exit = pool.awaitTermination(10, TimeUnit.MILLISECONDS);
 		} catch (ExecutionException | InterruptedException e) {
 			e.printStackTrace();

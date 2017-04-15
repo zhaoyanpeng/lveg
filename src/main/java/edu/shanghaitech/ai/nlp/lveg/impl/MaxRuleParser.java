@@ -38,7 +38,6 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 
 	@Override
 	public synchronized Object call() throws Exception {
-		if (task == null) { return null; }
 		Tree<State> sample = (Tree<State>) task;
 		Tree<String> parsed = parse(sample);
 		Meta<O> cache = new Meta(itask, parsed);

@@ -253,6 +253,8 @@ public class LearnerConfig extends Recorder {
 		public boolean useref = false;
 		@Option(name = "-resetw", usage = "reset the mixing weight according to the treebank grammars (default: false)")
 		public boolean resetw = false;
+		@Option(name = "-resetc", usage = "reset the # of component of the rule weight according to its frequency (default: false) ")
+		public boolean resetc = false;
 		@Option(name = "-mwfactor", usage = "multiply a factor when reseting the mixint weight to the treebank grammars (default: 1)")
 		public double mwfactor = 1.0;
 		@Option(name = "-usemasks", usage = "must close this option in MaxRuleParser, use masks from treebank grammars to prune the nonterminals (default: false)")
@@ -295,8 +297,6 @@ public class LearnerConfig extends Recorder {
 		public boolean pf1 = false;
 		@Option(name = "-ef1tag", usage = "the flag assigned to a f1 evaluation (default: \"\")")
 		public String ef1tag = "";
-		@Option(name = "-ef1pthhd", usage = "pruning threshold for parsing, see parameter \'expzero\' (default: 1e-6)")
-		public double ef1pthhd = 1e-6;
 		@Option(name = "-ef1prune", usage = "applying pruning when evaluating (f1-score) the grammar (true) or not (false) (default: false)")
 		public boolean ef1prune = false;
 		@Option(name = "-ef1ondev", usage = "evaluating f1-score on the development dataset (true) or not (false) (default: false)")
@@ -490,7 +490,7 @@ public class LearnerConfig extends Recorder {
 		trees.put(ID_DEV, devTrees);
 		
 		if (opts.useref) {
-		 makeSubTypes(numberer); // specify number of sub-types for each nonterminal
+			makeSubTypes(numberer); // specify number of sub-types for each nonterminal
 		}
 		
 		if (opts.saveCorpus && opts.outCorpus != null) {
@@ -617,10 +617,11 @@ public class LearnerConfig extends Recorder {
 		}
 	};
 	
-	protected static void resetRuleWeight(LVeGGrammar grammar, LVeGLexicon lexicon, Numberer numberer, double factor) {
-		int ntag = numberer.size(), nrule, count;
+	protected static void resetRuleWeight(LVeGGrammar grammar, LVeGLexicon lexicon, Numberer numberer, double factor, boolean resetc) {
+		int ntag = numberer.size(), nrule, count, ncomp;
 		List<GrammarRule> gUruleWithP, gBruleWithP, lUruleWithP;
-		double prob;
+		double prob, rulecnt, logprob;
+		int a = 0, b = 0, c = 0;
 		GaussianMixture ruleW;
 		/*
 		// probabilities of lexicon rules
@@ -658,13 +659,36 @@ public class LearnerConfig extends Recorder {
 			}
 			
 			for (GrammarRule rule : rules) {
+				rulecnt = rule.getWeight().getBias();
+				prob = rulecnt / count * factor;
+				logprob = Math.log(prob);
 				ruleW = rule.getWeight();
-				prob = Math.log(ruleW.getBias() / count * factor);
-				ruleW.setWeight(0, prob);
-				ruleW.setProb(prob);
+				ncomp = ncomponent;
+				
+				if (resetc && rulecnt > 1000) {
+					byte type = rule.getType();
+					if (rulecnt < 5000) {
+						ncomp += 1;
+						b++;
+					} else {
+						ncomp += 2;
+						c++;
+					}
+					rule.initializeWeight(type, (short) ncomp, (short) -1);
+					ruleW = rule.getWeight();
+					ruleW.setBias(rulecnt);
+				} else { a++; }
+				ruleW.setProb(logprob);
+				
+				prob = prob / ncomp;
+				logprob = Math.log(prob);
+				for (int icomp = 0; icomp < ncomp; icomp++) {
+					ruleW.setWeight(icomp, logprob);
+				}
 			}
-//			logger.debug(i + "\t: " + count + "\n");
+			logger.debug(i + "\t: " + count + "\n");
 		}
+		logger.debug("a: " + a + ", b: " + b + ", c: " + c + "\n");
 	}
 	
 }

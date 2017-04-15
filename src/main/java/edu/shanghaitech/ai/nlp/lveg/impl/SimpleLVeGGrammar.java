@@ -64,6 +64,7 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 	}
 	
 	
+	@Override
 	public void postInitialize() {
 		for (GrammarRule rule : uRuleTable.keySet()) {
 			rule.getWeight().setBias(uRuleTable.getCount(rule).getBias());
@@ -77,13 +78,23 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 	}
 	
 	
+	@Override
+	public void initializeOptimizer() {
+		for (GrammarRule rule : uRuleTable.keySet()) {
+			optimizer.addRule(rule);
+		}
+		for (GrammarRule rule : bRuleTable.keySet()) {
+			optimizer.addRule(rule);
+		}
+	}
+	
+	
 	public void addBRule(BinaryGrammarRule rule) {
 		if (bRulesWithP[rule.lhs].contains(rule)) { return; }
 		bRulesWithP[rule.lhs].add(rule);
 		bRulesWithLC[rule.lchild].add(rule);
 		bRulesWithRC[rule.rchild].add(rule);
 		bRuleMap.put(rule, rule);
-		optimizer.addRule(rule);
 	}
 	
 	
@@ -92,7 +103,6 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 		uRulesWithP[rule.lhs].add(rule);
 		uRulesWithC[rule.rhs].add(rule);
 		uRuleMap.put(rule, rule);
-		optimizer.addRule(rule);
 	}
 	
 	
@@ -236,7 +246,7 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 		for (GrammarRule rule : uRuleTable.keySet()) {
 			ncomp += rule.weight.ncomponent();
 			sb.append(rule + "\t\t" + uRuleTable.getCount(rule).getBias() + "\t\t" 
-					+ rule.weight.ncomponent() + "\t\t" + Math.exp(rule.weight.getWeight(0)));
+					+ rule.weight.ncomponent() + "\t\t" + Math.exp(rule.weight.getWeight(0)) + "\t\t" + Math.exp(rule.weight.getProb()));
 			if (++count % ncol == 0) {
 				sb.append("\n");
 			}
@@ -251,7 +261,7 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 		for (GrammarRule rule : bRuleTable.keySet()) {
 			ncomp += rule.weight.ncomponent();
 			sb.append(rule + "\t\t" + bRuleTable.getCount(rule).getBias() + "\t\t"
-					+ rule.weight.ncomponent() + "\t\t" + Math.exp(rule.weight.getWeight(0)));
+					+ rule.weight.ncomponent() + "\t\t" + Math.exp(rule.weight.getWeight(0)) + "\t\t" + Math.exp(rule.weight.getProb()));
 			if (++count % ncol == 0) {
 				sb.append("\n");
 			}

@@ -77,6 +77,14 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 			addURule((UnaryGrammarRule) rule);
 		}
 	}
+	
+	
+	@Override
+	public void initializeOptimizer() {
+		for (GrammarRule rule : uRuleTable.keySet()) {
+			optimizer.addRule(rule);
+		}
+	}
 
 
 	@Override
@@ -85,7 +93,6 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 		uRulesWithP[rule.lhs].add(rule);
 		uRulesWithC[rule.rhs].add(rule);
 		uRuleMap.put(rule, rule);
-		optimizer.addRule(rule);
 	}
 	
 	
@@ -215,7 +222,7 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 			for (GrammarRule rule : rules) {
 				ncomp += rule.weight.ncomponent();
 				sb.append(rule + "\t\t" + uRuleTable.getCount(rule).getBias() + "\t\t" 
-						+ rule.weight.ncomponent() + "\t\t" + Math.exp(rule.weight.getWeight(0)));
+						+ rule.weight.ncomponent() + "\t\t" + Math.exp(rule.weight.getWeight(0)) + "\t\t" + Math.exp(rule.weight.getProb()));
 				if (++count % ncol == 0) {
 					sb.append("\n");
 				}

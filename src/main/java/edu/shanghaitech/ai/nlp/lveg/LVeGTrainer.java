@@ -139,19 +139,21 @@ public class LVeGTrainer extends LearnerConfig {
 				grammar.tallyStateTree(tree);
 				
 			}
-			/*
-			System.out.println("mog : " + mogPool.getNumActive());
-			System.out.println("gd  : " + gaussPool.getNumActive());
-			*/
 			logger.trace("\n--->Going through the training set is over...");
+			
 			grammar.postInitialize();
 			lexicon.postInitialize();
 			logger.trace("post-initializing is over.\n");
-		}
-		// reset the rule weight
-		if (opts.resetw || opts.usemasks) {
-			logger.trace("--->Reset rule weights according to treebank grammars...\n");
-			resetRuleWeight(grammar, lexicon, numberer, opts.mwfactor);
+			
+			// reset the rule weight
+			if (opts.resetw || opts.usemasks) {
+				logger.trace("--->Reset rule weights according to treebank grammars...\n");
+				resetRuleWeight(grammar, lexicon, numberer, opts.mwfactor, opts.resetc);
+			}
+			
+			grammar.initializeOptimizer();
+			lexicon.initializeOptimizer();
+			logger.trace("\n--->Initializing optimizer is over...\n");
 		}
 		/*
 		logger.trace(grammar);
