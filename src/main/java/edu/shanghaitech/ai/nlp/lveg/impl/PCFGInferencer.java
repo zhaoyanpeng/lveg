@@ -25,6 +25,7 @@ public class PCFGInferencer extends Inferencer {
 
 
 	public static void insideScore(Chart chart, List<State> sentence, int nword, boolean iomask, int base, double ratio) {
+		try {
 		boolean retainall;
 		int x0, y0, x1, y1, c0, c1, c2;
 		double ruleScore, linScore, rinScore, pinScore;
@@ -69,10 +70,14 @@ public class PCFGInferencer extends Inferencer {
 				if (iomask) { chart.pruneInsideScoreMask(c2, (short) -1, base, ratio, retainall); }
 			}
 		}
+		} catch (Exception e) {
+			logger.error("PCFG inside: " + e + "\n");
+		}
 	}
 	
 	
 	public static void outsideScore(Chart chart, List<State> sentence, int nword, boolean iomask, int base, double ratio) {
+		try {
 		boolean retainall;
 		int x0, y0, x1, y1, c0, c1, c2;
 		double poutScore, linScore, rinScore, loutScore, routScore, ruleScore;
@@ -128,6 +133,9 @@ public class PCFGInferencer extends Inferencer {
 				outsideScoreForUnaryRule(chart, c2, iomask);
 				if (iomask) { chart.pruneOutsideScoreMask(c2, (short) -1, base, ratio, retainall); }	
 			}
+		}
+		} catch (Exception e) {
+			logger.error("PCFG outside: " + e + "\n");
 		}
 	}
 	
@@ -205,6 +213,7 @@ public class PCFGInferencer extends Inferencer {
 	
 	
 	public static void createPosteriorMask(int nword, Chart chart, double scoreS, double threshold) {
+		try {
 		int idx;
 		boolean retainall;
 		Set<Short> iset, oset;
@@ -228,6 +237,9 @@ public class PCFGInferencer extends Inferencer {
 					}		
 				}
 			}
+		}
+		} catch (Exception e) {
+			logger.error("PCFG mask: " + e + "\n");
 		}
 	}
 	

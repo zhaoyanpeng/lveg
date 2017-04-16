@@ -89,7 +89,7 @@
 -ef1ontrain, false,
 -ef1imwrite, false,
 
--runtag, test_gr,
+-runtag, 0416_stage1_parallel,
 -logroot, log/,
 -logtype, 0,
 -verbose, false,

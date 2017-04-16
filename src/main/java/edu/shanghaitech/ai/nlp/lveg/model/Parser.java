@@ -20,7 +20,6 @@ public abstract class Parser<I, O> extends Recorder implements Executor<I, O> {
 	protected short nthread;
 	protected boolean parallel;
 	protected boolean iosprune;
-	protected boolean cntprune;
 	protected boolean usemask;
 	
 	protected I task;

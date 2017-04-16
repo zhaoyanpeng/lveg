@@ -134,6 +134,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	 * @param nword # of words in the sentence
 	 */
 	public static void insideScore(Chart chart, List<State> sentence, int nword, boolean prune, boolean usemask, boolean iomask) {
+		try {
 		List<GrammarRule> rules;
 		int x0, y0, x1, y1, c0, c1, c2;
 		GaussianMixture pinScore, linScore, rinScore, ruleScore;
@@ -207,6 +208,9 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				if (prune) { chart.pruneInsideScore(c2, (short) -1); }
 			}
 		}
+		} catch (Exception e) {
+			logger.error("INFERENCER inside: " + e + "\n");
+		}
 	}
 	
 	
@@ -218,6 +222,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	 * @param nword # of words in the sentence
 	 */
 	public static void outsideScore(Chart chart, List<State> sentence, int nword, boolean prune, boolean usemask, boolean iomask) {
+		try {
 		List<GrammarRule> rules;
 		int x0, y0, x1, y1, c0, c1, c2;
 		GaussianMixture poutScore, linScore, rinScore, loutScore, routScore, ruleScore;
@@ -311,6 +316,9 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				outsideScoreForUnaryRule(chart, c2, prune, usemask, iomask);
 				if (prune) { chart.pruneOutsideScore(c2, (short) -1); }
 			}
+		}
+		} catch (Exception e) {
+			logger.error("INFERENCER outside: " + e + "\n");
 		}
 	}
 	
@@ -564,34 +572,35 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	
 	private static Tree<String> extractBestMaxRuleParse(Chart chart, int left, int right, int nword, short idtag, List<String> sentence) {
 		try {
-			int idx = Chart.idx(left, nword - (right - left));
-			int son = chart.getMaxRuleSon(idtag, idx);
-			if (son <= 0) { // sons = (1 << 31) + (rule.lchild << 16) + rule.rchild; or sons = 0;
-				return extractBestMaxRuleParseBinary(chart, left, right, nword, idtag, sentence);
-			} else {
-				short idGrandson = (short) (son >>> 16);
-				short idChild = (short) ((son << 16) >>> 16);
-				List<Tree<String>> child = new ArrayList<Tree<String>>();
-				String pname = (String) grammar.numberer.object(idtag);
-				if (pname.endsWith("^g")) { pname = pname.substring(0, pname.length() - 2); }
-				if (idx == 0 && idtag == 0) { // ROOT->A->B->C; ROOT->B->C; ROOT->C;
-					if (idGrandson != 0) { logger.error("There must be something wrong in the max rule parse\n."); }
-					child.add(extractBestMaxRuleParse(chart, left, right, nword, idChild, sentence));
-					return new Tree<String>(pname, child);
-				}
-				if (idGrandson == 0) {
-					child.add(extractBestMaxRuleParseBinary(chart, left, right, nword, idChild, sentence));
-					return new Tree<String>(pname, child);
-				} else {
-					child.add(extractBestMaxRuleParseBinary(chart, left, right, nword, idGrandson, sentence));
-					List<Tree<String>> chainChild = new ArrayList<Tree<String>>();
-					String cname = (String) grammar.numberer.object(idChild);
-					if (cname.endsWith("^g")) { cname = cname.substring(0, cname.length() - 2); }
-					chainChild.add(new Tree<String>(cname, child));
-					return new Tree<String>(pname, chainChild);
-				}
+		int idx = Chart.idx(left, nword - (right - left));
+		int son = chart.getMaxRuleSon(idtag, idx);
+		if (son <= 0) { // sons = (1 << 31) + (rule.lchild << 16) + rule.rchild; or sons = 0;
+			return extractBestMaxRuleParseBinary(chart, left, right, nword, idtag, sentence);
+		} else {
+			short idGrandson = (short) (son >>> 16);
+			short idChild = (short) ((son << 16) >>> 16);
+			List<Tree<String>> child = new ArrayList<Tree<String>>();
+			String pname = (String) grammar.numberer.object(idtag);
+			if (pname.endsWith("^g")) { pname = pname.substring(0, pname.length() - 2); }
+			if (idx == 0 && idtag == 0) { // ROOT->A->B->C; ROOT->B->C; ROOT->C;
+				if (idGrandson != 0) { logger.error("There must be something wrong in the max rule parse\n."); }
+				child.add(extractBestMaxRuleParse(chart, left, right, nword, idChild, sentence));
+				return new Tree<String>(pname, child);
 			}
+			if (idGrandson == 0) {
+				child.add(extractBestMaxRuleParseBinary(chart, left, right, nword, idChild, sentence));
+				return new Tree<String>(pname, child);
+			} else {
+				child.add(extractBestMaxRuleParseBinary(chart, left, right, nword, idGrandson, sentence));
+				List<Tree<String>> chainChild = new ArrayList<Tree<String>>();
+				String cname = (String) grammar.numberer.object(idChild);
+				if (cname.endsWith("^g")) { cname = cname.substring(0, cname.length() - 2); }
+				chainChild.add(new Tree<String>(cname, child));
+				return new Tree<String>(pname, chainChild);
+			}
+		}
 		} catch (NullPointerException e) { // FIXME must check if there is any error in the parsing results
+			logger.error("INFERENCER parse: " + e + "\n");
 			return new Tree<String>("OOPS_BUG");
 		}
 	}
