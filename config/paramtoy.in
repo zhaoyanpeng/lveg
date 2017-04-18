@@ -57,7 +57,7 @@
 -nmratio, 0.5,
 -maxvar, 5,
 -nvratio, 0.8,
--ncomponent, 1,
+-ncomponent, 2,
 -dim, 2,
 -useref, false,
 -resetw, false,
@@ -89,7 +89,7 @@
 -ef1ontrain, false,
 -ef1imwrite, false,
 
--runtag, toy_0412_1_2_ek3_simple_test14,
+-runtag, toy_0418_2_2_ek3_simple_test2,
 -logroot, log/,
 -logtype, 0,
 -verbose, false,

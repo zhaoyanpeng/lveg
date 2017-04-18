@@ -34,48 +34,66 @@ public class PCFGParser<I, O> extends Parser<I, O> {
 		this.chart = new Chart(maxslen, false, true, false);
 	}
 
+	
 	@Override
 	public Executor<?, ?> newInstance() {
 		return new PCFGParser<I, O>(this);
 	}
 
+	
 	@Override
 	public synchronized Object call() throws Exception {
 		Tree<State> sample = (Tree<State>) task;
-		
-		Tree<String> tree;
-		viterbiParsing(sample);
-		tree = StateTreeList.stateTreeToStringTree(sample, Inferencer.grammar.numberer);
-		tree = Inferencer.extractBestMaxRuleParse(chart, tree.getYield());
-
-		Meta<O> cache = new Meta(itask, tree);
+		Tree<String> parsed = null;
+		synchronized (sample) {
+			parsed = parse(sample);
+		}
+		Meta<O> cache = new Meta(itask, parsed);
 		synchronized (caches) {
 			caches.add(cache);
 			caches.notify();
 		}
 		task = null;
-		return null;
+		return itask;
 	}
 	
+	
+	/**
+	 * Dedicated to error handling.
+	 * 
+	 * @param tree the golden parse tree
+	 * @return     parse tree given the sentence
+	 */
 	public Tree<String> parse(Tree<State> tree) {
-		viterbiParsing(tree);
-		Tree<String> strTree = StateTreeList.stateTreeToStringTree(tree, Inferencer.grammar.numberer);
-		Tree<String> parseTree = Inferencer.extractBestMaxRuleParse(chart, strTree.getYield());
-		return parseTree;
+		Tree<String> parsed = null;
+		try { // do NOT expect it to crash
+			viterbiParse(tree);
+			parsed = StateTreeList.stateTreeToStringTree(tree, Inferencer.grammar.numberer);
+			parsed = Inferencer.extractBestMaxRuleParse(chart, parsed.getYield());
+		} catch (Exception e) {
+			parsed = new Tree<String>(Inferencer.DUMMY_TAG);
+			e.printStackTrace();
+		}
+		return parsed;
 	}
 	
-	protected void viterbiParsing(Tree<State> tree) {
+	
+	/**
+	 * Compute and store a viterbi parse path.
+	 * 
+	 * @param tree the golden parse tree
+	 */
+	protected void viterbiParse(Tree<State> tree) {
 		List<State> sentence = tree.getYield();
 		int nword = sentence.size();
-		
 		if (chart != null) {
 			chart.clear(nword);
 		} else {
 			chart = new Chart(nword, false, true, false);
 		}
-		synchronized (inferencer) {
-			inferencer.viterbiParsing(chart, sentence, nword);
-		}
+//		synchronized (inferencer) { // inferencer is read-only
+			inferencer.viterbiParse(chart, sentence, nword);
+//		}
 	}
 
 }

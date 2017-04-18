@@ -26,6 +26,7 @@ public class MaxRuleInferencer extends Inferencer {
 	 */
 	private static final long serialVersionUID = 3844565735030401845L;
 
+	
 	public MaxRuleInferencer(LVeGGrammar agrammar, LVeGLexicon alexicon) {
 		grammar = agrammar;
 		lexicon = alexicon;
@@ -45,7 +46,6 @@ public class MaxRuleInferencer extends Inferencer {
 		int x0, y0, x1, y1, c0, c1, c2;
 		double lcount, rcount, maxcnt, newcnt;
 		GaussianMixture linScore, rinScore, outScore, cinScore;
-		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBRuleMap();
 		// lexicons
 		for (int i = 0; i < nword; i++) {
 			State word = sentence.get(i);
@@ -71,10 +71,6 @@ public class MaxRuleInferencer extends Inferencer {
 				y1 = left + ilayer;
 				c2 = Chart.idx(left, nword - ilayer);
 				// binary grammar rules
-//				for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
-//					BinaryGrammarRule rule = (BinaryGrammarRule) rmap.getValue();
-//					if ((outScore = chart.getOutsideScore(rule.lhs, c2)) == null) { continue; }
-				
 				for (short itag = 0; itag < grammar.ntag; itag++) {
 					if ((outScore = chart.getOutsideScore(itag, c2)) == null) { continue; }
 					rules = grammar.getBRuleWithP(itag);
@@ -109,7 +105,6 @@ public class MaxRuleInferencer extends Inferencer {
 					}
 				}
 				
-//				}
 				// unary rules
 				maxRuleCountForUnaryRule(chart, c2, scoreS);
 			}

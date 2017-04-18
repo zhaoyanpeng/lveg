@@ -96,18 +96,6 @@ public class ParallelOptimizer extends Optimizer {
 			tasks.add(new Callable<Boolean>() {
 				@Override
 				public Boolean call() throws Exception {
-					/*
-					boolean updated = false;
-					Batch cntWithT = cntsWithT.get(rule);
-					Batch cntWithS = cntsWithS.get(rule);
-					for (short i = 0; i < Gradient.MAX_BATCH_SIZE; i++) {
-						if (cntWithT.get(i) != null || cntWithS.get(i) != null) { 
-							updated = true; 
-							break; 
-						} 
-					}
-					if (!updated) { return false; }
-					*/
 					Gradient gradient = gradients.get(rule);
 					boolean ichanged = gradient.eval(rule, cntWithT, cntWithS, scoreSandT);
 					// clear
@@ -457,7 +445,6 @@ public class ParallelOptimizer extends Optimizer {
 
 		@Override
 		public synchronized Object call() throws Exception {
-			if (task == null) { return null; }
 			Resource rsc = (Resource) task;
 			boolean status = rsc.gradient.eval(rsc.rule, rsc.iosWithT, rsc.iosWithS, rsc.scores);
 			rsc.iosWithS.clear();
@@ -468,7 +455,7 @@ public class ParallelOptimizer extends Optimizer {
 				caches.notifyAll();
 			}
 			task = null;
-			return null;
+			return itask;
 		}
 
 		@Override

@@ -26,6 +26,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	private static final long serialVersionUID = 3449371510125004187L;
 	protected final static short ROOT = 0;
 	protected final static short LENGTH_UCHAIN = 2;
+	public final static String DUMMY_TAG = "OOPTS_ROOT";
 	
 	public static LVeGLexicon lexicon;
 	public static LVeGGrammar grammar;
@@ -45,6 +46,8 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	
 	/**
 	 * Compute the inside score given the sentence and grammar rules, parallel version.
+	 * <p>
+	 * TODO need to update it to be consistent with the serial version
 	 * 
 	 * @param chart [in/out]-side score container
 	 * @param tree  in which only the sentence is used
@@ -93,6 +96,8 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	
 	/**
 	 * Compute the outside score given the sentence and grammar rules, parallel version.
+	 * <p>
+	 * TODO need to update it to be consistent with the serial version
 	 * 
 	 * @param chart [in/out]-side score container
 	 * @param tree  in which only the sentence is used.
@@ -134,11 +139,9 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	 * @param nword # of words in the sentence
 	 */
 	public static void insideScore(Chart chart, List<State> sentence, int nword, boolean prune, boolean usemask, boolean iomask) {
-		try {
 		List<GrammarRule> rules;
 		int x0, y0, x1, y1, c0, c1, c2;
 		GaussianMixture pinScore, linScore, rinScore, ruleScore;
-//		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBRuleMap();
 		
 		for (int i = 0; i < nword; i++) {
 			int iCell = Chart.idx(i, nword);
@@ -165,20 +168,13 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				y1 = left + ilayer;
 				c2 = Chart.idx(left, nword - ilayer);
 				// binary grammar rules
-//				for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
-//					BinaryGrammarRule rule = (BinaryGrammarRule) rmap.getValue();
-//					if (usemask && iomask) {
-//						if (!chart.isAllowed(rule.lhs, c2, true)) { continue; } 
-//					} else if (usemask) {
-//						if (!chart.isPosteriorAllowed(rule.lhs, c2)) { continue; }
-//					}
-					
 				for (short itag = 0; itag < grammar.ntag; itag++) {
 					if (usemask && iomask) {
 						if (!chart.isAllowed(itag, c2, true)) { continue; } 
 					} else if (usemask) {
 						if (!chart.isPosteriorAllowed(itag, c2)) { continue; }
 					}
+					
 					rules = grammar.getBRuleWithP(itag);
 					for (GrammarRule arule : rules) {
 						BinaryGrammarRule rule = (BinaryGrammarRule) arule;
@@ -201,15 +197,10 @@ public abstract class Inferencer extends Recorder implements Serializable {
 					}
 				}
 				
-//				}
-				
 				if (prune) { chart.pruneInsideScore(c2, (short) 0); }
 				insideScoreForUnaryRule(chart, c2, prune, usemask, iomask);
 				if (prune) { chart.pruneInsideScore(c2, (short) -1); }
 			}
-		}
-		} catch (Exception e) {
-			logger.error("INFERENCER inside: " + e + "\n");
 		}
 	}
 	
@@ -218,15 +209,13 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	 * Compute the outside score given the sentence and grammar rules.
 	 * 
 	 * @param chart [in/out]-side score container
-	 * @param tree  in which only the sentence is used.
+	 * @param tree  in which only the sentence is used
 	 * @param nword # of words in the sentence
 	 */
 	public static void outsideScore(Chart chart, List<State> sentence, int nword, boolean prune, boolean usemask, boolean iomask) {
-		try {
 		List<GrammarRule> rules;
 		int x0, y0, x1, y1, c0, c1, c2;
 		GaussianMixture poutScore, linScore, rinScore, loutScore, routScore, ruleScore;
-//		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBRuleMap();
 		
 		for (int ilayer = nword - 1; ilayer >= 0; ilayer--) {
 			for (int left = 0; left < nword - ilayer; left++) {
@@ -234,20 +223,13 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				x1 = left + ilayer + 1; 
 				c2 = Chart.idx(left, nword - ilayer);
 				// binary grammar rules
-//				for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
-//					BinaryGrammarRule rule = (BinaryGrammarRule) rmap.getValue();
-//					if (usemask && iomask) {
-//						if (!chart.isAllowed(rule.lchild, c2, false)) { continue; } 
-//					} else if (usemask) {
-//						if (!chart.isPosteriorAllowed(rule.lchild, c2)) { continue; }
-//					}
-				
 				for (short itag = 0; itag < grammar.ntag; itag++) {
 					if (usemask && iomask) {
 						if (!chart.isAllowed(itag, c2, false)) { continue; } 
 					} else if (usemask) {
 						if (!chart.isPosteriorAllowed(itag, c2)) { continue; }
 					}
+					
 					rules = grammar.getBRuleWithLC(itag);
 					for (GrammarRule arule : rules) {
 						BinaryGrammarRule rule = (BinaryGrammarRule) arule;
@@ -270,24 +252,16 @@ public abstract class Inferencer extends Recorder implements Serializable {
 					}
 				}
 				
-//				}
-				
 				y0 = left + ilayer;
 				y1 = left - 1;
 				// binary grammar rules
-//				for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
-//					BinaryGrammarRule rule = (BinaryGrammarRule) rmap.getValue();
-//					if (usemask && iomask) {
-//						if (!chart.isAllowed(rule.rchild, c2, false)) { continue; } 
-//					} else if (usemask) {
-//						if (!chart.isPosteriorAllowed(rule.rchild, c2)) { continue; }
-//					}
 				for (short itag = 0; itag < grammar.ntag; itag++) {
 					if (usemask && iomask) {
 						if (!chart.isAllowed(itag, c2, false)) { continue; } 
 					} else if (usemask) {
 						if (!chart.isPosteriorAllowed(itag, c2)) { continue; }
-					}					
+					}				
+					
 					rules = grammar.getBRuleWithRC(itag);
 					for (GrammarRule arule : rules) {
 						BinaryGrammarRule rule = (BinaryGrammarRule) arule;
@@ -310,15 +284,10 @@ public abstract class Inferencer extends Recorder implements Serializable {
 					}
 				}
 				
-//				}
-				
 				if (prune) { chart.pruneOutsideScore(c2, (short) 0); }
 				outsideScoreForUnaryRule(chart, c2, prune, usemask, iomask);
 				if (prune) { chart.pruneOutsideScore(c2, (short) -1); }
 			}
-		}
-		} catch (Exception e) {
-			logger.error("INFERENCER outside: " + e + "\n");
 		}
 	}
 	
@@ -392,8 +361,6 @@ public abstract class Inferencer extends Recorder implements Serializable {
 						if (!chart.isPosteriorAllowed(rule.lhs, idx)) { continue; }
 					}
 					
-//					if (false) { if (!chart.isAllowed(rule.lhs, idx, (short) (LENGTH_UCHAIN - level - 1))) { continue; } } // CHECK
-					
 					if (idx != 0 && rule.type == GrammarRule.RHSPACE) { continue; } // ROOT is allowed only when it is in cell 0 and is in level 1 or 2
 					rmKey = rule.type == GrammarRule.RHSPACE ? GrammarRule.Unit.C : GrammarRule.Unit.UC;
 					pinScore = rule.weight.mulForInsideOutside(cinScore, rmKey, true);
@@ -422,7 +389,9 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	
 	
 	/**
-	 * @param chart 
+	 * Set the outside score of ROOT to 1.
+	 * 
+	 * @param chart the chart storing inside/outside scores
 	 */
 	public static void setRootOutsideScore(Chart chart) {
 		GaussianMixture gm = new DiagonalGaussianMixture((short) 1);
@@ -538,7 +507,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				caches.notifyAll();
 			}
 			task = null;
-			return null;
+			return itask;
 		}
 
 		@Override
@@ -571,7 +540,6 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	
 	
 	private static Tree<String> extractBestMaxRuleParse(Chart chart, int left, int right, int nword, short idtag, List<String> sentence) {
-		try {
 		int idx = Chart.idx(left, nword - (right - left));
 		int son = chart.getMaxRuleSon(idtag, idx);
 		if (son <= 0) { // sons = (1 << 31) + (rule.lchild << 16) + rule.rchild; or sons = 0;
@@ -599,10 +567,6 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				return new Tree<String>(pname, chainChild);
 			}
 		}
-		} catch (NullPointerException e) { // FIXME must check if there is any error in the parsing results
-			logger.error("INFERENCER parse: " + e + "\n");
-			return new Tree<String>("OOPS_BUG");
-		}
 	}
 	
 	
@@ -616,18 +580,17 @@ public abstract class Inferencer extends Recorder implements Serializable {
 			if (son == 0) {
 				children.add(new Tree<String>(sentence.get(left)));
 			} else {
-				logger.error("must be somthing wrong.\n");
+				logger.error("There must be somthing wrong in the preterminal layer.\n");
 			}
 		} else {
 			int splitpoint = chart.getSplitPoint(idtag, idx);
 			if (splitpoint == -1) {
-				logger.error("\n---holly shit---\n");
-				logger.error("it is not the binary rule since there is no split point.\n");
-				return new Tree<String>("ROOT");
+				logger.error("It is not the binary rule since there is no split point.\n");
+				return new Tree<String>(DUMMY_TAG);
 			}
 			if (son > 0) {
-				logger.error("it is not the binary rule since son is larger than 0.\n");
-				return new Tree<String>("ROOT");
+				logger.error("It is not the binary rule since the son is larger than 0.\n");
+				return new Tree<String>(DUMMY_TAG);
 			}
 			son = ((son << 1) >>> 1);
 			short lchild = (short) (son >>> 16);

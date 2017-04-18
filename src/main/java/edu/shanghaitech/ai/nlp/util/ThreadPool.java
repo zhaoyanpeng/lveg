@@ -16,6 +16,7 @@ public class ThreadPool extends Recorder implements Serializable {
 	 * 
 	 */
 	private static final long serialVersionUID = -4870873867836614814L;
+	public final static String MAIN_THREAD = "MAIN_THREAD";
 	protected static Comparator<Meta<?>> idcomparator = new Comparator<Meta<?>>() {
 		@Override
 		public int compare(Meta<?> o1, Meta<?> o2) {
@@ -52,16 +53,82 @@ public class ThreadPool extends Recorder implements Serializable {
 			while (true) {
 				for (int i = 0; i < nthread; i++) {
 					if (submits[i] == null || submits[i].isDone()) {
-						executors[i].setNextTask(lastSubmission++, task);
-//						 logger.trace("\n------>last-submission: " + lastSubmission + "\n"); // DEBUG
+						executors[i].setNextTask(lastSubmission, task);
 						submits[i] = pool.submit(executors[i]);
+						lastSubmission++;
 						return;
 					}
 				}
 				try {
 					scores.wait();
 				} catch (InterruptedException e) {
-					// 
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+	
+	
+	
+	/**
+	 * A safe version of task submitter, but is less efficient.
+	 * 
+	 * @param task the task to be executed
+	 */
+	public void executeSafe(Object task) {
+		synchronized (scores) {
+			while (true) {
+				int iworker = 0, iret = -1;
+				boolean isnull = false, isdone = false, wait = false;
+				for (; iworker < nthread; iworker++) {
+					isnull = submits[iworker] == null;
+					if (!isnull) {
+						isdone = submits[iworker].isDone();
+					}
+					if (isnull || isdone) {
+						break;
+					}
+				} // find the free executor
+				
+				if (isnull || isdone) {
+					if (isdone) { 
+						try { // get the index of the finished task, should be larger than or equal to 0
+							iret = (int) submits[iworker].get();
+						} catch (InterruptedException | ExecutionException e) {
+							e.printStackTrace();
+							iret = -1;
+						} 
+						if (iret < 0) {
+							wait = true;
+						}
+					}
+					// lastSubmission: # of total submitted tasks
+					// lastReturn + 1: # of total returned tasks
+					// scores.size() : # of total tasks that are finished and waiting to be retrieved
+					if (lastSubmission - lastReturn - 1 - scores.size()  >= nthread) {
+						wait = true; // this error should be handled in Callable.call()
+						throw new IllegalStateException("Number of submissions is larger than that of available threads.");
+					}
+//					if (MAIN_THREAD.equals(Thread.currentThread().getName())) {
+//						logger.trace("\n---3------last ret: " + lastReturn + ", last submission: " + 
+//								lastSubmission + ", size: " + scores.size() + ", active: " + Thread.activeCount() + 
+//								", isnull: " + isnull + ", iret: " + iret);
+//					}
+				} else { // no free worker
+					wait = true;
+				}
+				
+				if (wait) {
+					try {
+						scores.wait();
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				} else {
+					executors[iworker].setNextTask(lastSubmission, task);
+					submits[iworker] = pool.submit(executors[iworker]);
+					lastSubmission++;
+					return;
 				}
 			}
 		}
@@ -69,12 +136,15 @@ public class ThreadPool extends Recorder implements Serializable {
 	
 	
 	public Object getNext() {
-		if (!hasNext()) { return new Double(0.0); }
-		lastReturn++;
-//		 logger.trace("\n--->last-ret: " + lastReturn + "\n"); // DEBUG
+		if (!hasNext()) { 
+			throw new IllegalStateException("Can only be invoked when there are available results to retrieve.");
+		}
 		synchronized (scores) {
+//			if (MAIN_THREAD.equals(Thread.currentThread().getName())) {
+//				logger.trace("\n---2------last ret: " + lastReturn + ", last submission: " + lastSubmission + ", size: " + scores.size());
+//			}
 			Meta<?> score = scores.poll();
-//			 logger.trace("\n~~~>score: " + score + "\n"); // DEBUG
+			lastReturn++;
 			return score.value();
 		}
 	}
@@ -82,6 +152,9 @@ public class ThreadPool extends Recorder implements Serializable {
 	
 	public boolean hasNext() {
 		synchronized (scores) {
+//			if (MAIN_THREAD.equals(Thread.currentThread().getName())) {
+//				logger.trace("\n---1------last ret: " + lastReturn + ", last submission: " + lastSubmission + ", size: " + scores.size());
+//			}
 			if (scores.isEmpty()) { return false; }
 			Meta<?> score = scores.peek();
 			return score.id == (lastReturn + 1);
@@ -91,6 +164,17 @@ public class ThreadPool extends Recorder implements Serializable {
 	
 	public boolean isDone() {
 		return (lastSubmission - 1) == lastReturn;
+	}
+	
+	
+	public void sleep() {
+		synchronized (scores) {
+			try {
+				scores.wait();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 	
 	

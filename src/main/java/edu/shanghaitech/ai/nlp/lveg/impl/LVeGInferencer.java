@@ -87,8 +87,7 @@ public class LVeGInferencer extends Inferencer {
 				break;
 			}
 			default:
-				System.err.println("Malformed tree: more than two children. Exitting...");
-				System.exit(0);	
+				throw new RuntimeException("Malformed tree: invalid # of children. Pid: " + parent.getId() + ", # children: " + children.size());
 			}
 		}
 	}
@@ -153,8 +152,7 @@ public class LVeGInferencer extends Inferencer {
 				break;
 			}
 			default:
-				System.err.println("Malformed tree: more than two children. Exitting...");
-				System.exit(0);
+				throw new RuntimeException("Malformed tree: invalid # of children. Pid: " + parent.getId() + ", # children: " + children.size());
 			}
 			
 			for (Tree<State> child : children) {
@@ -214,7 +212,7 @@ public class LVeGInferencer extends Inferencer {
 	
 	
 	/**
-	 * Eval the rule counts with the parse tree known.
+	 * Eval rule counts with the parse tree known.
 	 * 
 	 * @param tree      the parse tree
 	 * @param treeScore the score of the tree
@@ -269,11 +267,11 @@ public class LVeGInferencer extends Inferencer {
 				break;
 			}
 			default:
-				System.err.println("Malformed tree: more than two children. Exitting...");
-				System.exit(0);	
+				throw new RuntimeException("Malformed tree: invalid # of children. Pid: " + parent.getId() + ", # children: " + children.size());
 			}
 		}
 	}
+	
 	
 	private void evalUnaryRuleCount(Chart chart, int idx, short isample, State word, boolean prune) {
 		Set<Short> set;
@@ -323,6 +321,7 @@ public class LVeGInferencer extends Inferencer {
 		}
 	}
 	
+	
 	private void mergeUnaryRuleCount(Chart chart, int idx, UnaryGrammarRule rule, 
 			short isample, short olevel, short ilevel, boolean prune) {
 		if (chart.containsKey(rule.lhs, idx, false, olevel) && chart.containsKey((short) rule.rhs, idx, true, ilevel)) {
@@ -339,7 +338,7 @@ public class LVeGInferencer extends Inferencer {
 	/**
 	 * Set the outside score of the root node to 1.
 	 * 
-	 * @param tree the parse tree
+	 * @param tree the golden parse tree
 	 */
 	protected static void setRootOutsideScore(Tree<State> tree) {
 		GaussianMixture gm = new DiagonalGaussianMixture((short) 1);

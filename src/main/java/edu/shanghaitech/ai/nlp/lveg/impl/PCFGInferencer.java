@@ -18,6 +18,7 @@ public class PCFGInferencer extends Inferencer {
 	 */
 	private static final long serialVersionUID = -7545305823426970355L;
 	
+	
 	public PCFGInferencer(LVeGGrammar agrammar, LVeGLexicon alexicon) {
 		grammar = agrammar;
 		lexicon = alexicon;
@@ -25,7 +26,6 @@ public class PCFGInferencer extends Inferencer {
 
 
 	public static void insideScore(Chart chart, List<State> sentence, int nword, boolean iomask, int base, double ratio) {
-		try {
 		boolean retainall;
 		int x0, y0, x1, y1, c0, c1, c2;
 		double ruleScore, linScore, rinScore, pinScore;
@@ -70,14 +70,10 @@ public class PCFGInferencer extends Inferencer {
 				if (iomask) { chart.pruneInsideScoreMask(c2, (short) -1, base, ratio, retainall); }
 			}
 		}
-		} catch (Exception e) {
-			logger.error("PCFG inside: " + e + "\n");
-		}
 	}
 	
 	
 	public static void outsideScore(Chart chart, List<State> sentence, int nword, boolean iomask, int base, double ratio) {
-		try {
 		boolean retainall;
 		int x0, y0, x1, y1, c0, c1, c2;
 		double poutScore, linScore, rinScore, loutScore, routScore, ruleScore;
@@ -134,11 +130,7 @@ public class PCFGInferencer extends Inferencer {
 				if (iomask) { chart.pruneOutsideScoreMask(c2, (short) -1, base, ratio, retainall); }	
 			}
 		}
-		} catch (Exception e) {
-			logger.error("PCFG outside: " + e + "\n");
-		}
 	}
-	
 	
 	
 	private static void insideScoreForUnaryRule(Chart chart, int idx, boolean iomask) {
@@ -213,7 +205,6 @@ public class PCFGInferencer extends Inferencer {
 	
 	
 	public static void createPosteriorMask(int nword, Chart chart, double scoreS, double threshold) {
-		try {
 		int idx;
 		boolean retainall;
 		Set<Short> iset, oset;
@@ -238,13 +229,10 @@ public class PCFGInferencer extends Inferencer {
 				}
 			}
 		}
-		} catch (Exception e) {
-			logger.error("PCFG mask: " + e + "\n");
-		}
 	}
 	
 	
-	protected void viterbiParsing(Chart chart, List<State> sentence, int nword) {
+	protected void viterbiParse(Chart chart, List<State> sentence, int nword) {
 		int x0, y0, x1, y1, c0, c1, c2;
 		double lprob, rprob, maxprob, newprob;
 		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBRuleMap();

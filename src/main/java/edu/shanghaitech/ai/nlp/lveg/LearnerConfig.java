@@ -20,6 +20,7 @@ import edu.berkeley.nlp.PCFGLA.TreeAnnotations;
 import edu.berkeley.nlp.PCFGLA.Corpus.TreeBankType;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.data.StateTreeList;
+import edu.shanghaitech.ai.nlp.data.LVeGCorpus;
 import edu.shanghaitech.ai.nlp.data.ObjectFileManager.CorpusFile;
 import edu.shanghaitech.ai.nlp.lveg.impl.GaussFactory;
 import edu.shanghaitech.ai.nlp.lveg.impl.MoGFactory;

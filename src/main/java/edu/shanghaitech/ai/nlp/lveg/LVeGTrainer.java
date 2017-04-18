@@ -72,6 +72,10 @@ public class LVeGTrainer extends LearnerConfig {
 	protected static int nbatch = 0;
 	
 	public static void main(String[] args) throws Exception {
+		// main thread
+		Thread main = Thread.currentThread();
+		main.setName(ThreadPool.MAIN_THREAD);
+		// parsing parameters
 		String fparams = args[0];
 		try {
 			args = readFile(fparams, StandardCharsets.UTF_8).split(",");
@@ -245,6 +249,7 @@ public class LVeGTrainer extends LearnerConfig {
 					logger.trace("\n~~~score: " + FunUtil.double2str(score, precision, -1, false, true) + "\n");
 				}
 			}
+//			trainer.sleep();
 		}
 	}
 	
@@ -427,7 +432,7 @@ public class LVeGTrainer extends LearnerConfig {
 		logger.trace("===Average time each sample consumed is " + (epochETime - epochBTime) / (1000.0 * (ibatch * opts.bsize)) + "\n");
 		
 		// likelihood of the data set
-		logger.trace("\n----------log-likelihood in epoch is under evaluation----------\n");
+		logger.trace("\n----------log-likelihood in epoch " + iepoch + " is under evaluation----------\n");
 		boolean exit = peep(ibatch, iepoch, numberer, trllist, dellist, true);
 		logger.trace("\n------------------------evaluation over------------------------\n");
 		

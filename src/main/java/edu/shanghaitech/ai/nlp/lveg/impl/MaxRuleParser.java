@@ -11,7 +11,6 @@ import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
 import edu.shanghaitech.ai.nlp.lveg.model.Parser;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.syntax.State;
-import edu.shanghaitech.ai.nlp.util.FunUtil;
 
 public class MaxRuleParser<I, O> extends Parser<I, O> {
 	/**
@@ -39,14 +38,17 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 	@Override
 	public synchronized Object call() throws Exception {
 		Tree<State> sample = (Tree<State>) task;
-		Tree<String> parsed = parse(sample);
+		Tree<String> parsed = null;
+		synchronized (sample) {
+			parsed = parse(sample);
+		}
 		Meta<O> cache = new Meta(itask, parsed);
 		synchronized (caches) {
 			caches.add(cache);
-			caches.notifyAll();
+			caches.notify();
 		}
 		task = null;
-		return null;
+		return itask;
 	}
 	
 
@@ -56,23 +58,36 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 	}
 	
 	
+	/**
+	 * Dedicated to error handling.
+	 * 
+	 * @param tree the golden parse tree
+	 * @return     parse tree given the sentence
+	 */
 	public Tree<String> parse(Tree<State> tree) {
-//		logger.trace("eval max rule counts...");
-		boolean valid = evalMaxRuleCount(tree);
-//		logger.trace("over\n");
 		Tree<String> parsed = null;
-		if (valid) {
-			Tree<String> strTree = StateTreeList.stateTreeToStringTree(tree, Inferencer.grammar.numberer);
-//			logger.trace("extract max rule parse tree...");
-			parsed = Inferencer.extractBestMaxRuleParse(chart, strTree.getYield());
-//			logger.trace("over\n");
-		} else {
-			parsed = new Tree<String>("ROOT");
+		try { // do NOT expect it to crash
+			boolean valid = evalMaxRuleCount(tree);
+			if (valid) {
+				parsed = StateTreeList.stateTreeToStringTree(tree, Inferencer.grammar.numberer);
+				parsed = Inferencer.extractBestMaxRuleParse(chart, parsed.getYield());
+			} else {
+				parsed = new Tree<String>(Inferencer.DUMMY_TAG);
+			}
+		} catch (Exception e) {
+			parsed = new Tree<String>(Inferencer.DUMMY_TAG);
+			e.printStackTrace();
 		}
 		return parsed;
 	}
 	
 	
+	/**
+	 * Compute grammar rules counts in each chart cell.
+	 * 
+	 * @param tree the golden parse tree
+	 * @return     whether the sentence can be parsed (true) of not (false)
+	 */
 	protected boolean evalMaxRuleCount(Tree<State> tree) {
 		List<State> sentence = tree.getYield();
 		int nword = sentence.size();
@@ -85,15 +100,22 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 		if (Double.isFinite(scoreS)) {
 //			logger.trace("\nSentence score in logarithm: " + scoreS + ", Margin: " + score.marginalize(false) + "\n"); // DEBUG
 //			logger.trace("\nEval rule count with the sentence...\n"); // DEBUG
-			synchronized (inferencer) {
+			
+//			synchronized (inferencer) { // read-only, no synchronization needed in fact
 				inferencer.evalMaxRuleCount(chart, sentence, nword, scoreS);
-			}
+//			}
 			return true;
 		}
 		return false;
 	}
 	
 	
+	/**
+	 * @param tree     the golden parse tree
+	 * @param sentence the sentence need to be parsed
+	 * @param nword    length of the sentence
+	 * @return
+	 */
 	private double doInsideOutside(Tree<State> tree, List<State> sentence, int nword) {
 		if (chart != null) {
 			chart.clear(nword);

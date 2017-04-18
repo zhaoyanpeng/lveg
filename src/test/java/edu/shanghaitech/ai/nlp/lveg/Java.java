@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
@@ -73,6 +74,39 @@ public class Java {
 	}
 	
 	@Test
+	public void a() {
+		int x = 1;
+		b(x++);
+		System.out.println("in a: " + x);
+	}
+	
+	public void b(int a) {
+		System.out.println("in b: " + a);
+	}
+	
+//	@Test
+	public void testConcurrentModifier() {
+		List<String> mylist = new ArrayList<String>();
+		mylist.add("1");
+		mylist.add("2");
+		mylist.add("3");
+		mylist.add("4");
+		mylist.add("5");
+		Iterator<String> it = mylist.iterator();
+		while (it.hasNext()) {
+			String val = it.next();
+			System.out.println("list val: " + val);
+			if ("3".equals(val)) {
+//				mylist.remove(val);
+				it.remove();
+			}
+		}
+		for (String val : mylist) {
+			System.out.println(val);
+		}
+	}
+	
+//	@Test
 	public void testRegx() {
 		String regx = ".*?(\\d+)";
 		String line = "lveg_4.gr";

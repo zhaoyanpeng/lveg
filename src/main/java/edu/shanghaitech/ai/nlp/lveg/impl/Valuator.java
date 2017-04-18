@@ -42,14 +42,18 @@ public class Valuator<I, O> extends Parser<I, O> {
 	
 	@Override
 	public synchronized Object call() {
-		double ll = probability((Tree<State>) task);
+		Tree<State> sample = (Tree<State>) task;
+		double ll = Double.NEGATIVE_INFINITY;
+		synchronized (sample) {
+			ll = probability(sample);
+		}
 		Meta<O> cache = new Meta(itask, ll);
 		synchronized (caches) {
 			caches.add(cache);
-			caches.notifyAll();
+			caches.notify();
 		}
 		task = null;
-		return null;
+		return itask;
 	}
 	
 
@@ -58,12 +62,17 @@ public class Valuator<I, O> extends Parser<I, O> {
 	 * sentence, t is the parse tree.
 	 * 
 	 * @param tree the parse tree
-	 * @return  in logarithm
+	 * @return     logarithmic conditional probability of the parse tree given the sentence 
 	 */
 	public double probability(Tree<State> tree) {
-		double jointdist = scoreTree(tree);
-		double partition = scoreSentence(tree);
-		double ll = jointdist - partition;
+		double ll = Double.NEGATIVE_INFINITY;
+		try { // do NOT except it to crash 
+			double jointdist = scoreTree(tree);
+			double partition = scoreSentence(tree);
+			ll = jointdist - partition;
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 		return ll;
 	}
 	
@@ -72,7 +81,7 @@ public class Valuator<I, O> extends Parser<I, O> {
 	 * Compute p(t, s), where s denotes the sentence, t is a parse tree.
 	 * 
 	 * @param tree the parse tree
-	 * @return
+	 * @return     score of the parse tree
 	 */
 	protected double scoreTree(Tree<State> tree) {
 		LVeGInferencer.insideScoreWithTree(tree);
@@ -89,7 +98,7 @@ public class Valuator<I, O> extends Parser<I, O> {
 	 * Compute \sum_{t \in T} p(t, s), where T is the space of the parse tree.
 	 * 
 	 * @param tree in which only the sentence is used
-	 * @return
+	 * @return the sentence score
 	 */
 	protected double scoreSentence(Tree<State> tree) {
 		List<State> sentence = tree.getYield();

@@ -29,6 +29,7 @@ import edu.shanghaitech.ai.nlp.optimization.Optimizer;
 import edu.shanghaitech.ai.nlp.optimization.ParallelOptimizer;
 import edu.shanghaitech.ai.nlp.syntax.State;
 import edu.shanghaitech.ai.nlp.util.FunUtil;
+import edu.shanghaitech.ai.nlp.util.GradientChecker;
 import edu.shanghaitech.ai.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.util.OptionParser;
 import edu.shanghaitech.ai.nlp.util.ThreadPool;
@@ -316,7 +317,7 @@ public class LVeGToy extends LearnerConfig {
 					
 					if (opts.dgradnbatch > 0 && ((isample % (opts.bsize * opts.dgradnbatch)) == 0)) { 
 						debugrad(true); 
-						FunUtil.gradcheck(grammar, lexicon, lvegParser, valuator, tree, opts.maxsample);
+						GradientChecker.gradcheck(grammar, lexicon, lvegParser, valuator, tree, opts.maxsample);
 					}
 					
 					// apply gradient descent
