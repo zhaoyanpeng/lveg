@@ -160,8 +160,8 @@ public class LVeGTrainer extends LearnerConfig {
 			logger.trace("\n--->Initializing optimizer is over...\n");
 		}
 		
-		logger.trace(grammar);
-		logger.trace(lexicon);
+//		logger.trace(grammar);
+//		logger.trace(lexicon);
 //		System.exit(0);
 		
 		lexicon.labelTrees(trainTrees); // FIXME no errors, just alert you to pay attention to it 
@@ -249,7 +249,6 @@ public class LVeGTrainer extends LearnerConfig {
 					logger.trace("\n~~~score: " + FunUtil.double2str(score, precision, -1, false, true) + "\n");
 				}
 			}
-//			trainer.sleep();
 		}
 	}
 	

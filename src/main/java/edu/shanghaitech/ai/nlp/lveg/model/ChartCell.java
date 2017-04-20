@@ -27,14 +27,15 @@ import edu.shanghaitech.ai.nlp.util.Numberer;
  * We store such chart in an array, the mapping from the position in 
  * the chart to the index of the array is established as the follows
  * <p>
- * Layer: from 1, the top of the pyramid, to # of words, the bottom of 
- * the pyramid. 
+ * Layer: from 1, the top of the pyramid, to N, the number of words, 
+ * which corresponds to the bottom of the pyramid. 
  * <p>
- * Index: calculated as layer * (layer - 1) / 2 + offset, where offset
- * is counted starting from left to right for each layer.
+ * Index: calculated as "layer * (layer - 1) / 2 + offset", in which
+ * offset is counted starting from left to right for each layer.
  * <p>
- * If layer ranges from bottom (0) to top (# of words), index would be
- * (# + # - layer + 1) * layer / 2 + offset. We used the first schema.
+ * If the layer ranges from bottom (0) to up (# of words), the index 
+ * would be calculated as "(# + # - layer + 1) * layer / 2 + offset"
+ * . We used the first schema.
  */
 public class ChartCell {	
 	

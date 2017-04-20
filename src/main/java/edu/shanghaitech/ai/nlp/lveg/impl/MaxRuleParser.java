@@ -34,14 +34,17 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 		this.chart = new Chart(maxLenParsing, true, true, false);
 	}
 	
+	
+	@Override
+	public MaxRuleParser<?, ?> newInstance() {
+		return new MaxRuleParser<I, O>(this);
+	}
+	
 
 	@Override
 	public synchronized Object call() throws Exception {
 		Tree<State> sample = (Tree<State>) task;
-		Tree<String> parsed = null;
-		synchronized (sample) {
-			parsed = parse(sample);
-		}
+		Tree<String> parsed = parse(sample);
 		Meta<O> cache = new Meta(itask, parsed);
 		synchronized (caches) {
 			caches.add(cache);
@@ -51,15 +54,9 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 		return itask;
 	}
 	
-
-	@Override
-	public MaxRuleParser<?, ?> newInstance() {
-		return new MaxRuleParser<I, O>(this);
-	}
-	
 	
 	/**
-	 * Dedicated to error handling.
+	 * Dedicated to error handling while recovering the recorded best parse path.
 	 * 
 	 * @param tree the golden parse tree
 	 * @return     parse tree given the sentence
@@ -83,12 +80,12 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 	
 	
 	/**
-	 * Compute grammar rules counts in each chart cell.
+	 * Compute pseudo counts of grammar rules, and find a best parse path.
 	 * 
 	 * @param tree the golden parse tree
 	 * @return     whether the sentence can be parsed (true) of not (false)
 	 */
-	protected boolean evalMaxRuleCount(Tree<State> tree) {
+	private boolean evalMaxRuleCount(Tree<State> tree) {
 		List<State> sentence = tree.getYield();
 		int nword = sentence.size();
 		double scoreS = doInsideOutside(tree, sentence, nword);
@@ -98,12 +95,8 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 //		FunUtil.debugChart(chart.getChart(false), (short) -1, tree.getYield().size()); // DEBUG
 		
 		if (Double.isFinite(scoreS)) {
-//			logger.trace("\nSentence score in logarithm: " + scoreS + ", Margin: " + score.marginalize(false) + "\n"); // DEBUG
 //			logger.trace("\nEval rule count with the sentence...\n"); // DEBUG
-			
-//			synchronized (inferencer) { // read-only, no synchronization needed in fact
-				inferencer.evalMaxRuleCount(chart, sentence, nword, scoreS);
-//			}
+			inferencer.evalMaxRuleCount(chart, sentence, nword, scoreS);
 			return true;
 		}
 		return false;
@@ -111,6 +104,8 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 	
 	
 	/**
+	 * Inside/outside score calculation is required by MaxRule parser.
+	 * 
 	 * @param tree     the golden parse tree
 	 * @param sentence the sentence need to be parsed
 	 * @param nword    length of the sentence

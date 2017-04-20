@@ -8,6 +8,7 @@ import java.util.Set;
 
 /**
  * Rewrite, changing static fields to non-static ones, to be able to save to the object.
+ * Note that we have to ensure {@link #idx} is thread-safe by synchronizing it in {@link #object(int)}.
  * 
  * @author Dan Klein
  * @author Yanpeng Zhao
@@ -76,6 +77,7 @@ public class Numberer implements Serializable {
 	
 	
 	public int number(Object o) {
+		// CHECK do we really need it as the proxy of integer?
 		MutableInteger anidx = (MutableInteger) obj2idx.get(o);
 		if (anidx == null) {
 			if (locked) {
@@ -89,9 +91,17 @@ public class Numberer implements Serializable {
 		return anidx.intValue();
 	}
 	
+	/**
+	 * We do need to make "idx" thread-safe.
+	 * 
+	 * @param i index of the object
+	 * @return  object corresponding to the index
+	 */
 	public Object object(int i) {
-		idx.set(i); // CHECK must be individually initialized?
-		return idx2obj.get(idx);
+		synchronized (idx) {
+			idx.set(i); 
+			return idx2obj.get(idx);
+		}
 	}
 	
 	public Map getNumbererMap() {

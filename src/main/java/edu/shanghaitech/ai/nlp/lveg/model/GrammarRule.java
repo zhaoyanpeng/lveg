@@ -51,6 +51,11 @@ public abstract class GrammarRule implements Serializable {
 	public abstract void initializeWeight(byte type, short ncomponent, short ndim);
 	
 	
+	public void addWeightComponent(byte type, short ncomponnet, short ndim) {
+		
+	}
+	
+	
 	public static GaussianMixture rndRuleWeight(byte type, short ncomponent, short ndim) {
 		short defNcomp = ncomponent > 0 ? ncomponent : GaussianMixture.defNcomponent;
 		short defNdim = ndim > 0 ? ndim : GaussianDistribution.defNdimension;
@@ -98,7 +103,7 @@ public abstract class GrammarRule implements Serializable {
 			}
 			break;
 		default:
-			System.err.println("Not consistent with any grammar rule type.");
+			throw new RuntimeException("Not consistent with any grammar rule type. Type: " + type);
 		}
 		return aweight;
 	}

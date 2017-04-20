@@ -3,6 +3,7 @@ log/
 libs/
 pool/
 target/
+script/
 classes/
 berkeley/
 .settings/

@@ -44,10 +44,7 @@ public class PCFGParser<I, O> extends Parser<I, O> {
 	@Override
 	public synchronized Object call() throws Exception {
 		Tree<State> sample = (Tree<State>) task;
-		Tree<String> parsed = null;
-		synchronized (sample) {
-			parsed = parse(sample);
-		}
+		Tree<String> parsed = parse(sample);
 		Meta<O> cache = new Meta(itask, parsed);
 		synchronized (caches) {
 			caches.add(cache);
@@ -59,7 +56,7 @@ public class PCFGParser<I, O> extends Parser<I, O> {
 	
 	
 	/**
-	 * Dedicated to error handling.
+	 * Dedicated to error handling while recovering the recorded best parse path.
 	 * 
 	 * @param tree the golden parse tree
 	 * @return     parse tree given the sentence
@@ -79,21 +76,19 @@ public class PCFGParser<I, O> extends Parser<I, O> {
 	
 	
 	/**
-	 * Compute and store a viterbi parse path.
+	 * Compute and record a viterbi parse path.
 	 * 
 	 * @param tree the golden parse tree
 	 */
-	protected void viterbiParse(Tree<State> tree) {
+	private void viterbiParse(Tree<State> tree) {
 		List<State> sentence = tree.getYield();
 		int nword = sentence.size();
 		if (chart != null) {
 			chart.clear(nword);
 		} else {
 			chart = new Chart(nword, false, true, false);
-		}
-//		synchronized (inferencer) { // inferencer is read-only
-			inferencer.viterbiParse(chart, sentence, nword);
-//		}
+		} 
+		inferencer.viterbiParse(chart, sentence, nword);
 	}
 
 }

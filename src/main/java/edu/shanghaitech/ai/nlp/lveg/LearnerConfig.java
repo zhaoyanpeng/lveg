@@ -268,6 +268,12 @@ public class LearnerConfig extends Recorder {
 		public double tgprob = 1e-10;
 		@Option(name = "-iomask", usage = "which type of mask we would like to use, false: IO mask, true: posterior mask (default: false)")
 		public boolean iomask = false;
+		@Option(name = "-sexp", usage = "squeeze ratio in pruning components of inside/outside scores (default: 0.35)")
+		public double sexp = 0.35;
+		@Option(name = "-pivota", usage = "initialize # of components of the rule weight by its frequency (default: 200)")
+		public double pivota = 200;
+		@Option(name = "-pivotb", usage = "initialize # of components of the rule weight by its frequency (default: 5000)")
+		public double pivotb = 5000;
 		/* training-configurations section ends */
 		
 		/* evaluation section begins */
@@ -666,7 +672,7 @@ public class LearnerConfig extends Recorder {
 				ruleW = rule.getWeight();
 				ncomp = ncomponent;
 				
-				if (resetc && rulecnt > 1000) {
+				if (resetc && rulecnt > 100) {
 					byte type = rule.getType();
 					if (rulecnt < 5000) {
 						ncomp += 1;
@@ -687,7 +693,7 @@ public class LearnerConfig extends Recorder {
 					ruleW.setWeight(icomp, logprob);
 				}
 			}
-			logger.debug(i + "\t: " + count + "\n");
+//			logger.debug(i + "\t: " + count + "\n");
 		}
 		logger.debug("a: " + a + ", b: " + b + ", c: " + c + "\n");
 	}

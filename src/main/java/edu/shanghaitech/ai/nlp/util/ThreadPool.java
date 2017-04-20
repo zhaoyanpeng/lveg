@@ -53,6 +53,25 @@ public class ThreadPool extends Recorder implements Serializable {
 			while (true) {
 				for (int i = 0; i < nthread; i++) {
 					if (submits[i] == null || submits[i].isDone()) {
+						
+//						int iret = 1 << 30;
+//						boolean isnull = submits[i] == null;
+//						if (!isnull) {
+//							try { // get the index of the finished task, should be larger than or equal to 0
+//								iret = (int) submits[i].get();
+//							} catch (InterruptedException | ExecutionException e) {
+//								e.printStackTrace();
+//								iret = 1 << 30;
+//								logger.error("OOPS_BUG: get()\n");
+//								throw new RuntimeException("OOPS_BUG: excute\n");
+//							} 
+//						}
+						
+//						if (MAIN_THREAD.equals(Thread.currentThread().getName())) {
+//							logger.trace("\n---3------last ret: " + lastReturn + ", last submission: " + lastSubmission + 
+//									", size: " + scores.size() + ", active: " + Thread.activeCount() + ", isnull: " + isnull + ", iret: " + iret);
+//						}
+						
 						executors[i].setNextTask(lastSubmission, task);
 						submits[i] = pool.submit(executors[i]);
 						lastSubmission++;
@@ -71,7 +90,7 @@ public class ThreadPool extends Recorder implements Serializable {
 	
 	
 	/**
-	 * A safe version of task submitter, but is less efficient.
+	 * A safe implementation of task submission, but is less efficient.
 	 * 
 	 * @param task the task to be executed
 	 */
@@ -95,8 +114,9 @@ public class ThreadPool extends Recorder implements Serializable {
 						try { // get the index of the finished task, should be larger than or equal to 0
 							iret = (int) submits[iworker].get();
 						} catch (InterruptedException | ExecutionException e) {
-							e.printStackTrace();
 							iret = -1;
+							e.printStackTrace();
+							throw new IllegalStateException("OOPS_BUG: no return value.");
 						} 
 						if (iret < 0) {
 							wait = true;
@@ -107,7 +127,7 @@ public class ThreadPool extends Recorder implements Serializable {
 					// scores.size() : # of total tasks that are finished and waiting to be retrieved
 					if (lastSubmission - lastReturn - 1 - scores.size()  >= nthread) {
 						wait = true; // this error should be handled in Callable.call()
-						throw new IllegalStateException("Number of submissions is larger than that of available threads.");
+						throw new IllegalStateException("OOPS_BUG: Number of submissions is larger than that of available threads.");
 					}
 //					if (MAIN_THREAD.equals(Thread.currentThread().getName())) {
 //						logger.trace("\n---3------last ret: " + lastReturn + ", last submission: " + 
@@ -137,7 +157,7 @@ public class ThreadPool extends Recorder implements Serializable {
 	
 	public Object getNext() {
 		if (!hasNext()) { 
-			throw new IllegalStateException("Can only be invoked when there are available results to retrieve.");
+			throw new IllegalStateException("OOPS_BUG: Can only be invoked when there are available results to retrieve.");
 		}
 		synchronized (scores) {
 //			if (MAIN_THREAD.equals(Thread.currentThread().getName())) {

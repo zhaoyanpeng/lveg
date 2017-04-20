@@ -47,28 +47,30 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 		double scoreT = Double.NEGATIVE_INFINITY;
 		double scoreS = Double.NEGATIVE_INFINITY;
 		List<Double> scores = new ArrayList<Double>(3);
-		synchronized (sample) { // why is it necessary to synchronize sample?
+//		synchronized (sample) { // why is it necessary to synchronize sample?
 			scoreT = doInsideOutsideWithTree(sample); 
 			scoreS = doInsideOutside(sample); 
 			scores.add(scoreT);
 			scores.add(scoreS);
 			scores.add((double) sample.getYield().size());
-		}
-		try { // do NOT expect it to crash
-			if (Double.isFinite(scoreT) && Double.isFinite(scoreS)) {
+//		}
+		
+		if (Double.isFinite(scoreT) && Double.isFinite(scoreS)) {
+			try { // do NOT expect it to crash
 				synchronized (inferencer) {
 					inferencer.evalRuleCountWithTree(sample, (short) 0);
 					inferencer.evalRuleCount(sample, chart, (short) 0, false);
 					inferencer.evalGradients(scores);
 				}
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
-		} catch (Exception e) {
-			e.printStackTrace();
 		}
+		
 		Meta<O> cache = new Meta(itask, scores);
 		synchronized (caches) {
 			caches.add(cache);
-			caches.notifyAll();
+			caches.notify();
 		}
 		task = null;
 		return itask;
@@ -95,8 +97,9 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 		List<Double> scores = new ArrayList<Double>(3);
 		scores.add(scoreT);
 		scores.add(scoreS);
-		try { // do NOT expect it to crash
-			if (Double.isFinite(scoreT) && Double.isFinite(scoreS)) {
+		
+		if (Double.isFinite(scoreT) && Double.isFinite(scoreS)) {
+			try { // do NOT expect it to crash
 				synchronized (inferencer) {
 					inferencer.evalRuleCountWithTree(tree, isample);
 //					logger.trace("\nCheck rule count with the tree...\n"); // DEBUG
@@ -108,10 +111,11 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 //					FunUtil.debugCount(Inferencer.grammar, Inferencer.lexicon, tree, chart); // DEBUG
 //					logger.trace("\nEval count with the sentence over.\n"); // DEBUG
 				}
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
-		} catch (Exception e) {
-			e.printStackTrace();
 		}
+		
 		return scores;
 	}
 	
@@ -195,17 +199,16 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 			LVeGInferencer.setRootOutsideScore(tree);
 			LVeGInferencer.outsideScoreWithTree(tree);
 //			FunUtil.debugTree(tree, false, (short) 2); // DEBUG
-			
-			// the parse tree score, which should contain only weights of the components
-			GaussianMixture score = tree.getLabel().getInsideScore();
-			if (score != null) {
-				scoreT = score.eval(null, true);
-			}
-//			logger.trace("\nTree score: " + scoreT + "\n"); // DEBUG
-//			logger.trace("\nEval rule count with the tree...\n"); // DEBUG
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		// the parse tree score, which should contain only weights of the components
+		GaussianMixture score = tree.getLabel().getInsideScore();
+		if (score != null) {
+			scoreT = score.eval(null, true);
+		}
+//		logger.trace("\nTree score: " + scoreT + "\n"); // DEBUG
+//		logger.trace("\nEval rule count with the tree...\n"); // DEBUG
 		return scoreT;
 	}
 	

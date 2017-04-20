@@ -26,7 +26,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	private static final long serialVersionUID = 3449371510125004187L;
 	protected final static short ROOT = 0;
 	protected final static short LENGTH_UCHAIN = 2;
-	public final static String DUMMY_TAG = "OOPTS_ROOT";
+	public final static String DUMMY_TAG = "OOPS_ROOT";
 	
 	public static LVeGLexicon lexicon;
 	public static LVeGGrammar grammar;
@@ -548,7 +548,11 @@ public abstract class Inferencer extends Recorder implements Serializable {
 			short idGrandson = (short) (son >>> 16);
 			short idChild = (short) ((son << 16) >>> 16);
 			List<Tree<String>> child = new ArrayList<Tree<String>>();
-			String pname = (String) grammar.numberer.object(idtag);
+			String pname = null;
+			pname = (String) grammar.numberer.object(idtag);
+			if (pname == null) {
+				throw new IllegalStateException("OOPS_BUG: id: " + idtag + ", son: " + idChild + ", grandson: " + idGrandson);
+			}
 			if (pname.endsWith("^g")) { pname = pname.substring(0, pname.length() - 2); }
 			if (idx == 0 && idtag == 0) { // ROOT->A->B->C; ROOT->B->C; ROOT->C;
 				if (idGrandson != 0) { logger.error("There must be something wrong in the max rule parse\n."); }
@@ -572,8 +576,14 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	
 	private static Tree<String> extractBestMaxRuleParseBinary(Chart chart, int left, int right, int nword, short idtag, List<String> sentence) {
 		List<Tree<String>> children = new ArrayList<Tree<String>>();
-		String pname = (String) grammar.numberer.object(idtag);
-		if (pname.endsWith("^g")) { pname = pname.substring(0, pname.length() - 2); }
+		String pname = null;
+		pname = (String) grammar.numberer.object(idtag);
+		if (pname == null) { 
+			throw new IllegalStateException("OOPS_BUG: id: " + idtag);
+		}
+		if (pname.endsWith("^g")) { 
+			pname = pname.substring(0, pname.length() - 2); 
+		}
 		int idx = Chart.idx(left, nword - (right - left));
 		int son = chart.getMaxRuleSon(idtag, idx, (short) 0); // can only exist in level 0
 		if (right  == left) {
