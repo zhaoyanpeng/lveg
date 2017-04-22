@@ -253,15 +253,18 @@ public class LVeGTrainer extends LearnerConfig {
 	}
 	
 	
-	protected static int getBatch(int ibegin, List<Tree<State>> batch) {
+	protected static int getBatch(int ibegin, boolean shuffle, List<Tree<State>> batch) {
 		if (batch != null) { batch.clear(); } 
+		if (shuffle) { 
+			logger.trace("\n===shuffle training samples...\n");
+			Collections.shuffle(ftrainTrees, rnd4shuffle); 
+		}
 		int iend = ibegin + opts.bsize, nsample = ftrainTrees.size(), diff;
-		iend = (diff = (iend - nsample)) > 0 ? iend = nsample : iend;
+		iend = (diff = (iend - nsample)) >= 0 ? nsample : iend;
 		for (int i = ibegin; i < iend; i++) {
 			batch.add(ftrainTrees.get(i));
 		}
-		if (diff > 0) {
-			Collections.shuffle(ftrainTrees, rnd4shuffle);
+		if (diff >= 0) {
 			for (int i = 0; i < diff; i++) {
 				batch.add(ftrainTrees.get(i));
 			}
@@ -292,6 +295,7 @@ public class LVeGTrainer extends LearnerConfig {
 		List<Double> dellist = new ArrayList<Double>();
 		List<Double> scoresOfST = new ArrayList<Double>(3);
 		List<Tree<State>> batch = new ArrayList<Tree<State>>(opts.bsize + 5);
+		boolean shuffle = false;
 		do {
 			logger.trace("\n\n-------epoch " + iepoch + " begins-------\n\n");
 			boolean exit = false;
@@ -304,7 +308,7 @@ public class LVeGTrainer extends LearnerConfig {
 				}
 				nfailed = 0;
 				iprebeg = ibegin;
-				ibegin = getBatch(ibegin, batch);
+				ibegin = getBatch(ibegin, shuffle, batch);
 				batchBTime = System.currentTimeMillis();
 				for (Tree<State> tree : batch) {
 					trainer.execute(tree);
@@ -333,7 +337,10 @@ public class LVeGTrainer extends LearnerConfig {
 				logger.trace((eTime - bTime) / 1000.0 + "... batch time: " + (batchETime - batchBTime) / 1000.0 + "\n");
 				
 				if (ibegin < iprebeg) {
+					shuffle = true;
 					break; // epoch ends
+				} else {
+					shuffle = false;
 				}
 			}
 			if (exit) { // 
@@ -354,6 +361,7 @@ public class LVeGTrainer extends LearnerConfig {
 		List<Double> dellist = new ArrayList<Double>();
 		List<Tree<State>> batch = new ArrayList<Tree<State>>(opts.bsize + 5);
 		List<Double> scoresOfST = null;
+		boolean shuffle = false;
 		do {
 			logger.trace("\n\n-------epoch " + iepoch + " begins-------\n\n");
 			boolean exit = false;
@@ -366,7 +374,7 @@ public class LVeGTrainer extends LearnerConfig {
 				}
 				isample = 0;
 				iprebeg = ibegin;
-				ibegin = getBatch(ibegin, batch);
+				ibegin = getBatch(ibegin, shuffle, batch);
 				batchBTime = System.currentTimeMillis();
 				for (Tree<State> tree : batch) {
 					isample++;
@@ -410,7 +418,10 @@ public class LVeGTrainer extends LearnerConfig {
 				eTime = System.currentTimeMillis();
 				logger.trace((eTime - bTime) / 1000.0 + "... batch time: " + (batchETime - batchBTime) / 1000.0 + "\n");
 				if (ibegin < iprebeg) {
+					shuffle = true;
 					break; // epoch ends
+				} else {
+					shuffle = false;
 				}
 			}
 			if (exit) { // 
