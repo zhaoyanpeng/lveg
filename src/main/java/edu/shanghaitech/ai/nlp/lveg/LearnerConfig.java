@@ -63,6 +63,7 @@ public class LearnerConfig extends Recorder {
 	public static double tgRatio = 0.3;
 	public static double tgProb = 1e-10;
 	public static boolean iomask = false;
+	public static double squeezeexp = 0.35;
 	
 	public static short dim = 2;
 	public static short ncomponent = 2;
@@ -271,7 +272,7 @@ public class LearnerConfig extends Recorder {
 		@Option(name = "-sexp", usage = "squeeze ratio in pruning components of inside/outside scores (default: 0.35)")
 		public double sexp = 0.35;
 		@Option(name = "-pivota", usage = "initialize # of components of the rule weight by its frequency (default: 200)")
-		public double pivota = 200;
+		public double pivota = 100;
 		@Option(name = "-pivotb", usage = "initialize # of components of the rule weight by its frequency (default: 5000)")
 		public double pivotb = 5000;
 		/* training-configurations section ends */
@@ -440,6 +441,7 @@ public class LearnerConfig extends Recorder {
 		tgRatio = opts.tgratio;
 		tgProb = Math.log(opts.tgprob); // in logarithmic form
 		iomask = opts.iomask;
+		squeezeexp = opts.sexp;
 		Params.config(opts);
 		
 		GenericKeyedObjectPoolConfig config = new GenericKeyedObjectPoolConfig();
@@ -624,7 +626,7 @@ public class LearnerConfig extends Recorder {
 		}
 	};
 	
-	protected static void resetRuleWeight(LVeGGrammar grammar, LVeGLexicon lexicon, Numberer numberer, double factor, boolean resetc) {
+	protected static void resetRuleWeight(LVeGGrammar grammar, LVeGLexicon lexicon, Numberer numberer, double factor, boolean resetc, Options opts) {
 		int ntag = numberer.size(), nrule, count, ncomp;
 		List<GrammarRule> gUruleWithP, gBruleWithP, lUruleWithP;
 		double prob, rulecnt, logprob;
@@ -670,18 +672,24 @@ public class LearnerConfig extends Recorder {
 				prob = rulecnt / count * factor;
 				logprob = Math.log(prob);
 				ruleW = rule.getWeight();
-				ncomp = ncomponent;
+				ncomp = opts.ncomponent;
 				
-				if (resetc && rulecnt > 100) {
+				if (resetc && rulecnt > opts.pivota) {
 					byte type = rule.getType();
-					if (rulecnt < 5000) {
+					short increment = 0;
+					
+					if (rulecnt < opts.pivotb) {
 						ncomp += 1;
 						b++;
+						increment = 1;
 					} else {
 						ncomp += 2;
 						c++;
+						increment = 2;
 					}
-					rule.initializeWeight(type, (short) ncomp, (short) -1);
+//					rule.initializeWeight(type, (short) ncomp, (short) -1);
+					rule.addWeightComponent(type, increment, (short) -1);
+					
 					ruleW = rule.getWeight();
 					ruleW.setBias(rulecnt);
 				} else { a++; }
@@ -695,7 +703,7 @@ public class LearnerConfig extends Recorder {
 			}
 //			logger.debug(i + "\t: " + count + "\n");
 		}
-		logger.debug("a: " + a + ", b: " + b + ", c: " + c + "\n");
+		logger.debug("# of 1-comp: " + a + ", # of 2-comps: " + b + ", # of 3-comps: " + c + "\n");
 	}
 	
 }

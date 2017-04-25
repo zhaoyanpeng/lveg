@@ -35,6 +35,7 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	
 	protected static short defMaxNbig;
 	protected static short defNcomponent;
+	protected static double defSexp;
 	protected static double defMaxmw;
 	protected static double defRetainRatio;
 	protected static double defNegWRatio;
@@ -113,7 +114,7 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 				if (base < defMaxNbig + 1) {
 					base = 0;
 				} else {
-					base = (int) Math.floor(Math.pow(base, 0.35));
+					base = (int) Math.floor(Math.pow(base, LVeGTrainer.squeezeexp));
 				}
 				base = base + defMaxNbig;
 				base = base > 50 ? 50 : base; // hard coding for debugging
@@ -1157,6 +1158,15 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 			return comp.multivnd.size();
 		}
 		return -1;
+	}
+	
+	
+	public void rectifyId() {
+		if (components == null) { return; }
+		ncomponent = components.size();
+		for (short i = 0; i < ncomponent; i++) {
+			components.get(i).id = i;
+		}
 	}
 	
 	

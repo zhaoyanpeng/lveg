@@ -152,7 +152,7 @@ public class LVeGTrainer extends LearnerConfig {
 			// reset the rule weight
 			if (opts.resetw || opts.usemasks) {
 				logger.trace("--->Reset rule weights according to treebank grammars...\n");
-				resetRuleWeight(grammar, lexicon, numberer, opts.mwfactor, opts.resetc);
+				resetRuleWeight(grammar, lexicon, numberer, opts.mwfactor, opts.resetc, opts);
 			}
 			
 			grammar.initializeOptimizer();
@@ -160,8 +160,8 @@ public class LVeGTrainer extends LearnerConfig {
 			logger.trace("\n--->Initializing optimizer is over...\n");
 		}
 		
-//		logger.trace(grammar);
-//		logger.trace(lexicon);
+		logger.trace(grammar);
+		logger.trace(lexicon);
 //		System.exit(0);
 		
 		lexicon.labelTrees(trainTrees); // FIXME no errors, just alert you to pay attention to it 

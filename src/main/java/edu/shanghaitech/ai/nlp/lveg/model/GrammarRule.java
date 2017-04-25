@@ -51,8 +51,17 @@ public abstract class GrammarRule implements Serializable {
 	public abstract void initializeWeight(byte type, short ncomponent, short ndim);
 	
 	
-	public void addWeightComponent(byte type, short ncomponnet, short ndim) {
-		
+	public void addWeightComponent(byte type, short increment, short ndim) {
+		short defNcomp = increment > 0 ? increment : GaussianMixture.defNcomponent;
+		short defNdim = ndim > 0 ? ndim : GaussianDistribution.defNdimension;
+		if (weight == null) {
+			weight = rndRuleWeight(type, defNcomp, defNdim);
+		} else {
+			GaussianMixture aweight = new DiagonalGaussianMixture(defNcomp);
+			rndRuleWeight(type, defNcomp, defNdim, aweight);
+			weight.add(aweight, false);
+			weight.rectifyId(); // required
+		}
 	}
 	
 	
@@ -60,54 +69,59 @@ public abstract class GrammarRule implements Serializable {
 		short defNcomp = ncomponent > 0 ? ncomponent : GaussianMixture.defNcomponent;
 		short defNdim = ndim > 0 ? ndim : GaussianDistribution.defNdimension;
 		GaussianMixture aweight = new DiagonalGaussianMixture(defNcomp);
+		rndRuleWeight(type, defNcomp, defNdim, aweight);
+		return aweight;
+	}
+	
+	
+	private static void rndRuleWeight(byte type, short ncomponent, short dim, GaussianMixture weight) {
 		switch (type) {
 		case RHSPACE: // rules for the root since it does not have subtypes
-			for (int i = 0; i < defNcomp; i++) {
+			for (int i = 0; i < ncomponent; i++) {
 				Set<GaussianDistribution> set = new HashSet<GaussianDistribution>(1, 1);
-				set.add(new DiagonalGaussianDistribution(defNdim));
-				aweight.add(i, Unit.C, set);
+				set.add(new DiagonalGaussianDistribution(dim));
+				weight.add(i, Unit.C, set);
 			}
 			break;
 		case LHSPACE: // rules in the preterminal layer (discarded)
-			for (int i = 0; i < defNcomp; i++) {
+			for (int i = 0; i < ncomponent; i++) {
 				Set<GaussianDistribution> set = new HashSet<GaussianDistribution>(1, 1);
-				set.add(new DiagonalGaussianDistribution(defNdim));
-				aweight.add(i, Unit.P, set);
+				set.add(new DiagonalGaussianDistribution(dim));
+				weight.add(i, Unit.P, set);
 			}
 			break;
 		case LRURULE: // general unary rules 
-			for (int i = 0; i < defNcomp; i++) {
+			for (int i = 0; i < ncomponent; i++) {
 				Map<String, Set<GaussianDistribution>> map = new HashMap<String, Set<GaussianDistribution>>(2, 1);
 				Set<GaussianDistribution> set0 = new HashSet<GaussianDistribution>(1, 1);
 				Set<GaussianDistribution> set1 = new HashSet<GaussianDistribution>(1, 1);
-				set0.add(new DiagonalGaussianDistribution(defNdim));
-				set1.add(new DiagonalGaussianDistribution(defNdim));
+				set0.add(new DiagonalGaussianDistribution(dim));
+				set1.add(new DiagonalGaussianDistribution(dim));
 				map.put(Unit.P, set0);
 				map.put(Unit.UC, set1);
-				aweight.add(i, map);
+				weight.add(i, map);
 			}
 			break;
 		case LRBRULE: // general binary rules
-			for (int i = 0; i < defNcomp; i++) {
+			for (int i = 0; i < ncomponent; i++) {
 				Map<String, Set<GaussianDistribution>> map = new HashMap<String, Set<GaussianDistribution>>(3, 1);
 				Set<GaussianDistribution> set0 = new HashSet<GaussianDistribution>(1, 1);
 				Set<GaussianDistribution> set1 = new HashSet<GaussianDistribution>(1, 1);
 				Set<GaussianDistribution> set2 = new HashSet<GaussianDistribution>(1, 1);
-				set0.add(new DiagonalGaussianDistribution(defNdim));
-				set1.add(new DiagonalGaussianDistribution(defNdim));
-				set2.add(new DiagonalGaussianDistribution(defNdim));
+				set0.add(new DiagonalGaussianDistribution(dim));
+				set1.add(new DiagonalGaussianDistribution(dim));
+				set2.add(new DiagonalGaussianDistribution(dim));
 				map.put(Unit.P, set0);
 				map.put(Unit.LC, set1);
 				map.put(Unit.RC, set2);
-				aweight.add(i, map);
+				weight.add(i, map);
 			}
 			break;
 		default:
 			throw new RuntimeException("Not consistent with any grammar rule type. Type: " + type);
 		}
-		return aweight;
-	}
-	
+	}	
+
 	
 	public byte getType() {
 		return type;
@@ -137,4 +151,5 @@ public abstract class GrammarRule implements Serializable {
 	public void setWeight(GaussianMixture weight) {
 		this.weight = weight;
 	}
+	
 }
