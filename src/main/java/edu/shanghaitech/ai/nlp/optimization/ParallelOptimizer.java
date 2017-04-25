@@ -455,7 +455,7 @@ public class ParallelOptimizer extends Optimizer {
 				caches.notifyAll();
 			}
 			task = null;
-			return itask;
+			return null;
 		}
 
 		@Override
