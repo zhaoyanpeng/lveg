@@ -452,7 +452,7 @@ public class ParallelOptimizer extends Optimizer {
 			Meta<O> cache = new Meta(itask, status);
 			synchronized (caches) {
 				caches.add(cache);
-				caches.notifyAll();
+				caches.notify();
 			}
 			task = null;
 			return null;

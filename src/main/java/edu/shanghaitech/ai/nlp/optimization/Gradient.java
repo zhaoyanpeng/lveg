@@ -135,10 +135,15 @@ public class Gradient extends Recorder implements Serializable {
 	
 	
 	protected boolean eval(GrammarRule rule, Batch ioScoreWithT, Batch ioScoreWithS, List<Double> scoreSandT) {
-		if (Optimizer.sampling) {
-			return evalsampling(rule, ioScoreWithT, ioScoreWithS, scoreSandT);
-		} else {
-			return evalintegral(rule, ioScoreWithT, ioScoreWithS, scoreSandT);
+		try {
+			if (Optimizer.sampling) {
+				return evalsampling(rule, ioScoreWithT, ioScoreWithS, scoreSandT);
+			} else {
+				return evalintegral(rule, ioScoreWithT, ioScoreWithS, scoreSandT);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			return false;
 		}
 	}
 	

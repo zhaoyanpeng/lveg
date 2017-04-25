@@ -34,8 +34,8 @@ public class FunUtil extends Recorder {
 	 * 
 	 */
 	private static final long serialVersionUID = -9216654024276471124L;
-	public final static double LOG_ZERO = -1.0e10;
-	public final static double LOG_TINY = -0.5e10;
+	public final static double LOG_ZERO = -1.0e20;
+	public final static double LOG_TINY = -0.5e20;
 	public final static double EXP_ZERO = -Math.log(-LOG_ZERO);
 	public final static NumberFormat formatter = new DecimalFormat("0.###E0");
 	
