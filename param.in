@@ -69,7 +69,8 @@
 -sexp, 0.35,
 -pivota, 100,
 -pivotb, 5000,
--resetl, true,
+-resetl, false,
+-resetp, true,
 
 -eratio, -0.1, 
 -eonlylen, 3,
@@ -91,7 +92,7 @@
 -ef1ontrain, false,
 -ef1imwrite, false,
 
--runtag, 0430_1_2_3_200_test4_tb,
+-runtag, 0430_1_2_3_200_test5_tb,
 -logroot, log/,
 -logtype, 0,
 -verbose, false,

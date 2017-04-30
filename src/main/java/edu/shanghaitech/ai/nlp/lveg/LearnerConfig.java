@@ -7,10 +7,12 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Random;
+import java.util.Set;
 
 import org.apache.commons.pool2.impl.GenericKeyedObjectPoolConfig;
 
@@ -22,14 +24,19 @@ import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.data.StateTreeList;
 import edu.shanghaitech.ai.nlp.data.LVeGCorpus;
 import edu.shanghaitech.ai.nlp.data.ObjectFileManager.CorpusFile;
+import edu.shanghaitech.ai.nlp.lveg.impl.BinaryGrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.impl.DiagonalGaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.impl.GaussFactory;
 import edu.shanghaitech.ai.nlp.lveg.impl.MoGFactory;
 import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGLexicon;
+import edu.shanghaitech.ai.nlp.lveg.impl.UnaryGrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture.Component;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.Unit;
 import edu.shanghaitech.ai.nlp.optimization.Optimizer.OptChoice;
 import edu.shanghaitech.ai.nlp.optimization.ParallelOptimizer.ParallelMode;
 import edu.shanghaitech.ai.nlp.syntax.State;
@@ -270,8 +277,10 @@ public class LearnerConfig extends Recorder {
 		public double pivota = 100;
 		@Option(name = "-pivotb", usage = "initialize # of components of the rule weight by its frequency (default: 5000)")
 		public double pivotb = 5000;
-		@Option(name = "-resetl", usage = "whether reset lexicon rule weights or not (false) (default: false)")
+		@Option(name = "-resetl", usage = "whether reset lexicon rule weights (true) or not (false) (default: false)")
 		public boolean resetl = false;
+		@Option(name = "-resetp", usage = "whether reset mus of the rule weight (true) or not (false) (default: false)")
+		public boolean resetp = false;
 		/* training-configurations section ends */
 		
 		/* evaluation section begins */
@@ -618,12 +627,13 @@ public class LearnerConfig extends Recorder {
 		}
 	};
 	
-	protected static void resetRuleWeight(LVeGGrammar grammar, LVeGLexicon lexicon, Numberer numberer, double factor, boolean resetc, Options opts) {
+	protected static void resetRuleWeight(LVeGGrammar grammar, LVeGLexicon lexicon, Numberer numberer, double factor, Options opts) {
 		int ntag = numberer.size(), nrule, count, ncomp;
 		List<GrammarRule> gUruleWithP, gBruleWithP, lUruleWithP;
 		double prob, rulecnt, logprob;
 		int a = 0, b = 0, c = 0, d = 0, e = 0;
 		GaussianMixture ruleW;
+		boolean resetc;
 		/*
 		// probabilities of lexicon rules
 		// since LHS tags of lexicon rules and CNF rules do not overlap
@@ -649,7 +659,6 @@ public class LearnerConfig extends Recorder {
 			gUruleWithP = grammar.getURuleWithP(i);
 			gBruleWithP = grammar.getBRuleWithP(i);
 			lUruleWithP = lexicon.getURuleWithP(i);
-			nrule = gUruleWithP.size() + gBruleWithP.size();
 			nrule = gUruleWithP.size() + gBruleWithP.size() + lUruleWithP.size();
 			List<GrammarRule> rules = new ArrayList<GrammarRule>(nrule + 5);
 			rules.addAll(gUruleWithP);
@@ -686,7 +695,6 @@ public class LearnerConfig extends Recorder {
 						c++;
 						increment = 2;
 					}
-//					rule.initializeWeight(type, (short) ncomp, (short) -1);
 					rule.addWeightComponent(type, increment, (short) -1);
 					
 					ruleW = rule.getWeight();
@@ -705,6 +713,142 @@ public class LearnerConfig extends Recorder {
 		logger.debug("# of 1-comp: " + a + ", # of 2-comps: " + b + ", # of 3-comps: " + c +
 				", skip # of lexicon rules: " + d +
 				", # of larger than " + opts.pivota + " is " + e + "\n");
+		
+		if (opts.resetp) {
+			resetRuleWeightParams(grammar, lexicon, numberer, opts);
+		}
 	}
+	
+	
+	protected static void resetRuleWeightParams(LVeGGrammar grammar, LVeGLexicon lexicon, Numberer numberer, Options opts) {
+		int ntag = numberer.size(), nrule;
+		List<GrammarRule> gUruleWithP, gBruleWithP, lUruleWithP;
+		// filters
+		Set<Short> lexiconTags = new HashSet<Short>(ntag);
+		for (int i = 0; i < ntag; i++) {
+			lUruleWithP = lexicon.getURuleWithP(i);
+			for (GrammarRule rule : lUruleWithP) {
+				lexiconTags.add(rule.lhs);
+				break;
+			}
+		}
+		logger.trace("---lexicon tags: # is " + lexiconTags.size() + "; " + lexiconTags + "\n");
+		
+		// params
+		int ncomp = 3;
+		List[][] tmus = new List[ntag][ncomp];
+		for (short itag = 0; itag < ntag; itag++) {
+			if (lexiconTags.contains(itag)) { 
+				logger.trace("skip lexicon tag: " + itag + "\n");
+				continue; 	
+			}
+			for (int icomp = 0; icomp < ncomp; icomp++) {
+				tmus[itag][icomp] = new ArrayList<Double>(opts.dim);
+				for (short idim = 0; idim < opts.dim; idim++) {
+					double rndn = (random.nextDouble() - opts.nmratio) * opts.maxmu;
+					tmus[itag][icomp].add(rndn);
+				}
+			}
+		}
+		
+		// reset
+		for (short itag = 0; itag < ntag; itag++) {
+			if (lexiconTags.contains(itag)) { continue; }
+			gUruleWithP = grammar.getURuleWithP(itag);
+			gBruleWithP = grammar.getBRuleWithP(itag);
+			nrule = gUruleWithP.size() + gBruleWithP.size();
+			List<GrammarRule> rules = new ArrayList<GrammarRule>(nrule + 5);
+			rules.addAll(gUruleWithP);
+			rules.addAll(gBruleWithP);
+			
+			for (GrammarRule rule : rules) {
+				resetRuleWeightParams(rule, tmus);
+			}
+		}
+	}
+	
+	
+	private static void resetRuleWeightParams(GrammarRule rule, List[][] tmus) {
+		GaussianMixture ruleW = rule.weight;
+		int ncomp = ruleW.ncomponent();
+		byte type = rule.getType();
+		
+		switch (type) {
+		case GrammarRule.RHSPACE: { // rules for the root since it does not have subtypes
+			UnaryGrammarRule urule = (UnaryGrammarRule) rule;
+			List[] newmus = tmus[urule.rhs];
+			for (short i = 0; i < ncomp; i++) {
+				Component comp = ruleW.getComponent(i);
+				if (newmus[i] != null) {
+					GaussianDistribution gd = comp.squeeze(Unit.C);
+					List<Double> oldmus = gd.getMus();
+					assert(oldmus.size() == newmus[i].size());
+					oldmus.clear();
+					oldmus.addAll(newmus[i]);
+				}
+			}
+			break;
+		}
+		case GrammarRule.LHSPACE: { // rules in the preterminal layer (discarded)
+			logger.error("\n---not supposed to be reached\n");
+			break;
+		}
+		case GrammarRule.LRURULE: { // general unary rules 
+			UnaryGrammarRule urule = (UnaryGrammarRule) rule;
+			List[] pnewmus = tmus[urule.lhs];
+			List[] cnewmus = tmus[urule.rhs];
+			for (short i = 0; i < ncomp; i++) {
+				Component comp = ruleW.getComponent(i);
+				GaussianDistribution gd = comp.squeeze(Unit.P);
+				List<Double> oldmus = gd.getMus();
+				assert(oldmus.size() == pnewmus[i].size());
+				oldmus.clear();
+				oldmus.addAll(pnewmus[i]);
+				
+				if (cnewmus[i] != null) {
+					gd = comp.squeeze(Unit.UC);
+					oldmus = gd.getMus();
+					assert(oldmus.size() == cnewmus[i].size());
+					oldmus.clear();
+					oldmus.addAll(cnewmus[i]);
+				}
+			}
+			break;
+		}
+		case GrammarRule.LRBRULE: { // general binary rules
+			BinaryGrammarRule brule = (BinaryGrammarRule) rule;
+			List[] pnewmus = tmus[brule.lhs];
+			List[] lnewmus = tmus[brule.lchild];
+			List[] rnewmus = tmus[brule.rchild];
+			for (short i = 0; i < ncomp; i++) {
+				Component comp = ruleW.getComponent(i);
+				GaussianDistribution gd = comp.squeeze(Unit.P);
+				List<Double> oldmus = gd.getMus();
+				assert(oldmus.size() == pnewmus[i].size());
+				oldmus.clear();
+				oldmus.addAll(pnewmus[i]);
+				
+				if (lnewmus[i] != null) {
+					gd = comp.squeeze(Unit.LC);
+					oldmus = gd.getMus();
+					assert(oldmus.size() == lnewmus[i].size());
+					oldmus.clear();
+					oldmus.addAll(lnewmus[i]);
+				}
+				
+				if (rnewmus[i] != null) {
+					gd = comp.squeeze(Unit.RC);
+					oldmus = gd.getMus();
+					assert(oldmus.size() == rnewmus[i].size());
+					oldmus.clear();
+					oldmus.addAll(rnewmus[i]);
+				}
+			}
+			break;
+		}
+		default:
+			throw new RuntimeException("Not consistent with any grammar rule type. Type: " + type);
+		}
+	}	
 	
 }
