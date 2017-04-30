@@ -275,6 +275,8 @@ public class LearnerConfig extends Recorder {
 		public double pivota = 100;
 		@Option(name = "-pivotb", usage = "initialize # of components of the rule weight by its frequency (default: 5000)")
 		public double pivotb = 5000;
+		@Option(name = "-resetl", usage = "whether reset lexicon rule weights or not (false) (default: false)")
+		public boolean resetl = false;
 		/* training-configurations section ends */
 		
 		/* evaluation section begins */
@@ -630,7 +632,7 @@ public class LearnerConfig extends Recorder {
 		int ntag = numberer.size(), nrule, count, ncomp;
 		List<GrammarRule> gUruleWithP, gBruleWithP, lUruleWithP;
 		double prob, rulecnt, logprob;
-		int a = 0, b = 0, c = 0;
+		int a = 0, b = 0, c = 0, d = 0, e = 0;
 		GaussianMixture ruleW;
 		/*
 		// probabilities of lexicon rules
@@ -674,6 +676,13 @@ public class LearnerConfig extends Recorder {
 				ruleW = rule.getWeight();
 				ncomp = opts.ncomponent;
 				
+				if (!opts.resetl && rule.type == GrammarRule.LHSPACE) {
+					d++;
+					resetc = false;
+				} else {
+					resetc = opts.resetc;
+				}
+				
 				if (resetc && rulecnt > opts.pivota) {
 					byte type = rule.getType();
 					short increment = 0;
@@ -703,7 +712,9 @@ public class LearnerConfig extends Recorder {
 			}
 //			logger.debug(i + "\t: " + count + "\n");
 		}
-		logger.debug("# of 1-comp: " + a + ", # of 2-comps: " + b + ", # of 3-comps: " + c + "\n");
+		logger.debug("# of 1-comp: " + a + ", # of 2-comps: " + b + ", # of 3-comps: " + c +
+				", skip # of lexicon rules: " + d +
+				", # of larger than " + opts.pivota + " is " + e + "\n");
 	}
 	
 }

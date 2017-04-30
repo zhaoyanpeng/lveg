@@ -695,7 +695,7 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 			for (Map.Entry<String, Set<GaussianDistribution>> gaussian : comp.multivnd.entrySet()) {
 				for (GaussianDistribution gd : gaussian.getValue()) {
 					value += gd.eval(sample, normal);
-					if (Double.isInfinite(value)) {
+					if (!Double.isFinite(value)) {
 						logger.error("\n---derivate the mixting weight---\n" + this + "\n");
 					}
 				}
@@ -725,7 +725,7 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 				List<Double> slice = sample.get(gaussian.getKey());
 				for (GaussianDistribution gd : gaussian.getValue()) {
 					value += gd.eval(slice, normal);
-					if (Double.isInfinite(value)) {
+					if (!Double.isFinite(value)) {
 						logger.error("\n---derivate the mixting weight---\n" + this + "\n");
 					}
 				}
@@ -768,7 +768,7 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 			List<Double> slice = sample.get(gaussian.getKey());
 			for (GaussianDistribution gd : gaussian.getValue()) {
 				value += gd.eval(slice, normal);
-				if (Double.isInfinite(value)) {
+				if (!Double.isFinite(value)) {
 					logger.error("\n---derivate the mixting weight---\n" + this + "\n");
 				}
 			}

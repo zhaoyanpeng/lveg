@@ -61,7 +61,7 @@
 -dim, 2,
 -useref, false,
 -resetw, true,
--resetc, true,
+-resetc, false,
 -mwfactor, 1.0,
 -usemasks, true,
 -tgbase, 3,
@@ -92,7 +92,7 @@
 -ef1ontrain, false,
 -ef1imwrite, false,
 
--runtag, 0425_1_2_3_200_test1,
+-runtag, 0425_1_2_3_200_test2_tb,
 -logroot, log/,
 -logtype, 0,
 -verbose, false,

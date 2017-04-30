@@ -565,7 +565,7 @@ public class Debugger extends Recorder {
 		for (Map.Entry<Integer, Integer> entry : summary.entrySet()) {
 			for (int i = 0; i < nbin ; i += 10) {
 				int len = entry.getKey();
-				if (len < i) {
+				if (len <= i) {
 					if (lens.containsKey(i)) {
 						lens.put(i, lens.get(i) + entry.getValue());
 					} else {

@@ -1,5 +1,7 @@
 package edu.shanghaitech.ai.nlp.lveg;
 
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -18,6 +20,7 @@ import java.util.regex.Pattern;
 import org.junit.Test;
 
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture.Component;
+import edu.shanghaitech.ai.nlp.util.Debugger;
 import edu.shanghaitech.ai.nlp.util.FunUtil;
 
 public class Java {
@@ -73,7 +76,23 @@ public class Java {
 		}
 	}
 	
+	
 	@Test
+	public void c() {
+//		Debugger.debugTreebank();
+		
+		String format = "%.3f";
+		NumberFormat formatter = new DecimalFormat("0.###E0");
+		double xx = Double.NEGATIVE_INFINITY;
+		System.out.println(String.format(format, xx));
+		System.out.println(formatter.format(xx));
+		
+		double yy = Double.NaN;
+		System.out.println(String.format(format, yy));
+		System.out.println(formatter.format(yy));
+	}
+	
+//	@Test
 	public void a() {
 		int x = 1;
 		b(x++);

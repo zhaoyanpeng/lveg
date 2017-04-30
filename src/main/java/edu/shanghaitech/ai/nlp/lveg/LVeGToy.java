@@ -9,10 +9,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import edu.berkeley.nlp.PCFGLA.TreeAnnotations;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.syntax.Trees;
 import edu.shanghaitech.ai.nlp.data.StateTreeList;
 import edu.shanghaitech.ai.nlp.data.ObjectFileManager.GrammarFile;
+import edu.shanghaitech.ai.nlp.lveg.LearnerConfig.Options;
 import edu.shanghaitech.ai.nlp.lveg.impl.LVeGParser;
 import edu.shanghaitech.ai.nlp.lveg.impl.MaxRuleParser;
 import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGGrammar;
@@ -59,7 +61,7 @@ public class LVeGToy extends LearnerConfig {
 	protected static String treeFile;
 	
 	protected static Options opts;
-	protected static int ntree = 2;
+	protected static int ntree = 5;
 	
 	public static void main(String[] args) throws Exception {
 		String fparams = args[0];
@@ -73,9 +75,18 @@ public class LVeGToy extends LearnerConfig {
 		// configurations
 		initialize(opts, false); // logger can only be used after the initialization
 		logger.info("Calling with " + optionParser.getParsedOptions() + "\n");
+		
+//		showPPTrees(opts);
+//		System.exit(0);
+		
 		// loading data
 		Numberer wrapper = new Numberer();
-		Map<String, StateTreeList> trees = makeData(wrapper, opts) /*makeComplexData(wrapper, opts)*/;
+		Map<String, StateTreeList> trees = 
+				makeAugmentedData(wrapper, opts);
+				/*loadPPTrees(wrapper, opts);*/
+				/*makeData(wrapper, opts);*/ 
+				/*makeComplexData(wrapper, opts);*/
+		
 		// training
 		long startTime = System.currentTimeMillis();
 		train(trees, wrapper);
@@ -122,18 +133,26 @@ public class LVeGToy extends LearnerConfig {
 			lexicon.postInitialize();
 			logger.trace("post-initializing is over.\n");
 			
+//			resetPPrule(grammar, lexicon);
+			resetInterule(grammar, lexicon);
+			
 			grammar.initializeOptimizer();
 			lexicon.initializeOptimizer();
 			logger.trace("\n--->Initializing optimizer is over...\n");
 		}
 		
-		customize(grammar, lexicon); // reset grammar rules
+//		customize(grammar, lexicon); // reset grammar rules
 		
-		/*
-		logger.trace(grammar);
-		logger.trace(lexicon);
-		System.exit(0);
-		*/
+//		logger.trace(grammar);
+//		logger.trace(lexicon);
+//		System.exit(0);
+		
+		
+		// DEBUG print initial grammars
+		logger.info("\n\n----------PRINT INITIAL GRAMMARS----------\n\n");
+		printGrammars();
+		
+		
 		lexicon.labelTrees(trainTrees); // FIXME no errors, just alert you to pay attention to it 
 		
 		lvegParser = new LVeGParser<Tree<State>, List<Double>>(grammar, lexicon, opts.maxslen, 
@@ -162,6 +181,15 @@ public class LVeGToy extends LearnerConfig {
 		} else {
 			serialInBatch(numberer, ll);
 		}
+		
+		
+		// DEBUG print final grammars
+		logger.info("\n\n----------PRINT FINAL GRAMMARS----------\n\n");
+		printGrammars();
+		
+		logger.trace(grammar);
+		logger.trace(lexicon);
+		
 		// kill threads
 		grammar.shutdown();
 		lexicon.shutdown();
@@ -170,7 +198,6 @@ public class LVeGToy extends LearnerConfig {
 	}
 	
 	protected static void debugrad(boolean debug) {
-		
 		Map<GrammarRule, GrammarRule> uRuleMap = grammar.getURuleMap();
 		for (Map.Entry<GrammarRule, GrammarRule> entry : uRuleMap.entrySet()) {
 			goptimizer.debug(entry.getKey(), debug);
@@ -179,8 +206,33 @@ public class LVeGToy extends LearnerConfig {
 		for (Map.Entry<GrammarRule, GrammarRule> entry : uRuleMap.entrySet()) {
 			loptimizer.debug(entry.getKey(), debug);
 		}
-		
+		/*
+		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBRuleMap();
+		for (Map.Entry<GrammarRule, GrammarRule> entry : bRuleMap.entrySet()) {
+			goptimizer.debug(entry.getKey(), debug);
+		}
+		*/
 		/*goptimizer.debug(null, debug);*/
+	}
+	
+	
+	protected static void printGrammars() {
+		GrammarRule rule = null;
+		Map<GrammarRule, GrammarRule> uRuleMap = grammar.getURuleMap();
+		for (Map.Entry<GrammarRule, GrammarRule> entry : uRuleMap.entrySet()) {
+			rule = entry.getKey();
+			logger.trace("\n----------\nRule: " + rule + "\nRule Weight: " + rule.getWeight() + "\n----------\n");
+		}
+		uRuleMap = lexicon.getURuleMap();
+		for (Map.Entry<GrammarRule, GrammarRule> entry : uRuleMap.entrySet()) {
+			rule = entry.getKey();
+			logger.trace("\n----------\nRule: " + rule + "\nRule Weight: " + rule.getWeight() + "\n----------\n");
+		}
+		Map<GrammarRule, GrammarRule> bRuleMap = grammar.getBRuleMap();
+		for (Map.Entry<GrammarRule, GrammarRule> entry : bRuleMap.entrySet()) {
+			rule = entry.getKey();
+			logger.trace("\n----------\nRule: " + rule + "\nRule Weight: " + rule.getWeight() + "\n----------\n");
+		}
 	}
 	
 	
@@ -300,7 +352,6 @@ public class LVeGToy extends LearnerConfig {
 					logger.trace("--------- " + StateTreeList.stateTreeToStringTree(tree, numberer) + "\n");
 					continue;
 				}
-				
 				logger.trace("scores: " + FunUtil.double2str(scoresOfST, precision, -1, false, true) + "\teval gradients... ");
 				beginTime = System.currentTimeMillis();
 				
@@ -317,7 +368,7 @@ public class LVeGToy extends LearnerConfig {
 					
 					if (opts.dgradnbatch > 0 && ((isample % (opts.bsize * opts.dgradnbatch)) == 0)) { 
 						debugrad(true); 
-						GradientChecker.gradcheck(grammar, lexicon, lvegParser, valuator, tree, opts.maxsample);
+//						GradientChecker.gradcheck(grammar, lexicon, lvegParser, valuator, tree, opts.maxsample);
 					}
 					
 					// apply gradient descent
@@ -544,6 +595,76 @@ public class LVeGToy extends LearnerConfig {
 		return trees;
 	}
 	
+	
+	protected static Map<String, StateTreeList> makeAugmentedData(Numberer wraper, Options opts) {
+		StateTreeList trainTrees;
+		Numberer numberer = wraper.getGlobalNumberer(KEY_TAG_SET);
+		Map<String, StateTreeList> trees = new HashMap<String, StateTreeList>(3, 1);
+		List<Tree<String>> strTrees = new ArrayList<Tree<String>>();
+		for (int i = 0; i < ntree; i++) {
+//			String string = "(ROOT (A_" + i + " (B X_" + i + ")))";
+			String string = "(ROOT (A_" + i + " (B (C X_" + i + "))))";
+			strTrees.add((new Trees.PennTreeReader(new StringReader(string))).next());
+		}
+		trainTrees = stringTreeToStateTree(strTrees, numberer, opts, false);
+		trees.put(ID_TRAIN, trainTrees);
+		return trees;
+	}
+	
+	
+	protected static void resetInterule(LVeGGrammar grammar, LVeGLexicon lexicon) {
+		GrammarRule rule = grammar.getURule((short) 2, 3, (byte) 0);
+		rule.addWeightComponent(rule.type, (short) 4, (short) -1);
+	}
+	
+	
+	public static Map<String, StateTreeList> loadPPTrees(Numberer wraper, Options opts) {
+		Numberer numberer = wraper.getGlobalNumberer(KEY_TAG_SET);
+		Map<String, StateTreeList> trees = new HashMap<String, StateTreeList>(3, 1);
+		List<Tree<String>> strTrees = loadStringTree(opts.datadir + "wsj_toy_tree_ppa", opts);
+		StateTreeList trainTrees = stringTreeToStateTree(strTrees, numberer, opts, false);
+		trees.put(ID_TRAIN, trainTrees);
+		return trees;
+	}
+	
+	
+	public static void showPPTrees(Options opts) throws Exception {
+		List<Tree<String>> trees = loadStringTree(opts.datadir + "wsj_toy_tree_ppa", opts);
+		int idx = 0;
+		String name, prefix = sublogroot + opts.imgprefix + "_gd";
+		for (Tree<String> tree : trees) {
+			name = prefix + "_" + idx;
+			System.out.println(idx + "\t" + tree);
+			FunUtil.saveTree2image(null, name, tree, null);
+			Tree<String> gold = TreeAnnotations.unAnnotateTree(tree, false);
+			name += "_ud";
+			System.out.println(idx + "\t" + gold);
+			FunUtil.saveTree2image(null, name, gold, null);
+			idx++;
+		}
+	}
+	
+	protected static Map<String, StateTreeList> ppAttachment(Numberer wraper, Options opts) {
+		StateTreeList trainTrees;
+		Numberer numberer = wraper.getGlobalNumberer(KEY_TAG_SET);
+		Map<String, StateTreeList> trees = new HashMap<String, StateTreeList>(3, 1);
+		List<Tree<String>> strTrees = new ArrayList<Tree<String>>();
+		for (int i = 0; i < ntree; i++) {
+			String string = "(ROOT (A_" + i + " (B X_" + i + ")))";
+			strTrees.add((new Trees.PennTreeReader(new StringReader(string))).next());
+		}
+		trainTrees = stringTreeToStateTree(strTrees, numberer, opts, false);
+		trees.put(ID_TRAIN, trainTrees);
+		return trees;
+	}
+	
+	
+	protected static void resetPPrule(LVeGGrammar grammar, LVeGLexicon lexicon) {
+		GrammarRule rule = grammar.getBRule((short) 8, (short) 9, (short) 3);
+		rule.addWeightComponent(rule.type, (short) 1, (short) -1);
+		rule = grammar.getURule((short) 3, 7, (byte) 0);
+		rule.addWeightComponent(rule.type, (short) 1, (short) -1);
+	}
 	
 	protected static void customize(LVeGGrammar grammar, LVeGLexicon lexicon) {
 		GrammarRule ur01 = new UnaryGrammarRule((short) 0, (short) 1, GrammarRule.RHSPACE, true);	
