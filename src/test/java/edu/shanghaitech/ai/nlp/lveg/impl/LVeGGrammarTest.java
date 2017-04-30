@@ -45,7 +45,7 @@ public class LVeGGrammarTest {
 //	}
 	
 	int nTag = 10;
-	LVeGGrammar grammar = new SimpleLVeGGrammar(null, nTag, false, null);
+	LVeGGrammar grammar = new SimpleLVeGGrammar(null, nTag);
 	
 	@Test
 	public void testLVeGGrammar() {

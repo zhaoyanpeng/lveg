@@ -6,7 +6,7 @@ public class LVeGTesterTest {
 
 	@Test
 	public void testLVeGLearner() {
-		String[] args = {"param.in"};
+		String[] args = {"param.f1"};
 		try {
 			LVeGTester.main(args);
 		} catch (Exception e) {

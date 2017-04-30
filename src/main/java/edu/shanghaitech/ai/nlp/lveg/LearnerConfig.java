@@ -141,7 +141,7 @@ public class LearnerConfig extends Recorder {
 		
 		/* optimization-parameter section begins*/
 		@Option(name = "-lr", usage = "learning rate (default: 1.0)")
-		public double lr = 0.02;
+		public double lr = 0.01;
 		@Option(name = "-reg", usage = "using regularization (true) or not (false) (default: false)")
 		public boolean reg = false;
 		@Option(name = "-clip", usage = "clipping the gradients (true) or not (false) (default: false)")
@@ -153,7 +153,7 @@ public class LearnerConfig extends Recorder {
 		@Option(name = "-l1", usage = "using l1 regularization (true) or l2 regularization (false) (default: true)")
 		public boolean l1 = true;
 		@Option(name = "-minmw", usage = "minimum mixing weight (default: 1e-6)")
-		public double minmw = 1e-20;
+		public double minmw = 1e-15;
 		@Option(name = "-epsilon", usage = "a small constant to avoid the division by zero (default: 1e-8)")
 		public double epsilon = 1e-8;
 		@Option(name = "-choice", usage = "optimization methods: NORMALIZED, SGD, ADAGRAD, RMSPROP, ADADELTA, ADAM (default: ADAM)")
@@ -163,7 +163,7 @@ public class LearnerConfig extends Recorder {
 		@Option(name = "-lambda1", usage = "1st. order momentum (default: 0.9)")
 		public double lambda1 = 0.9;
 		@Option(name = "-lambda2", usage = "2nd. order momentum (default: 0.9)")
-		public double lambda2 = 0.9;
+		public double lambda2 = 0.999;
 		/* optimization-parameter section ends*/
 		
 		/* grammar-data section begins */
@@ -171,8 +171,8 @@ public class LearnerConfig extends Recorder {
 		public String inGrammar = null;
 		@Option(name = "-outGrammar", usage = "output: object file of the grammar (default: null)")
 		public String outGrammar = null;
-		@Option(name = "-saveGrammar", usage = "save grammar to the object file (true) or not (false) (default: false)")
-		public boolean saveGrammar = false;
+		@Option(name = "-saveGrammar", usage = "save grammar to the object file (true) or not (false) (default: true)")
+		public boolean saveGrammar = true;
 		@Option(name = "-loadGrammar", usage = "load grammar from the object file (true) or not (false) (default: false)")
 		public boolean loadGrammar = false;
 		@Option(name = "-nbatchSave", usage = "# of batches after which the grammar is saved (default: 20")
@@ -251,8 +251,6 @@ public class LearnerConfig extends Recorder {
 		public short ncomponent = 2;
 		@Option(name = "-dim", usage = "dimension of the gaussian (default: 2)")
 		public short dim = 2;
-		@Option(name = "-useref", usage = "refer the # of subtypes of nonterminals of berkeley parser (true) or not (false) (default: false)")
-		public boolean useref = false;
 		@Option(name = "-resetw", usage = "reset the mixing weight according to the treebank grammars (default: false)")
 		public boolean resetw = false;
 		@Option(name = "-resetc", usage = "reset the # of component of the rule weight according to its frequency (default: false) ")
@@ -397,7 +395,7 @@ public class LearnerConfig extends Recorder {
 	}
 	
 	public static void initialize(Options opts, boolean test) {
-		if (opts.outGrammar == null) {
+		if (opts.outGrammar == null && !test) {
 			throw new IllegalArgumentException("Output file is required.");
 		}
 		// make directories
@@ -499,10 +497,6 @@ public class LearnerConfig extends Recorder {
 		trees.put(ID_TRAIN, trainTrees);
 		trees.put(ID_TEST, testTrees);
 		trees.put(ID_DEV, devTrees);
-		
-		if (opts.useref) {
-			makeSubTypes(numberer); // specify number of sub-types for each nonterminal
-		}
 		
 		if (opts.saveCorpus && opts.outCorpus != null) {
 			logger.info("\n-------saving corpus file...");

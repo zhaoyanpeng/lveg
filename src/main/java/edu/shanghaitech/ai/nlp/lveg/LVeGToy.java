@@ -100,8 +100,8 @@ public class LVeGToy extends LearnerConfig {
 		treeFile = sublogroot + opts.imgprefix;
 		Numberer numberer = wrapper.getGlobalNumberer(KEY_TAG_SET);
 		
-		grammar = new SimpleLVeGGrammar(numberer, -1, opts.useref, refSubTypes);
-		lexicon = new SimpleLVeGLexicon(numberer, -1, opts.useref, refSubTypes);
+		grammar = new SimpleLVeGGrammar(numberer, -1);
+		lexicon = new SimpleLVeGLexicon(numberer, -1);
 		
 		/* to ease the parameters tuning */
 		GaussianMixture.config(opts.maxnbig, opts.expzero, opts.maxmw, opts.ncomponent, 

@@ -41,10 +41,8 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 	}
 	
 	
-	public SimpleLVeGLexicon(Numberer numberer, int ntag, boolean useRef, Map<Short, Short> nSubTypes) {
+	public SimpleLVeGLexicon(Numberer numberer, int ntag) {
 		this();
-		this.refSubTypes = nSubTypes;
-		this.useRef = useRef;
 		if (numberer == null) {
 			this.numberer = null;
 			this.ntag = ntag;
@@ -115,12 +113,7 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 			short tagIdx = tags.get(i).getId();
 			GrammarRule rule = new UnaryGrammarRule(tagIdx, wordIdx, GrammarRule.LHSPACE);
 			if (!uRuleTable.containsKey(rule)) { 
-				int ncomp = -1;
-				if (useRef) { // 1 component for 20 sub-types for lexicon rules
-					ncomp = (int) (Math.round(Math.pow(refSubTypes.get(tagIdx), 0.2)));
-					ncomp = ncomp == 0 ? -1 : (ncomp > 3 ? 3 : ncomp);
-				}
-				rule.initializeWeight(GrammarRule.LHSPACE, (short) ncomp, (short) -1); 
+				rule.initializeWeight(GrammarRule.LHSPACE, (short) -1, (short) -1); 
 			}
 			uRuleTable.addCount(rule, 1.0);
 		}

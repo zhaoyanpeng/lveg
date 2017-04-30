@@ -83,7 +83,6 @@ public class LVeGTester extends LearnerConfig {
 		GaussianMixture.config(opts.maxnbig, opts.expzero, opts.maxmw, opts.ncomponent, 
 				opts.nwratio, opts.riserate, opts.rtratio, opts.hardcut, random, mogPool);
 		GaussianDistribution.config(opts.maxmu, opts.maxvar, opts.dim, opts.nmratio, opts.nvratio, random, gaussPool);
-		Optimizer.config(opts.choice, random, opts.maxsample, opts.bsize, opts.minmw, opts.sampling); // FIXME no errors, just alert you...
 		
 		// load grammar
 		logger.trace("--->Loading grammars from \'" + subdatadir + opts.inGrammar + "\'...\n");
@@ -110,8 +109,7 @@ public class LVeGTester extends LearnerConfig {
 		
 		logger.info("\n---F1 CONFIG---\n[parallel: batch-" + opts.pbatch + ", grad-" + 
 				opts.pgrad + ", eval-" + opts.peval + ", test-" + opts.pf1 + "]\n\n");
-		
-		sorter = new PriorityQueue<Tree<State>>(opts.bsize + 5, wcomparator);
+		sorter = new PriorityQueue<Tree<State>>(3000, wcomparator);
 		
 		StringBuffer sb = new StringBuffer();
 		sb.append("[test ]" + f1entry(testTrees, numberer, false) + "\n");

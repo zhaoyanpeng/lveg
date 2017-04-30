@@ -25,13 +25,11 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 	private static final long serialVersionUID = 650638115156791313L;
 
 	
-	public SimpleLVeGGrammar(Numberer numberer, int ntag, boolean useRef, Map<Short, Short> nSubTypes) {
+	public SimpleLVeGGrammar(Numberer numberer, int ntag) {
 		this.uRuleTable = new RuleTable<UnaryGrammarRule>(UnaryGrammarRule.class);
 		this.bRuleTable = new RuleTable<BinaryGrammarRule>(BinaryGrammarRule.class);
 		this.uRuleMap = new HashMap<GrammarRule, GrammarRule>();
 		this.bRuleMap = new HashMap<GrammarRule, GrammarRule>();
-		this.refSubTypes = nSubTypes;
-		this.useRef = useRef;
 		if (numberer == null) {
 			this.numberer = null;
 			this.ntag = ntag;
@@ -124,13 +122,7 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 			byte type = idParent != 0 ? GrammarRule.LRURULE : GrammarRule.RHSPACE;
 			GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
 			if (!uRuleTable.containsKey(rule)) { 
-				int ntype, ncomp = (short) -1;
-				if (useRef) {
-					ntype = refSubTypes.get(idParent) * refSubTypes.get(idChild);
-					ncomp = (int) (Math.round(Math.pow(ntype, 0.2)));
-					ncomp = ncomp == 0 ? -1 : (ncomp > 6 ? 6 : ncomp);
-				}
-				rule.initializeWeight(type, (short) ncomp, (short) -1); 
+				rule.initializeWeight(type, (short) -1, (short) -1); 
 			}
 			uRuleTable.addCount(rule, 1.0);
 			break;
@@ -140,13 +132,7 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 			short idrChild = children.get(1).getLabel().getId();
 			GrammarRule rule = new BinaryGrammarRule(idParent, idlChild, idrChild);
 			if (!bRuleTable.containsKey(rule)) { 
-				int ntype, ncomp = (short) -1;
-				if (useRef) {
-					ntype = refSubTypes.get(idParent) * refSubTypes.get(idlChild) * refSubTypes.get(idrChild);
-					ncomp = (int) (Math.round(Math.pow(ntype, 0.2)));
-					ncomp = ncomp == 0 ? -1 : (ncomp > 10 ? 10 : ncomp);
-				}
-				rule.initializeWeight(GrammarRule.LRBRULE, (short) ncomp, (short) -1); 
+				rule.initializeWeight(GrammarRule.LRBRULE, (short) -1, (short) -1); 
 			}
 			bRuleTable.addCount(rule, 1.0);
 			break;

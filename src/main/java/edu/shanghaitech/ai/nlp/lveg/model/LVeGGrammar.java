@@ -34,9 +34,6 @@ public abstract class LVeGGrammar extends Recorder implements Serializable {
 	public Numberer numberer;
 	public int ntag;
 	
-	protected boolean useRef;
-	protected Map<Short, Short> refSubTypes;
-	
 	/**
 	 * Needed when we want to find a rule and access its statistics.
 	 * we first construct a rule, which is used as the key, and use 
