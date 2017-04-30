@@ -5,6 +5,7 @@ import java.util.List;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.data.StateTreeList;
 import edu.shanghaitech.ai.nlp.lveg.model.ChartCell.Chart;
+import edu.shanghaitech.ai.nlp.lveg.LVeGTrainer;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.Inferencer;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
@@ -21,9 +22,9 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 	
 	
 	private MaxRuleParser(MaxRuleParser<?, ?> parser) {
-		super(parser.maxslen, parser.nthread, parser.parallel, parser.iosprune, false);
+		super(parser.maxslen, parser.nthread, parser.parallel, parser.iosprune, parser.usemask);
 		this.inferencer = parser.inferencer;
-		this.chart = new Chart(parser.maxslen, true, true, false);
+		this.chart = new Chart(parser.maxslen, true, true, parser.usemask);
 	}
 	
 	
@@ -31,7 +32,7 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 			boolean parallel, boolean iosprune, boolean usemasks) {
 		super(maxLenParsing, nthread, parallel, iosprune, usemasks);
 		this.inferencer = new MaxRuleInferencer(grammar, lexicon);
-		this.chart = new Chart(maxLenParsing, true, true, false);
+		this.chart = new Chart(maxLenParsing, true, true, usemasks);
 	}
 	
 	
@@ -115,7 +116,16 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 		if (chart != null) {
 			chart.clear(nword);
 		} else {
-			chart = new Chart(nword, true, true, false);
+			chart = new Chart(nword, true, true, usemask);
+		}
+		if (usemask) {
+			PCFGInferencer.insideScore(chart, sentence, nword, LVeGTrainer.iomask, LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
+			PCFGInferencer.setRootOutsideScore(chart);
+			PCFGInferencer.outsideScore(chart, sentence, nword, LVeGTrainer.iomask,  LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
+			if (!LVeGTrainer.iomask) { // not use inside/outside score masks
+				double score = chart.getInsideScoreMask((short) 0, Chart.idx(0, 1));
+				PCFGInferencer.createPosteriorMask(nword, chart, score, LVeGTrainer.tgProb);
+			}
 		}
 		if (parallel) {
 			cpool.reset();
@@ -125,12 +135,12 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 			Inferencer.outsideScore(chart, sentence, nword, iosprune, cpool);
 		} else {
 //			logger.trace("\nInside score...\n"); // DEBUG
-			Inferencer.insideScore(chart, sentence, nword, iosprune, false, false);
+			Inferencer.insideScore(chart, sentence, nword, iosprune, usemask, LVeGTrainer.iomask);
 //			FunUtil.debugChart(chart.getChart(true), (short) -1, tree.getYield().size()); // DEBUG
 
 			Inferencer.setRootOutsideScore(chart);
 //			logger.trace("\nOutside score...\n"); // DEBUG
-			Inferencer.outsideScore(chart, sentence, nword, iosprune, false, false);
+			Inferencer.outsideScore(chart, sentence, nword, iosprune, usemask, LVeGTrainer.iomask);
 //			FunUtil.debugChart(chart.getChart(false), (short) -1, tree.getYield().size()); // DEBUG
 		}
 		double scoreS = Double.NEGATIVE_INFINITY;

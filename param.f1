@@ -30,7 +30,7 @@
 -usemasks, true,
 -tgbase, 3,
 -tgratio, 0.3,
--tgprob, 1e-10,
+-tgprob, 1e-3,
 -iomask, false,
 -sexp, 0.35,
 
@@ -41,7 +41,7 @@
 
 -pf1, true,
 -inGrammar, lveg_9.gr,
--ef1tag, 0420_lveg_check_3_test4_parallel_asyn,
+-ef1tag, 0420_lveg_check_3_test2_parallel_asyn_prune,
 -ef1prune, true,
 -ef1ondev, false,
 -ef1ontrain, false,
