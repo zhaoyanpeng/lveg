@@ -49,7 +49,6 @@
 -maxsample, 1,
 -maxslen, 50,
 -nAllowedDrop, 6,
--nratio, 0.5,
 -maxramdom, 1,
 -maxmw, 10,
 -nwratio, 0.8,
@@ -92,7 +91,7 @@
 -ef1ontrain, false,
 -ef1imwrite, false,
 
--runtag, 0430_1_2_3_200_test3_tb,
+-runtag, 0430_1_2_3_200_test4_tb,
 -logroot, log/,
 -logtype, 0,
 -verbose, false,

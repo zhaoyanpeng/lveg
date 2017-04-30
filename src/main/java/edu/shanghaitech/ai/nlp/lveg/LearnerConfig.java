@@ -53,7 +53,6 @@ public class LearnerConfig extends Recorder {
 	
 	public final static String KEY_TAG_SET = "tag";
 	public static double minmw = 1e-6;
-	public static double nratio = 0.5;
 	
 	public static short cntdrop = 0;
 	public static double besttrain = Double.NEGATIVE_INFINITY;
@@ -231,8 +230,6 @@ public class LearnerConfig extends Recorder {
 		public short maxslen = 120;
 		@Option(name = "-nAllowedDrop", usage = "# of allowed iterations in which the validation likelihood drops (default: 6)")
 		public short nAllowedDrop = 6;
-		@Option(name = "-nratio", usage = "fraction of negative values when initializing MoG parameters (Default: 0.5)")
-		public double nratio = 0.5;
 		@Option(name = "-maxramdom", usage = "maximum random double (int) value of the exponent part of MoG parameters (Default: 1)")
 		public double maxrandom = 1;
 		@Option(name = "-maxmw", usage = "maximum random exponent when initializing mixing weights (default: 1)")
@@ -431,7 +428,6 @@ public class LearnerConfig extends Recorder {
 		
 		dim = opts.dim;
 		minmw = opts.minmw;
-		nratio = opts.nratio;
 		precision = opts.precision;
 		maxrandom = opts.maxrandom;
 		randomseed = opts.rndomseed;
