@@ -90,6 +90,10 @@ public class Java {
 		double yy = Double.NaN;
 		System.out.println(String.format(format, yy));
 		System.out.println(formatter.format(yy));
+		
+		double mm = 1;
+		System.out.println(FunUtil.logAdd(mm, xx));
+		
 	}
 	
 //	@Test

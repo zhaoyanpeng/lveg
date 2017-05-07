@@ -6,6 +6,8 @@ import java.util.List;
 import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.util.Counter;
 import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGLexicon;
+import edu.shanghaitech.ai.nlp.lvet.impl.TagWPair;
+import edu.shanghaitech.ai.nlp.lvet.impl.TaggedWord;
 import edu.shanghaitech.ai.nlp.syntax.State;
 
 /**
@@ -43,6 +45,27 @@ public class LVeGCorpus implements Serializable {
 				if (wordCounter.getCount(name) <= rareThreshold) {
 					name = lexicon.getCachedSignature(name, pos);
 					word.setName(name);
+				}
+				pos++;
+			}
+		}
+	}
+	
+	
+	public static void replaceRareWords(
+			List<List<TaggedWord>> sequences, TagWPair twPair, int rareThreshold) {
+		Counter<String> wordCounter = new Counter<String>();
+		for (List<TaggedWord> sequence : sequences) {
+			for (TaggedWord word : sequence) {
+				wordCounter.incrementCount(word.word, 1.0);
+				twPair.wordIndexer.add(word.word);
+			}
+		}
+		for (List<TaggedWord> sequence : sequences) {
+			int pos = 0;
+			for (TaggedWord word : sequence) {
+				if (wordCounter.getCount(word.word) <= rareThreshold) {
+					word.word = twPair.getCachedSignature(word.word, pos);
 				}
 				pos++;
 			}
