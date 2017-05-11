@@ -19,7 +19,9 @@ import java.util.regex.Pattern;
 
 import org.junit.Test;
 
+import edu.shanghaitech.ai.nlp.lveg.impl.BinaryGrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture.Component;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
 import edu.shanghaitech.ai.nlp.util.Debugger;
 import edu.shanghaitech.ai.nlp.util.FunUtil;
 
@@ -90,6 +92,12 @@ public class Java {
 		double yy = Double.NaN;
 		System.out.println(String.format(format, yy));
 		System.out.println(formatter.format(yy));
+		
+		GrammarRule rule0 = new BinaryGrammarRule((short) 6, (short) 8, (short)8);
+		GrammarRule rule1 = new BinaryGrammarRule((short) 6, (short) 8, (short)8);
+
+		System.out.println(rule0 = rule1);
+		System.out.println(rule0.equals(rule1));
 	}
 	
 //	@Test

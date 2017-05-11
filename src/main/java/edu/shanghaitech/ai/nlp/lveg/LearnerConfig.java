@@ -670,8 +670,7 @@ public class LearnerConfig extends Recorder {
 			
 			for (GrammarRule rule : rules) {
 				rulecnt = rule.getWeight().getBias();
-				prob = rulecnt / count * factor;
-				logprob = Math.log(prob);
+				prob = rulecnt / count;
 				ruleW = rule.getWeight();
 				ncomp = opts.ncomponent;
 				
@@ -700,9 +699,11 @@ public class LearnerConfig extends Recorder {
 					ruleW = rule.getWeight();
 					ruleW.setBias(rulecnt);
 				} else { a++; }
+				logprob = Math.log(prob);
 				ruleW.setProb(logprob);
 				
-				prob = prob / ncomp;
+				ncomp = ruleW.ncomponent();
+				prob = prob * factor / ncomp;
 				logprob = Math.log(prob);
 				for (int icomp = 0; icomp < ncomp; icomp++) {
 					ruleW.setWeight(icomp, logprob);

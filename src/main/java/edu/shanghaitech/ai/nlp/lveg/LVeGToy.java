@@ -325,7 +325,13 @@ public class LVeGToy extends LearnerConfig {
 		List<Double> trllist = new ArrayList<Double>();
 		List<Double> dellist = new ArrayList<Double>();
 		int cnt = 0;
+		int a = 200;
 		do {			
+//			if (cnt % a == 0) {
+//				logger.info("\n---check similarity");
+//				checkSimilarity(grammar);
+//			}
+			
 			logger.trace("\n\n-------epoch " + cnt + " begins-------\n\n");
 			double length = 0;
 			boolean exit = false;
@@ -399,6 +405,16 @@ public class LVeGToy extends LearnerConfig {
 					break; 
 				}
 			}
+			
+//			if (cnt > 500 && cnt % 200 == 0) {
+//			if (cnt < 600 && cnt % a == 0) {
+//			if (cnt > 0 && cnt % a == 0) { // does not work for n = 3
+//			if (cnt % a == 0) { // work for n == 3
+			if (cnt % a == 0) {
+				logger.info("\n---check similarity");
+				checkSimilarity(grammar);
+			}
+			
 		} while(++cnt < opts.nepoch);
 		
 		finals(trllist, dellist, numberer, true); // better finalize it in a specialized test class
@@ -408,7 +424,7 @@ public class LVeGToy extends LearnerConfig {
 	
 	
 	public static void finals(List<Double> trllist, List<Double> dellist, Numberer numberer, boolean exit) {
-		logger.trace("Convergence Path [train]: " + trllist + "\tMAX: " + Collections.max(trllist) + "\n");
+		logger.trace("Convergence Path [train]: " + trllist + "\nMAX: " + Collections.max(trllist) + "\n");
 		logger.trace("\n----------training is over after " + trllist.size() + " batches----------\n");
 		
 		if (opts.saveGrammar) {
@@ -478,6 +494,13 @@ public class LVeGToy extends LearnerConfig {
 			logger.trace("------->" + trll + " consumed " + (endTime - beginTime) / 1000.0 + "s\n");
 			trainTrees.reset();
 			trllist.add(trll);
+			
+			if (trll > bestscore) {
+				bestscore = trll;
+				cntdrop = 0;
+			} else {
+				cntdrop++;
+			}
 		}
 		return false;
 	}
@@ -614,7 +637,130 @@ public class LVeGToy extends LearnerConfig {
 	
 	protected static void resetInterule(LVeGGrammar grammar, LVeGLexicon lexicon) {
 		GrammarRule rule = grammar.getURule((short) 2, 3, (byte) 0);
-		rule.addWeightComponent(rule.type, (short) 4, (short) -1);
+		rule.addWeightComponent(rule.type, (short) (ntree - 1), (short) -1);
+	}
+	
+	protected static void checkSimilarity(LVeGGrammar grammar) {
+		GrammarRule rule = grammar.getURule((short) 2, 3, (byte) 0);
+		int ncomp = rule.weight.ncomponent();
+		GaussianDistribution gdi, gdj;
+		Component compi, compj;
+		double pivot = 1e-5, range = 4;
+		for (int i = 0; i < ncomp; i++) {
+			compi = rule.weight.getComponent((short) i);
+			
+//			if (Math.exp(compi.getWeight()) < 1e-2) {
+//				compi.setWeight(Math.log(1e-2));
+//				logger.info("---reset the small mixing weight");
+//			}
+//			if (Math.exp(compi.getWeight()) > 1e1) {
+//				compi.setWeight(Math.log(2));
+//				logger.info("---reset the small mixing weight");
+//			}
+			
+//			if (Math.exp(compi.getWeight()) < 1e-2 ||
+//					Math.exp(compi.getWeight()) > 1e1) {
+//				compi.setWeight(0);
+//				gdi = compi.squeeze(GrammarRule.Unit.P);
+//				resetGD(gdi, range);
+//				gdi = compi.squeeze(GrammarRule.Unit.UC);
+//				resetGD(gdi, range);
+//				logger.info("---reset the small mixing weight");
+//				continue;
+//			}
+			/*
+			for (int j = i + 1; j < ncomp; j++) {
+				compj = rule.weight.getComponent((short) j);
+				gdi = compi.squeeze(GrammarRule.Unit.P);
+				gdj = compj.squeeze(GrammarRule.Unit.P);
+				double value = eulerDistance(gdi, gdj);
+				if (value < pivot) {
+					resetGD(gdj, range);
+					logger.info("\n---reset P parameters");
+				}
+				
+				gdi = compi.squeeze(GrammarRule.Unit.UC);
+				gdj = compj.squeeze(GrammarRule.Unit.UC);
+				value = eulerDistance(gdi, gdj);
+				if (value < pivot) {
+					resetGD(gdj, range);
+					logger.info("\n---reset UC parameters");
+				}
+			}
+			*/
+			
+			for (int j = i + 1; j < ncomp; j++) {
+				
+				compj = rule.weight.getComponent((short) j);
+				gdi = compi.squeeze(GrammarRule.Unit.P);
+				gdj = compj.squeeze(GrammarRule.Unit.P);
+				
+				double value = integral(gdi, gdj);
+				if (Math.exp(value) > pivot) {
+					resetGD(gdj, range);
+					logger.info("\n---reset P parameters");
+				}
+				
+				gdi = compi.squeeze(GrammarRule.Unit.UC);
+				gdj = compj.squeeze(GrammarRule.Unit.UC);
+				
+				value = integral(gdi, gdj);
+				if (Math.exp(value) > pivot) {
+					resetGD(gdj, range);
+					logger.info("\n---reset UC parameters");
+				}
+			}
+			
+		}
+	}
+	
+	
+	protected static double eulerDistance(GaussianDistribution gdi, GaussianDistribution gdj) {
+		int dim = gdi.getDim();
+		double value = 0, vtmp = 0, epsilon = 0;
+		List<Double> mus0 = gdi.getMus(), vars0 = gdi.getVars();
+		List<Double> mus1 = gdj.getMus(), vars1 = gdj.getVars();
+		assert(gdi.getDim() == gdj.getDim());
+		
+		for (int i = 0; i < dim; i++) {
+			value += Math.pow(mus0.get(i) - mus1.get(i), 2);
+		}
+		value = Math.sqrt(value);
+		return value;
+	}
+	
+	
+	protected static void resetGD(GaussianDistribution gd, double range) {
+		List<Double> mus = gd.getMus(), vars = gd.getVars();
+		int dim = gd.getDim();
+		mus.clear();
+		vars.clear();
+		for (int i = 0; i < dim; i++) {
+			double rndn = (random.nextDouble() - 0.5) * range;
+			mus.add(rndn);
+			vars.add(0.0);
+		}
+	}
+	
+	
+	protected static double integral(GaussianDistribution gdi, GaussianDistribution gdj) {
+		int dim = gdi.getDim();
+		double value = 0, vtmp = 0, epsilon = 0;
+		List<Double> mus0 = gdi.getMus(), vars0 = gdi.getVars();
+		List<Double> mus1 = gdj.getMus(), vars1 = gdj.getVars();
+		assert(gdi.getDim() == gdj.getDim());
+		
+		for (int i = 0; i < dim; i++) {
+			double mu0 = mus0.get(i), mu1 = mus1.get(i);
+			double vr0 = Math.exp(vars0.get(i) * 2), vr1 = Math.exp(vars1.get(i) * 2);
+			vtmp = vr0 + vr1 + epsilon;
+			// int NN dx, // in logarithmic form
+			double shared0 = -0.5 * Math.log(vtmp) - Math.pow(mu0 - mu1, 2) / (2 * vtmp);
+			// complete integral
+			value += shared0; 
+		}
+		value += Math.log(2 * Math.PI) * (-dim / 2.0); // normalizer in Gaussian is implicitly cached
+		return value;
 	}
 	
 	
