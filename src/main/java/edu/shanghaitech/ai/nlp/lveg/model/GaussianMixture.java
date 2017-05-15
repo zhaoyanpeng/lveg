@@ -846,7 +846,8 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 		// note that either Math.exp(scoreT) or Math.exp(scoreS) could be 0. Here we have to pass them in decimal format
 		// because it does not guarantee that gradst and gradss must be positive, which indicates that we have to store
 		// both of them in decimal format. See details in DiagonalGaussianDistribution.derivative(...).
-		derivative(comp, cumulative, zeroflagt, zeroflags, Math.exp(scoreT), Math.exp(scoreS), gradst, gradss, grads);
+//		derivative(comp, cumulative, zeroflagt, zeroflags, Math.exp(scoreT), Math.exp(scoreS), gradst, gradss, grads);
+		derivative(comp, cumulative, zeroflagt, zeroflags, scoreT, scoreS, gradst, gradss, grads);
 	}
 	
 	

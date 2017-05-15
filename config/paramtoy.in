@@ -19,7 +19,7 @@
 -l1, true,
 -minmw, 1e-9,
 -epsilon, 1e-8,
--choice, ADAM,
+-choice, SGD,
 -lambda, 0.9,
 -lambda1, 0.9,
 -lambda2, 0.999,
@@ -45,7 +45,7 @@
 -hardcut, false,
 -expzero, 1e-6,
 -bsize, 1,
--nepoch, 1500,
+-nepoch, 3,
 -maxsample, 1,
 -maxslen, 50,
 -nAllowedDrop, 6,
@@ -56,8 +56,8 @@
 -nmratio, 0.5,
 -maxvar, 5,
 -nvratio, 0.8,
--ncomponent, 1,
--dim, 1,
+-ncomponent, 2,
+-dim, 2,
 -resetw, false,
 -resetc, false,
 -mwfactor, 1.0,
@@ -87,7 +87,7 @@
 -ef1ontrain, false,
 -ef1imwrite, false,
 
--runtag, toy_0508_sample5_test1_1_1_bs1_mu1_reset_pivot1e-5_range5,
+-runtag, toy_0515_sample3_test1_1_1_bs1,
 -logroot, log/,
 -logtype, 0,
 -verbose, false,
@@ -95,6 +95,6 @@
 -precision, 3,
 -rndomseed, 0,
 
--dgradnbatch, -1,
+-dgradnbatch, 1,
 
 -imgprefix, lveg

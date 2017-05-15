@@ -61,7 +61,7 @@ public class LVeGToy extends LearnerConfig {
 	protected static String treeFile;
 	
 	protected static Options opts;
-	protected static int ntree = 5;
+	protected static int ntree = 3;
 	
 	public static void main(String[] args) throws Exception {
 		String fparams = args[0];
@@ -82,9 +82,9 @@ public class LVeGToy extends LearnerConfig {
 		// loading data
 		Numberer wrapper = new Numberer();
 		Map<String, StateTreeList> trees = 
-				makeAugmentedData(wrapper, opts);
+				/*makeAugmentedData(wrapper, opts);*/
 				/*loadPPTrees(wrapper, opts);*/
-				/*makeData(wrapper, opts);*/ 
+				makeData(wrapper, opts); 
 				/*makeComplexData(wrapper, opts);*/
 		
 		// training
@@ -134,7 +134,7 @@ public class LVeGToy extends LearnerConfig {
 			logger.trace("post-initializing is over.\n");
 			
 //			resetPPrule(grammar, lexicon);
-			resetInterule(grammar, lexicon);
+//			resetInterule(grammar, lexicon);
 			
 			grammar.initializeOptimizer();
 			lexicon.initializeOptimizer();
@@ -374,7 +374,7 @@ public class LVeGToy extends LearnerConfig {
 					
 					if (opts.dgradnbatch > 0 && ((isample % (opts.bsize * opts.dgradnbatch)) == 0)) { 
 						debugrad(true); 
-//						GradientChecker.gradcheck(grammar, lexicon, lvegParser, valuator, tree, opts.maxsample);
+						GradientChecker.gradcheck(grammar, lexicon, lvegParser, valuator, tree, opts.maxsample);
 					}
 					
 					// apply gradient descent
@@ -410,10 +410,10 @@ public class LVeGToy extends LearnerConfig {
 //			if (cnt < 600 && cnt % a == 0) {
 //			if (cnt > 0 && cnt % a == 0) { // does not work for n = 3
 //			if (cnt % a == 0) { // work for n == 3
-			if (cnt % a == 0) {
-				logger.info("\n---check similarity");
-				checkSimilarity(grammar);
-			}
+//			if (cnt % a == 0) {
+//				logger.info("\n---check similarity");
+//				checkSimilarity(grammar);
+//			}
 			
 		} while(++cnt < opts.nepoch);
 		

@@ -117,11 +117,15 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 		for (int i = 0; i < dim * 2; i++) {
 			tmpt = gradst == null ? 0 : gradst.get(i);
 			tmps = gradss == null ? 0 : gradss.get(i);
-//			grad = tmps / scoreS - tmpt / scoreT;
+//			grad = tmps / scoreS - tmpt / scoreT; 
 			
-			ss = scoreS == 0 ? 0 : tmps / scoreS;
-			st = scoreT == 0 ? 0 : tmpt / scoreT;
-			grad = ss - st;
+			ss = tmps == 0 ? 0 : Math.log(Math.abs(tmps)) - scoreS;
+			st = tmpt == 0 ? 0 : Math.log(Math.abs(tmpt)) - scoreT;
+			grad = Math.signum(tmps) * Math.exp(ss) - Math.signum(tmpt) * Math.exp(st);
+			
+//			ss = scoreS == 0 ? 0 : tmps / scoreS;
+//			st = scoreT == 0 ? 0 : tmpt / scoreT;
+//			grad = ss - st;
 			grads.set(i, grads.get(i) + grad);
 		}
 	}

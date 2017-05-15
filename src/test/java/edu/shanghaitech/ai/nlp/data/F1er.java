@@ -18,7 +18,7 @@ public class F1er {
 	@Test
 	public void testF1er() throws Exception {
 		String root = "E:/SourceCode/ParsersData/";
-		String infile = root + "/gr_0426_1128_40_1_4_180_nb10_p5_f1_ep3_40.log";
+		String infile = root + "/gr_0508_1658_40_2_3_180_nb10_p5_f1_ep4_40_mt6.log";
 		String outfile = root + "/bit";
 		splitData(infile, outfile);
 	}
