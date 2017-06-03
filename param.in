@@ -73,6 +73,7 @@
 -resetp, false,
 
 -eratio, -0.1, 
+-efraction, 0.5,
 -eonlylen, 3,
 -efirstk, 200,
 -eontrain, false,
@@ -92,7 +93,7 @@
 -ef1ontrain, false,
 -ef1imwrite, false,
 
--runtag, 0510_1_2_3_200_test5_tb,
+-runtag, 0601_1_2_3_200_test3_tb,
 -logroot, log/,
 -logtype, 0,
 -verbose, false,

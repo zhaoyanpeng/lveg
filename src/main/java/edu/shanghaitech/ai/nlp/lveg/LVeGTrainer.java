@@ -241,6 +241,10 @@ public class LVeGTrainer extends LearnerConfig {
 			}
 			ftrainTrees.add(tree);
 		}
+		if (opts.efraction > 0) {
+			ftrainTrees = sampleTrees(ftrainTrees, opts);
+			logger.debug(", " + ftrainTrees.size() + "\n\n");
+		}
 		sorter = new PriorityQueue<Tree<State>>(opts.bsize + 5, wcomparator);
 		
 		if (opts.pbatch) {

@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
@@ -286,6 +287,8 @@ public class LearnerConfig extends Recorder {
 		/* evaluation section begins */
 		@Option(name = "-eratio", usage = "fraction of the training data on which the grammar evaluation is conducted, no such constraints if it is negative (default: 0.2)")
 		public double eratio = 0.2;
+		@Option(name = "-efraction", usage = "evaluate grammars on a fraction of samples")
+		public double efraction = 1.0;
 		@Option(name = "-eonlylen", usage = "training or evaluating on only the sentences of length less than or equal to the specific length, no such constraints if it is negative (default: 50)")
 		public short eonlylen = 50;
 		@Option(name = "-efirstk", usage = "evaluating the grammar on the only first k samples, no such constraints if it is negative (default: 200)")
@@ -626,6 +629,36 @@ public class LearnerConfig extends Recorder {
 			return o2.getYield().size() - o1.getYield().size();
 		}
 	};
+	
+	
+	protected static ArrayList<Tree<State>> sampleTrees(List<Tree<State>> trees, Options opts) {
+		ArrayList<Tree<State>> newList = new ArrayList<Tree<State>>();
+		for (Tree<State> tree : trees) {
+			List<State> sentence = tree.getYield();
+			int sentenceLength = sentence.size();
+			if (sentenceLength > opts.eonlylen)
+				continue;
+			newList.add(tree);			
+		}
+		
+		int total = newList.size();
+		int nneed = (int) Math.ceil(total * opts.efraction);
+		Random rnd = new Random(11);
+		Set<Integer> idxes = new LinkedHashSet<Integer>();
+		while (idxes.size() < nneed) {
+			Integer next = rnd.nextInt(total);
+			idxes.add(next);
+		}
+		
+		ArrayList<Tree<State>> filterList = new ArrayList<Tree<State>>();
+		for (Integer idx : idxes) {
+			filterList.add(newList.get(idx));
+		}
+		
+		logger.debug("\n\n" + "total: " + total + ", nneed: " + nneed + ", fract: " + opts.efraction + ", " + trees.size());
+		return filterList;
+	}
+	
 	
 	protected static void resetRuleWeight(LVeGGrammar grammar, LVeGLexicon lexicon, Numberer numberer, double factor, Options opts) {
 		int ntag = numberer.size(), nrule, count, ncomp;

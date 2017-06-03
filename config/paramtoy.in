@@ -68,6 +68,7 @@
 -iomask, true,
 
 -eratio, -0.1, 
+-efraction, 1.0,
 -eonlylen, -1,
 -efirstk, -1,
 -eontrain, true,
@@ -87,7 +88,7 @@
 -ef1ontrain, false,
 -ef1imwrite, false,
 
--runtag, toy_0515_sample3_test1_1_1_bs1,
+-runtag, toy_0601_sample3_test1_1_1_bs1,
 -logroot, log/,
 -logtype, 0,
 -verbose, false,
