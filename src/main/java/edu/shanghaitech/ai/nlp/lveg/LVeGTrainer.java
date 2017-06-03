@@ -132,6 +132,27 @@ public class LVeGTrainer extends LearnerConfig {
 			if (matcher.find()) { // training continued starting from the input grammar
 				iepoch = Integer.valueOf(matcher.group(1).trim()) + 1;
 			}
+			
+			logger.trace(grammar);
+			logger.trace(lexicon);
+			
+			// reset the rule weight
+			/*
+			if (opts.resetw || opts.usemasks) {
+				logger.trace("--->Reset rule weights according to treebank grammars...\n");
+				resetRuleWeight(grammar, lexicon, numberer, opts.mwfactor, opts);
+				
+				goptimizer = new ParallelOptimizer(opts.ntgrad, opts.pgrad, opts.pmode, opts.pverbose);
+				loptimizer = new ParallelOptimizer(opts.ntgrad, opts.pgrad, opts.pmode, opts.pverbose);
+				
+				grammar.setOptimizer(goptimizer);
+				lexicon.setOptimizer(loptimizer);
+				
+				grammar.initializeOptimizer();
+				lexicon.initializeOptimizer();
+				logger.trace("\n--->Initializing optimizer is over...\n");
+			}
+			*/
 		} else {
 			goptimizer = new ParallelOptimizer(opts.ntgrad, opts.pgrad, opts.pmode, opts.pverbose);
 			loptimizer = new ParallelOptimizer(opts.ntgrad, opts.pgrad, opts.pmode, opts.pverbose);
@@ -163,6 +184,7 @@ public class LVeGTrainer extends LearnerConfig {
 //		logger.trace(grammar);
 //		logger.trace(lexicon);
 //		System.exit(0);
+		System.out.println("--------" + opts.runtag);
 		
 		lexicon.labelTrees(trainTrees); // FIXME no errors, just alert you to pay attention to it 
 		lexicon.labelTrees(testTrees); // save the search time cost by finding a specific tag-word
@@ -239,14 +261,31 @@ public class LVeGTrainer extends LearnerConfig {
 	}
 	
 	
+	protected static void printGrammars() {
+		logger.trace(grammar);
+		logger.trace(lexicon);
+		logger.info("\n-------saving the incorrect grammar file...");
+		GrammarFile gfile = new GrammarFile(grammar, lexicon);
+		String filename = subdatadir + opts.outGrammar + "_error.gr";
+		if (gfile.save(filename)) {
+			logger.info("to \'" + filename + "\' successfully.\n");
+		} else {
+			logger.info("to \'" + filename + "\' unsuccessfully.\n");
+		}
+		logger.trace("---something wrong");
+		System.exit(0);
+	}
+	
+	
 	protected static void jointrainer(short nfailed) {
 		while (!trainer.isDone()) {
 			while (trainer.hasNext()) {
 				List<Double> score = (List<Double>) trainer.getNext();
-				if (Double.isInfinite(score.get(0)) || Double.isInfinite(score.get(1))) {
-					nfailed++;
-				} else {
+				if (Double.isFinite(score.get(0)) || Double.isFinite(score.get(1))) {
 					logger.trace("\n~~~score: " + FunUtil.double2str(score, precision, -1, false, true) + "\n");
+				} else {
+					nfailed++;
+					printGrammars();
 				}
 			}
 		}
@@ -295,7 +334,7 @@ public class LVeGTrainer extends LearnerConfig {
 		List<Double> dellist = new ArrayList<Double>();
 		List<Double> scoresOfST = new ArrayList<Double>(3);
 		List<Tree<State>> batch = new ArrayList<Tree<State>>(opts.bsize + 5);
-		boolean shuffle = false;
+		boolean shuffle = true;
 		do {
 			logger.trace("\n\n-------epoch " + iepoch + " begins-------\n\n");
 			boolean exit = false;
@@ -314,10 +353,11 @@ public class LVeGTrainer extends LearnerConfig {
 					trainer.execute(tree);
 					while (trainer.hasNext()) {
 						List<Double> score = (List<Double>) trainer.getNext();
-						if (Double.isInfinite(score.get(0)) || Double.isInfinite(score.get(1))) {
-							nfailed++;
-						} else {
+						if (Double.isFinite(score.get(0)) || Double.isFinite(score.get(1))) {
 							logger.trace("\n~~~score: " + FunUtil.double2str(score, precision, -1, false, true) + "\n");
+						} else {
+							nfailed++;
+							printGrammars();
 						}
 					}
 				}

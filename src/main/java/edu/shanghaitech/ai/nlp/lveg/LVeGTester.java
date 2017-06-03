@@ -17,6 +17,7 @@ import edu.shanghaitech.ai.nlp.data.ObjectFileManager.GrammarFile;
 import edu.shanghaitech.ai.nlp.lveg.impl.MaxRuleParser;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
 import edu.shanghaitech.ai.nlp.optimization.Optimizer;
@@ -84,6 +85,8 @@ public class LVeGTester extends LearnerConfig {
 				opts.nwratio, opts.riserate, opts.rtratio, opts.hardcut, random, mogPool);
 		GaussianDistribution.config(opts.maxmu, opts.maxvar, opts.dim, opts.nmratio, opts.nvratio, random, gaussPool);
 		
+//		debugGrammars();
+		
 		// load grammar
 		logger.trace("--->Loading grammars from \'" + subdatadir + opts.inGrammar + "\'...\n");
 		GrammarFile gfile = (GrammarFile) GrammarFile.load(subdatadir + opts.inGrammar);
@@ -128,6 +131,31 @@ public class LVeGTester extends LearnerConfig {
 		mparser.shutdown();
 	}
 	
+	protected static void debugGrammars() {
+		for (int i = 0; i < 7; i++) {
+			String data = subdatadir + "lveg_" + i + ".gr";
+			logger.trace("--->Loading grammars from \'" + data  + "\'\n\n");
+			GrammarFile gfile = (GrammarFile) GrammarFile.load(data);
+			grammar = gfile.getGrammar();
+			lexicon = gfile.getLexicon();
+			
+			GrammarRule brule = grammar.getBRule((short) 5, (short) 64, (short) 9);
+			logger.debug(brule + "\tW=" + brule.getWeight() + "\n");
+			brule = grammar.getURule((short) 0, (short) 5, GrammarRule.RHSPACE);
+			logger.debug(brule + "\tW=" + brule.getWeight() + "\n");
+			brule = grammar.getBRule((short) 6, (short) 5, (short) 10);
+			logger.debug(brule + "\tW=" + brule.getWeight() + "\n");
+			brule = grammar.getBRule((short) 6, (short) 5, (short) 3);
+			logger.debug(brule + "\tW=" + brule.getWeight() + "\n");
+			brule = grammar.getBRule((short) 5, (short) 5, (short) 5);
+			logger.debug(brule + "\tW=" + brule.getWeight() + "\n");
+			brule = grammar.getBRule((short) 5, (short) 5, (short) 3);
+			logger.debug(brule + "\tW=" + brule.getWeight() + "\n");
+			brule = grammar.getURule((short) 5, (short) 18, GrammarRule.LRURULE);
+			logger.debug(brule + "\tW=" + brule.getWeight() + "\n");
+		}
+		System.exit(0);
+	}
 	
 	public static String f1entry(StateTreeList trees, Numberer numberer, boolean istrain) {
 		if (opts.pf1) {

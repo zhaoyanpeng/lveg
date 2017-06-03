@@ -3,6 +3,7 @@ package edu.shanghaitech.ai.nlp.lveg.impl;
 import java.util.List;
 
 import edu.shanghaitech.ai.nlp.lveg.LVeGTrainer;
+import edu.shanghaitech.ai.nlp.lveg.LearnerConfig.Params;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 import edu.shanghaitech.ai.nlp.util.FunUtil;
 
@@ -117,7 +118,7 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 		for (int i = 0; i < dim * 2; i++) {
 			tmpt = gradst == null ? 0 : gradst.get(i);
 			tmps = gradss == null ? 0 : gradss.get(i);
-//			grad = tmps / scoreS - tmpt / scoreT; 
+//			grad = tmps / scoreS - tmpt / scoreT;
 			
 			ss = tmps == 0 ? 0 : Math.log(Math.abs(tmps)) - scoreS;
 			st = tmpt == 0 ? 0 : Math.log(Math.abs(tmpt)) - scoreT;
@@ -126,6 +127,8 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 //			ss = scoreS == 0 ? 0 : tmps / scoreS;
 //			st = scoreT == 0 ? 0 : tmpt / scoreT;
 //			grad = ss - st;
+//			grad = Math.sqrt(Math.abs(grad)) > Params.absmax ? Params.absmax * Math.signum(grad);
+			grad = Math.abs(grad) > Params.absmax ? Params.absmax * Math.signum(grad) : grad;
 			grads.set(i, grads.get(i) + grad);
 		}
 	}

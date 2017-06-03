@@ -838,6 +838,7 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 		double dMixingW = Math.exp(partWithS - scoreS) - Math.exp(partWithT - scoreT);
 		double dPenalty = Params.reg ? (Params.l1 ? Params.wdecay * weight : Params.wdecay * Math.pow(weight, 2)) : 0.0;
 		dMixingW += dPenalty;
+		dMixingW = Math.abs(dMixingW) > Params.absmax ? Params.absmax * Math.signum(dMixingW) : dMixingW;
 		wgrads.set(iComponent, wgrads.get(iComponent) + dMixingW);
 		
 		// w.r.t. mu & sigma
