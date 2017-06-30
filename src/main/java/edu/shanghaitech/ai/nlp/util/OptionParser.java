@@ -13,10 +13,10 @@ public class OptionParser extends Recorder {
 	 * 
 	 */
 	private static final long serialVersionUID = -3167531289091868339L;
-	private final Map<String, Option> options = new HashMap<String, Option>();
-	private final Map<String, Field> fields = new HashMap<String, Field>();
+	private final Map<String, Option> options = new HashMap<>();
+	private final Map<String, Field> fields = new HashMap<>();
 	private final Map<Class<?>, Type> types = new HashMap<Class<?>, Type>();
-	private final Set<String> required = new HashSet<String>();
+	private final Set<String> required = new HashSet<>();
 	private final Class<?> clsOption;
 	private enum Type {
 		CHAR, BYTE, SHORT, INT, LONG, FLOAT, DOUBLE, BOOLEAN, STRING

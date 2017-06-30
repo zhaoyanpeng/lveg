@@ -25,7 +25,7 @@ public class LVeGCorpus implements Serializable {
 	 */
 	public static void replaceRareWords(
 			StateTreeList trees, SimpleLVeGLexicon lexicon, int rareThreshold) {
-		Counter<String> wordCounter = new Counter<String>();
+		Counter<String> wordCounter = new Counter<>();
 		for (Tree<State> tree : trees) {
 			List<State> words = tree.getYield();
 			for (State word : words) {

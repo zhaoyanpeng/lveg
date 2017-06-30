@@ -18,6 +18,7 @@ import edu.shanghaitech.ai.nlp.lveg.impl.MaxRuleParser;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleType;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
 import edu.shanghaitech.ai.nlp.syntax.State;
@@ -111,7 +112,7 @@ public class LVeGTester extends LearnerConfig {
 		
 		logger.info("\n---F1 CONFIG---\n[parallel: batch-" + opts.pbatch + ", grad-" + 
 				opts.pgrad + ", eval-" + opts.peval + ", test-" + opts.pf1 + "]\n\n");
-		sorter = new PriorityQueue<Tree<State>>(3000, wcomparator);
+		sorter = new PriorityQueue<>(3000, wcomparator);
 		
 		StringBuffer sb = new StringBuffer();
 		sb.append("[test ]" + f1entry(testTrees, numberer, false) + "\n");
@@ -140,7 +141,7 @@ public class LVeGTester extends LearnerConfig {
 			
 			GrammarRule brule = grammar.getBRule((short) 5, (short) 64, (short) 9);
 			logger.debug(brule + "\tW=" + brule.getWeight() + "\n");
-			brule = grammar.getURule((short) 0, (short) 5, GrammarRule.RHSPACE);
+			brule = grammar.getURule((short) 0, (short) 5, RuleType.RHSPACE);
 			logger.debug(brule + "\tW=" + brule.getWeight() + "\n");
 			brule = grammar.getBRule((short) 6, (short) 5, (short) 10);
 			logger.debug(brule + "\tW=" + brule.getWeight() + "\n");
@@ -150,7 +151,7 @@ public class LVeGTester extends LearnerConfig {
 			logger.debug(brule + "\tW=" + brule.getWeight() + "\n");
 			brule = grammar.getBRule((short) 5, (short) 5, (short) 3);
 			logger.debug(brule + "\tW=" + brule.getWeight() + "\n");
-			brule = grammar.getURule((short) 5, (short) 18, GrammarRule.LRURULE);
+			brule = grammar.getURule((short) 5, (short) 18, RuleType.LRURULE);
 			logger.debug(brule + "\tW=" + brule.getWeight() + "\n");
 		}
 		System.exit(0);
@@ -169,7 +170,7 @@ public class LVeGTester extends LearnerConfig {
 		Tree<State> goldTree = null;
 		Tree<String> parsedTree = null;
 		int nUnparsable = 0, cnt = 0, idx = 0;
-		List<Tree<State>> trees = new ArrayList<Tree<State>>(stateTreeList.size());
+		List<Tree<State>> trees = new ArrayList<>(stateTreeList.size());
 		filterTrees(opts, stateTreeList, trees, numberer, istrain);
 		
 		for (Tree<State> tree : trees) {
@@ -219,7 +220,7 @@ public class LVeGTester extends LearnerConfig {
 		
 		int nUnparsable = 0, idx = 0;
 		
-		List<Tree<State>> trees = new ArrayList<Tree<State>>(stateTreeList.size());
+		List<Tree<State>> trees = new ArrayList<>(stateTreeList.size());
 		filterTrees(opts, stateTreeList, trees, numberer, istrain);
 		
 //		List<Tree<State>> trees = getToyTrees(numberer);

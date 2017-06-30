@@ -53,8 +53,8 @@ public abstract class GaussianDistribution extends Recorder implements Comparabl
 		this.id = 0;
 		this.key = -2;
 		this.dim = ndimension;
-		this.mus = new ArrayList<Double>(dim);
-		this.vars = new ArrayList<Double>(dim);
+		this.mus = new ArrayList<>(dim);
+		this.vars = new ArrayList<>(dim);
 	}
 	
 	
@@ -128,7 +128,7 @@ public abstract class GaussianDistribution extends Recorder implements Comparabl
 	 * @return
 	 */
 	protected List<Double> normalize(List<Double> sample) {
-		List<Double> list = new ArrayList<Double>();
+		List<Double> list = new ArrayList<>();
 		for (int i = 0; i < dim; i++) {
 			list.add((sample.get(i) - mus.get(i)) / Math.exp(vars.get(i)));
 		}

@@ -2,14 +2,16 @@ package edu.shanghaitech.ai.nlp.lveg.impl;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 
 import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleType;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleUnit;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.syntax.State;
 import edu.shanghaitech.ai.nlp.util.Numberer;
@@ -28,8 +30,8 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 	public SimpleLVeGGrammar(Numberer numberer, int ntag) {
 		this.uRuleTable = new RuleTable<UnaryGrammarRule>(UnaryGrammarRule.class);
 		this.bRuleTable = new RuleTable<BinaryGrammarRule>(BinaryGrammarRule.class);
-		this.uRuleMap = new HashMap<GrammarRule, GrammarRule>();
-		this.bRuleMap = new HashMap<GrammarRule, GrammarRule>();
+		this.uRuleMap = new HashMap<>();
+		this.bRuleMap = new HashMap<>();
 		if (numberer == null) {
 			this.numberer = null;
 			this.ntag = ntag;
@@ -51,13 +53,13 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 		this.chainSumUnaryRulesWithP = new List[ntag];
 		this.chainSumUnaryRulesWithC = new List[ntag];
 		for (int i = 0; i < ntag; i++) {
-			uRulesWithP[i] = new ArrayList<GrammarRule>();
-			uRulesWithC[i] = new ArrayList<GrammarRule>();
-			bRulesWithP[i]  = new ArrayList<GrammarRule>();
-			bRulesWithLC[i] = new ArrayList<GrammarRule>();
-			bRulesWithRC[i] = new ArrayList<GrammarRule>();
-			chainSumUnaryRulesWithP[i] = new ArrayList<GrammarRule>();
-			chainSumUnaryRulesWithC[i] = new ArrayList<GrammarRule>();
+			uRulesWithP[i] = new ArrayList<>();
+			uRulesWithC[i] = new ArrayList<>();
+			bRulesWithP[i]  = new ArrayList<>();
+			bRulesWithLC[i] = new ArrayList<>();
+			bRulesWithRC[i] = new ArrayList<>();
+			chainSumUnaryRulesWithP[i] = new ArrayList<>();
+			chainSumUnaryRulesWithC[i] = new ArrayList<>();
 		}
 	}
 	
@@ -119,7 +121,7 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 			break;
 		case 1: {
 			short idChild = children.get(0).getLabel().getId();
-			byte type = idParent != 0 ? GrammarRule.LRURULE : GrammarRule.RHSPACE;
+			RuleType type = idParent != 0 ? RuleType.LRURULE : RuleType.RHSPACE;
 			GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
 			if (!uRuleTable.containsKey(rule)) { 
 				rule.initializeWeight(type, (short) -1, (short) -1); 
@@ -132,7 +134,7 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 			short idrChild = children.get(1).getLabel().getId();
 			GrammarRule rule = new BinaryGrammarRule(idParent, idlChild, idrChild);
 			if (!bRuleTable.containsKey(rule)) { 
-				rule.initializeWeight(GrammarRule.LRBRULE, (short) -1, (short) -1); 
+				rule.initializeWeight(RuleType.LRBRULE, (short) -1, (short) -1); 
 			}
 			bRuleTable.addCount(rule, 1.0);
 			break;
@@ -151,9 +153,9 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 	 * Compute the two-order unary chain.
 	 */
 	protected void computeChainUnaryRule(boolean prune) {
-		Map<String, String> keys0 = new HashMap<String, String>();
-		Map<String, String> keys1 = new HashMap<String, String>();
-		keys1.put(GrammarRule.Unit.P, GrammarRule.Unit.RM);
+		EnumMap<RuleUnit, RuleUnit> keys0 = new EnumMap<>(RuleUnit.class);
+		EnumMap<RuleUnit, RuleUnit> keys1 = new EnumMap<>(RuleUnit.class);
+		keys1.put(RuleUnit.P, RuleUnit.RM);
 		short count = 0, total = 0;
 		
 		// rules of the from X->ROOT(0) are not allowed
@@ -162,14 +164,14 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 				if (iparent == ichild) { continue; }
 				boolean found = false;
 				int cnt = 0;
-				byte type;
+				RuleType type;
 				keys0.clear();
 				if (iparent == 0) {
-					type = GrammarRule.RHSPACE;
-					keys0.put(GrammarRule.Unit.C, GrammarRule.Unit.RM);
+					type = RuleType.RHSPACE;
+					keys0.put(RuleUnit.C, RuleUnit.RM);
 				} else {
-					type = GrammarRule.LRURULE;
-					keys0.put(GrammarRule.Unit.UC, GrammarRule.Unit.RM);
+					type = RuleType.LRURULE;
+					keys0.put(RuleUnit.UC, RuleUnit.RM);
 				}
 				
 				GaussianMixture weightSum = new DiagonalGaussianMixture();
@@ -189,7 +191,7 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 							if (ucrule.lhs != uprule.rhs) { continue; }
 							cruleWeight = ucrule.getWeight();
 							aruleWeight = GaussianMixture.mulAndMarginalize(pruleWeight, cruleWeight, keys0, keys1);
-							if (iparent == 0) { aruleWeight = aruleWeight.replaceAllKeys(GrammarRule.Unit.C); }
+							if (iparent == 0) { aruleWeight = aruleWeight.replaceAllKeys(RuleUnit.C); }
 							weightSum.add(aruleWeight, prune);
 							found = true;
 							cnt++;

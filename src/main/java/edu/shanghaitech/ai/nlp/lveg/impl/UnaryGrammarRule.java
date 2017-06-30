@@ -22,31 +22,31 @@ public class UnaryGrammarRule extends GrammarRule implements Comparable<Object> 
 	public UnaryGrammarRule(short lhs, int rhs) {
 		this.lhs = lhs;
 		this.rhs = rhs;
-		this.type = LRURULE;
+		this.type = RuleType.LRURULE;
 	}
 	
 	
-	public UnaryGrammarRule(short lhs, int rhs, byte type) {
+	public UnaryGrammarRule(short lhs, int rhs, RuleType type) {
 		this.lhs = lhs;
 		this.rhs = rhs;
 		this.type = type;
 	}
 	
 	
-	public UnaryGrammarRule(short lhs, int rhs, byte type, boolean init) {
+	public UnaryGrammarRule(short lhs, int rhs, RuleType type, boolean init) {
 		this(lhs, rhs, type);
 		if (init) { initializeWeight(type, (short) -1, (short) -1); }
 	}
 	
 	
-	public UnaryGrammarRule(short lhs, int rhs, byte type, GaussianMixture weight) {
+	public UnaryGrammarRule(short lhs, int rhs, RuleType type, GaussianMixture weight) {
 		this(lhs, rhs, type);
 		this.weight = weight;
 	}
 	
 	
 	@Override
-	public void initializeWeight(byte type, short ncomponent, short ndim) {
+	public void initializeWeight(RuleType type, short ncomponent, short ndim) {
 		weight = rndRuleWeight(type, ncomponent, ndim);
 	}
 	
@@ -100,7 +100,7 @@ public class UnaryGrammarRule extends GrammarRule implements Comparable<Object> 
 	
 	@Override
 	public String toString() {
-		return "U-Rule [P: " + lhs +", UC: " + rhs + ", T: " + (short) type + "]";
+		return "U-Rule [P: " + lhs +", UC: " + rhs + ", T: " + type + "]";
 	}
 
 }

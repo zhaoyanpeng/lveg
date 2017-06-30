@@ -13,6 +13,7 @@ import edu.shanghaitech.ai.nlp.lveg.impl.BinaryGrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.impl.RuleTable;
 import edu.shanghaitech.ai.nlp.lveg.impl.UnaryGrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleType;
 
 public class RuleTableTest {
 
@@ -28,9 +29,9 @@ public class RuleTableTest {
 //		RuleTable<?> unaryRuleTable = new RuleTable<UnaryGrammarRule>(UnaryGrammarRule.class);
 //		RuleTable<?> binaryRuleTable = new RuleTable<BinaryGrammarRule>(BinaryGrammarRule.class);
 		
-		GrammarRule rule0 = new UnaryGrammarRule((short) 1, (short) 2, GrammarRule.LRURULE, true);
-		GrammarRule rule1 = new UnaryGrammarRule((short) 1, (short) 2, GrammarRule.LRURULE, false);
-		GrammarRule rule5 = new UnaryGrammarRule((short) 1, (short) 2, GrammarRule.RHSPACE, true);	
+		GrammarRule rule0 = new UnaryGrammarRule((short) 1, (short) 2, RuleType.LRURULE, true);
+		GrammarRule rule1 = new UnaryGrammarRule((short) 1, (short) 2, RuleType.LRURULE, false);
+		GrammarRule rule5 = new UnaryGrammarRule((short) 1, (short) 2, RuleType.RHSPACE, true);	
 		GrammarRule rule8 = new UnaryGrammarRule((short) 1, (short) 2);	
 		
 		GrammarRule rule3 = new BinaryGrammarRule((short) 1, (short) 2, (short) 3, true);

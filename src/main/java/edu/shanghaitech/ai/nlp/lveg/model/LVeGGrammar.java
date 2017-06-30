@@ -1,6 +1,7 @@
 package edu.shanghaitech.ai.nlp.lveg.model;
 
 import java.io.Serializable;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -10,6 +11,8 @@ import edu.shanghaitech.ai.nlp.lveg.LVeGTrainer;
 import edu.shanghaitech.ai.nlp.lveg.impl.BinaryGrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.impl.RuleTable;
 import edu.shanghaitech.ai.nlp.lveg.impl.UnaryGrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleType;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleUnit;
 import edu.shanghaitech.ai.nlp.optimization.Optimizer;
 import edu.shanghaitech.ai.nlp.syntax.State;
 import edu.shanghaitech.ai.nlp.util.Numberer;
@@ -83,7 +86,7 @@ public abstract class LVeGGrammar extends Recorder implements Serializable {
 			// when calculating inside and outside scores, we do not want the rule weight to be null, so just set it to zero
 			// if the given query rule is not valid (never appears in the training set).
 			logger.warn("\nBinary Rule NOT Found: [P: " + idParent + ", LC: " + idlChild + ", RC: " + idrChild + "]\n");
-			GaussianMixture weight = GrammarRule.rndRuleWeight(GrammarRule.LRBRULE, (short) -1, (short) -1);
+			GaussianMixture weight = GrammarRule.rndRuleWeight(RuleType.LRBRULE, (short) -1, (short) -1);
 			/*weight.setWeights(Double.NEGATIVE_INFINITY);*/
 			weight.setWeights(LVeGTrainer.minmw);
 			return weight;
@@ -92,7 +95,7 @@ public abstract class LVeGGrammar extends Recorder implements Serializable {
 		}
 	}
 	
-	public GaussianMixture getURuleWeight(short idParent, short idChild, byte type, boolean context) {
+	public GaussianMixture getURuleWeight(short idParent, short idChild, RuleType type, boolean context) {
 		GrammarRule rule = getURule(idParent, idChild, type);
 		if (rule != null) {
 			return rule.getWeight();
@@ -113,7 +116,7 @@ public abstract class LVeGGrammar extends Recorder implements Serializable {
 		return bRuleMap.get(rule);
 	}
 	
-	public GrammarRule getURule(short idParent, int idChild, byte type) {
+	public GrammarRule getURule(short idParent, int idChild, RuleType type) {
 		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
 		return uRuleMap.get(rule);
 	}
@@ -159,36 +162,36 @@ public abstract class LVeGGrammar extends Recorder implements Serializable {
 		return bRuleTable.containsKey(rule);
 	}
 	
-	public boolean containsURule(short idParent, int idChild, byte type) {
+	public boolean containsURule(short idParent, int idChild, RuleType type) {
 		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
 		return uRuleTable.containsKey(rule);
 	}
 	
-	public void addCount(short idParent, short idlChild, short idrChild, Map<String, GaussianMixture> count, short isample, boolean withTree) {
+	public void addCount(short idParent, short idlChild, short idrChild, EnumMap<RuleUnit, GaussianMixture> count, short isample, boolean withTree) {
 		GrammarRule rule = getBRule(idParent, idlChild, idrChild);
 		addCount(rule, count, isample, withTree);
 	}
 	
-	public Map<Short, List<Map<String, GaussianMixture>>> getCount(short idParent, short idlChild, short idrChild, boolean withTree) {
+	public Map<Short, List<EnumMap<RuleUnit, GaussianMixture>>> getCount(short idParent, short idlChild, short idrChild, boolean withTree) {
 		GrammarRule rule = getBRule(idParent, idlChild, idrChild);
 		return getCount(rule, withTree);
 	}
 	
-	public void addCount(short idParent, int idChild, Map<String, GaussianMixture> count, byte type, short isample, boolean withTree) {
+	public void addCount(short idParent, int idChild, EnumMap<RuleUnit, GaussianMixture> count, RuleType type, short isample, boolean withTree) {
 		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
 		addCount(rule, count, isample, withTree);
 	}
 	
-	public Map<Short, List<Map<String, GaussianMixture>>> getCount(short idParent, int idChild, boolean withTree, byte type) {
+	public Map<Short, List<EnumMap<RuleUnit, GaussianMixture>>> getCount(short idParent, int idChild, boolean withTree, RuleType type) {
 		GrammarRule rule = new UnaryGrammarRule(idParent, idChild, type);
 		return getCount(rule, withTree);
 	}
 	
-	public void addCount(GrammarRule rule, Map<String, GaussianMixture> count, short isample, boolean withTree) {
+	public void addCount(GrammarRule rule, EnumMap<RuleUnit, GaussianMixture> count, short isample, boolean withTree) {
 		optimizer.addCount(rule, count, isample, withTree);
 	}
 	
-	public Map<Short, List<Map<String, GaussianMixture>>> getCount(GrammarRule rule, boolean withTree) {
+	public Map<Short, List<EnumMap<RuleUnit, GaussianMixture>>> getCount(GrammarRule rule, boolean withTree) {
 		return optimizer.getCount(rule, withTree);
 	}
 	

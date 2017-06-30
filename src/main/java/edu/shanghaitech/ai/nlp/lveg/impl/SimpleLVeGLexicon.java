@@ -4,13 +4,13 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.data.StateTreeList;
 import edu.shanghaitech.ai.nlp.lveg.LVeGTrainer;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleType;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
 import edu.shanghaitech.ai.nlp.syntax.State;
 import edu.shanghaitech.ai.nlp.util.Indexer;
@@ -32,7 +32,7 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 	
 	public SimpleLVeGLexicon() {
 		this.uRuleTable = new RuleTable<UnaryGrammarRule>(UnaryGrammarRule.class);
-		this.uRuleMap = new HashMap<GrammarRule, GrammarRule>();
+		this.uRuleMap = new HashMap<>();
 		this.wordIndexer = new Indexer<String>();
 		this.lastWord = TOKEN_UNKNOWN;
 		this.lastPosition = -1;
@@ -58,7 +58,7 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 	protected void initialize() {
 		this.uRulesWithP = new List[ntag];
 		for (int i = 0; i < ntag; i++) {
-			uRulesWithP[i] = new ArrayList<GrammarRule>();
+			uRulesWithP[i] = new ArrayList<>();
 		}
 	}
 	
@@ -68,7 +68,7 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 		this.nword = wordIndexer.size();
 		this.uRulesWithC = new List[nword];
 		for (int i = 0; i < nword; i++) {
-			uRulesWithC[i] = new ArrayList<GrammarRule>(5);
+			uRulesWithC[i] = new ArrayList<>(5);
 		}
 		for (GrammarRule rule : uRuleTable.keySet()) {
 			rule.getWeight().setBias(uRuleTable.getCount(rule).getBias());
@@ -111,9 +111,9 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 			int wordIdx = wordIndexer.indexOf(name);
 			word.wordIdx = wordIdx;
 			short tagIdx = tags.get(i).getId();
-			GrammarRule rule = new UnaryGrammarRule(tagIdx, wordIdx, GrammarRule.LHSPACE);
+			GrammarRule rule = new UnaryGrammarRule(tagIdx, wordIdx, RuleType.LHSPACE);
 			if (!uRuleTable.containsKey(rule)) { 
-				rule.initializeWeight(GrammarRule.LHSPACE, (short) -1, (short) -1); 
+				rule.initializeWeight(RuleType.LHSPACE, (short) -1, (short) -1); 
 			}
 			uRuleTable.addCount(rule, 1.0);
 		}
@@ -167,14 +167,14 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 		int wordIdx = getWordIdx(word); // should be >= 0
 		if (wordIdx == -1) { // double check
 			logger.warn("\nUnknown Word Signature [P: " + itag + ", UC: " + wordIdx + ", word = " + word.getName() + ", sig = (UNK)]\n");
-			GaussianMixture weight = GrammarRule.rndRuleWeight(GrammarRule.LHSPACE, (short) -1, (short) -1);
+			GaussianMixture weight = GrammarRule.rndRuleWeight(RuleType.LHSPACE, (short) -1, (short) -1);
 			weight.setWeights(LVeGTrainer.minmw);
 			return weight;
 		}
-		GrammarRule rule = getURule(itag, wordIdx, GrammarRule.LHSPACE);
+		GrammarRule rule = getURule(itag, wordIdx, RuleType.LHSPACE);
 		if (rule == null) { // double check
 			logger.warn("\nUnknown Lexicon Rule [P: " + itag + ", UC: " + wordIdx + ", word = " + word.getName() + ", sig = (UNK)]\n");
-			GaussianMixture weight = GrammarRule.rndRuleWeight(GrammarRule.LHSPACE, (short) -1, (short) -1);
+			GaussianMixture weight = GrammarRule.rndRuleWeight(RuleType.LHSPACE, (short) -1, (short) -1);
 			/*weight.setWeights(Double.NEGATIVE_INFINITY);*/
 			weight.setWeights(LVeGTrainer.minmw);
 			return weight;
@@ -244,9 +244,9 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 		
 		public IndexMap(int n) {
 			this.count = 0;
-			this.to = new ArrayList<Integer>(n);
-			this.from = new ArrayList<Integer>(n);
-			this.frequency = new ArrayList<Integer>(n);
+			this.to = new ArrayList<>(n);
+			this.from = new ArrayList<>(n);
+			this.frequency = new ArrayList<>(n);
 			// initialization
 			for (int i = 0; i < n; i++) {
 				to.add(-1);
@@ -297,8 +297,8 @@ public class SimpleLVeGLexicon extends LVeGLexicon {
 		
 		public IndexMap copy() {
 			IndexMap map = new IndexMap(to.size());
-			map.to    = new ArrayList<Integer>(to.size());
-			map.from  = new ArrayList<Integer>(to.size());
+			map.to    = new ArrayList<>(to.size());
+			map.from  = new ArrayList<>(to.size());
 			map.count = count;
 			map.to.addAll(to);
 			map.from.addAll(from);

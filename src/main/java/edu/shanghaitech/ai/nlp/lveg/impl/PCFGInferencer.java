@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Set;
 
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleType;
 import edu.shanghaitech.ai.nlp.lveg.model.Inferencer;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
@@ -145,7 +146,7 @@ public class PCFGInferencer extends Inferencer {
 				cinScore = chart.getInsideScoreMask(idTag, idx, level);
 				while (iterator.hasNext()) {
 					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
-					if (idx != 0 && rule.type == GrammarRule.RHSPACE) { continue; } // ROOT is allowed only when it is in cell 0 and is in level 1 or 2
+					if (idx != 0 && rule.type == RuleType.RHSPACE) { continue; } // ROOT is allowed only when it is in cell 0 and is in level 1 or 2
 					pinScore = rule.weight.getProb() + cinScore;
 					chart.addInsideScoreMask(rule.lhs, idx, pinScore, (short) (level + 1));
 				}
@@ -160,7 +161,7 @@ public class PCFGInferencer extends Inferencer {
 				cinScore = chart.getInsideScoreMask(idTag, idx, LENGTH_UCHAIN);
 				while (iterator.hasNext()) {
 					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
-					if (rule.type != GrammarRule.RHSPACE) { continue; } // only consider ROOT in level 3
+					if (rule.type != RuleType.RHSPACE) { continue; } // only consider ROOT in level 3
 					pinScore = rule.weight.getProb() + cinScore;
 					chart.addInsideScoreMask(rule.lhs, idx, pinScore, (short) (LENGTH_UCHAIN + 1));
 				}
@@ -291,7 +292,7 @@ public class PCFGInferencer extends Inferencer {
 				rules = grammar.getURuleWithC(mkey);
 				for (GrammarRule arule : rules) {
 					UnaryGrammarRule rule = (UnaryGrammarRule) arule;
-					if (rule.type == GrammarRule.RHSPACE) { continue; }
+					if (rule.type == RuleType.RHSPACE) { continue; }
 					if ((maxprob = chart.getMaxRuleCount(rule.lhs, idx)) > prob) { continue; }
 					newprob = prob + rule.weight.getProb();
 					if (newprob > maxprob) {

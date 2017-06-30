@@ -51,10 +51,10 @@ public class ParallelOptimizer extends Optimizer {
 	
 	
 	private ParallelOptimizer() {
-		this.cntsWithS = new HashMap<GrammarRule, Batch>();
-		this.cntsWithT = new HashMap<GrammarRule, Batch>();
-		this.ruleSet = new HashSet<GrammarRule>();
-		this.gradients = new HashMap<GrammarRule, Gradient>();
+		this.cntsWithS = new HashMap<>();
+		this.cntsWithT = new HashMap<>();
+		this.ruleSet = new HashSet<>();
+		this.gradients = new HashMap<>();
 		this.mode = ParallelMode.THREAD_POOL;
 		this.futures = null;
 		this.tasks = null;
@@ -80,7 +80,7 @@ public class ParallelOptimizer extends Optimizer {
 	
 	private void composeTasks(final List<Double> scoreSandT) {
 		if (tasks == null) {
-			tasks = new ArrayList<Callable<Boolean>>(ruleSet.size()); 
+			tasks = new ArrayList<>(ruleSet.size()); 
 		}
 		for (final GrammarRule rule : ruleSet) {
 			boolean updated = false;
@@ -248,7 +248,7 @@ public class ParallelOptimizer extends Optimizer {
 		boolean exit = true;
 		int nchanged = 0, isdone = 0;
 		if (futures == null) { 
-			futures = new ArrayList<Future<Boolean>>(ruleSet.size()); 
+			futures = new ArrayList<>(ruleSet.size()); 
 		}
 		futures.clear();
 		pool = Executors.newFixedThreadPool(nthread);

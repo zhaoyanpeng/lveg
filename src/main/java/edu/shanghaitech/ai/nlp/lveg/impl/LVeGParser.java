@@ -12,7 +12,6 @@ import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
 import edu.shanghaitech.ai.nlp.lveg.model.Parser;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.syntax.State;
-import edu.shanghaitech.ai.nlp.util.FunUtil;
 
 /**
  * @author Yanpeng Zhao
@@ -46,7 +45,7 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 		Tree<State> sample = (Tree<State>) task;
 		double scoreT = Double.NEGATIVE_INFINITY;
 		double scoreS = Double.NEGATIVE_INFINITY;
-		List<Double> scores = new ArrayList<Double>(3);
+		List<Double> scores = new ArrayList<>(3);
 //		synchronized (sample) { // why is it necessary to synchronize sample?
 			scoreT = doInsideOutsideWithTree(sample); 
 			scoreS = doInsideOutside(sample); 
@@ -94,7 +93,7 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 //		logger.trace("\nOutside scores with the sentence...\n\n"); // DEBUG
 //		FunUtil.debugChart(chart.getChart(false), (short) -1, tree.getYield().size()); // DEBUG
 		
-		List<Double> scores = new ArrayList<Double>(3);
+		List<Double> scores = new ArrayList<>(3);
 		scores.add(scoreT);
 		scores.add(scoreS);
 		

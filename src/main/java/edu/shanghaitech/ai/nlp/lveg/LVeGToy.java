@@ -14,7 +14,6 @@ import edu.berkeley.nlp.syntax.Tree;
 import edu.berkeley.nlp.syntax.Trees;
 import edu.shanghaitech.ai.nlp.data.StateTreeList;
 import edu.shanghaitech.ai.nlp.data.ObjectFileManager.GrammarFile;
-import edu.shanghaitech.ai.nlp.lveg.LearnerConfig.Options;
 import edu.shanghaitech.ai.nlp.lveg.impl.LVeGParser;
 import edu.shanghaitech.ai.nlp.lveg.impl.MaxRuleParser;
 import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGGrammar;
@@ -24,6 +23,8 @@ import edu.shanghaitech.ai.nlp.lveg.impl.Valuator;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleType;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleUnit;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture.Component;
@@ -251,9 +252,9 @@ public class LVeGToy extends LearnerConfig {
 	
 	
 	public static void parallelInBatch(Numberer numberer, double prell) throws Exception {
-		List<Double> scoresOfST = new ArrayList<Double>(3);
-		List<Double> trllist = new ArrayList<Double>();
-		List<Double> dellist = new ArrayList<Double>();
+		List<Double> scoresOfST = new ArrayList<>(3);
+		List<Double> trllist = new ArrayList<>();
+		List<Double> dellist = new ArrayList<>();
 		int cnt = 0;
 		do {			
 			logger.trace("\n\n-------epoch " + cnt + " begins-------\n\n");
@@ -322,8 +323,8 @@ public class LVeGToy extends LearnerConfig {
 	
 	public static void serialInBatch(Numberer numberer, double prell) throws Exception {
 		List<Double> scoresOfST = null;
-		List<Double> trllist = new ArrayList<Double>();
-		List<Double> dellist = new ArrayList<Double>();
+		List<Double> trllist = new ArrayList<>();
+		List<Double> dellist = new ArrayList<>();
 		int cnt = 0;
 		int a = 200;
 		do {			
@@ -579,8 +580,8 @@ public class LVeGToy extends LearnerConfig {
 	protected static Map<String, StateTreeList> makeComplexData(Numberer wraper, Options opts) {
 		StateTreeList trainTrees;
 		Numberer numberer = wraper.getGlobalNumberer(KEY_TAG_SET);
-		Map<String, StateTreeList> trees = new HashMap<String, StateTreeList>(3, 1);
-		List<Tree<String>> strTrees = new ArrayList<Tree<String>>();
+		Map<String, StateTreeList> trees = new HashMap<>(3, 1);
+		List<Tree<String>> strTrees = new ArrayList<>();
 		
 		String str1 = "(ROOT (S (A w_0) (E (B w_1) (C w_2))))";
 		String str2 = "(ROOT (S (A w_0) (F (B w_1) (C w_2))))";
@@ -607,8 +608,8 @@ public class LVeGToy extends LearnerConfig {
 	protected static Map<String, StateTreeList> makeData(Numberer wraper, Options opts) {
 		StateTreeList trainTrees;
 		Numberer numberer = wraper.getGlobalNumberer(KEY_TAG_SET);
-		Map<String, StateTreeList> trees = new HashMap<String, StateTreeList>(3, 1);
-		List<Tree<String>> strTrees = new ArrayList<Tree<String>>();
+		Map<String, StateTreeList> trees = new HashMap<>(3, 1);
+		List<Tree<String>> strTrees = new ArrayList<>();
 		for (int i = 0; i < ntree; i++) {
 			String string = "(ROOT (A_" + i + " (B X_" + i + ")))";
 			strTrees.add((new Trees.PennTreeReader(new StringReader(string))).next());
@@ -622,8 +623,8 @@ public class LVeGToy extends LearnerConfig {
 	protected static Map<String, StateTreeList> makeAugmentedData(Numberer wraper, Options opts) {
 		StateTreeList trainTrees;
 		Numberer numberer = wraper.getGlobalNumberer(KEY_TAG_SET);
-		Map<String, StateTreeList> trees = new HashMap<String, StateTreeList>(3, 1);
-		List<Tree<String>> strTrees = new ArrayList<Tree<String>>();
+		Map<String, StateTreeList> trees = new HashMap<>(3, 1);
+		List<Tree<String>> strTrees = new ArrayList<>();
 		for (int i = 0; i < ntree; i++) {
 //			String string = "(ROOT (A_" + i + " (B X_" + i + ")))";
 			String string = "(ROOT (A_" + i + " (B (C X_" + i + "))))";
@@ -636,12 +637,12 @@ public class LVeGToy extends LearnerConfig {
 	
 	
 	protected static void resetInterule(LVeGGrammar grammar, LVeGLexicon lexicon) {
-		GrammarRule rule = grammar.getURule((short) 2, 3, (byte) 0);
+		GrammarRule rule = grammar.getURule((short) 2, 3, RuleType.LRURULE);
 		rule.addWeightComponent(rule.type, (short) (ntree - 1), (short) -1);
 	}
 	
 	protected static void checkSimilarity(LVeGGrammar grammar) {
-		GrammarRule rule = grammar.getURule((short) 2, 3, (byte) 0);
+		GrammarRule rule = grammar.getURule((short) 2, 3, RuleType.LRURULE);
 		int ncomp = rule.weight.ncomponent();
 		GaussianDistribution gdi, gdj;
 		Component compi, compj;
@@ -692,8 +693,8 @@ public class LVeGToy extends LearnerConfig {
 			for (int j = i + 1; j < ncomp; j++) {
 				
 				compj = rule.weight.getComponent((short) j);
-				gdi = compi.squeeze(GrammarRule.Unit.P);
-				gdj = compj.squeeze(GrammarRule.Unit.P);
+				gdi = compi.squeeze(RuleUnit.P);
+				gdj = compj.squeeze(RuleUnit.P);
 				
 				double value = integral(gdi, gdj);
 				if (Math.exp(value) > pivot) {
@@ -701,8 +702,8 @@ public class LVeGToy extends LearnerConfig {
 					logger.info("\n---reset P parameters");
 				}
 				
-				gdi = compi.squeeze(GrammarRule.Unit.UC);
-				gdj = compj.squeeze(GrammarRule.Unit.UC);
+				gdi = compi.squeeze(RuleUnit.UC);
+				gdj = compj.squeeze(RuleUnit.UC);
 				
 				value = integral(gdi, gdj);
 				if (Math.exp(value) > pivot) {
@@ -766,7 +767,7 @@ public class LVeGToy extends LearnerConfig {
 	
 	public static Map<String, StateTreeList> loadPPTrees(Numberer wraper, Options opts) {
 		Numberer numberer = wraper.getGlobalNumberer(KEY_TAG_SET);
-		Map<String, StateTreeList> trees = new HashMap<String, StateTreeList>(3, 1);
+		Map<String, StateTreeList> trees = new HashMap<>(3, 1);
 		List<Tree<String>> strTrees = loadStringTree(opts.datadir + "wsj_toy_tree_ppa", opts);
 		StateTreeList trainTrees = stringTreeToStateTree(strTrees, numberer, opts, false);
 		trees.put(ID_TRAIN, trainTrees);
@@ -793,8 +794,8 @@ public class LVeGToy extends LearnerConfig {
 	protected static Map<String, StateTreeList> ppAttachment(Numberer wraper, Options opts) {
 		StateTreeList trainTrees;
 		Numberer numberer = wraper.getGlobalNumberer(KEY_TAG_SET);
-		Map<String, StateTreeList> trees = new HashMap<String, StateTreeList>(3, 1);
-		List<Tree<String>> strTrees = new ArrayList<Tree<String>>();
+		Map<String, StateTreeList> trees = new HashMap<>(3, 1);
+		List<Tree<String>> strTrees = new ArrayList<>();
 		for (int i = 0; i < ntree; i++) {
 			String string = "(ROOT (A_" + i + " (B X_" + i + ")))";
 			strTrees.add((new Trees.PennTreeReader(new StringReader(string))).next());
@@ -808,17 +809,17 @@ public class LVeGToy extends LearnerConfig {
 	protected static void resetPPrule(LVeGGrammar grammar, LVeGLexicon lexicon) {
 		GrammarRule rule = grammar.getBRule((short) 8, (short) 9, (short) 3);
 		rule.addWeightComponent(rule.type, (short) 1, (short) -1);
-		rule = grammar.getURule((short) 3, 7, (byte) 0);
+		rule = grammar.getURule((short) 3, 7, RuleType.LRURULE);
 		rule.addWeightComponent(rule.type, (short) 1, (short) -1);
 	}
 	
 	protected static void customize(LVeGGrammar grammar, LVeGLexicon lexicon) {
-		GrammarRule ur01 = new UnaryGrammarRule((short) 0, (short) 1, GrammarRule.RHSPACE, true);	
-		GrammarRule ur03 = new UnaryGrammarRule((short) 0, (short) 3, GrammarRule.RHSPACE, true);	
-		GrammarRule ur12 = new UnaryGrammarRule((short) 1, (short) 2, GrammarRule.LRURULE, true);	
-		GrammarRule ur32 = new UnaryGrammarRule((short) 3, (short) 2, GrammarRule.LRURULE, true);	
-		GrammarRule ur20 = new UnaryGrammarRule((short) 2, (short) 0, GrammarRule.LHSPACE, true);	
-		GrammarRule ur21 = new UnaryGrammarRule((short) 2, (short) 1, GrammarRule.LHSPACE, true);	
+		GrammarRule ur01 = new UnaryGrammarRule((short) 0, (short) 1, RuleType.RHSPACE, true);	
+		GrammarRule ur03 = new UnaryGrammarRule((short) 0, (short) 3, RuleType.RHSPACE, true);	
+		GrammarRule ur12 = new UnaryGrammarRule((short) 1, (short) 2, RuleType.LRURULE, true);	
+		GrammarRule ur32 = new UnaryGrammarRule((short) 3, (short) 2, RuleType.LRURULE, true);	
+		GrammarRule ur20 = new UnaryGrammarRule((short) 2, (short) 0, RuleType.LHSPACE, true);	
+		GrammarRule ur21 = new UnaryGrammarRule((short) 2, (short) 1, RuleType.LHSPACE, true);	
 		
 		Component comp01 = ur01.getWeight().getComponent((short) 0);
 		Component comp03 = ur03.getWeight().getComponent((short) 0);
@@ -827,14 +828,14 @@ public class LVeGToy extends LearnerConfig {
 		Component comp20 = ur20.getWeight().getComponent((short) 0);
 		Component comp21 = ur21.getWeight().getComponent((short) 0);
 		
-		GaussianDistribution gd01 = comp01.squeeze(GrammarRule.Unit.C);
-		GaussianDistribution gd03 = comp03.squeeze(GrammarRule.Unit.C);
-		GaussianDistribution gd12p = comp12.squeeze(GrammarRule.Unit.P);
-		GaussianDistribution gd12c = comp12.squeeze(GrammarRule.Unit.UC);
-		GaussianDistribution gd32p = comp32.squeeze(GrammarRule.Unit.P);
-		GaussianDistribution gd32c = comp32.squeeze(GrammarRule.Unit.UC);
-		GaussianDistribution gd20 = comp20.squeeze(GrammarRule.Unit.P);
-		GaussianDistribution gd21 = comp21.squeeze(GrammarRule.Unit.P);
+		GaussianDistribution gd01 = comp01.squeeze(RuleUnit.C);
+		GaussianDistribution gd03 = comp03.squeeze(RuleUnit.C);
+		GaussianDistribution gd12p = comp12.squeeze(RuleUnit.P);
+		GaussianDistribution gd12c = comp12.squeeze(RuleUnit.UC);
+		GaussianDistribution gd32p = comp32.squeeze(RuleUnit.P);
+		GaussianDistribution gd32c = comp32.squeeze(RuleUnit.UC);
+		GaussianDistribution gd20 = comp20.squeeze(RuleUnit.P);
+		GaussianDistribution gd21 = comp21.squeeze(RuleUnit.P);
 		
 		double mua = 1.0, mub = -1.0;
 		gd01.getMus().set(0, mua);

@@ -47,28 +47,28 @@ public class ChartCell {
 		Cell cell = new Cell();
 		switch (type) {
 		case MAX_RULE: {
-			cell.maxRulePos = new HashMap<Short, Short>();
-			cell.maxRuleSon = new HashMap<Short, Integer>();
-			cell.splitPoint = new HashMap<Short, Short>();
-			cell.maxRuleCnts = new HashMap<Short, Map<Short, Double>>(3, 1);
-			cell.maxRuleSons = new HashMap<Short, Map<Short, Integer>>(3, 1);
+			cell.maxRulePos = new HashMap<>();
+			cell.maxRuleSon = new HashMap<>();
+			cell.splitPoint = new HashMap<>();
+			cell.maxRuleCnts = new HashMap<>(3, 1);
+			cell.maxRuleSons = new HashMap<>(3, 1);
 			break;
 		}
 		case PCFG: {
-			cell.masks = new HashSet<Short>();
-			cell.mtags = new HashMap<Short, Set<Short>>(3, 1);
-			cell.mtotals = new HashMap<Short, Double>();
-			cell.mscores = new HashMap<Short, Map<Short, Double>>(3, 1);
+			cell.masks = new HashSet<>();
+			cell.mtags = new HashMap<>(3, 1);
+			cell.mtotals = new HashMap<>();
+			cell.mscores = new HashMap<>(3, 1);
 			break;
 		}
 		case MASK: {
-			cell.masks = new HashSet<Short>();
-			cell.mtags = new HashMap<Short, Set<Short>>(3, 1);
+			cell.masks = new HashSet<>();
+			cell.mtags = new HashMap<>(3, 1);
 			break;
 		}
 		case DEFAULT: {
-			cell.totals = new HashMap<Short, GaussianMixture>();
-			cell.scores = new HashMap<Short, Map<Short, GaussianMixture>>(3, 1);
+			cell.totals = new HashMap<>();
+			cell.scores = new HashMap<>(3, 1);
 			break;
 		}
 		default: {
@@ -91,30 +91,30 @@ public class ChartCell {
 		private PriorityQueue<Double> queue = null; // owned by this chart, need to make it thread safe
 		
 		public Chart(int n, boolean defchoice, boolean maxrule, boolean usemask) {
-			queue = new PriorityQueue<Double>();
+			queue = new PriorityQueue<>();
 			initialize(n, defchoice, maxrule, usemask);
 		}
 		
 		private void initialize(int n, boolean defchoice, boolean maxrule, boolean usemask) {
 			int size = n * (n + 1) / 2;
 			if (defchoice) {
-				ochart = new ArrayList<Cell>(size);
-				ichart = new ArrayList<Cell>(size);
+				ochart = new ArrayList<>(size);
+				ichart = new ArrayList<>(size);
 				for (int i = 0; i < size; i++) {
 					ochart.add(getCell(CellType.DEFAULT));
 					ichart.add(getCell(CellType.DEFAULT));
 				}
 			}
 			if (maxrule) {
-				mchart = new ArrayList<Cell>(size);
+				mchart = new ArrayList<>(size);
 				for (int i = 0; i < size; i++) {
 					mchart.add(getCell(CellType.MAX_RULE));
 				}
 			}
 			if (usemask) {
-				imasks = new ArrayList<Cell>(size);
-				omasks = new ArrayList<Cell>(size);
-				tmasks = new ArrayList<Cell>(size);
+				imasks = new ArrayList<>(size);
+				omasks = new ArrayList<>(size);
+				tmasks = new ArrayList<>(size);
 				for (int i = 0; i < size; i++) {
 					imasks.add(getCell(CellType.PCFG));
 					omasks.add(getCell(CellType.PCFG));
@@ -460,7 +460,7 @@ public class ChartCell {
 		protected void addPosteriorMask(short key, short level) {
 			Set<Short> keys = mtags.get(level);
 			if (keys == null) {
-				keys = new HashSet<Short>();
+				keys = new HashSet<>();
 				mtags.put(level, keys);
 			}
 			keys.add(key);
@@ -469,7 +469,7 @@ public class ChartCell {
 		protected synchronized void addScoreMask(short key, double score, short level) {
 			Map<Short, Double> lscore = mscores.get(level);
 			if (lscore == null) {
-				lscore = new HashMap<Short, Double>();
+				lscore = new HashMap<>();
 				mscores.put(level, lscore);
 			}
 			Double ascore = lscore.get(key);
@@ -556,7 +556,7 @@ public class ChartCell {
 			// cnts for the same nonterminals in different levels
 			Map<Short, Double> lcnts = maxRuleCnts.get(level);
 			if (lcnts == null) {
-				lcnts = new HashMap<Short, Double>();
+				lcnts = new HashMap<>();
 				maxRuleCnts.put(level, lcnts);
 			}
 			Double cnt = lcnts.get(key); // double check
@@ -565,7 +565,7 @@ public class ChartCell {
 			// sons for the same nonterminals in different levels
 			Map<Short, Integer> lsons = maxRuleSons.get(level);
 			if (lsons == null) {
-				lsons = new HashMap<Short, Integer>();
+				lsons = new HashMap<>();
 				maxRuleSons.put(level, lsons);
 			}
 			lsons.put(key, sons);
@@ -604,7 +604,7 @@ public class ChartCell {
 		protected synchronized void addScore(short key, GaussianMixture gm, short level) {
 			Map<Short, GaussianMixture> lscore = scores.get(level);
 			if (lscore == null) {
-				lscore = new HashMap<Short, GaussianMixture>();
+				lscore = new HashMap<>();
 				scores.put(level, lscore);
 			}
 			GaussianMixture agm = lscore.get(key);

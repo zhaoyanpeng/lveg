@@ -1,5 +1,6 @@
 package edu.shanghaitech.ai.nlp.lveg.impl;
 
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -9,6 +10,8 @@ import java.util.Set;
 import edu.shanghaitech.ai.nlp.lveg.model.ChartCell.Chart;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleType;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleUnit;
 import edu.shanghaitech.ai.nlp.lveg.model.Inferencer;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
@@ -55,8 +58,8 @@ public class MaxRuleInferencer extends Inferencer {
 				if (chart.containsKey(rule.lhs, iCell, false)) {
 					cinScore = lexicon.score(word, rule.lhs);
 					outScore = chart.getOutsideScore(rule.lhs, iCell);
-					Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>(1, 1);
-					scores.put(GrammarRule.Unit.P, outScore);
+					EnumMap<RuleUnit, GaussianMixture> scores = new EnumMap<>(RuleUnit.class);
+					scores.put(RuleUnit.P, outScore);
 					newcnt = cinScore.mulAndMarginalize(scores) - scoreS;
 					chart.addMaxRuleCount(rule.lhs, iCell, newcnt, 0, (short) -1, (short) 0);
 				}
@@ -91,10 +94,10 @@ public class MaxRuleInferencer extends Inferencer {
 							}
 							newcnt = lcount + rcount;
 							if ((maxcnt = chart.getMaxRuleCount(rule.lhs, c2)) > newcnt) { continue; }
-							Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>(3, 1);
-							scores.put(GrammarRule.Unit.P, outScore);
-							scores.put(GrammarRule.Unit.LC, linScore);
-							scores.put(GrammarRule.Unit.RC, rinScore);
+							EnumMap<RuleUnit, GaussianMixture> scores = new EnumMap<>(RuleUnit.class);
+							scores.put(RuleUnit.P, outScore);
+							scores.put(RuleUnit.LC, linScore);
+							scores.put(RuleUnit.RC, rinScore);
 							newcnt = newcnt + rule.weight.mulAndMarginalize(scores) - scoreS;
 							if (newcnt > maxcnt) {
 								// the negative, higher 2 bytes (lchild, sign bit exclusive) <- lower 2 bytes (rchild)
@@ -135,10 +138,10 @@ public class MaxRuleInferencer extends Inferencer {
 							(outScore = chart.getOutsideScore(okey, idx, (short) 1)) == null) {
 						continue;
 					}
-					if ((ruleW = grammar.getURuleWeight(okey, ikey, GrammarRule.LRURULE, true)) == null) { continue; }
-					Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>(2, 1);
-					scores.put(GrammarRule.Unit.P, outScore);
-					scores.put(GrammarRule.Unit.UC, cinScore);
+					if ((ruleW = grammar.getURuleWeight(okey, ikey, RuleType.LRURULE, true)) == null) { continue; }
+					EnumMap<RuleUnit, GaussianMixture> scores = new EnumMap<>(RuleUnit.class);
+					scores.put(RuleUnit.P, outScore);
+					scores.put(RuleUnit.UC, cinScore);
 					newcnt = count + ruleW.mulAndMarginalize(scores) - scoreS;
 					if (newcnt > maxcnt) {
 						midcnts.put(okey, newcnt);
@@ -161,10 +164,10 @@ public class MaxRuleInferencer extends Inferencer {
 							(outScore = chart.getOutsideScore(okey, idx, (short) 0)) == null) {
 						continue;
 					}
-					if ((ruleW = grammar.getURuleWeight(okey, ikey, GrammarRule.LRURULE, true)) == null) { continue; }
-					Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>(2, 1);
-					scores.put(GrammarRule.Unit.P, outScore);
-					scores.put(GrammarRule.Unit.UC, cinScore);
+					if ((ruleW = grammar.getURuleWeight(okey, ikey, RuleType.LRURULE, true)) == null) { continue; }
+					EnumMap<RuleUnit, GaussianMixture> scores = new EnumMap<>(RuleUnit.class);
+					scores.put(RuleUnit.P, outScore);
+					scores.put(RuleUnit.UC, cinScore);
 					newcnt = count + ruleW.mulAndMarginalize(scores) - scoreS;
 					if (newcnt > maxcnt) {
 						int sons = (son << 16) + ikey;
@@ -199,14 +202,14 @@ public class MaxRuleInferencer extends Inferencer {
 						continue;
 					}
 					for (Short mid : ikeyLevel1) {
-						if ((w0 = grammar.getURuleWeight(mid, ikey, GrammarRule.LRURULE, true)) == null ||
-								(w1 = grammar.getURuleWeight(okey, mid, GrammarRule.LRURULE, true)) == null) {
+						if ((w0 = grammar.getURuleWeight(mid, ikey, RuleType.LRURULE, true)) == null ||
+								(w1 = grammar.getURuleWeight(okey, mid, RuleType.LRURULE, true)) == null) {
 							continue;
 						}
-						cinScore = w0.mulForInsideOutside(cinScore, GrammarRule.Unit.UC, true);
-						Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>(2, 1);
-						scores.put(GrammarRule.Unit.P, outScore);
-						scores.put(GrammarRule.Unit.UC, cinScore);
+						cinScore = w0.mulForInsideOutside(cinScore, RuleUnit.UC, true);
+						EnumMap<RuleUnit, GaussianMixture> scores = new EnumMap<>(RuleUnit.class);
+						scores.put(RuleUnit.P, outScore);
+						scores.put(RuleUnit.UC, cinScore);
 						newcnt = count + w1.mulAndMarginalize(scores) - scoreS;
 						if (newcnt > maxcnt) {
 							int sons = (ikey << 16) + mid; // higher 2 bytes (grandson) <- lower 2 bytes (child)
@@ -238,12 +241,12 @@ public class MaxRuleInferencer extends Inferencer {
 				Iterator<GrammarRule> iterator = rules.iterator();
 				while (iterator.hasNext()) {
 					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
-					if (rule.type == GrammarRule.RHSPACE) { continue; } // ROOT is excluded
+					if (rule.type == RuleType.RHSPACE) { continue; } // ROOT is excluded
 					if ((maxcnt = chart.getMaxRuleCount(rule.lhs, idx)) > count) { continue; }
 					if ((outScore = chart.getOutsideScore(rule.lhs, idx, (short) 0)) == null) { continue; }
-					Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>(2, 1);
-					scores.put(GrammarRule.Unit.P, outScore);
-					scores.put(GrammarRule.Unit.UC, cinScore);
+					EnumMap<RuleUnit, GaussianMixture> scores = new EnumMap<>(RuleUnit.class);
+					scores.put(RuleUnit.P, outScore);
+					scores.put(RuleUnit.UC, cinScore);
 					newcnt = count + rule.weight.mulAndMarginalize(scores) - scoreS;
 					if (newcnt > maxcnt) {
 						chart.addMaxRuleCount(rule.lhs, idx, newcnt, mkey, (short) -1, (short) 1);
@@ -269,8 +272,8 @@ public class MaxRuleInferencer extends Inferencer {
 						(maxcnt = chart.getMaxRuleCount(ROOT, idx)) > count) {
 					continue;
 				}
-				Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>(1, 1);
-				scores.put(GrammarRule.Unit.C, cinScore);
+				EnumMap<RuleUnit, GaussianMixture> scores = new EnumMap<>(RuleUnit.class);
+				scores.put(RuleUnit.C, cinScore);
 				newcnt = count + rule.weight.mulAndMarginalize(scores) - scoreS;
 				if (newcnt > maxcnt) {
 					chart.addMaxRuleCount(ROOT, idx, newcnt, rule.rhs, (short) -1, (short) 0); // a specific 'binary' rule

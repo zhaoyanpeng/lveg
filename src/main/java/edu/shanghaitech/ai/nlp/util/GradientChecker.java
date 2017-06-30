@@ -1,9 +1,10 @@
 package edu.shanghaitech.ai.nlp.util;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.lveg.impl.LVeGParser;
@@ -11,6 +12,8 @@ import edu.shanghaitech.ai.nlp.lveg.impl.Valuator;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleType;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleUnit;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
 import edu.shanghaitech.ai.nlp.optimization.Gradient.Grads;
@@ -89,7 +92,7 @@ public class GradientChecker extends Recorder {
 		
 		
 		Object gradients = null;
-		if (entry.getKey().type != GrammarRule.LHSPACE) {
+		if (entry.getKey().type != RuleType.LHSPACE) {
 			gradients = grammar.getOptimizer().debug(entry.getKey(), false);
 		} else {
 			gradients = lexicon.getOptimizer().debug(entry.getKey(), false);
@@ -99,15 +102,15 @@ public class GradientChecker extends Recorder {
 		if (gradients != null) {
 			Grads grads = (Grads) gradients;
 			sb.append("\n---\nWgrads: ");
-			List<Double> wgrads = new ArrayList<Double>(grads.wgrads.size());
+			List<Double> wgrads = new ArrayList<>(grads.wgrads.size());
 			for (Double dw : grads.wgrads) {
 				wgrads.add(dw / maxsample);
 			}
-			List<Map<String, List<Double>>> ggrads = new ArrayList<Map<String, List<Double>>>(grads.ggrads.size());
-			for (Map<String, List<Double>> comp : grads.ggrads) {
-				Map<String, List<Double>> gauss = new HashMap<String, List<Double>>(comp.size(), 1);
-				for (Map.Entry<String, List<Double>> gaussian : comp.entrySet()) {
-					List<Double> params = new ArrayList<Double>(gaussian.getValue().size());
+			List<EnumMap<RuleUnit, List<Double>>> ggrads = new ArrayList<>(grads.ggrads.size());
+			for (Map<RuleUnit, List<Double>> comp : grads.ggrads) {
+				EnumMap<RuleUnit, List<Double>> gauss = new EnumMap<>(RuleUnit.class);
+				for (Entry<RuleUnit, List<Double>> gaussian : comp.entrySet()) {
+					List<Double> params = new ArrayList<>(gaussian.getValue().size());
 					for (Double dg : gaussian.getValue()) {
 						params.add(dg / maxsample);
 					}

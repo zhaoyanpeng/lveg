@@ -234,7 +234,7 @@ public class LVeGTrainer extends LearnerConfig {
 		logger.info("\n---SGD CONFIG---\n[parallel: batch-" + opts.pbatch + ", grad-" + 
 				opts.pgrad + ", eval-" + opts.peval + "] " + Params.toString(false) + "\n");
 		
-		ftrainTrees = new ArrayList<Tree<State>>(trainTrees.size());
+		ftrainTrees = new ArrayList<>(trainTrees.size());
 		for (Tree<State> tree : trainTrees) {
 			if (opts.eonlylen > 0) {
 				if (tree.getYield().size() > opts.eonlylen) { continue; }
@@ -245,7 +245,7 @@ public class LVeGTrainer extends LearnerConfig {
 			ftrainTrees = sampleTrees(ftrainTrees, opts);
 			logger.debug(", " + ftrainTrees.size() + "\n\n");
 		}
-		sorter = new PriorityQueue<Tree<State>>(opts.bsize + 5, wcomparator);
+		sorter = new PriorityQueue<>(opts.bsize + 5, wcomparator);
 		
 		if (opts.pbatch) {
 			parallelInBatch(numberer, iepoch);
@@ -334,10 +334,10 @@ public class LVeGTrainer extends LearnerConfig {
 	public static void parallelInBatch(Numberer numberer, int iepoch) throws Exception {
 		long bTime, eTime, epochBTime, batchBTime, batchETime;
 		int iprebeg, ibegin = 0, nfailed, ibatch = 0;
-		List<Double> trllist = new ArrayList<Double>();
-		List<Double> dellist = new ArrayList<Double>();
-		List<Double> scoresOfST = new ArrayList<Double>(3);
-		List<Tree<State>> batch = new ArrayList<Tree<State>>(opts.bsize + 5);
+		List<Double> trllist = new ArrayList<>();
+		List<Double> dellist = new ArrayList<>();
+		List<Double> scoresOfST = new ArrayList<>(3);
+		List<Tree<State>> batch = new ArrayList<>(opts.bsize + 5);
 		boolean shuffle = true;
 		do {
 			logger.trace("\n\n-------epoch " + iepoch + " begins-------\n\n");
@@ -401,9 +401,9 @@ public class LVeGTrainer extends LearnerConfig {
 	public static void serialInBatch(Numberer numberer, int iepoch) throws Exception {
 		long bTime, eTime, epochBTime, batchBTime, batchETime;
 		int iprebeg, ibegin = 0, ibatch = 0, length, isample = 0;
-		List<Double> trllist = new ArrayList<Double>();
-		List<Double> dellist = new ArrayList<Double>();
-		List<Tree<State>> batch = new ArrayList<Tree<State>>(opts.bsize + 5);
+		List<Double> trllist = new ArrayList<>();
+		List<Double> dellist = new ArrayList<>();
+		List<Tree<State>> batch = new ArrayList<>(opts.bsize + 5);
 		List<Double> scoresOfST = null;
 		boolean shuffle = false;
 		do {
@@ -610,7 +610,7 @@ public class LVeGTrainer extends LearnerConfig {
 	public static double parallelLL(Options opts, ThreadPool valuator, StateTreeList stateTreeList, Numberer numberer, boolean istrain) {
 		double ll = 0, sumll = 0;
 		int nUnparsable = 0, cnt = 0;
-		List<Tree<State>> trees = new ArrayList<Tree<State>>(stateTreeList.size());
+		List<Tree<State>> trees = new ArrayList<>(stateTreeList.size());
 		filterTrees(opts, stateTreeList, trees, numberer, istrain);
 		for (Tree<State> tree : trees) {
 			valuator.execute(tree);
@@ -643,7 +643,7 @@ public class LVeGTrainer extends LearnerConfig {
 	public static double serialLL(Options opts, Valuator<?, ?> valuator, StateTreeList stateTreeList, Numberer numberer, boolean istrain) {
 		double ll = 0, sumll = 0;
 		int nUnparsable = 0, cnt = 0;
-		List<Tree<State>> trees = new ArrayList<Tree<State>>(stateTreeList.size());
+		List<Tree<State>> trees = new ArrayList<>(stateTreeList.size());
 		filterTrees(opts, stateTreeList, trees, numberer, istrain);
 		for (Tree<State> tree : trees) {
 			ll = valuator.probability(tree);

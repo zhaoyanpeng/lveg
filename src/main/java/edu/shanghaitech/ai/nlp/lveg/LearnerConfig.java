@@ -26,7 +26,6 @@ import edu.shanghaitech.ai.nlp.data.StateTreeList;
 import edu.shanghaitech.ai.nlp.data.LVeGCorpus;
 import edu.shanghaitech.ai.nlp.data.ObjectFileManager.CorpusFile;
 import edu.shanghaitech.ai.nlp.lveg.impl.BinaryGrammarRule;
-import edu.shanghaitech.ai.nlp.lveg.impl.DiagonalGaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.impl.GaussFactory;
 import edu.shanghaitech.ai.nlp.lveg.impl.MoGFactory;
 import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGLexicon;
@@ -37,7 +36,8 @@ import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture.Component;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
-import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.Unit;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleType;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleUnit;
 import edu.shanghaitech.ai.nlp.optimization.Optimizer.OptChoice;
 import edu.shanghaitech.ai.nlp.optimization.ParallelOptimizer.ParallelMode;
 import edu.shanghaitech.ai.nlp.syntax.State;
@@ -464,14 +464,14 @@ public class LearnerConfig extends Recorder {
 		
 		MoGFactory mfactory = new MoGFactory(opts.ncomponent, opts.maxmw, opts.nwratio, random);
 		GaussFactory gfactory = new GaussFactory(opts.dim, opts.maxmu, opts.maxvar, opts.nmratio, opts.nvratio, random);
-		mogPool = new ObjectPool<Short, GaussianMixture>(mfactory, config);
-		gaussPool = new ObjectPool<Short, GaussianDistribution>(gfactory, config);
+		mogPool = new ObjectPool<>(mfactory, config);
+		gaussPool = new ObjectPool<>(gfactory, config);
 	}
 	
 	public static  Map<String, StateTreeList> loadData(Numberer wrapper, Options opts) {
 		Numberer numberer = null;
 		StateTreeList trainTrees, testTrees, devTrees;
-		Map<String, StateTreeList> trees = new HashMap<String, StateTreeList>(3, 1);
+		Map<String, StateTreeList> trees = new HashMap<>(3, 1);
 		if (opts.loadCorpus && opts.inCorpus != null) {
 			logger.trace("--->Loading corpus from \'" + opts.datadir + opts.inCorpus + "\'...\n");
 			CorpusFile corpus = (CorpusFile) CorpusFile.load(opts.datadir + opts.inCorpus);
@@ -522,7 +522,7 @@ public class LearnerConfig extends Recorder {
 	protected static void makeSubTypes(Numberer numberer) {
 		int size = numberer.size();
 		String entrySep = " ", kvSep = "=";
-		refSubTypes = new HashMap<Short, Short>(size, 1);
+		refSubTypes = new HashMap<>(size, 1);
 		String[] entries = reference.split(entrySep);
 		for (String entry : entries) {
 			if (entry.length() > 1 && entry.contains(kvSep)) {
@@ -632,7 +632,7 @@ public class LearnerConfig extends Recorder {
 	
 	
 	protected static ArrayList<Tree<State>> sampleTrees(List<Tree<State>> trees, Options opts) {
-		ArrayList<Tree<State>> newList = new ArrayList<Tree<State>>();
+		ArrayList<Tree<State>> newList = new ArrayList<>();
 		for (Tree<State> tree : trees) {
 			List<State> sentence = tree.getYield();
 			int sentenceLength = sentence.size();
@@ -644,13 +644,13 @@ public class LearnerConfig extends Recorder {
 		int total = newList.size();
 		int nneed = (int) Math.ceil(total * opts.efraction);
 		Random rnd = new Random(11);
-		Set<Integer> idxes = new LinkedHashSet<Integer>();
+		Set<Integer> idxes = new LinkedHashSet<>();
 		while (idxes.size() < nneed) {
 			Integer next = rnd.nextInt(total);
 			idxes.add(next);
 		}
 		
-		ArrayList<Tree<State>> filterList = new ArrayList<Tree<State>>();
+		ArrayList<Tree<State>> filterList = new ArrayList<>();
 		for (Integer idx : idxes) {
 			filterList.add(newList.get(idx));
 		}
@@ -693,7 +693,7 @@ public class LearnerConfig extends Recorder {
 			gBruleWithP = grammar.getBRuleWithP(i);
 			lUruleWithP = lexicon.getURuleWithP(i);
 			nrule = gUruleWithP.size() + gBruleWithP.size() + lUruleWithP.size();
-			List<GrammarRule> rules = new ArrayList<GrammarRule>(nrule + 5);
+			List<GrammarRule> rules = new ArrayList<>(nrule + 5);
 			rules.addAll(gUruleWithP);
 			rules.addAll(gBruleWithP);
 			rules.addAll(lUruleWithP);
@@ -707,7 +707,7 @@ public class LearnerConfig extends Recorder {
 				ruleW = rule.getWeight();
 				ncomp = opts.ncomponent;
 				
-				if (!opts.resetl && rule.type == GrammarRule.LHSPACE) {
+				if (!opts.resetl && rule.type == RuleType.LHSPACE) {
 					d++;
 					resetc = false;
 				} else {
@@ -715,7 +715,7 @@ public class LearnerConfig extends Recorder {
 				}
 				
 				if (resetc && rulecnt > opts.pivota) {
-					byte type = rule.getType();
+					RuleType type = rule.getType();
 					short increment = 0;
 					
 					if (rulecnt < opts.pivotb) {
@@ -758,7 +758,7 @@ public class LearnerConfig extends Recorder {
 		int ntag = numberer.size(), nrule;
 		List<GrammarRule> gUruleWithP, gBruleWithP, lUruleWithP;
 		// filters
-		Set<Short> lexiconTags = new HashSet<Short>(ntag);
+		Set<Short> lexiconTags = new HashSet<>(ntag);
 		for (int i = 0; i < ntag; i++) {
 			lUruleWithP = lexicon.getURuleWithP(i);
 			for (GrammarRule rule : lUruleWithP) {
@@ -777,7 +777,7 @@ public class LearnerConfig extends Recorder {
 				continue; 	
 			}
 			for (int icomp = 0; icomp < ncomp; icomp++) {
-				tmus[itag][icomp] = new ArrayList<Double>(opts.dim);
+				tmus[itag][icomp] = new ArrayList<>(opts.dim);
 				for (short idim = 0; idim < opts.dim; idim++) {
 					double rndn = (random.nextDouble() - opts.nmratio) * opts.maxmu;
 					tmus[itag][icomp].add(rndn);
@@ -791,7 +791,7 @@ public class LearnerConfig extends Recorder {
 			gUruleWithP = grammar.getURuleWithP(itag);
 			gBruleWithP = grammar.getBRuleWithP(itag);
 			nrule = gUruleWithP.size() + gBruleWithP.size();
-			List<GrammarRule> rules = new ArrayList<GrammarRule>(nrule + 5);
+			List<GrammarRule> rules = new ArrayList<>(nrule + 5);
 			rules.addAll(gUruleWithP);
 			rules.addAll(gBruleWithP);
 			
@@ -805,16 +805,16 @@ public class LearnerConfig extends Recorder {
 	private static void resetRuleWeightParams(GrammarRule rule, List[][] tmus) {
 		GaussianMixture ruleW = rule.weight;
 		int ncomp = ruleW.ncomponent();
-		byte type = rule.getType();
+		RuleType type = rule.getType();
 		
 		switch (type) {
-		case GrammarRule.RHSPACE: { // rules for the root since it does not have subtypes
+		case RHSPACE: { // rules for the root since it does not have subtypes
 			UnaryGrammarRule urule = (UnaryGrammarRule) rule;
 			List[] newmus = tmus[urule.rhs];
 			for (short i = 0; i < ncomp; i++) {
 				Component comp = ruleW.getComponent(i);
 				if (newmus[i] != null) {
-					GaussianDistribution gd = comp.squeeze(Unit.C);
+					GaussianDistribution gd = comp.squeeze(RuleUnit.C);
 					List<Double> oldmus = gd.getMus();
 					assert(oldmus.size() == newmus[i].size());
 					oldmus.clear();
@@ -823,24 +823,24 @@ public class LearnerConfig extends Recorder {
 			}
 			break;
 		}
-		case GrammarRule.LHSPACE: { // rules in the preterminal layer (discarded)
+		case LHSPACE: { // rules in the preterminal layer (discarded)
 			logger.error("\n---not supposed to be reached\n");
 			break;
 		}
-		case GrammarRule.LRURULE: { // general unary rules 
+		case LRURULE: { // general unary rules 
 			UnaryGrammarRule urule = (UnaryGrammarRule) rule;
 			List[] pnewmus = tmus[urule.lhs];
 			List[] cnewmus = tmus[urule.rhs];
 			for (short i = 0; i < ncomp; i++) {
 				Component comp = ruleW.getComponent(i);
-				GaussianDistribution gd = comp.squeeze(Unit.P);
+				GaussianDistribution gd = comp.squeeze(RuleUnit.P);
 				List<Double> oldmus = gd.getMus();
 				assert(oldmus.size() == pnewmus[i].size());
 				oldmus.clear();
 				oldmus.addAll(pnewmus[i]);
 				
 				if (cnewmus[i] != null) {
-					gd = comp.squeeze(Unit.UC);
+					gd = comp.squeeze(RuleUnit.UC);
 					oldmus = gd.getMus();
 					assert(oldmus.size() == cnewmus[i].size());
 					oldmus.clear();
@@ -849,21 +849,21 @@ public class LearnerConfig extends Recorder {
 			}
 			break;
 		}
-		case GrammarRule.LRBRULE: { // general binary rules
+		case LRBRULE: { // general binary rules
 			BinaryGrammarRule brule = (BinaryGrammarRule) rule;
 			List[] pnewmus = tmus[brule.lhs];
 			List[] lnewmus = tmus[brule.lchild];
 			List[] rnewmus = tmus[brule.rchild];
 			for (short i = 0; i < ncomp; i++) {
 				Component comp = ruleW.getComponent(i);
-				GaussianDistribution gd = comp.squeeze(Unit.P);
+				GaussianDistribution gd = comp.squeeze(RuleUnit.P);
 				List<Double> oldmus = gd.getMus();
 				assert(oldmus.size() == pnewmus[i].size());
 				oldmus.clear();
 				oldmus.addAll(pnewmus[i]);
 				
 				if (lnewmus[i] != null) {
-					gd = comp.squeeze(Unit.LC);
+					gd = comp.squeeze(RuleUnit.LC);
 					oldmus = gd.getMus();
 					assert(oldmus.size() == lnewmus[i].size());
 					oldmus.clear();
@@ -871,7 +871,7 @@ public class LearnerConfig extends Recorder {
 				}
 				
 				if (rnewmus[i] != null) {
-					gd = comp.squeeze(Unit.RC);
+					gd = comp.squeeze(RuleUnit.RC);
 					oldmus = gd.getMus();
 					assert(oldmus.size() == rnewmus[i].size());
 					oldmus.clear();

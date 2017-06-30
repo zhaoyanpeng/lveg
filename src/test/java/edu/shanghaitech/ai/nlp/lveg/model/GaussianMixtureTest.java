@@ -3,6 +3,8 @@ package edu.shanghaitech.ai.nlp.lveg.model;
 import static org.junit.Assert.*;
 
 import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -17,9 +19,8 @@ import edu.shanghaitech.ai.nlp.lveg.impl.DiagonalGaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.impl.DiagonalGaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
-import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture.Component;
-import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.Unit;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleUnit;
 import edu.shanghaitech.ai.nlp.util.FunUtil;
 
 public class GaussianMixtureTest {
@@ -39,25 +40,25 @@ public class GaussianMixtureTest {
 		gm2 = new DiagonalGaussianMixture(LVeGTrainer.ncomponent);
 		
 		for (int i = 0; i < LVeGTrainer.ncomponent; i++) {
-			Map<String, Set<GaussianDistribution>> map = new HashMap<String, Set<GaussianDistribution>>();
+			EnumMap<RuleUnit, Set<GaussianDistribution>> map = new EnumMap<>(RuleUnit.class);
 			Set<GaussianDistribution> list0 = new HashSet<GaussianDistribution>();
 			Set<GaussianDistribution> list1 = new HashSet<GaussianDistribution>();
 			list0.add(new DiagonalGaussianDistribution(LVeGTrainer.dim));
 			list1.add(new DiagonalGaussianDistribution(LVeGTrainer.dim));
-			map.put(Unit.P, list0);
-			map.put(Unit.UC, list1);
+			map.put(RuleUnit.P, list0);
+			map.put(RuleUnit.UC, list1);
 			gm0.add(i, map);
 		}
 		System.out.println("gm0---" + gm0);
 		
 		for (int i = 0; i < LVeGTrainer.ncomponent; i++) {
-			Map<String, Set<GaussianDistribution>> map = new HashMap<String, Set<GaussianDistribution>>();
+			EnumMap<RuleUnit, Set<GaussianDistribution>> map = new EnumMap<>(RuleUnit.class);
 			Set<GaussianDistribution> list0 = new HashSet<GaussianDistribution>();
 			Set<GaussianDistribution> list1 = new HashSet<GaussianDistribution>();
 			list0.add(new DiagonalGaussianDistribution(LVeGTrainer.dim));
 			list1.add(new DiagonalGaussianDistribution(LVeGTrainer.dim));
-			map.put(Unit.P, list0);
-			map.put(Unit.UC, list1);
+			map.put(RuleUnit.P, list0);
+			map.put(RuleUnit.UC, list1);
 			gm1.add(i, map);
 		}
 		System.out.println("gm1---" + gm1);
@@ -65,7 +66,7 @@ public class GaussianMixtureTest {
 		for (int i = 0; i < LVeGTrainer.ncomponent; i++) {
 			Set<GaussianDistribution> list = new HashSet<GaussianDistribution>();
 			list.add(new DiagonalGaussianDistribution(LVeGTrainer.dim));
-			gm2.add(i, Unit.UC, list);
+			gm2.add(i, RuleUnit.UC, list);
 		}
 		System.out.println("gm2---" + gm2);
 	}
@@ -181,10 +182,10 @@ public class GaussianMixtureTest {
 		System.out.println("gmc---" + gmc);
 		
 		System.out.println("addmap-gmc---" + gmc);
-		Map<String, Set<GaussianDistribution>> map = new HashMap<String, Set<GaussianDistribution>>();
+		EnumMap<RuleUnit, Set<GaussianDistribution>> map = new EnumMap<>(RuleUnit.class);
 		Set<GaussianDistribution> list0 = new HashSet<GaussianDistribution>();
 		list0.add(new DiagonalGaussianDistribution(LVeGTrainer.dim));
-		map.put(Unit.P, list0);
+		map.put(RuleUnit.P, list0);
 		gmc.add(0.0, map);
 		
 		List<Component> components = gmc.components();
@@ -240,7 +241,7 @@ public class GaussianMixtureTest {
 		GaussianMixture cgm2 = gm2.copy(true);
 		
 		System.out.println("---multiplication and marginalization---");
-		GaussianMixture gm3 = cgm0.mulForInsideOutside(cgm2, GrammarRule.Unit.UC, true);
+		GaussianMixture gm3 = cgm0.mulForInsideOutside(cgm2, RuleUnit.UC, true);
 		System.out.println("InScore uc--" + gm3);
 		
 		System.out.println("---deep copy---");
@@ -250,7 +251,7 @@ public class GaussianMixtureTest {
 		System.out.println("---shallow copy---");
 		cgm0 = gm0.copy(true);
 		System.out.println(cgm0);
-		GaussianMixture gm5 = cgm0.mulForInsideOutside(cgm2, GrammarRule.Unit.UC, false);
+		GaussianMixture gm5 = cgm0.mulForInsideOutside(cgm2, RuleUnit.UC, false);
 		System.out.println(gm5);
 		System.out.println(cgm0);
 	}
@@ -262,8 +263,8 @@ public class GaussianMixtureTest {
 		GaussianMixture gm3 = gm0.multiply(gm1);
 		System.out.println("gm0 X gm1---" + gm3);
 		
-		Set<String> keys = new HashSet<String>();
-		keys.add("uc");
+		EnumSet<RuleUnit> keys = EnumSet.noneOf(RuleUnit.class);
+		keys.add(RuleUnit.UC);
 		
 		gm3.marginalize(keys);
 		System.out.println("Remove uc---" + gm3);
@@ -276,7 +277,7 @@ public class GaussianMixtureTest {
 		GaussianMixture gm4 = gm0.multiply(gm2);
 		System.out.println("gm0 X gm2---" + gm4);
 		
-		GaussianMixture gm8 = gm4.replaceAllKeys("uc");
+		GaussianMixture gm8 = gm4.replaceAllKeys(RuleUnit.UC);
 		System.out.println("Repwith uc--" + gm8);
 
 		gm4.marginalize(keys);
@@ -286,10 +287,10 @@ public class GaussianMixtureTest {
 		System.out.println("Merge  p ---" + gm6);
 		
 
-		Map<String, String> keys0 = new HashMap<String, String>();
-		Map<String, String> keys1 = new HashMap<String, String>();
-		keys0.put("uc", "rm");
-		keys1.put("p", "rm");
+		EnumMap<RuleUnit, RuleUnit> keys0 = new EnumMap<>(RuleUnit.class);
+		EnumMap<RuleUnit, RuleUnit> keys1 = new EnumMap<>(RuleUnit.class);
+		keys0.put(RuleUnit.UC, RuleUnit.RM);
+		keys1.put(RuleUnit.P, RuleUnit.RM);
 		GaussianMixture gm7 = GaussianMixture.mulAndMarginalize(gm0, gm1, keys0, keys1);
 		System.out.println("MulAndMarginalize gm0 X gm1---" + gm7);
 		

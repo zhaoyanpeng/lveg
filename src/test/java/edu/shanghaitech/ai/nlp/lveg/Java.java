@@ -78,6 +78,30 @@ public class Java {
 		}
 	}
 	
+	enum XXX {
+		a(1), 
+		b(2), 
+		c(3);
+		
+		int x;
+		
+		XXX(int x) {
+			this.x = x;
+		}
+		
+		int value() {
+			return x;
+		}
+		
+		@Override
+		public String toString() {
+			return String.valueOf(x);
+		}
+	}
+	
+	enum YYY {
+		a, b, c
+	}
 	
 	@Test
 	public void c() {
@@ -98,6 +122,15 @@ public class Java {
 
 		System.out.println(rule0 = rule1);
 		System.out.println(rule0.equals(rule1));
+		
+		System.out.println(XXX.b);
+		System.out.println(YYY.a.ordinal());
+		
+		XXX x1 = XXX.a;
+		XXX x2 = XXX.b;
+		System.out.println(x1 == x2);
+		System.out.println(x1.equals(x2));
+
 	}
 	
 //	@Test

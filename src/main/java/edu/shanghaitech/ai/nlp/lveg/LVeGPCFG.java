@@ -111,7 +111,7 @@ public class LVeGPCFG extends LearnerConfig {
 		logger.info("\n---F1 CONFIG---\n[parallel: batch-" + opts.pbatch + ", grad-" + 
 				opts.pgrad + ", eval-" + opts.peval + ", test-" + opts.pf1 + "]\n\n");
 		
-		sorter = new PriorityQueue<Tree<State>>(opts.bsize + 5, wcomparator);
+		sorter = new PriorityQueue<>(opts.bsize + 5, wcomparator);
 		
 		StringBuffer sb = new StringBuffer();
 		sb.append("[test ]" + f1entry(testTrees, numberer, false) + "\n");
@@ -144,7 +144,7 @@ public class LVeGPCFG extends LearnerConfig {
 		Tree<State> goldTree = null;
 		Tree<String> parsedTree = null;
 		int nUnparsable = 0, cnt = 0, idx = 0;
-		List<Tree<State>> trees = new ArrayList<Tree<State>>(stateTreeList.size());
+		List<Tree<State>> trees = new ArrayList<>(stateTreeList.size());
 		filterTrees(opts, stateTreeList, trees, numberer, istrain);
 		
 		for (Tree<State> tree : trees) {
@@ -180,7 +180,7 @@ public class LVeGPCFG extends LearnerConfig {
 
 		int nUnparsable = 0, idx = 0;
 		
-		List<Tree<State>> trees = new ArrayList<Tree<State>>(stateTreeList.size());
+		List<Tree<State>> trees = new ArrayList<>(stateTreeList.size());
 		filterTrees(opts, stateTreeList, trees, numberer, istrain);
 
 		for (Tree<State> tree : trees) {
