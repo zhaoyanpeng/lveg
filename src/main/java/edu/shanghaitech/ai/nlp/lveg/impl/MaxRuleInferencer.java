@@ -206,7 +206,7 @@ public class MaxRuleInferencer extends Inferencer {
 								(w1 = grammar.getURuleWeight(okey, mid, RuleType.LRURULE, true)) == null) {
 							continue;
 						}
-						cinScore = w0.mulForInsideOutside(cinScore, RuleUnit.UC, true);
+						cinScore = w0.mulAndMarginalize(cinScore, null, RuleUnit.UC, true);
 						EnumMap<RuleUnit, GaussianMixture> scores = new EnumMap<>(RuleUnit.class);
 						scores.put(RuleUnit.P, outScore);
 						scores.put(RuleUnit.UC, cinScore);

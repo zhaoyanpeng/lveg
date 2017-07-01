@@ -191,8 +191,8 @@ public abstract class Inferencer extends Recorder implements Serializable {
 								linScore = chart.getInsideScore(rule.lchild, c0);
 								rinScore = chart.getInsideScore(rule.rchild, c1);
 								
-								pinScore = ruleScore.mulForInsideOutside(linScore, RuleUnit.LC, true);
-								pinScore = pinScore.mulForInsideOutside(rinScore, RuleUnit.RC, false);
+								pinScore = ruleScore.mulAndMarginalize(linScore, null, RuleUnit.LC, true);
+								pinScore = pinScore.mulAndMarginalize(rinScore, null, RuleUnit.RC, false);
 								chart.addInsideScore(rule.lhs, c2, pinScore, (short) 0);
 							}
 						}
@@ -246,8 +246,8 @@ public abstract class Inferencer extends Recorder implements Serializable {
 								poutScore = chart.getOutsideScore(rule.lhs, c0);
 								rinScore = chart.getInsideScore(rule.rchild, c1);
 								
-								loutScore = ruleScore.mulForInsideOutside(poutScore, RuleUnit.P, true);
-								loutScore = loutScore.mulForInsideOutside(rinScore, RuleUnit.RC, false);
+								loutScore = ruleScore.mulAndMarginalize(poutScore, null, RuleUnit.P, true);
+								loutScore = loutScore.mulAndMarginalize(rinScore, null, RuleUnit.RC, false);
 								chart.addOutsideScore(rule.lchild, c2, loutScore, (short) 0);
 							}
 						}
@@ -278,8 +278,8 @@ public abstract class Inferencer extends Recorder implements Serializable {
 								poutScore = chart.getOutsideScore(rule.lhs, c0);
 								linScore = chart.getInsideScore(rule.lchild, c1);
 								
-								routScore = ruleScore.mulForInsideOutside(poutScore, RuleUnit.P, true);
-								routScore = routScore.mulForInsideOutside(linScore, RuleUnit.LC, false);
+								routScore = ruleScore.mulAndMarginalize(poutScore, null, RuleUnit.P, true);
+								routScore = routScore.mulAndMarginalize(linScore, null, RuleUnit.LC, false);
 								chart.addOutsideScore(rule.rchild, c2, routScore, (short) 0);
 							}
 						}
@@ -334,7 +334,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 						if (!chart.isPosteriorAllowed((short) rule.rhs, idx)) { continue; }
 					}
 					
-					coutScore = rule.weight.mulForInsideOutside(poutScore, rmKey, true);
+					coutScore = rule.weight.mulAndMarginalize(poutScore, null, rmKey, true);
 					chart.addOutsideScore((short) rule.rhs, idx, coutScore, (short) (level + 1));
 				}
 			}
@@ -365,7 +365,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 					
 					if (idx != 0 && rule.type == RuleType.RHSPACE) { continue; } // ROOT is allowed only when it is in cell 0 and is in level 1 or 2
 					rmKey = rule.type == RuleType.RHSPACE ? RuleUnit.C : RuleUnit.UC;
-					pinScore = rule.weight.mulForInsideOutside(cinScore, rmKey, true);
+					pinScore = rule.weight.mulAndMarginalize(cinScore, null, rmKey, true);
 					chart.addInsideScore(rule.lhs, idx, pinScore, (short) (level + 1));
 				}
 			}
@@ -381,7 +381,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				while (iterator.hasNext()) {
 					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
 					if (rule.type != RuleType.RHSPACE) { continue; } // only consider ROOT in level 3
-					pinScore = rule.weight.mulForInsideOutside(cinScore, RuleUnit.C, true);
+					pinScore = rule.weight.mulAndMarginalize(cinScore, null, RuleUnit.C, true);
 					chart.addInsideScore(rule.lhs, idx, pinScore, (short) (LENGTH_UCHAIN + 1));
 				}
 			}
@@ -458,8 +458,8 @@ public abstract class Inferencer extends Recorder implements Serializable {
 						linScore = input.chart.getInsideScore(rule.lchild, c0);
 						rinScore = input.chart.getInsideScore(rule.rchild, c1);
 						
-						pinScore = ruleScore.mulForInsideOutside(linScore, RuleUnit.LC, true);
-						pinScore = pinScore.mulForInsideOutside(rinScore, RuleUnit.RC, false);
+						pinScore = ruleScore.mulAndMarginalize(linScore, null, RuleUnit.LC, true);
+						pinScore = pinScore.mulAndMarginalize(rinScore, null, RuleUnit.RC, false);
 						input.cell.addScore(rule.lhs, pinScore, (short) 0);
 					}
 				}
@@ -479,8 +479,8 @@ public abstract class Inferencer extends Recorder implements Serializable {
 						poutScore = input.chart.getOutsideScore(rule.lhs, c0);
 						rinScore = input.chart.getInsideScore(rule.rchild, c1);
 						
-						loutScore = ruleScore.mulForInsideOutside(poutScore, RuleUnit.P, true);
-						loutScore = loutScore.mulForInsideOutside(rinScore, RuleUnit.RC, false);
+						loutScore = ruleScore.mulAndMarginalize(poutScore, null, RuleUnit.P, true);
+						loutScore = loutScore.mulAndMarginalize(rinScore, null, RuleUnit.RC, false);
 						input.cell.addScore(rule.lchild, loutScore, (short) 0);
 					}
 				}
@@ -497,8 +497,8 @@ public abstract class Inferencer extends Recorder implements Serializable {
 						poutScore = input.chart.getOutsideScore(rule.lhs, c0);
 						linScore = input.chart.getInsideScore(rule.lchild, c1);
 						
-						routScore = ruleScore.mulForInsideOutside(poutScore, RuleUnit.P, true);
-						routScore = routScore.mulForInsideOutside(linScore, RuleUnit.LC, false);
+						routScore = ruleScore.mulAndMarginalize(poutScore, null, RuleUnit.P, true);
+						routScore = routScore.mulAndMarginalize(linScore, null, RuleUnit.LC, false);
 						input.cell.addScore(rule.rchild, routScore, (short) 0); 
 					}
 				}

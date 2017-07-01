@@ -93,7 +93,7 @@
 -ef1ontrain, false,
 -ef1imwrite, false,
 
--runtag, 0630_1_2_3_200_test5_tb,
+-runtag, 0630_1_2_3_200_test6_tb,
 -logroot, log/,
 -logtype, 0,
 -verbose, false,

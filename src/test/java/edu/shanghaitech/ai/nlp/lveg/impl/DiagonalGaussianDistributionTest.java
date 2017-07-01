@@ -53,21 +53,21 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		logger.trace("\n---Inside Score---\n");
 		GaussianMixture cin20 = ur20.getWeight().copy(true);
 //		cin20.setWeight(0, -1e-3);
-		GaussianMixture cin12 = ur12.getWeight().mulForInsideOutside(cin20, RuleUnit.UC, true); // in logarithm
+		GaussianMixture cin12 = ur12.getWeight().mulAndMarginalize(cin20, null, RuleUnit.UC, true); // in logarithm
 		logger.trace("cin12    : " + cin12 + "\n");
 		GaussianMixture cin12copy = marginalize(ur12.getWeight(), cin20, RuleUnit.UC, true);    // in the normal way
 		logger.trace("cin12copy: " + cin12copy + "\n");
 		
-		GaussianMixture cin32 = ur32.getWeight().mulForInsideOutside(cin20, RuleUnit.UC, true);
+		GaussianMixture cin32 = ur32.getWeight().mulAndMarginalize(cin20, null, RuleUnit.UC, true);
 		logger.trace("cin32    : " + cin32 + "\n");
 		
 //		ur01.getWeight().setWeight(0, 1e-3);
 		
-		GaussianMixture cin01 = ur01.getWeight().mulForInsideOutside(cin12, RuleUnit.C, true);
+		GaussianMixture cin01 = ur01.getWeight().mulAndMarginalize(cin12, null, RuleUnit.C, true);
 		logger.trace("cin01    : " + cin01 + "\t" + FunUtil.logAdd(cin01.getWeight(0), cin01.getWeight(1)) + "\n");
 		GaussianMixture cin01copy = marginalize(ur01.getWeight(), cin12, RuleUnit.C, true);
 		logger.trace("cin01copy: " + cin01copy + "\n");
-		GaussianMixture cin03 = ur03.getWeight().mulForInsideOutside(cin32, RuleUnit.C, true);
+		GaussianMixture cin03 = ur03.getWeight().mulAndMarginalize(cin32, null, RuleUnit.C, true);
 		logger.trace("cin03    : " + cin03 + "\t" + FunUtil.logAdd(cin03.getWeight(0), cin03.getWeight(1)) + "\n");
 		
 		logger.trace("Score    : " + FunUtil.logAdd(cin01.marginalize(true), cin03.marginalize(true)) + "\n");
@@ -77,12 +77,12 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		outor.marginalizeToOne();
 		logger.trace("outor    :" + outor + "\n");
 		
-		GaussianMixture outx1 = ur01.getWeight().mulForInsideOutside(outor, RuleUnit.P, true);
+		GaussianMixture outx1 = ur01.getWeight().mulAndMarginalize(outor, null, RuleUnit.P, true);
 		logger.trace("outx1    :" + outx1 + "\n");
-		GaussianMixture outx3 = ur03.getWeight().mulForInsideOutside(outor, RuleUnit.P, true);
+		GaussianMixture outx3 = ur03.getWeight().mulAndMarginalize(outor, null, RuleUnit.P, true);
 		logger.trace("outx3    :" + outx3 + "\n");
-		GaussianMixture outx2 = ur12.getWeight().mulForInsideOutside(outx1, RuleUnit.P, true);
-		GaussianMixture out32 = ur32.getWeight().mulForInsideOutside(outx3, RuleUnit.P, true);
+		GaussianMixture outx2 = ur12.getWeight().mulAndMarginalize(outx1, null, RuleUnit.P, true);
+		GaussianMixture out32 = ur32.getWeight().mulAndMarginalize(outx3, null, RuleUnit.P, true);
 		outx2.add(out32, false);
 		logger.trace("outx2    :" + outx2 + "\n");
 		
@@ -187,21 +187,21 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		logger.trace("\n---Inside Score---\n");
 		GaussianMixture cin20 = ur20.getWeight().copy(true);
 //		cin20.setWeight(0, -1e-3);
-		GaussianMixture cin12 = ur12.getWeight().mulForInsideOutside(cin20, RuleUnit.UC, true); // in logarithm
+		GaussianMixture cin12 = ur12.getWeight().mulAndMarginalize(cin20, null, RuleUnit.UC, true); // in logarithm
 		logger.trace("cin12    : " + cin12 + "\n");
 		GaussianMixture cin12copy = marginalize(ur12.getWeight(), cin20, RuleUnit.UC, true);    // in the normal way
 		logger.trace("cin12copy: " + cin12copy + "\n");
 		
-		GaussianMixture cin32 = ur32.getWeight().mulForInsideOutside(cin20, RuleUnit.UC, true);
+		GaussianMixture cin32 = ur32.getWeight().mulAndMarginalize(cin20, null, RuleUnit.UC, true);
 		logger.trace("cin32    : " + cin32 + "\n");
 		
 //		ur01.getWeight().setWeight(0, 1e-3);
 		
-		GaussianMixture cin01 = ur01.getWeight().mulForInsideOutside(cin12, RuleUnit.C, true);
+		GaussianMixture cin01 = ur01.getWeight().mulAndMarginalize(cin12, null, RuleUnit.C, true);
 		logger.trace("cin01    : " + cin01 + "\t" + FunUtil.logAdd(cin01.getWeight(0), cin01.getWeight(1)) + "\n");
 		GaussianMixture cin01copy = marginalize(ur01.getWeight(), cin12, RuleUnit.C, true);
 		logger.trace("cin01copy: " + cin01copy + "\n");
-		GaussianMixture cin03 = ur03.getWeight().mulForInsideOutside(cin32, RuleUnit.C, true);
+		GaussianMixture cin03 = ur03.getWeight().mulAndMarginalize(cin32, null, RuleUnit.C, true);
 		logger.trace("cin03    : " + cin03 + "\t" + FunUtil.logAdd(cin03.getWeight(0), cin03.getWeight(1)) + "\n");
 		
 		logger.trace("Score    : " + FunUtil.logAdd(cin01.marginalize(true), cin03.marginalize(true)) + "\n");
@@ -211,12 +211,12 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		outor.marginalizeToOne();
 		logger.trace("outor    :" + outor + "\n");
 		
-		GaussianMixture outx1 = ur01.getWeight().mulForInsideOutside(outor, RuleUnit.P, true);
+		GaussianMixture outx1 = ur01.getWeight().mulAndMarginalize(outor, null, RuleUnit.P, true);
 		logger.trace("outx1    :" + outx1 + "\n");
-		GaussianMixture outx3 = ur03.getWeight().mulForInsideOutside(outor, RuleUnit.P, true);
+		GaussianMixture outx3 = ur03.getWeight().mulAndMarginalize(outor, null, RuleUnit.P, true);
 		logger.trace("outx3    :" + outx3 + "\n");
-		GaussianMixture outx2 = ur12.getWeight().mulForInsideOutside(outx1, RuleUnit.P, true);
-		GaussianMixture out32 = ur32.getWeight().mulForInsideOutside(outx3, RuleUnit.P, true);
+		GaussianMixture outx2 = ur12.getWeight().mulAndMarginalize(outx1, null, RuleUnit.P, true);
+		GaussianMixture out32 = ur32.getWeight().mulAndMarginalize(outx3, null, RuleUnit.P, true);
 		outx2.add(out32, false);
 		logger.trace("outx2    :" + outx2 + "\n");
 		
@@ -317,21 +317,21 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		logger.trace("\n---Inside Score---\n");
 		GaussianMixture cin20 = ur20.getWeight().copy(true);
 //		cin20.setWeight(0, -1e-3);
-		GaussianMixture cin12 = ur12.getWeight().mulForInsideOutside(cin20, RuleUnit.UC, true); // in logarithm
+		GaussianMixture cin12 = ur12.getWeight().mulAndMarginalize(cin20, null, RuleUnit.UC, true); // in logarithm
 		logger.trace("cin12    : " + cin12 + "\n");
 		GaussianMixture cin12copy = marginalize(ur12.getWeight(), cin20, RuleUnit.UC, true);    // in the normal way
 		logger.trace("cin12copy: " + cin12copy + "\n");
 		
-		GaussianMixture cin32 = ur32.getWeight().mulForInsideOutside(cin20, RuleUnit.UC, true);
+		GaussianMixture cin32 = ur32.getWeight().mulAndMarginalize(cin20, null, RuleUnit.UC, true);
 		logger.trace("cin32    : " + cin32 + "\n");
 		
 		ur01.getWeight().setWeight(0, 1e-3);
 		
-		GaussianMixture cin01 = ur01.getWeight().mulForInsideOutside(cin12, RuleUnit.C, true);
+		GaussianMixture cin01 = ur01.getWeight().mulAndMarginalize(cin12, null, RuleUnit.C, true);
 		logger.trace("cin01    : " + cin01 + "\t" + cin01.getWeight(0) + "\n");
 		GaussianMixture cin01copy = marginalize(ur01.getWeight(), cin12, RuleUnit.C, true);
 		logger.trace("cin01copy: " + cin01copy + "\n");
-		GaussianMixture cin03 = ur03.getWeight().mulForInsideOutside(cin32, RuleUnit.C, true);
+		GaussianMixture cin03 = ur03.getWeight().mulAndMarginalize(cin32, null, RuleUnit.C, true);
 		logger.trace("cin03    : " + cin03 + "\t" + cin03.getWeight(0) + "\n");
 		
 		logger.trace("Score    : " + FunUtil.logAdd(cin01.getWeight(0), cin03.getWeight(0)) + "\n");
@@ -341,12 +341,12 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		outor.marginalizeToOne();
 		logger.trace("outor    :" + outor + "\n");
 		
-		GaussianMixture outx1 = ur01.getWeight().mulForInsideOutside(outor, RuleUnit.P, true);
+		GaussianMixture outx1 = ur01.getWeight().mulAndMarginalize(outor, null, RuleUnit.P, true);
 		logger.trace("outx1    :" + outx1 + "\n");
-		GaussianMixture outx3 = ur03.getWeight().mulForInsideOutside(outor, RuleUnit.P, true);
+		GaussianMixture outx3 = ur03.getWeight().mulAndMarginalize(outor, null, RuleUnit.P, true);
 		logger.trace("outx3    :" + outx3 + "\n");
-		GaussianMixture outx2 = ur12.getWeight().mulForInsideOutside(outx1, RuleUnit.P, true);
-		GaussianMixture out32 = ur32.getWeight().mulForInsideOutside(outx3, RuleUnit.P, true);
+		GaussianMixture outx2 = ur12.getWeight().mulAndMarginalize(outx1, null, RuleUnit.P, true);
+		GaussianMixture out32 = ur32.getWeight().mulAndMarginalize(outx3, null, RuleUnit.P, true);
 		outx2.add(out32, false);
 		logger.trace("outx2    :" + outx2 + "\n");
 		
@@ -465,19 +465,19 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		logger.trace("\n---Inside Score---\n");
 		GaussianMixture cin20 = ur20.getWeight().copy(true);
 //		cin20.setWeight(0, -0.1);
-		GaussianMixture cin12 = ur12.getWeight().mulForInsideOutside(cin20, RuleUnit.UC, true); // in logarithm
+		GaussianMixture cin12 = ur12.getWeight().mulAndMarginalize(cin20, null, RuleUnit.UC, true); // in logarithm
 		logger.trace("cin12    : " + cin12 + "\n");
 		GaussianMixture cin12copy = marginalize(ur12.getWeight(), cin20, RuleUnit.UC, true);    // in the normal way
 		logger.trace("cin12copy: " + cin12copy + "\n");
 		
-		GaussianMixture cin32 = ur32.getWeight().mulForInsideOutside(cin20, RuleUnit.UC, true);
+		GaussianMixture cin32 = ur32.getWeight().mulAndMarginalize(cin20, null, RuleUnit.UC, true);
 		logger.trace("cin32    : " + cin32 + "\n");
 		
-		GaussianMixture cin01 = ur01.getWeight().mulForInsideOutside(cin12, RuleUnit.C, true);
+		GaussianMixture cin01 = ur01.getWeight().mulAndMarginalize(cin12, null, RuleUnit.C, true);
 		logger.trace("cin01    : " + cin01 + "\t" + cin01.getWeight(0) + "\n");
 		GaussianMixture cin01copy = marginalize(ur01.getWeight(), cin12, RuleUnit.C, true);
 		logger.trace("cin01copy: " + cin01copy + "\n");
-		GaussianMixture cin03 = ur03.getWeight().mulForInsideOutside(cin32, RuleUnit.C, true);
+		GaussianMixture cin03 = ur03.getWeight().mulAndMarginalize(cin32, null, RuleUnit.C, true);
 		logger.trace("cin03    : " + cin03 + "\t" + cin03.getWeight(0) + "\n");
 		
 		double scoret = cin01.getWeight(0);;
@@ -490,12 +490,12 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		outor.marginalizeToOne();
 		logger.trace("outor    :" + outor + "\n");
 		
-		GaussianMixture outx1 = ur01.getWeight().mulForInsideOutside(outor, RuleUnit.P, true);
+		GaussianMixture outx1 = ur01.getWeight().mulAndMarginalize(outor, null, RuleUnit.P, true);
 		logger.trace("outx1    :" + outx1 + "\n");
-		GaussianMixture outx3 = ur03.getWeight().mulForInsideOutside(outor, RuleUnit.P, true);
+		GaussianMixture outx3 = ur03.getWeight().mulAndMarginalize(outor, null, RuleUnit.P, true);
 		logger.trace("outx3    :" + outx3 + "\n");
-		GaussianMixture outx2 = ur12.getWeight().mulForInsideOutside(outx1, RuleUnit.P, true);
-		GaussianMixture out32 = ur32.getWeight().mulForInsideOutside(outx3, RuleUnit.P, true);
+		GaussianMixture outx2 = ur12.getWeight().mulAndMarginalize(outx1, null, RuleUnit.P, true);
+		GaussianMixture out32 = ur32.getWeight().mulAndMarginalize(outx3, null, RuleUnit.P, true);
 		outx2.add(out32, false);
 		logger.trace("outx2    :" + outx2 + "\n");
 		
@@ -637,23 +637,23 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		logger.trace("\n---Inside Score---\n");
 		GaussianMixture cin20 = ur20.getWeight().copy(true);
 //		cin20.setWeight(0, -1e-5);
-		GaussianMixture cin12 = ur12.getWeight().mulForInsideOutside(cin20, RuleUnit.UC, true); // in logarithm
+		GaussianMixture cin12 = ur12.getWeight().mulAndMarginalize(cin20, null, RuleUnit.UC, true); // in logarithm
 		logger.trace("cin12    : " + cin12 + "\t" + cin12.getWeight(0) + "\n");
 		GaussianMixture cin12copy = marginalize(ur12.getWeight(), cin20, RuleUnit.UC, true);    // in the normal way
 		logger.trace("cin12copy: " + cin12copy + "\t" + cin12copy.getWeight(0) + "\n");
 		
-		GaussianMixture cin32 = ur32.getWeight().mulForInsideOutside(cin20, RuleUnit.UC, true);
+		GaussianMixture cin32 = ur32.getWeight().mulAndMarginalize(cin20, null, RuleUnit.UC, true);
 		logger.trace("cin32    : " + cin32 + "\t" + cin32.getWeight(0) + "\n");
 		GaussianMixture cin32copy = marginalize(ur32.getWeight(), cin20, RuleUnit.UC, true);
 		logger.trace("cin32copy: " + cin32copy + "\t" + cin32copy.getWeight(0) + "\n");
 		
 //		ur01.getWeight().setWeight(0, -1e-5);
 		
-		GaussianMixture cin01 = ur01.getWeight().mulForInsideOutside(cin12, RuleUnit.C, true);
+		GaussianMixture cin01 = ur01.getWeight().mulAndMarginalize(cin12, null, RuleUnit.C, true);
 		logger.trace("cin01    : " + cin01 + "\t" + cin01.getWeight(0) + "\n");
 		GaussianMixture cin01copy = marginalize(ur01.getWeight(), cin12, RuleUnit.C, true);
 		logger.trace("cin01copy: " + cin01copy + "\n");
-		GaussianMixture cin03 = ur03.getWeight().mulForInsideOutside(cin32, RuleUnit.C, true);
+		GaussianMixture cin03 = ur03.getWeight().mulAndMarginalize(cin32, null, RuleUnit.C, true);
 		logger.trace("cin03    : " + cin03 + "\t" + cin03.getWeight(0) + "\n");
 		
 		double scoret = cin01.getWeight(0);
@@ -666,13 +666,13 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		outor.marginalizeToOne();
 		logger.trace("outor    :" + outor + "\n");
 		
-		GaussianMixture outx1 = ur01.getWeight().mulForInsideOutside(outor, RuleUnit.P, true);
+		GaussianMixture outx1 = ur01.getWeight().mulAndMarginalize(outor, null, RuleUnit.P, true);
 		logger.trace("outx1    :" + outx1 + "\n");
-		GaussianMixture outx3 = ur03.getWeight().mulForInsideOutside(outor, RuleUnit.P, true);
+		GaussianMixture outx3 = ur03.getWeight().mulAndMarginalize(outor, null, RuleUnit.P, true);
 		logger.trace("outx3    :" + outx3 + "\n");
-		GaussianMixture outx2 = ur12.getWeight().mulForInsideOutside(outx1, RuleUnit.P, true);
+		GaussianMixture outx2 = ur12.getWeight().mulAndMarginalize(outx1, null, RuleUnit.P, true);
 		GaussianMixture outsidet = outx2.copy(true);
-		GaussianMixture out32 = ur32.getWeight().mulForInsideOutside(outx3, RuleUnit.P, true);
+		GaussianMixture out32 = ur32.getWeight().mulAndMarginalize(outx3, null, RuleUnit.P, true);
 		outx2.add(out32, false);
 		logger.trace("outx2    :" + outx2 + "\n");
 		
@@ -787,19 +787,19 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		logger.trace("\n---Inside Score---\n");
 		GaussianMixture cin20 = ur20.getWeight().copy(true);
 //		cin20.setWeight(0, -0.1);
-		GaussianMixture cin12 = ur12.getWeight().mulForInsideOutside(cin20, RuleUnit.UC, true); // in logarithm
+		GaussianMixture cin12 = ur12.getWeight().mulAndMarginalize(cin20, null, RuleUnit.UC, true); // in logarithm
 		logger.trace("cin12    : " + cin12 + "\n");
 		GaussianMixture cin12copy = marginalize(ur12.getWeight(), cin20, RuleUnit.UC, true);    // in the normal way
 		logger.trace("cin12copy: " + cin12copy + "\n");
 		
-		GaussianMixture cin32 = ur32.getWeight().mulForInsideOutside(cin20, RuleUnit.UC, true);
+		GaussianMixture cin32 = ur32.getWeight().mulAndMarginalize(cin20, null, RuleUnit.UC, true);
 		logger.trace("cin32    : " + cin32 + "\n");
 		
-		GaussianMixture cin01 = ur01.getWeight().mulForInsideOutside(cin12, RuleUnit.C, true);
+		GaussianMixture cin01 = ur01.getWeight().mulAndMarginalize(cin12, null, RuleUnit.C, true);
 		logger.trace("cin01    : " + cin01 + "\t" + cin01.getWeight(0) + "\n");
 		GaussianMixture cin01copy = marginalize(ur01.getWeight(), cin12, RuleUnit.C, true);
 		logger.trace("cin01copy: " + cin01copy + "\n");
-		GaussianMixture cin03 = ur03.getWeight().mulForInsideOutside(cin32, RuleUnit.C, true);
+		GaussianMixture cin03 = ur03.getWeight().mulAndMarginalize(cin32, null, RuleUnit.C, true);
 		logger.trace("cin03    : " + cin03 + "\t" + cin03.getWeight(0) + "\n");
 		
 		double scoret = cin03.getWeight(0);;
@@ -812,12 +812,12 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		outor.marginalizeToOne();
 		logger.trace("outor    :" + outor + "\n");
 		
-		GaussianMixture outx1 = ur01.getWeight().mulForInsideOutside(outor, RuleUnit.P, true);
+		GaussianMixture outx1 = ur01.getWeight().mulAndMarginalize(outor, null, RuleUnit.P, true);
 		logger.trace("outx1    :" + outx1 + "\n");
-		GaussianMixture outx3 = ur03.getWeight().mulForInsideOutside(outor, RuleUnit.P, true);
+		GaussianMixture outx3 = ur03.getWeight().mulAndMarginalize(outor, null, RuleUnit.P, true);
 		logger.trace("outx3    :" + outx3 + "\n");
-		GaussianMixture outx2 = ur12.getWeight().mulForInsideOutside(outx1, RuleUnit.P, true);
-		GaussianMixture out32 = ur32.getWeight().mulForInsideOutside(outx3, RuleUnit.P, true);
+		GaussianMixture outx2 = ur12.getWeight().mulAndMarginalize(outx1, null, RuleUnit.P, true);
+		GaussianMixture out32 = ur32.getWeight().mulAndMarginalize(outx3, null, RuleUnit.P, true);
 		outx2.add(out32, false);
 		logger.trace("outx2    :" + outx2 + "\n");
 		

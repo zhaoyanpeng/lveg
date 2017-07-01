@@ -416,6 +416,8 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	 * @param deep deep (true) or shallow (false) copy of the instance
 	 * @return 
 	 * 
+	 * @deprecated {{@link #mulAndMarginalize(GaussianMixture, GaussianMixture, RuleUnit, boolean)} is prefered.
+	 * 
 	 */
 	public GaussianMixture mulForInsideOutside(GaussianMixture gm, RuleUnit key, boolean deep) {
 		GaussianMixture amixture = deep ? this.copy(deep) : this;

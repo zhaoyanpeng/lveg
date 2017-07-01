@@ -241,7 +241,7 @@ public class GaussianMixtureTest {
 		GaussianMixture cgm2 = gm2.copy(true);
 		
 		System.out.println("---multiplication and marginalization---");
-		GaussianMixture gm3 = cgm0.mulForInsideOutside(cgm2, RuleUnit.UC, true);
+		GaussianMixture gm3 = cgm0.mulAndMarginalize(cgm2, null, RuleUnit.UC, true);
 		System.out.println("InScore uc--" + gm3);
 		
 		System.out.println("---deep copy---");
@@ -251,7 +251,7 @@ public class GaussianMixtureTest {
 		System.out.println("---shallow copy---");
 		cgm0 = gm0.copy(true);
 		System.out.println(cgm0);
-		GaussianMixture gm5 = cgm0.mulForInsideOutside(cgm2, RuleUnit.UC, false);
+		GaussianMixture gm5 = cgm0.mulAndMarginalize(cgm2, null, RuleUnit.UC, false);
 		System.out.println(gm5);
 		System.out.println(cgm0);
 	}
