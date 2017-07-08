@@ -10,7 +10,6 @@ import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleType;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleUnit;
-import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture.Component;
 import edu.shanghaitech.ai.nlp.util.FunUtil;
 import edu.shanghaitech.ai.nlp.util.Recorder;
 
@@ -26,7 +25,7 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 
 		String logfile = "log/mog_test_t";
 		logger = logUtil.getBothLogger(logfile);
-		testIntegrationComp1Dim1Ana();
+//		testIntegrationComp1Dim1Ana();
 	}
 	
 	
@@ -70,7 +69,7 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		GaussianMixture cin03 = ur03.getWeight().mulAndMarginalize(cin32, null, RuleUnit.C, true);
 		logger.trace("cin03    : " + cin03 + "\t" + FunUtil.logAdd(cin03.getWeight(0), cin03.getWeight(1)) + "\n");
 		
-		logger.trace("Score    : " + FunUtil.logAdd(cin01.marginalize(true), cin03.marginalize(true)) + "\n");
+//		logger.trace("Score    : " + FunUtil.logAdd(cin01.marginalize(true), cin03.marginalize(true)) + "\n");
 		
 		logger.trace("\n---Outside Score---\n");
 		GaussianMixture outor = new DiagonalGaussianMixture((short) 1);
@@ -92,17 +91,17 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		GaussianMixture outsidet = outor;
 		GaussianMixture cinsidet = cin12;
 		double scoret = FunUtil.logAdd(cin01.getWeight(0), cin01.getWeight(1));
-		double scores = FunUtil.logAdd(cin01.marginalize(true), cin03.marginalize(true));
+//		double scores = FunUtil.logAdd(cin01.marginalize(true), cin03.marginalize(true));
 		
 		logger.trace("\n---Counts---\n");
-		logger.trace("scoret: " + scoret + "\tscores: " + scores + "\n");
+//		logger.trace("scoret: " + scoret + "\tscores: " + scores + "\n");
 		logger.trace("outsides: " + outsides + "\n");
 		logger.trace("outsidet: " + outsidet + "\n");
 		logger.trace("cinsides: " + cinsides + "\n");
 		logger.trace("cinsidet: " + cinsidet + "\n");
 		
 		Random rnd1 = new Random(0);
-		evalgradientsComp2Dim2(nsample, ur01, outsides, cinsides, outsidet, cinsidet, scoret, scores, rnd1);
+//		evalgradientsComp2Dim2(nsample, ur01, outsides, cinsides, outsidet, cinsidet, scoret, scores, rnd1);
 	}
 	
 	
@@ -204,7 +203,7 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		GaussianMixture cin03 = ur03.getWeight().mulAndMarginalize(cin32, null, RuleUnit.C, true);
 		logger.trace("cin03    : " + cin03 + "\t" + FunUtil.logAdd(cin03.getWeight(0), cin03.getWeight(1)) + "\n");
 		
-		logger.trace("Score    : " + FunUtil.logAdd(cin01.marginalize(true), cin03.marginalize(true)) + "\n");
+//		logger.trace("Score    : " + FunUtil.logAdd(cin01.marginalize(true), cin03.marginalize(true)) + "\n");
 		
 		logger.trace("\n---Outside Score---\n");
 		GaussianMixture outor = new DiagonalGaussianMixture((short) 1);
@@ -576,7 +575,7 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		sum /= nsample;
 		logger.trace("Evaluated Grad: " + sum + "\n");
 	}
-	
+/*	
 	public void testIntegrationComp1Dim1V() {
 		Random rnd = new Random(0);
 		short ncomp = 1, ndim = 1;
@@ -692,7 +691,7 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 //		evalgradientsComp1Dim1V(nsample, ur01, outsides, cinsides, outsidet, cinsidet, scoret, scores, rnd1);
 		evalgradientsComp1Dim1V(nsample, ur20, outx2, cinsides, outsidet, cinsidet, scoret, scores, rnd1, std);
 	}
-	
+*/	
 	public void evalgradientsComp1Dim1V(int nsample, GrammarRule rule, GaussianMixture outsides, GaussianMixture cinsides, 
 			GaussianMixture outsidet, GaussianMixture cinsidet, double scoret, double scores, Random rnd, double std) {
 		double sum = 0.0;
@@ -720,6 +719,8 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		logger.trace("Evaluated Grad: " + sum + "\n");
 	}
 	
+	
+/*	
 	public void testIntegrationComp1Dim1Ana() {
 		Random rnd = new Random(0);
 		short ncomp = 1, ndim = 1;
@@ -837,7 +838,8 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		Random rnd1 = new Random(0);
 		evalgradientsComp1Dim1Ana(nsample, ur03, outsides, cinsides, outsidet, cinsidet, scoret, scores, rnd1);
 	}
-	
+*/	
+/*	
 	public void evalgradientsComp1Dim1Ana(int nsample, GrammarRule rule, GaussianMixture outsides, GaussianMixture cinsides, 
 			GaussianMixture outsidet, GaussianMixture cinsidet, double scoret, double scores, Random rnd) {
 		double sum = 0.0;
@@ -875,7 +877,7 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		logger.trace(nn + "\t" + factor + "\n");
 		logger.trace("Evaluated Grad: " + wgrad + "\n");
 	}
-	
+*/	
 	public void derivative(double order0, double order1, double order2) {
 		
 		
@@ -891,23 +893,23 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		// calculating inside score can always remove some portions, but calculating outside score
 		// can not, because the rule ROOT->N has the dummy outside score for ROOT (one component but
 		// without gaussians) and the rule weight does not contain "P" portion. Here is hardcoding
-		if (gm1.components().size() == 1 && gm1.size(0) == 0) {
-			return amixture;
-		}
-		// the following is the general case
-		for (Component comp : amixture.components()) {
-			double sum = 0.0;
-			GaussianDistribution gd = comp.squeeze(key);
-			for (Component comp1 : gm1.components()) {
-				GaussianDistribution gd1 = comp1.squeeze(null);
-				double vcomp = Math.exp(comp1.getWeight()) * marginalize(gd, gd1);
-				sum += vcomp;
-			}
-			// CHECK Math.log(Math.exp(a) * b)
-			double weight = Math.exp(comp.getWeight()) * sum;
-			comp.setWeight(Math.log(weight));
-			comp.getMultivnd().remove(key);
-		}
+//		if (gm1.components().size() == 1 && gm1.size(0) == 0) {
+//			return amixture;
+//		}
+//		// the following is the general case
+//		for (Component comp : amixture.components()) {
+//			double sum = 0.0;
+//			GaussianDistribution gd = comp.squeeze(key);
+//			for (Component comp1 : gm1.components()) {
+//				GaussianDistribution gd1 = comp1.squeeze(null);
+//				double vcomp = Math.exp(comp1.getWeight()) * marginalize(gd, gd1);
+//				sum += vcomp;
+//			}
+//			// CHECK Math.log(Math.exp(a) * b)
+//			double weight = Math.exp(comp.getWeight()) * sum;
+//			comp.setWeight(Math.log(weight));
+//			comp.getMultivnd().remove(key);
+//		}
 		return amixture;
 	}
 	

@@ -18,16 +18,12 @@ import edu.shanghaitech.ai.nlp.lveg.impl.LVeGParser;
 import edu.shanghaitech.ai.nlp.lveg.impl.MaxRuleParser;
 import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGLexicon;
-import edu.shanghaitech.ai.nlp.lveg.impl.UnaryGrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.impl.Valuator;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
-import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleType;
-import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleUnit;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
-import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture.Component;
 import edu.shanghaitech.ai.nlp.optimization.Optimizer;
 import edu.shanghaitech.ai.nlp.optimization.ParallelOptimizer;
 import edu.shanghaitech.ai.nlp.syntax.State;
@@ -85,8 +81,8 @@ public class LVeGToy extends LearnerConfig {
 		Map<String, StateTreeList> trees = 
 				/*makeAugmentedData(wrapper, opts);*/
 				/*loadPPTrees(wrapper, opts);*/
-				makeData(wrapper, opts); 
-				/*makeComplexData(wrapper, opts);*/
+				/*makeData(wrapper, opts); */
+				makeComplexData(wrapper, opts);
 		
 		// training
 		long startTime = System.currentTimeMillis();
@@ -635,12 +631,14 @@ public class LVeGToy extends LearnerConfig {
 		return trees;
 	}
 	
-	
+/*	
 	protected static void resetInterule(LVeGGrammar grammar, LVeGLexicon lexicon) {
 		GrammarRule rule = grammar.getURule((short) 2, 3, RuleType.LRURULE);
 		rule.addWeightComponent(rule.type, (short) (ntree - 1), (short) -1);
 	}
+*/	
 	
+/*	
 	protected static void checkSimilarity(LVeGGrammar grammar) {
 		GrammarRule rule = grammar.getURule((short) 2, 3, RuleType.LRURULE);
 		int ncomp = rule.weight.ncomponent();
@@ -669,7 +667,7 @@ public class LVeGToy extends LearnerConfig {
 //				logger.info("---reset the small mixing weight");
 //				continue;
 //			}
-			/*
+			
 			for (int j = i + 1; j < ncomp; j++) {
 				compj = rule.weight.getComponent((short) j);
 				gdi = compi.squeeze(GrammarRule.Unit.P);
@@ -688,7 +686,7 @@ public class LVeGToy extends LearnerConfig {
 					logger.info("\n---reset UC parameters");
 				}
 			}
-			*/
+			
 			
 			for (int j = i + 1; j < ncomp; j++) {
 				
@@ -714,7 +712,7 @@ public class LVeGToy extends LearnerConfig {
 			
 		}
 	}
-	
+*/	
 	
 	protected static double eulerDistance(GaussianDistribution gdi, GaussianDistribution gdj) {
 		int dim = gdi.getDim();
@@ -805,14 +803,15 @@ public class LVeGToy extends LearnerConfig {
 		return trees;
 	}
 	
-	
+/*	
 	protected static void resetPPrule(LVeGGrammar grammar, LVeGLexicon lexicon) {
 		GrammarRule rule = grammar.getBRule((short) 8, (short) 9, (short) 3);
 		rule.addWeightComponent(rule.type, (short) 1, (short) -1);
 		rule = grammar.getURule((short) 3, 7, RuleType.LRURULE);
 		rule.addWeightComponent(rule.type, (short) 1, (short) -1);
 	}
-	
+*/	
+/*	
 	protected static void customize(LVeGGrammar grammar, LVeGLexicon lexicon) {
 		GrammarRule ur01 = new UnaryGrammarRule((short) 0, (short) 1, RuleType.RHSPACE, true);	
 		GrammarRule ur03 = new UnaryGrammarRule((short) 0, (short) 3, RuleType.RHSPACE, true);	
@@ -867,4 +866,5 @@ public class LVeGToy extends LearnerConfig {
 		urmap.get(ur20).setWeight(ur20.getWeight());
 		urmap.get(ur21).setWeight(ur21.getWeight());
 	}
+*/
 }

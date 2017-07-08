@@ -1,9 +1,8 @@
 package edu.shanghaitech.ai.nlp.lveg.model;
 
 import java.io.Serializable;
-import java.util.EnumMap;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 import edu.shanghaitech.ai.nlp.lveg.impl.DiagonalGaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.impl.DiagonalGaussianMixture;
@@ -25,8 +24,8 @@ public abstract class GrammarRule implements Serializable {
 			this.id = id;
 		}
 		
-		public String id() {
-			return String.valueOf(id);
+		public int id() {
+			return id;
 		}
 		
 		@Override
@@ -46,24 +45,6 @@ public abstract class GrammarRule implements Serializable {
 	public RuleType type;
 	public GaussianMixture weight;
 	
-	/*
-	public final static byte LRBRULE = 3; // left and right hand sides, binary rule
-	public final static byte RHSPACE = 2; 
-	public final static byte LHSPACE = 1; 
-	public final static byte LRURULE = 0; // left and right hand sides, unary rule
-	*/
-	
-	/*
-	public static class Unit {
-		public final static String P = "p";
-		public final static String C = "c";
-		public final static String LC = "lc";
-		public final static String RC = "rc";
-		public final static String UC = "uc";
-		public final static String RM = "rm";
-	}
-	*/
-	
 	public GrammarRule() {
 		// TODO
 	}
@@ -73,77 +54,71 @@ public abstract class GrammarRule implements Serializable {
 	public abstract void initializeWeight(RuleType type, short ncomponent, short ndim);
 	
 	
-	public void addWeightComponent(RuleType type, short increment, short ndim) {
-		short defNcomp = increment > 0 ? increment : GaussianMixture.defNcomponent;
-		short defNdim = ndim > 0 ? ndim : GaussianDistribution.defNdimension;
-		if (weight == null) {
-			weight = rndRuleWeight(type, defNcomp, defNdim);
-		} else {
-			GaussianMixture aweight = new DiagonalGaussianMixture(defNcomp);
-			rndRuleWeight(type, defNcomp, defNdim, aweight);
-			weight.add(aweight, false);
-			weight.rectifyId(); // required
-		}
-	}
-	
-	
 	public static GaussianMixture rndRuleWeight(RuleType type, short ncomponent, short ndim) {
 		short defNcomp = ncomponent > 0 ? ncomponent : GaussianMixture.defNcomponent;
 		short defNdim = ndim > 0 ? ndim : GaussianDistribution.defNdimension;
 		GaussianMixture aweight = new DiagonalGaussianMixture(defNcomp);
 		rndRuleWeight(type, defNcomp, defNdim, aweight);
+		aweight.setBinding(type); // CHECK
+		aweight.buildSimpleView();
 		return aweight;
 	}
 	
 	
 	private static void rndRuleWeight(RuleType type, short ncomponent, short dim, GaussianMixture weight) {
+		int ncomp = 0;
 		switch (type) {
-		case RHSPACE: // rules for the root since it does not have subtypes
+		case RHSPACE: { // rules for the root since it does not have subtypes
+			List<GaussianDistribution> list = new ArrayList<>(5);
 			for (int i = 0; i < ncomponent; i++) {
-				Set<GaussianDistribution> set = new HashSet<>(1, 1);
-				set.add(new DiagonalGaussianDistribution(dim));
-				weight.add(i, RuleUnit.C, set);
+				list.add(new DiagonalGaussianDistribution(dim));
 			}
+			weight.add(RuleUnit.C, list);
+			ncomp = ncomponent;
 			break;
-		case LHSPACE: // rules in the preterminal layer (discarded)
+		}
+		case LHSPACE: { // rules in the preterminal layer (discarded)
+			List<GaussianDistribution> list = new ArrayList<>(5);
 			for (int i = 0; i < ncomponent; i++) {
-				Set<GaussianDistribution> set = new HashSet<>(1, 1);
-				set.add(new DiagonalGaussianDistribution(dim));
-				weight.add(i, RuleUnit.P, set);
+				list.add(new DiagonalGaussianDistribution(dim));
 			}
+			weight.add(RuleUnit.P, list);
+			ncomp = ncomponent;
 			break;
-		case LRURULE: // general unary rules 
+		}
+		case LRURULE: { // general unary rules 
+			List<GaussianDistribution> list0 = new ArrayList<>(5);
+			List<GaussianDistribution> list1 = new ArrayList<>(5);
 			for (int i = 0; i < ncomponent; i++) {
-				EnumMap<RuleUnit, Set<GaussianDistribution>> map = new EnumMap<>(RuleUnit.class);
-				Set<GaussianDistribution> set0 = new HashSet<>(1, 1);
-				Set<GaussianDistribution> set1 = new HashSet<>(1, 1);
-				set0.add(new DiagonalGaussianDistribution(dim));
-				set1.add(new DiagonalGaussianDistribution(dim));
-				map.put(RuleUnit.P, set0);
-				map.put(RuleUnit.UC, set1);
-				weight.add(i, map);
+				list0.add(new DiagonalGaussianDistribution(dim));
+				list1.add(new DiagonalGaussianDistribution(dim));
 			}
+			weight.add(RuleUnit.P, list0);
+			weight.add(RuleUnit.UC, list1);
+			ncomp = ncomponent * ncomponent;
 			break;
-		case LRBRULE: // general binary rules
+		}
+		case LRBRULE: { // general binary rules
+			List<GaussianDistribution> list0 = new ArrayList<>(5);
+			List<GaussianDistribution> list1 = new ArrayList<>(5);
+			List<GaussianDistribution> list2 = new ArrayList<>(5);
 			for (int i = 0; i < ncomponent; i++) {
-				EnumMap<RuleUnit, Set<GaussianDistribution>> map = new EnumMap<>(RuleUnit.class);
-				Set<GaussianDistribution> set0 = new HashSet<>(1, 1);
-				Set<GaussianDistribution> set1 = new HashSet<>(1, 1);
-				Set<GaussianDistribution> set2 = new HashSet<>(1, 1);
-				set0.add(new DiagonalGaussianDistribution(dim));
-				set1.add(new DiagonalGaussianDistribution(dim));
-				set2.add(new DiagonalGaussianDistribution(dim));
-				map.put(RuleUnit.P, set0);
-				map.put(RuleUnit.LC, set1);
-				map.put(RuleUnit.RC, set2);
-				weight.add(i, map);
+				list0.add(new DiagonalGaussianDistribution(dim));
+				list1.add(new DiagonalGaussianDistribution(dim));
+				list2.add(new DiagonalGaussianDistribution(dim));
 			}
+			weight.add(RuleUnit.P, list0);
+			weight.add(RuleUnit.LC, list1);
+			weight.add(RuleUnit.RC, list2);
+			ncomp = ncomponent * ncomponent * ncomponent;
 			break;
+		}
 		default:
 			throw new RuntimeException("Not consistent with any grammar rule type. Type: " + type);
 		}
+		weight.initMixingW(ncomp); // CHECK
 	}	
-
+	
 	
 	public RuleType getType() {
 		return type;

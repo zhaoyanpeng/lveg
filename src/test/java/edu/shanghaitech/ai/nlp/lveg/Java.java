@@ -1,12 +1,15 @@
 package edu.shanghaitech.ai.nlp.lveg;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -20,9 +23,7 @@ import java.util.regex.Pattern;
 import org.junit.Test;
 
 import edu.shanghaitech.ai.nlp.lveg.impl.BinaryGrammarRule;
-import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture.Component;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
-import edu.shanghaitech.ai.nlp.util.Debugger;
 import edu.shanghaitech.ai.nlp.util.FunUtil;
 
 public class Java {
@@ -79,8 +80,8 @@ public class Java {
 	}
 	
 	enum XXX {
-		a(1), 
-		b(2), 
+		d(1), 
+		a(2), 
 		c(3);
 		
 		int x;
@@ -92,11 +93,12 @@ public class Java {
 		int value() {
 			return x;
 		}
-		
+		/*
 		@Override
 		public String toString() {
 			return String.valueOf(x);
 		}
+		*/
 	}
 	
 	enum YYY {
@@ -104,6 +106,22 @@ public class Java {
 	}
 	
 	@Test
+	public void d() {
+		YYY y = YYY.b;
+		switch (y) {
+		case a:
+		case b: {
+			System.out.println("a or b");
+			break;
+		}
+		case c: {
+			System.out.println("c");
+			break;
+		}
+		}
+	}
+	
+//	@Test
 	public void c() {
 //		Debugger.debugTreebank();
 		
@@ -123,14 +141,19 @@ public class Java {
 		System.out.println(rule0 = rule1);
 		System.out.println(rule0.equals(rule1));
 		
-		System.out.println(XXX.b);
+		System.out.println(XXX.a);
 		System.out.println(YYY.a.ordinal());
 		
 		XXX x1 = XXX.a;
-		XXX x2 = XXX.b;
+		XXX x2 = XXX.a;
 		System.out.println(x1 == x2);
 		System.out.println(x1.equals(x2));
-
+		
+		Map<XXX, Integer> emptymap = new EnumMap<>(XXX.class);
+		emptymap.put(XXX.a, 2);
+		emptymap.put(XXX.c, 2);
+		emptymap.put(XXX.d, 2);
+		System.out.print(emptymap);
 	}
 	
 //	@Test
@@ -223,6 +246,8 @@ public class Java {
 		list.subList(0, list.size()).clear();
 		list.add(4);
 		list.subList(1, list.size()).clear();
+		System.out.println(list);
+		list.subList(0, list.size()).clear();
 		System.out.println(list);
 	}
 	
@@ -320,5 +345,19 @@ public class Java {
 		array[1].x = 50;
 		System.out.println(container);
 		
+	}
+	
+//	@Test
+	public void testStringEqual() {
+		String str0 = new String("nihaoa");
+		String str1 = "nihaoa";
+		String str2 = str1;
+		String str3 = new String("nihaoa");
+		
+		assertFalse(str0 == str3);
+		assertTrue(str0.equals(str3));
+		
+		assertTrue(str1 == str2);
+		assertTrue(str0.equals(str1));
 	}
 }

@@ -2,16 +2,13 @@ package edu.shanghaitech.ai.nlp.lveg.impl;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 
 import edu.berkeley.nlp.syntax.Tree;
-import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleType;
-import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleUnit;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.syntax.State;
 import edu.shanghaitech.ai.nlp.util.Numberer;
@@ -146,77 +143,6 @@ public class SimpleLVeGGrammar extends LVeGGrammar implements Serializable {
 		for (Tree<State> child : children) {
 			tallyStateTree(child);
 		}
-	}
-	
-	
-	/**
-	 * Compute the two-order unary chain.
-	 */
-	protected void computeChainUnaryRule(boolean prune) {
-		EnumMap<RuleUnit, RuleUnit> keys0 = new EnumMap<>(RuleUnit.class);
-		EnumMap<RuleUnit, RuleUnit> keys1 = new EnumMap<>(RuleUnit.class);
-		keys1.put(RuleUnit.P, RuleUnit.RM);
-		short count = 0, total = 0;
-		
-		// rules of the from X->ROOT(0) are not allowed
-		for (short iparent = 0; iparent < ntag; iparent++) {
-			for (short ichild = 1; ichild < ntag; ichild++) {
-				if (iparent == ichild) { continue; }
-				boolean found = false;
-				int cnt = 0;
-				RuleType type;
-				keys0.clear();
-				if (iparent == 0) {
-					type = RuleType.RHSPACE;
-					keys0.put(RuleUnit.C, RuleUnit.RM);
-				} else {
-					type = RuleType.LRURULE;
-					keys0.put(RuleUnit.UC, RuleUnit.RM);
-				}
-				
-				GaussianMixture weightSum = new DiagonalGaussianMixture();
-				UnaryGrammarRule uruleSum = new UnaryGrammarRule(iparent, ichild, type, weightSum);
-				GaussianMixture pruleWeight = null, cruleWeight = null, aruleWeight = null;
-				
-				for (GrammarRule prule : uRulesWithP[iparent]) {
-					UnaryGrammarRule uprule = (UnaryGrammarRule) prule;
-					pruleWeight = uprule.getWeight(); // one-order chain rule
-					if (uprule.rhs == ichild) {
-						weightSum.add(pruleWeight.copy(true), prune);
-						found = true;
-						cnt++;
-					} else { // two-order chain rule
-						for (GrammarRule crule : uRulesWithC[ichild]) {
-							UnaryGrammarRule ucrule = (UnaryGrammarRule) crule;
-							if (ucrule.lhs != uprule.rhs) { continue; }
-							cruleWeight = ucrule.getWeight();
-							aruleWeight = GaussianMixture.mulAndMarginalize(pruleWeight, cruleWeight, keys0, keys1);
-							if (iparent == 0) { aruleWeight = aruleWeight.replaceAllKeys(RuleUnit.C); }
-							weightSum.add(aruleWeight, prune);
-							found = true;
-							cnt++;
-						}
-					}
-				} 
-				if (found) {
-					total++;
-					// why shall we add it? Adding could result in the exponential increase of the # of components.
-					// addUnaryRule(uruleSum);
-					// the resulting chain rule
-					chainSumUnaryRules.add(uruleSum);
-					chainSumUnaryRulesWithP[iparent].add(uruleSum);
-					chainSumUnaryRulesWithC[ichild].add(uruleSum);
-//					logger.trace("Rule: [" + iparent + ", " + ichild + "]\t# of rules combined: " + cnt + 
-//							"\t# of components: " + uruleSum.getWeight().getNcomponent());
-				} 
-			}
-		}
-		// TODO a temporary implementation, it may weaken the unary rules of length 1.
-		for (GrammarRule rule : chainSumUnaryRules) {
-			if (!uRuleMap.containsKey(rule)) { count++; continue; }
-			addURule((UnaryGrammarRule) rule);
-		}
-		logger.trace("# of new rules: " + count + " \t# of all rules: " + total + "\n");
 	}
 	
 

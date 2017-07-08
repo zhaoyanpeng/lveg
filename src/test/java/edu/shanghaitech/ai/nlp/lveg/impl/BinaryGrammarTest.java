@@ -1,35 +1,34 @@
 package edu.shanghaitech.ai.nlp.lveg.impl;
 
-import java.util.EnumMap;
-import java.util.HashSet;
-import java.util.Set;
+import static org.junit.Assert.*;
+
+import java.util.Random;
 
 import org.junit.Test;
 
-import edu.shanghaitech.ai.nlp.lveg.LVeGTrainer;
-import edu.shanghaitech.ai.nlp.lveg.impl.DiagonalGaussianDistribution;
-import edu.shanghaitech.ai.nlp.lveg.impl.DiagonalGaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
-import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleUnit;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleType;
 
 public class BinaryGrammarTest {
+	static short ncomp = 2, ndim = 2;
+	static {
+		Random rnd = new Random(0);
+		GaussianMixture.config((short) -1, 1e-6, 4, ncomp, 0.5, -1.0, -1.0, true, rnd, null);
+		GaussianDistribution.config(1, 5, ndim, 0.5, 0.8, rnd, null);
+	}
+	
 	@Test
 	public void testBinaryGrammarTest() {
-		GaussianMixture gm = new DiagonalGaussianMixture(LVeGTrainer.ncomponent);
-		for (int i = 0; i < LVeGTrainer.ncomponent; i++) {
-			EnumMap<RuleUnit, Set<GaussianDistribution>> map = new EnumMap<>(RuleUnit.class);
-			Set<GaussianDistribution> list0 = new HashSet<GaussianDistribution>();
-			Set<GaussianDistribution> list1 = new HashSet<GaussianDistribution>();
-			Set<GaussianDistribution> list2 = new HashSet<GaussianDistribution>();
-			list0.add(new DiagonalGaussianDistribution(LVeGTrainer.dim));
-			list1.add(new DiagonalGaussianDistribution(LVeGTrainer.dim));
-			list2.add(new DiagonalGaussianDistribution(LVeGTrainer.dim));
-			map.put(RuleUnit.P, list0);
-			map.put(RuleUnit.LC, list1);
-			map.put(RuleUnit.RC, list2);
-			gm.add(i, map);
-		}
-		System.out.println(gm);
+		System.out.println("\n---LRBRULE---\n");
+		
+		GrammarRule rule0 = new BinaryGrammarRule((short) 0, (short) 1, (short) 2);
+		rule0.initializeWeight(RuleType.LRBRULE, ncomp, ndim);
+		System.out.println(rule0);
+		System.out.println(rule0.weight);
+		System.out.println(rule0.weight.spviews());
+		
+		assertTrue(rule0.weight.getBinding() == RuleType.LRBRULE);
 	}
 }

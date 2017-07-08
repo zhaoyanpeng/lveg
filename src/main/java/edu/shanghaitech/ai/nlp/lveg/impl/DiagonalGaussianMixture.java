@@ -1,11 +1,10 @@
 package edu.shanghaitech.ai.nlp.lveg.impl;
 
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.Set;
 
-import edu.shanghaitech.ai.nlp.lveg.LVeGTrainer;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleUnit;
@@ -42,41 +41,9 @@ public class DiagonalGaussianMixture extends GaussianMixture {
 		return new DiagonalGaussianMixture(ncomponent, init);
 	}
 	
-	public DiagonalGaussianMixture(
-			short ncomponent, List<Double> weights, List<EnumMap<RuleUnit, Set<GaussianDistribution>>> mixture) {
-		this();
-		this.ncomponent = ncomponent;
-		for (int i = 0; i < weights.size(); i++) {
-			this.components.add(new Component((short) i, weights.get(i), mixture.get(i)));
-		}
-	}
-	
-	
-	public static DiagonalGaussianMixture borrowObject(short ncomponent) {
-		GaussianMixture obj = null;
-		try {
-			obj = defObjectPool.borrowObject(ncomponent);
-		} catch (Exception e) {
-			logger.error("---------Borrow GM " + e + "\n");
-			try {
-				LVeGTrainer.mogPool.invalidateObject(ncomponent, obj);
-			} catch (Exception e1) {
-				logger.error("---------Borrow GM(invalidate) " + e + "\n");
-			}
-			ncomponent = ncomponent == -1 ? defNcomponent : ncomponent;
-			obj = new DiagonalGaussianMixture(ncomponent);
-		}
-		return (DiagonalGaussianMixture) obj;
-	}
-	
 	@Override
 	protected void initialize() {
-		for (int i = 0; i < ncomponent; i++) {
-			double weight = (defRnd.nextDouble() - defNegWRatio) * defMaxmw;
-			EnumMap<RuleUnit, Set<GaussianDistribution>> multivnd = new EnumMap<>(RuleUnit.class);
-			 weight = /*-0.69314718056*/ 0; // mixing weight 0.5, 1, 2
-			components.add(new Component((short) i, weight, multivnd));
-		}
+		// pass
 	}
 	
 	@Override
@@ -86,29 +53,6 @@ public class DiagonalGaussianMixture extends GaussianMixture {
 		return gm;
 	}
 	
-	
-	@Override
-	public DiagonalGaussianMixture replaceKeys(EnumMap<RuleUnit, RuleUnit> keys) {
-		DiagonalGaussianMixture gm = new DiagonalGaussianMixture();
-		replaceKeys(gm, keys);
-		return gm;
-	}
-	
-	
-	@Override
-	public DiagonalGaussianMixture replaceAllKeys(RuleUnit newkey) {
-		DiagonalGaussianMixture gm = new DiagonalGaussianMixture();
-		replaceAllKeys(gm, newkey);
-		return gm;
-	}
-	
-	
-	@Override
-	public DiagonalGaussianMixture multiply(GaussianMixture multiplier) {
-		DiagonalGaussianMixture gm = new DiagonalGaussianMixture();
-		multiply(gm, multiplier);
-		return gm;
-	}
 	
 	@Override
 	public GaussianMixture mulAndMarginalize(GaussianMixture gm, GaussianMixture des, RuleUnit key, boolean deep) {
@@ -121,54 +65,48 @@ public class DiagonalGaussianMixture extends GaussianMixture {
 		} else { // new memo space
 			des = deep ? copy(true) : this;
 		}
-		// the following is the general case
-		for (Component comp : des.components()) {
-			double logsum = Double.NEGATIVE_INFINITY;
-			GaussianDistribution gd = comp.squeeze(key);
-			// w(ROOT->X) has no P portion in computing outside score
-			if (gd == null) { continue; } 
-			for (Component comp1 : gm.components()) {
-				GaussianDistribution gd1 = comp1.squeeze(null);
-				double logcomp = comp1.getWeight() + gd.mulAndMarginalize(gd1);
-				logsum = FunUtil.logAdd(logsum, logcomp);
+		
+		List<GaussianDistribution> gaussians = gausses.get(key);
+		if (gaussians != null) { // w(ROOT->X) does not contain P portion when computing the outside score given the tree
+			List<Double> integrals = new ArrayList<>(gaussians.size());
+			for (GaussianDistribution gaussian : gaussians) {
+				double logsum = Double.NEGATIVE_INFINITY, logcomp;
+				for (SimpleView view : gm.spviews()) {
+					logcomp = view.weight;
+					if (view.gaussian != null) { 
+						logcomp += gaussian.mulAndMarginalize(view.gaussian);
+					} // treated as a constant when Gaussian is null
+					logsum = FunUtil.logAdd(logsum, logcomp);
+				}
+				integrals.add(logsum);
 			}
-			comp.setWeight(comp.getWeight() + logsum);
-			comp.getMultivnd().remove(key);
+			des.marginalize(key, integrals);
 		}
 		return des;
 	}
-
+	
 	@Override
 	public double mulAndMarginalize(EnumMap<RuleUnit, GaussianMixture> counts) {
 		if (counts == null) { return Double.NEGATIVE_INFINITY; }
-		double values = Double.NEGATIVE_INFINITY;
-		for (Component comp : components) {
-			double value = 0.0, vtmp = 0.0;
-			for (Entry<RuleUnit, Set<GaussianDistribution>> node : comp.getMultivnd().entrySet()) {
-				vtmp = 0.0;
-				GaussianMixture gm = counts.get(node.getKey()); 
-				for (GaussianDistribution gd : node.getValue()) {
-					vtmp = mulAndMarginalize(gm, gd); // head (tail) variable & outside (inside) score 
-					break;
+		double values = Double.NEGATIVE_INFINITY, value, vtmp;
+		EnumMap<RuleUnit, List<Double>> caches = new EnumMap<>(RuleUnit.class);
+		for (Entry<RuleUnit, List<GaussianDistribution>> unit : gausses.entrySet()) {
+			List<GaussianDistribution> gaussians = unit.getValue();
+			List<Double> integrals = new ArrayList<>(gaussians.size());
+			for (GaussianDistribution gaussian : gaussians) {
+				value = Double.NEGATIVE_INFINITY;
+				GaussianMixture gm = counts.get(unit.getKey());
+				for (SimpleView view : gm.spviews()) {
+					vtmp = gaussian.mulAndMarginalize(view.gaussian);
+					vtmp += view.weight;
+					value = FunUtil.logAdd(value, vtmp);
 				}
-				value += vtmp;
+				integrals.add(value);
 			}
-			value += comp.getWeight();
-			values = FunUtil.logAdd(values, value);
+			caches.put(unit.getKey(), integrals);
 		}
+		values = eval(caches);
 		return values;
-	}
-	
-	
-	public static double mulAndMarginalize(GaussianMixture gm, GaussianDistribution gd) {
-		double value = Double.NEGATIVE_INFINITY, vtmp;
-		for (Component comp : gm.components()) {
-			GaussianDistribution ios = comp.squeeze(null);
-			vtmp = gd.mulAndMarginalize(ios);
-			vtmp += comp.getWeight();
-			value = FunUtil.logAdd(value, vtmp);
-		}
-		return value;
 	}
 	
 }

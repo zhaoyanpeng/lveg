@@ -12,6 +12,8 @@ import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
 import edu.shanghaitech.ai.nlp.lveg.model.Parser;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.syntax.State;
+import edu.shanghaitech.ai.nlp.util.Debugger;
+import edu.shanghaitech.ai.nlp.util.FunUtil;
 
 /**
  * @author Yanpeng Zhao
@@ -85,13 +87,13 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 	public List<Double> evalRuleCounts(Tree<State> tree, short isample) {
 		double scoreT = doInsideOutsideWithTree(tree); 
 //		logger.trace("\nInside/outside scores with the tree...\n\n"); // DEBUG
-//		logger.trace(FunUtil.debugTree(tree, false, (short) 2, Inferencer.grammar.numberer, false) + "\n"); // DEBUG
+//		logger.trace(Debugger.debugTree(tree, false, (short) 2, Inferencer.grammar.numberer, false) + "\n"); // DEBUG
 		
 		double scoreS = doInsideOutside(tree); 
 //		logger.trace("\nInside scores with the sentence...\n\n"); // DEBUG
-//		FunUtil.debugChart(chart.getChart(true), (short) -1, tree.getYield().size()); // DEBUG
+//		Debugger.debugChart(chart.getChart(true), (short) -1, tree.getYield().size(), Inferencer.grammar.numberer); // DEBUG
 //		logger.trace("\nOutside scores with the sentence...\n\n"); // DEBUG
-//		FunUtil.debugChart(chart.getChart(false), (short) -1, tree.getYield().size()); // DEBUG
+//		Debugger.debugChart(chart.getChart(false), (short) -1, tree.getYield().size(), Inferencer.grammar.numberer); // DEBUG
 		
 		List<Double> scores = new ArrayList<>(3);
 		scores.add(scoreT);
@@ -102,12 +104,12 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 				synchronized (inferencer) {
 					inferencer.evalRuleCountWithTree(tree, isample);
 //					logger.trace("\nCheck rule count with the tree...\n"); // DEBUG
-//					FunUtil.debugCount(Inferencer.grammar, Inferencer.lexicon, tree); // DEBUG
+//					Debugger.debugCount(Inferencer.grammar, Inferencer.lexicon, tree); // DEBUG
 //					logger.trace("\nEval count with the tree over.\n"); // DEBUG
 					
 					inferencer.evalRuleCount(tree, chart, isample, false);
 //					logger.trace("\nCheck rule count with the sentence...\n"); // DEBUG
-//					FunUtil.debugCount(Inferencer.grammar, Inferencer.lexicon, tree, chart); // DEBUG
+//					Debugger.debugCount(Inferencer.grammar, Inferencer.lexicon, tree, chart); // DEBUG
 //					logger.trace("\nEval count with the sentence over.\n"); // DEBUG
 				}
 			} catch (Exception e) {
@@ -160,12 +162,12 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 			} else {
 //				logger.trace("\nInside score...\n"); // DEBUG
 				Inferencer.insideScore(chart, sentence, nword, iosprune, usemask, LVeGTrainer.iomask);
-//				FunUtil.debugChart(chart.getChart(true), (short) -1, tree.getYield().size(), Inferencer.grammar.numberer); // DEBUG
+//				Debugger.debugChart(chart.getChart(true), (short) -1, tree.getYield().size(), Inferencer.grammar.numberer); // DEBUG
 		
 //				logger.trace("\nOutside score...\n"); // DEBUG
 				Inferencer.setRootOutsideScore(chart);
 				Inferencer.outsideScore(chart, sentence, nword, iosprune, usemask, LVeGTrainer.iomask);
-//				FunUtil.debugChart(chart.getChart(false), (short) -1, tree.getYield().size(), Inferencer.grammar.numberer); // DEBUG
+//				Debugger.debugChart(chart.getChart(false), (short) -1, tree.getYield().size(), Inferencer.grammar.numberer); // DEBUG
 			}
 			
 //			System.exit(0);
@@ -192,12 +194,12 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 		try { // do NOT expect it to crash
 //			logger.trace("\nInside score with the tree...\n"); // DEBUG	
 			LVeGInferencer.insideScoreWithTree(tree);
-//			FunUtil.debugTree(tree, false, (short) 2); // DEBUG
+//			Debugger.debugTree(tree, false, (short) 2, Inferencer.grammar.numberer, false); // DEBUG
 			
 //			logger.trace("\nOutside score with the tree...\n"); // DEBUG
 			LVeGInferencer.setRootOutsideScore(tree);
 			LVeGInferencer.outsideScoreWithTree(tree);
-//			FunUtil.debugTree(tree, false, (short) 2); // DEBUG
+//			Debugger.debugTree(tree, false, (short) 2, Inferencer.grammar.numberer, false); // DEBUG
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

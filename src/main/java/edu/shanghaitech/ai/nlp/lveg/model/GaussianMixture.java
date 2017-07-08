@@ -4,24 +4,21 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
-import java.util.EnumSet;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.PriorityQueue;
 import java.util.Random;
-import java.util.Set;
 
 import edu.shanghaitech.ai.nlp.lveg.LVeGTrainer;
 import edu.shanghaitech.ai.nlp.lveg.LearnerConfig.Params;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleType;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleUnit;
 import edu.shanghaitech.ai.nlp.util.FunUtil;
 import edu.shanghaitech.ai.nlp.util.ObjectPool;
 import edu.shanghaitech.ai.nlp.util.Recorder;
 
 /**
- * 
  * @author Yanpeng Zhao
  *
  */
@@ -32,8 +29,6 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	private static final long serialVersionUID = -822680841484765529L;
 	private static final double LOG_ZERO = -1.0e10;
 	private static double EXP_ZERO = /*-Math.log(-LOG_ZERO)*/Math.log(1e-6);
-	protected List<Component> components;
-	protected short key; // from the object pool (>=-1) or not (<-1)
 	
 	protected static short defMaxNbig;
 	protected static short defNcomponent;
@@ -46,11 +41,6 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	protected static ObjectPool<Short, GaussianMixture> defObjectPool;
 	protected static Random defRnd;
 	
-	/**
-	 * Not sure if it is necessary.
-	 * 
-	 * @deprecated 
-	 */
 	protected double bias;
 	protected double prob;
 	protected int ncomponent;
@@ -58,16 +48,20 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	protected GaussianMixture(short ncomponent) {
 		this.bias = 0;
 		this.prob = 0;
-		this.key = -2;
 		this.ncomponent = ncomponent;
-		this.components = new ArrayList<>(defNcomponent + 1);
+		
+		// new model 
+		this.binding = null;
+		this.weights = new ArrayList<>();
+		this.gausses = new EnumMap<>(RuleUnit.class);
+		this.spviews = new ArrayList<>();
 	}
 	
 	
-	/**
-	 * Initialize the fields by default.
-	 */
 	protected abstract void initialize();
+	public abstract GaussianMixture instance(short ncomponent, boolean init);
+	public abstract double mulAndMarginalize(EnumMap<RuleUnit, GaussianMixture> counts);
+	public abstract GaussianMixture mulAndMarginalize(GaussianMixture gm, GaussianMixture des, RuleUnit key, boolean deep);
 	
 	
 	/**
@@ -89,21 +83,12 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	}
 	
 	
-	public static void returnObject(GaussianMixture obj) {
-		if (obj.key >= -1) {
-			defObjectPool.returnObject(obj.key, obj);
-		} else {
-			obj.clear();
-		}
-	}
-	
-	
 	/**
 	 * Remove the trivial components.
 	 */
 	public void delTrivia() {
 		if (ncomponent <= 1) { return; }
-		PriorityQueue<Component> sorted = sort();
+		PriorityQueue<SimpleView> sorted = sort();
 		if (defMaxNbig > 0 && (defHardCut || defRetainRatio > 0 || defRiseRate > 0)) {
 			int base = 0;
 			if (defHardCut) {
@@ -121,37 +106,36 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 				base = base + defMaxNbig;
 				base = base > 50 ? 50 : base; // hard coding for debugging
 			}
-			components.clear();
+			spviews.clear();
 			if (sorted.size() > base) {
 				while (!sorted.isEmpty()) {
-					components.add(sorted.poll());
-					if (components.size() == base) { break; }
+					spviews.add(sorted.poll());
+					if (spviews.size() == base) { break; }
 				}
 			} else {
-				components.addAll(sorted);
+				spviews.addAll(sorted);
 			}
-			ncomponent = components.size();
+			ncomponent = spviews.size();
 		} else {
 			double maxw = sorted.peek().weight;
-			for (Component comp : components) {
-				if (comp.weight > LOG_ZERO && (comp.weight - maxw) > EXP_ZERO) { 
+			for (SimpleView view : spviews) {
+				if (view.weight > LOG_ZERO && (view.weight - maxw) > EXP_ZERO) { 
 					continue; 
 				}
-				sorted.remove(comp);
+				sorted.remove(view);
 			}
-			components.clear();
-			components.addAll(sorted);
+			spviews.clear();
+			spviews.addAll(sorted);
 			ncomponent = sorted.size();
 		}
 	}
 	
-	
 	/**
 	 * @return the sorted components by the mixing weight in case when you have modified the mixing weights of some components.
 	 */
-	public PriorityQueue<Component> sort() {
-		PriorityQueue<Component> sorter = new PriorityQueue<>(ncomponent + 1, wcomparator);
-		sorter.addAll(components);
+	public PriorityQueue<SimpleView> sort() {
+		PriorityQueue<SimpleView> sorter = new PriorityQueue<>(ncomponent + 1, vcomparator);
+		sorter.addAll(spviews);
 		return sorter;
 	}
 	
@@ -167,124 +151,6 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	
 	
 	/**
-	 * Add the mixture of gaussians.
-	 * 
-	 * @param gm mixture of gaussians
-	 */
-	public void add(GaussianMixture gm, boolean prune) {
-		// TODO bias += gm.bias;
-		ncomponent += gm.ncomponent;
-		components.addAll(gm.components);
-		if (prune) { delTrivia(); }
-	}
-	
-	
-	/**
-	 * Add a component.
-	 * 
-	 * @param weight    weight of the component
-	 * @param component a component of the mixture of gaussians
-	 */
-	public void add(double weight, EnumMap<RuleUnit, Set<GaussianDistribution>> component) {
-		components.add(new Component((short) ncomponent, weight, component));
-		ncomponent++;
-	}
-	
-	
-	/**
-	 * Add gaussian distributions to a component.
-	 * 
-	 * @param iComponent index of the component
-	 * @param gaussians  a set of gaussian distributions
-	 */
-	public void add(int iComponent, EnumMap<RuleUnit, Set<GaussianDistribution>> gaussians) {
-		Component comp = null;
-		if ((comp = components.get(iComponent)) != null) {
-			for (Entry<RuleUnit, Set<GaussianDistribution>> gaussian : gaussians.entrySet()) {
-				add(comp.multivnd, gaussian.getKey(), gaussian.getValue());
-			}
-		}
-	}
-	
-	
-	/**
-	 * Add gaussian distributions to the specific portion of a component.
-	 * 
-	 * @param iComponent index of the component
-	 * @param key        which denotes the specific portion of a component
-	 * @param value      which is added to the specific portion of a component
-	 */
-	public void add(int iComponent, RuleUnit key, Set<GaussianDistribution> gausses) {
-		Component comp = null;
-		if ((comp = components.get(iComponent)) != null) {
-			add(comp.multivnd, key, gausses);
-		}
-	}
-	
-	
-	/**
-	 * Add gaussian distributions to a component.
-	 * 
-	 * @param component the component of the mixture of gaussians
-	 * @param gaussians a set of gaussian distributions
-	 */
-	public static void add(EnumMap<RuleUnit, Set<GaussianDistribution>> component, 
-			EnumMap<RuleUnit, Set<GaussianDistribution>> gaussians) {
-		for (Entry<RuleUnit, Set<GaussianDistribution>> gaussian : gaussians.entrySet()) {
-			add(component, gaussian.getKey(), gaussian.getValue());
-		}
-	}
-	
-	
-	/**
-	 * Add gaussian distributions to the specific portion of a component.
-	 * TODO can be further simplified, see {@code Inferencer.Cell.addScore}
-	 * 
-	 * @param component the component of the mixture of gaussians
-	 * @param key       which denotes the specific portion of a component
-	 * @param value     which is added to the specific portion of a component
-	 */
-	public static void add(
-			EnumMap<RuleUnit, Set<GaussianDistribution>> component, 
-			RuleUnit key, Set<GaussianDistribution> value) {
-		Set<GaussianDistribution> gausses = component.get(key);
-		if (!component.containsKey(key)) {
-			/*
-			gausses = new HashSet<GaussianDistribution>();
-			gausses.addAll(value);
-			component.put(key, gausses);
-			*/
-			component.put(key, value);
-		} else {
-			if (gausses == null) {
-				gausses = new HashSet<>();
-			}
-			gausses.addAll(value);
-		}
-	}
-	
-	
-	/**
-	 * @param iComponent index of the component
-	 * @return
-	 */
-	public Component getComponent(short iComponent) {
-		/*
-		for (Component comp : components) {
-			if (comp.id == iComponent) {
-				return comp;
-			}
-		}
-		return null;
-		*/
-		return components.get(iComponent);
-	}
-	
-	public abstract GaussianMixture instance(short ncomponent, boolean init);
-	public abstract double mulAndMarginalize(EnumMap<RuleUnit, GaussianMixture> counts);
-	public abstract GaussianMixture mulAndMarginalize(GaussianMixture gm, GaussianMixture des, RuleUnit key, boolean deep);
-	
-	/**
 	 * Make a copy of this MoG. This will create a new instance of MoG.
 	 * 
 	 * @param deep boolean value, indicating deep (true) or shallow (false) copy
@@ -294,416 +160,15 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	
 	
 	/**
-	 * Make a copy of this MoG.
-	 * 
-	 * @param des  a placeholder of MoG
-	 * @param deep boolean value, indicating deep (true) or shallow (false) copy
-	 */
-	protected void copy(GaussianMixture des, boolean deep) {
-		des.ncomponent = ncomponent;
-		for (Component comp : components) {
-			if (deep) {
-				des.components.add(new Component(comp.id, comp.weight, copy(comp.multivnd)));
-			} else {
-				des.components.add(comp);
-			}
-		}
-	}
-	
-	
-	/**
-	 * Make a copy of the component of the mixture of gaussians.
-	 * 
-	 * @param component a component of the mixture of gaussians
-	 * @return
-	 */
-	public static EnumMap<RuleUnit, Set<GaussianDistribution>> copy(Map<RuleUnit, Set<GaussianDistribution>> component) {
-		EnumMap<RuleUnit, Set<GaussianDistribution>> replica = new EnumMap<>(RuleUnit.class);
-		for (Entry<RuleUnit, Set<GaussianDistribution>> gaussian : component.entrySet()) {
-			replica.put(gaussian.getKey(), copy(gaussian.getValue()));
-		}
-		return replica;
-	}
-	
-	
-	/**
-	 * Make a copy of a set of gaussian distributions.
-	 * 
-	 * @param gausses a set of gaussian distributions
-	 * @return
-	 */
-	public static Set<GaussianDistribution> copy(Set<GaussianDistribution> gausses) {
-		Set<GaussianDistribution> replica = new HashSet<>();
-		for (GaussianDistribution gd : gausses) {
-			replica.add(gd.copy());
-		}
-		return replica;
-	}
-	
-	
-	/**
-	 * Replace the key of the specific portion of the mixture of gaussians with the new key (by reference).
-	 * This will create a new copy of this MoG, but with the new keys.
-	 * 
-	 * @param keys pairs of (old-key, new-key)
-	 * @return
-	 */
-	public GaussianMixture replaceKeys(EnumMap<RuleUnit, RuleUnit> keys) { return null; }
-	
-	
-	/**
-	 * Replace the key of the specific portion of the mixture of gaussians with the new key (by reference).
-	 * 
-	 * @param des  a placeholder of MoG
-	 * @param keys pairs of (old-key, new-key)
-	 */
-	protected void replaceKeys(GaussianMixture des, EnumMap<RuleUnit, RuleUnit> keys) {
-		for (Component comp : components) {
-			EnumMap<RuleUnit, Set<GaussianDistribution>> multivnd = new EnumMap<>(RuleUnit.class);
-			for (Entry<RuleUnit, Set<GaussianDistribution>> gaussian : comp.multivnd.entrySet()) {
-				RuleUnit key = gaussian.getKey();
-				if (keys.containsKey(key)) {
-					add(multivnd, keys.get(key), gaussian.getValue());
-				} else {
-					add(multivnd, key, gaussian.getValue());
-				}
-			}
-			des.components.add(new Component((short) des.ncomponent, comp.weight, multivnd));
-			des.ncomponent++;
-		}
-	}
-	
-	
-	/**
-	 * Replace all of the existing keys with a new key (by reference).
-	 * This will create a new copy of this MoG, but with the new keys.
-	 * 
-	 * @param gm     mixture of gaussians
-	 * @param newkey the new key
-	 * @return
-	 */
-	public GaussianMixture replaceAllKeys(RuleUnit newkey) { return null; }
-	
-	
-	/**
-	 * Replace all of the existing keys with a new key (by reference).
-	 * 
-	 * @param des    a placeholder of MoG
-	 * @param newkey the new key
-	 */
-	protected void replaceAllKeys(GaussianMixture des, RuleUnit newkey) {
-		for (Component comp : components) {
-			EnumMap<RuleUnit, Set<GaussianDistribution>> multivnd = new EnumMap<>(RuleUnit.class);
-			Set<GaussianDistribution> gausses = new HashSet<>();
-			for (Entry<RuleUnit, Set<GaussianDistribution>> gaussian : comp.multivnd.entrySet()) {
-				gausses.addAll(gaussian.getValue());
-			}
-			multivnd.put(newkey, gausses);
-			des.components.add(new Component((short) des.ncomponent, comp.weight, multivnd));
-			des.ncomponent++;
-		}
-	}
-	
-	
-	/**
-	 * Problem-specific multiplication (calculation of the inside score). Inside score 
-	 * of the current non-terminal relates to the inside scores (mixture of gaussians) 
-	 * of the children only partially, since the gaussians are afterwards marginalized
-	 * and thus only weights matter. The same rules for the outside score.
-	 * 
-	 * @param gm   mixture of gaussians that needs to be marginalized
-	 * @param key  which denotes the portion, to be marginalized, of the component
-	 * @param deep deep (true) or shallow (false) copy of the instance
-	 * @return 
-	 * 
-	 * @deprecated {{@link #mulAndMarginalize(GaussianMixture, GaussianMixture, RuleUnit, boolean)} is prefered.
-	 * 
-	 */
-	public GaussianMixture mulForInsideOutside(GaussianMixture gm, RuleUnit key, boolean deep) {
-		GaussianMixture amixture = deep ? this.copy(deep) : this;
-		// calculating inside score can always remove some portions, but calculating outside score
-		// can not, because the rule ROOT->N has the dummy outside score for ROOT (one component but
-		// without gaussians) and the rule weight does not contain "P" portion. Here is hardcoding
-		/*if (gm.components.size() == 1 && gm.size(0) == 0) {
-			return amixture;
-		}*/
-		// the following is the general case
-		for (Component comp : amixture.components) {
-			double logsum = Double.NEGATIVE_INFINITY;
-			GaussianDistribution gd = comp.squeeze(key);
-			if (gd == null) { continue; } // see the above comments
-			for (Component comp1 : gm.components) {
-				GaussianDistribution gd1 = comp1.squeeze(null);
-				double logcomp = comp1.weight + gd.mulAndMarginalize(gd1);
-				logsum = FunUtil.logAdd(logsum, logcomp);
-			}
-			comp.weight += logsum;
-			comp.multivnd.remove(key);
-		}
-		return amixture;
-	}
-	
-	
-	/**
-	 * Multiply two gaussian mixtures and marginlize the specific portions of the result.
-	 * 
-	 * @param gm0   one mixture of gaussians
-	 * @param gm1   the other mixture of gaussians
-	 * @param keys0 pairs of (key, value), key denotes the specific portions of gm0, value is the new key
-	 * @param keys1 pairs of (key, value), key denotes the specific portions of gm1, value is the new key
-	 * @return
-	 */	
-	public static GaussianMixture mulAndMarginalize(GaussianMixture gm0, GaussianMixture gm1, 
-			EnumMap<RuleUnit, RuleUnit> keys0, EnumMap<RuleUnit, RuleUnit> keys1) {
-		if (gm0 == null || gm1 == null) { return null; }
-		gm0 = gm0.replaceKeys(keys0);
-		gm1 = gm1.replaceKeys(keys1);
-		GaussianMixture gm = gm0.multiply(gm1);
-		
-		EnumSet<RuleUnit> keys = EnumSet.noneOf(RuleUnit.class);
-		for (Entry<RuleUnit, RuleUnit> map : keys0.entrySet()) {
-			keys.add(map.getValue());
-		}
-		for (Entry<RuleUnit, RuleUnit> map : keys1.entrySet()) {
-			keys.add(map.getValue());
-		}
-		gm.marginalize(keys);
-		return gm;
-	}
-	
-	
-	/**
-	 * Multiply this MoG by the given mixtures of gaussians.
-	 * This will create a new instance of MoG.
-	 * 
-	 * @param multiplier the other mixture of gaussians
-	 * @return    
-	 */
-	public GaussianMixture multiply(GaussianMixture multiplier) { return null; }
-	
-	
-	/**
-	 * Multiply this MoG by the given mixtures of gaussians.
-	 * 
-	 * @param des        a placeholder of MoG
-	 * @param multiplier the other mixture of gaussians
-	 */
-	protected void multiply(GaussianMixture des, GaussianMixture multiplier) {
-		for (Component comp0 : components) {
-			for (Component comp1 : multiplier.components) {
-				EnumMap<RuleUnit, Set<GaussianDistribution>> multivnd = 
-						multiply(comp0.multivnd, comp1.multivnd);
-				// CHECK Math.log(Math.exp(a) * Math.exp(b))
-				double weight = comp0.weight + comp1.weight;
-				des.components.add(new Component((short) des.ncomponent, weight, multivnd));
-				des.ncomponent++;
-			}
-		}
-	}
-	
-	
-	/**
-	 * Multiply two components of the mixture of gaussians.
-	 * 
-	 * @param component0 one component of the mixture of the gaussians
-	 * @param component1 the other component of the mixture of the gaussians
-	 * @param copy 		  using copy or reference
-	 * @return
-	 */
-	protected EnumMap<RuleUnit, Set<GaussianDistribution>> multiply(
-			EnumMap<RuleUnit, Set<GaussianDistribution>> component0, 
-			EnumMap<RuleUnit, Set<GaussianDistribution>> component1) {
-		EnumMap<RuleUnit, Set<GaussianDistribution>> component = copy(component0);
-		for (Entry<RuleUnit, Set<GaussianDistribution>> gaussian : component1.entrySet()) {
-			add(component, gaussian.getKey(), copy(gaussian.getValue()));
-		}
-		return component;
-	}
-	
-	
-	
-	/**
-	 * Marginalize the mixture of gaussians.
-	 * 
-	 * @param logarithm whether the return value is the logarithm form or not
-	 * @return
-	 */
-	public double marginalize(boolean logarithm) {
-		if (logarithm) {
-			double logval = Double.NEGATIVE_INFINITY;
-			for (Component comp : components) {
-				logval = FunUtil.logAdd(logval, comp.weight);
-			}
-			return logval;
-		} else {
-			double value = 0;
-			for (Component comp : components) {
-				value += Math.exp(comp.weight);
-			}
-			return value;
-		}
-	}
-	
-	
-	/**
-	 * Marginalize the specific portions of the mixture of gaussians.
-	 * 
-	 * @param keys which map to the portions, to be marginalized, of the mixture of gaussians
-	 */
-	public void marginalize(EnumSet<RuleUnit> keys) {
-		for (Component comp : components) {
-			for (RuleUnit key : keys) {
-				comp.multivnd.remove(key);
-			}
-		}
-	}
-	
-	
-	/**
 	 * Set the outside score of the root node to 1.
 	 */
 	public void marginalizeToOne() {
-		if (ncomponent <= 0) {
-			System.err.println("Fatal error when marginalize the MoG to one.\n" + toString());
-			System.exit(0);
-		}
 		// sanity check
 		ncomponent = 1;
-		components.subList(1, components.size()).clear();
-		// CHECK Math.exp(0)
-		Component comp = components.get(0);
-		comp.clear();
-		comp.weight = 0;
-		comp.id = 0;
-	}
-	
-	
-	/**
-	 * Merge the same components, which could be resulted in by the marginalization, 
-	 * of the mixture of gaussians (implemented by reference).
-	 * 
-	 * @param gm mixture of gaussians
-	 * @return
-	 */
-	public static GaussianMixture merge(GaussianMixture gm) {
-		GaussianMixture amixture = gm.instance((short) 0, false);
-		for (Component comp : gm.components) {
-			int idx = amixture.contains(comp.multivnd);
-			if (idx < 0) {
-				amixture.components.add(new Component((short) amixture.ncomponent, comp.weight, comp.multivnd));
-				amixture.ncomponent++;
-			} else {
-				Component acomp = amixture.components.get(idx);
-				// CHECK Math.log(Math.exp(a) + Math.exp(b))
-				acomp.weight = FunUtil.logAdd(acomp.weight, comp.weight);
-			}
-		}
-		return amixture;
-	}
-	
-	
-	/**
-	 * Determine if the component of the mixture of gaussians is contained in the given 
-	 * mixture of gaussians.
-	 * 
-	 * @param component the component of the mixture of gaussians
-	 * @return
-	 */
-	public int contains(EnumMap<RuleUnit, Set<GaussianDistribution>> component) {
-		for (Component comp : components) {
-			if (isEqual(component, comp.multivnd)) {
-				return comp.id;
-			}
-		}
-		return -1;
-	}
-	
-	
-	/**
-	 * Compare whether two components of the mixture of gaussians are the same.
-	 * </p>
-	 * CHECK to double check. It should be symmetrically the same.
-	 * </p>
-	 * @param component0 one component of the mixture of gaussians
-	 * @param component1 the other component of the mixture of gaussians
-	 * @return
-	 */
-	private boolean isEqual(
-			EnumMap<RuleUnit, Set<GaussianDistribution>> component0,
-			EnumMap<RuleUnit, Set<GaussianDistribution>> component1) {
-		if (component0.size() != component1.size()) { return false; }
-		// the uniqueness of the keys ensures that one for loop is enough
-		for (Entry<RuleUnit, Set<GaussianDistribution>> gaussian : component0.entrySet()) {
-			if (!component1.containsKey(gaussian.getKey())) { return false; }
-			Set<GaussianDistribution> gausses0 = gaussian.getValue();
-			Set<GaussianDistribution> gausses1 = component1.get(gaussian.getKey());
-			if (!isEqual(gausses0, gausses1)) { return false; }
-		}
-		return true;
-	}
-	
-	
-	/**
-	 * Compare whether two set of gaussians are identical. We only cares about the value not the hash code for the
-	 * item, thus A.containsAll(B) && B.containsAll(A) or A.equals(B) is not appropriate for our application since
-	 * Both of which will invoke hashCode().
-	 * 
-	 * @param gausses0 a set of gaussians
-	 * @param gausses1 a set of gaussians
-	 * @return
-	 */
-	private boolean isEqual(Set<GaussianDistribution> gausses0, Set<GaussianDistribution> gausses1) {
-		if (gausses0 == null || gausses1 == null) {
-			if (gausses0 != gausses1) {
-				return false;
-			} else {
-				return true;
-			}
-		}
-		if (gausses0.size() != gausses1.size()) { return false; }
-		/**
-		 * CHECK The following code has a hidden bug. If the item in the gaussian set is modified somewhere else 
-		 * and effects the return value of hashcode(), equals() will fail since Set.add() evals the hash-code of 
-		 * the item when it is added and won't automatically change depending on the newest status of the item.
-		 * 
-		 * if (!gausses0.equals(gausses1)) { return false; }
-		 * 
-		 * http://stackoverflow.com/questions/32963070/hashset-containsobject-returns-false-for-instance-modified-after-insertion
-		 */
-		// the uniqueness of the gaussians ensures that one for loop is enough
-		for (GaussianDistribution g0 : gausses0) {
-			boolean found1 = false;
-			for (GaussianDistribution g1 : gausses1) {
-				if (g1.equals(g0)) { found1 = true; break; }
-			}
-			if (!found1) { return false; } 
-		}
-		return true;
-	}
-	
-	
-	/**
-	 * Eval the values of inside and outside score functions given the sample. Normal is supposed to be false.
-	 * 
-	 * @param sample the sample
-	 * @param normal whether the sample is from N(0, 1) (true) or not (false)
-	 * @return
-	 */
-	public double evalInsideOutside(List<Double> sample, boolean normal) {
-		double ret = 0.0, value;
-		for (Component comp : components) {
-			value = 0.0;
-			for (Entry<RuleUnit, Set<GaussianDistribution>> gaussian : comp.multivnd.entrySet()) {
-				for (GaussianDistribution gd : gaussian.getValue()) {
-					value += gd.eval(sample, normal);
-					if (!Double.isFinite(value)) {
-						logger.error("\n---derivate the mixting weight---\n" + this + "\n");
-					}
-				}
-			}
-			ret += Math.exp(comp.weight + value);
-		}
-		return ret;
+		gausses.clear();
+		weights.clear();
+		weights.add(0.0);
+		buildSimpleView();
 	}
 	
 	
@@ -718,21 +183,7 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	public double eval(EnumMap<RuleUnit, List<Double>> sample, boolean normal) {
 		if (sample == null) { return eval(normal); }
 		
-		double ret = 0.0, value;
-		for (Component comp : components) {
-			value = 0.0;
-			// TODO This is not correct because every component contains the same variables but with different parameters.
-			for (Entry<RuleUnit, Set<GaussianDistribution>> gaussian : comp.multivnd.entrySet()) {
-				List<Double> slice = sample.get(gaussian.getKey());
-				for (GaussianDistribution gd : gaussian.getValue()) {
-					value += gd.eval(slice, normal);
-					if (!Double.isFinite(value)) {
-						logger.error("\n---derivate the mixting weight---\n" + this + "\n");
-					}
-				}
-			}
-			ret += Math.exp(comp.weight + value);
-		}
+		double ret = 0.0;
 		return ret;
 	}
 	
@@ -744,140 +195,230 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	 * @return
 	 */
 	private double eval(boolean logarithm) {
-		for (Component comp : components) {
-			if (comp.multivnd.size() > 0) {
-				logger.error("You are not supposed to call this method if the MoG contains multivnd.\n");
-				return -0.0;
-			}
-		}
-		return marginalize(logarithm);
-	}
-	
-	
-	/**
-	 * Take the derivative of the MoG w.r.t the mixing weight.
-	 * 
-	 * @param sample     the sample from N(0, 1)
-	 * @param icomponent index of the component
-	 * @param normal     whether the sample is from N(0, 1) or not
-	 * @return
-	 */
-	public double derivateMixingWeight(EnumMap<RuleUnit, List<Double>> sample, int iComponent, boolean normal) {
-		double value = 0.0;
-		Component comp = components.get(iComponent);
-		for (Entry<RuleUnit, Set<GaussianDistribution>> gaussian : comp.multivnd.entrySet()) {
-			List<Double> slice = sample.get(gaussian.getKey());
-			for (GaussianDistribution gd : gaussian.getValue()) {
-				value += gd.eval(slice, normal);
-				if (!Double.isFinite(value)) {
-					logger.error("\n---derivate the mixting weight---\n" + this + "\n");
+		if (logarithm) {
+			double logval = Double.NEGATIVE_INFINITY;
+			for (SimpleView view : spviews) {
+				if (view.gaussian != null) {
+					throw new RuntimeException("You are not supposed to call this method if the MoG contains any Gaussian.\n");
 				}
+				logval = FunUtil.logAdd(logval, view.weight);
 			}
-		}
-		value = Math.exp(value);
-		return value;
-	}
-	
-	
-	/**
-	 * Take the derivative of MoG w.r.t parameters (mu & sigma) of the component.
-	 * 
-	 * @param cumulative accumulate the gradients (true) or not (false)
-	 * @param icomponent index of the component of MoG
-	 * @param factor     derivative with respect to rule weight: (E[c(r, t) | T_x] - E[c(r, t) | x]) / w(r)
-	 * @param sample     the sample from the current component
-	 * @param ggrads     gradients of the parameters of gaussian distributions
-	 * @param wgrads     gradients of the mixing weights of MoG
-	 * @param normal     whether the sample is from N(0, 1) (true) or not (false)
-	 */
-	public void derivative(boolean cumulative, int iComponent, double factor, 
-			EnumMap<RuleUnit, List<Double>> sample, EnumMap<RuleUnit, List<Double>> ggrads, List<Double> wgrads, boolean normal) {
-		if (!cumulative && iComponent == 0) { // CHECK stupid if...else...
-			wgrads.clear();
-			for (int i = 0; i < ncomponent; i++) {
-				wgrads.add(0.0);
+			return logval;
+		} else {
+			double value = 0;
+			for (SimpleView view : spviews) {
+				if (view.gaussian != null) {
+					throw new RuntimeException("You are not supposed to call this method if the MoG contains any Gaussian.\n");
+				}
+				value += Math.exp(view.weight);
 			}
+			return value;
 		}
-		Component comp = components.get(iComponent);
-		double weight = Math.exp(comp.weight);
-		double dPenalty = Params.reg ? (Params.l1 ? Params.wdecay * weight : Params.wdecay * Math.pow(weight, 2)) : 0.0;
-		double dMixingW = factor * weight * 1/*derivateMixingWeight(sample, iComponent, normal)*/;
-		for (Entry<RuleUnit, Set<GaussianDistribution>> gaussian : comp.multivnd.entrySet()) {
-			List<Double> slice = sample.get(gaussian.getKey());
-			List<Double> grads = ggrads.get(gaussian.getKey());
-			for (GaussianDistribution gd : gaussian.getValue()) {
-				gd.derivative(dMixingW, slice, grads, cumulative, normal);
-				// break; // CHECK only one gaussian is allowed
-			}
-		}
-		dMixingW += dPenalty;
-		wgrads.set(iComponent, wgrads.get(iComponent) + dMixingW);
 	}
 	
 	
 	/**
 	 * Derivative w.r.t. mixing weight & mu & sigma.
 	 */
-	public void derivative(boolean cumulative, int iComponent, double scoreT, double scoreS, 
-			EnumMap<RuleUnit, List<Double>> gradst, EnumMap<RuleUnit, List<Double>> gradss, EnumMap<RuleUnit, List<Double>> grads, 
-			List<Double> wgrads, List<EnumMap<RuleUnit, GaussianMixture>> cntsWithT, List<EnumMap<RuleUnit, GaussianMixture>> cntsWithS, 
-			List<EnumMap<RuleUnit, List<List<Double>>>> cachesWithT, List<EnumMap<RuleUnit, List<List<Double>>>> cachesWithS) {
-		if (!cumulative && iComponent == 0) { // CHECK stupid if...else..., wgrads is used by all components.
+	public void derivative(boolean cumulative, double scoreT, double scoreS, EnumMap<RuleUnit, List<List<Double>>> gradst, 
+			EnumMap<RuleUnit, List<List<Double>>> gradss, EnumMap<RuleUnit, List<List<Double>>> grads, List<Double> wgrads, 
+			List<EnumMap<RuleUnit, GaussianMixture>> cntsWithT, List<EnumMap<RuleUnit, GaussianMixture>> cntsWithS, 
+			List<EnumMap<RuleUnit, List<List<List<Double>>>>> cachesWithT, List<EnumMap<RuleUnit, List<List<List<Double>>>>> cachesWithS) {
+		if (!cumulative) { // CHECK stupid if...else..., wgrads is used by all components.
 			wgrads.clear();
 			for (int i = 0; i < ncomponent; i++) {
 				wgrads.add(0.0);
 			}
 		}
 		// memo
-		Component comp = components.get(iComponent);
 		allocateMemory(cntsWithT, cntsWithS, cachesWithT, cachesWithS);
-		double partWithT = computeCaches(comp, cntsWithT, cachesWithT);
-		double partWithS = computeCaches(comp, cntsWithS, cachesWithS);
+		computeCaches(cntsWithT, cachesWithT);
+		computeCaches(cntsWithS, cachesWithS);
 		
 		// w.r.t. mixing weight
-		double weight = Math.exp(comp.weight);
-		double dMixingW = Math.exp(partWithS - scoreS) - Math.exp(partWithT - scoreT);
-		double dPenalty = Params.reg ? (Params.l1 ? Params.wdecay * weight : Params.wdecay * Math.pow(weight, 2)) : 0.0;
-		dMixingW += dPenalty;
-		dMixingW = Math.abs(dMixingW) > Params.absmax ? Params.absmax * Math.signum(dMixingW) : dMixingW;
-		wgrads.set(iComponent, wgrads.get(iComponent) + dMixingW);
+		derivative(wgrads, cntsWithT, cntsWithS, cachesWithT, cachesWithS, scoreT, scoreS);
 		
 		// w.r.t. mu & sigma
-		boolean zeroflagt = derivative(gradst, comp, cntsWithT, cachesWithT);
-		boolean zeroflags = derivative(gradss, comp, cntsWithS, cachesWithS);
+		boolean zeroflagt = derivative(gradst, cntsWithT, cachesWithT);
+		boolean zeroflags = derivative(gradss, cntsWithS, cachesWithS);
 		// note that either Math.exp(scoreT) or Math.exp(scoreS) could be 0. Here we have to pass them in decimal format
 		// because it does not guarantee that gradst and gradss must be positive, which indicates that we have to store
 		// both of them in decimal format. See details in DiagonalGaussianDistribution.derivative(...).
-//		derivative(comp, cumulative, zeroflagt, zeroflags, Math.exp(scoreT), Math.exp(scoreS), gradst, gradss, grads);
-		derivative(comp, cumulative, zeroflagt, zeroflags, scoreT, scoreS, gradst, gradss, grads);
+		derivative(cumulative, zeroflagt, zeroflags, scoreT, scoreS, gradst, gradss, grads);
 	}
 	
 	
 	/**
-	 * Compute the intermediate values needed in gradients computation.
+	 * Update cumulative gradients w.r.t mixing weights.
 	 * 
-	 * @param ggrads which stores intermediate values in computing gradients
-	 * @param comp   the component of the rule weight
-	 * @param counts which decides if expected counts exist (true) or not (false)
-	 * @param caches see {@link #computeCaches(Component, List, List)}
-	 * @return
+	 * @param iComponent index of the component
+	 * @param wgrads     which stores the cumulative gradients w.r.t mixing weights
+	 * @param logw       mixing weight in logarithmic form
+	 * @param valt       integrals given parse tree
+	 * @param vals       integrals given sentence
+	 * @param scoreT     score of the parse tree
+	 * @param scoreS     score of the sentence
 	 */
-	protected boolean derivative(EnumMap<RuleUnit, List<Double>> ggrads, Component comp, 
-			List<EnumMap<RuleUnit, GaussianMixture>> counts, List<EnumMap<RuleUnit, List<List<Double>>>> caches) {
-		if (counts == null) { return false; }
-		for (Entry<RuleUnit, Set<GaussianDistribution>> node : comp.multivnd.entrySet()) { // head variable or tail variable
-			RuleUnit key = node.getKey();
-			for (int i = 0; i < counts.size(); i++) { // every occurrence
-				EnumMap<RuleUnit, List<List<Double>>> cache = caches.get(i); // tail portion is constant if the node is head variable, vice versus 
-				double factor = Math.exp(factorButKey(key, cache) + comp.weight); // pay attention to ...
-				for (GaussianDistribution gd : node.getValue()) {
-					boolean cumulative = (i> 0);
-					gd.derivative(cumulative, factor, ggrads.get(key), cache.get(key));
-					break;
+	private void updateWgrads(int iComponent, List<Double> wgrads, 
+			double logw, double valt, double vals, double scoreT, double scoreS) {
+		double weight = Math.exp(logw);
+		double dMixingW = Math.exp(vals - scoreS) - Math.exp(valt - scoreT);
+		double dPenalty = Params.reg ? (Params.l1 ? Params.wdecay * weight : Params.wdecay * Math.pow(weight, 2)) : 0.0;
+		dMixingW += dPenalty;
+		dMixingW = Math.abs(dMixingW) > Params.absmax ? Params.absmax * Math.signum(dMixingW) : dMixingW;
+		wgrads.set(iComponent, wgrads.get(iComponent) + dMixingW);
+	}
+	
+	
+	/**
+	 * Derivatives w.r.t the mixing weights.
+	 * 
+	 * @param wgrads      cumulative gradients of mixing weights
+	 * @param cachesWithT see {@link #computeCaches(List, List)}
+	 * @param cachesWithS see {@link #computeCaches(List, List)}
+	 */
+	public void derivative(List<Double> wgrads, List<EnumMap<RuleUnit, GaussianMixture>> countsWithT, 
+			List<EnumMap<RuleUnit, GaussianMixture>> countsWithS, List<EnumMap<RuleUnit, List<List<List<Double>>>>> cachesWithT, 
+			List<EnumMap<RuleUnit, List<List<List<Double>>>>> cachesWithS, double scoreT, double scoreS) {
+		double val, vals, valt, logw;
+		switch (binding) {
+		case RHSPACE: {
+			for (int i = 0; i < ncomponent; i++) {
+				vals = Double.NEGATIVE_INFINITY;
+				valt = Double.NEGATIVE_INFINITY;
+				logw = weights.get(i);
+				
+				if (countsWithT != null) {
+					for (int j = 0; j < countsWithT.size(); j++) {
+						EnumMap<RuleUnit, List<List<List<Double>>>> cachesT = cachesWithT.get(j);
+						List<List<List<Double>>> caches = cachesT.get(RuleUnit.C);
+						List<Double> cache = caches.get(i).get(0);
+						val = cache.get(cache.size() - 1) + logw;
+						valt = FunUtil.logAdd(valt, val);
+					}
 				}
+				
+				if (countsWithS != null) {
+					for (int j = 0; j < countsWithS.size(); j++) {
+						EnumMap<RuleUnit, List<List<List<Double>>>> cachesS = cachesWithS.get(j);
+						List<List<List<Double>>> caches = cachesS.get(RuleUnit.C);
+						List<Double> cache = caches.get(i).get(0);
+						val = cache.get(cache.size() - 1) + logw;
+						vals = FunUtil.logAdd(vals, val);
+					}
+				}
+				updateWgrads(i, wgrads, logw, valt, vals, scoreT, scoreS);
 			}
+			break;
 		}
-		return true;
+		case LHSPACE: {
+			for (int i = 0; i < ncomponent; i++) {
+				vals = Double.NEGATIVE_INFINITY;
+				valt = Double.NEGATIVE_INFINITY;
+				logw = weights.get(i);
+				
+				if (countsWithT != null) {
+					for (int j = 0; j < countsWithT.size(); j++) {
+						EnumMap<RuleUnit, List<List<List<Double>>>> cachesT = cachesWithT.get(j);
+						List<List<List<Double>>> caches = cachesT.get(RuleUnit.P);
+						List<Double> cache = caches.get(i).get(0);
+						val = cache.get(cache.size() - 1) + logw;
+						valt = FunUtil.logAdd(valt, val);
+					}
+				}
+				
+				if (countsWithS != null) {
+					for (int j = 0; j < countsWithS.size(); j++) {
+						EnumMap<RuleUnit, List<List<List<Double>>>> cachesS = cachesWithS.get(j);
+						List<List<List<Double>>> caches = cachesS.get(RuleUnit.P);
+						List<Double> cache = caches.get(i).get(0);
+						val = cache.get(cache.size() - 1) + logw;
+						vals = FunUtil.logAdd(vals, val);
+					}
+				}
+				updateWgrads(i, wgrads, logw, valt, vals, scoreT, scoreS);
+			}
+			break;
+		}
+		case LRURULE: {
+			int nuc = gausses.get(RuleUnit.UC).size();
+			for (int i = 0; i < ncomponent; i++) {
+				vals = Double.NEGATIVE_INFINITY;
+				valt = Double.NEGATIVE_INFINITY;
+				logw = weights.get(i);
+				
+				if (countsWithT != null) {
+					for (int j = 0; j < countsWithT.size(); j++) {
+						EnumMap<RuleUnit, List<List<List<Double>>>> cachesT = cachesWithT.get(j);
+						List<List<List<Double>>> caches0 = cachesT.get(RuleUnit.P);
+						List<List<List<Double>>> caches1 = cachesT.get(RuleUnit.UC);
+						List<Double> cache0 = caches0.get(i / nuc).get(0);
+						List<Double> cache1 = caches1.get(i % nuc).get(0);
+						val = cache0.get(cache0.size() - 1) + cache1.get(cache1.size() - 1) + logw;
+						valt = FunUtil.logAdd(valt, val);
+					}
+				}
+				
+				if (countsWithS != null) {
+					for (int j = 0; j < countsWithS.size(); j++) {
+						EnumMap<RuleUnit, List<List<List<Double>>>> cachesS = cachesWithS.get(j);
+						List<List<List<Double>>> caches0 = cachesS.get(RuleUnit.P);
+						List<List<List<Double>>> caches1 = cachesS.get(RuleUnit.UC);
+						List<Double> cache0 = caches0.get(i / nuc).get(0);
+						List<Double> cache1 = caches1.get(i % nuc).get(0);
+						val = cache0.get(cache0.size() - 1) + cache1.get(cache1.size() - 1) + logw;
+						vals = FunUtil.logAdd(vals, val);
+					}
+				}
+				updateWgrads(i, wgrads, logw, valt, vals, scoreT, scoreS);
+			}
+			break;
+		}
+		case LRBRULE: { // idx = np * |nlc| * |nrc| + nlc * |nrc| + nrc
+			int nlc = gausses.get(RuleUnit.LC).size(), ip;
+			int nrc = gausses.get(RuleUnit.RC).size(), ic;
+			for (int i = 0; i < ncomponent; i++) {
+				vals = Double.NEGATIVE_INFINITY;
+				valt = Double.NEGATIVE_INFINITY;
+				logw = weights.get(i);
+				ip = i / (nlc * nrc);
+				ic = i % (nlc * nrc);
+				
+				if (countsWithT != null) {
+					for (int j = 0; j < countsWithT.size(); j++) {
+						EnumMap<RuleUnit, List<List<List<Double>>>> cachesT = cachesWithT.get(j);
+						List<List<List<Double>>> caches0 = cachesT.get(RuleUnit.P);
+						List<List<List<Double>>> caches1 = cachesT.get(RuleUnit.LC);
+						List<List<List<Double>>> caches2 = cachesT.get(RuleUnit.RC);
+						List<Double> cache0 = caches0.get(ip).get(0);
+						List<Double> cache1 = caches1.get(ic / nrc).get(0);
+						List<Double> cache2 = caches2.get(ic % nrc).get(0);
+						val = cache0.get(cache0.size() - 1) + cache1.get(cache1.size() - 1) + cache2.get(cache2.size() - 1) + logw;
+						valt = FunUtil.logAdd(valt, val);
+					}
+				}
+				
+				if (countsWithS != null) {
+					for (int j = 0; j < countsWithS.size(); j++) {
+						EnumMap<RuleUnit, List<List<List<Double>>>> cachesS = cachesWithS.get(j);
+						List<List<List<Double>>> caches0 = cachesS.get(RuleUnit.P);
+						List<List<List<Double>>> caches1 = cachesS.get(RuleUnit.LC);
+						List<List<List<Double>>> caches2 = cachesS.get(RuleUnit.RC);
+						List<Double> cache0 = caches0.get(ip).get(0);
+						List<Double> cache1 = caches1.get(ic / nrc).get(0);
+						List<Double> cache2 = caches2.get(ic % nrc).get(0);
+						val = cache0.get(cache0.size() - 1) + cache1.get(cache1.size() - 1) + cache2.get(cache2.size() - 1) + logw;
+						vals = FunUtil.logAdd(vals, val);
+					}
+				}
+				updateWgrads(i, wgrads, logw, valt, vals, scoreT, scoreS);
+			}
+			break;
+		}
+		default: {
+			throw new RuntimeException("Not consistent with any grammar rule type. Existing type: " + binding);
+		}
+		}
 	}
 	
 	
@@ -892,38 +433,195 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	 * @param gradss     intermediate values (with sentence) from {@link #derivative(Map, Component, List, List)}
 	 * @param grads      which holds gradients of mu & sigma
 	 */
-	protected void derivative(Component comp, boolean cumulative, boolean zeroflagt, boolean zeroflags, double scoreT, double scoreS,
-			EnumMap<RuleUnit, List<Double>> gradst, EnumMap<RuleUnit, List<Double>> gradss, EnumMap<RuleUnit, List<Double>> grads) {
+	protected void derivative(boolean cumulative, boolean zeroflagt, boolean zeroflags, double scoreT, double scoreS,
+			EnumMap<RuleUnit, List<List<Double>>> gradst, EnumMap<RuleUnit, List<List<Double>>> gradss, EnumMap<RuleUnit, List<List<Double>>> grads) {
 		if (!(zeroflagt || zeroflags)) { logger.error("There must be something wrong.\n"); }
-		for (Entry<RuleUnit, Set<GaussianDistribution>> node : comp.multivnd.entrySet()) {
-			List<Double> agrads = grads.get(node.getKey());
-			List<Double> agradst = zeroflagt ? gradst.get(node.getKey()) : null;
-			List<Double> agradss = zeroflags ? gradss.get(node.getKey()) : null;
-			for (GaussianDistribution gd : node.getValue()) {
-				gd.derivative(cumulative, agrads, agradst, agradss, scoreT, scoreS);
-				break;
+		for (Entry<RuleUnit, List<GaussianDistribution>> unit : gausses.entrySet()) {
+			List<List<Double>> ugrads = grads.get(unit.getKey());
+			List<List<Double>> ugradst = gradst.get(unit.getKey());
+			List<List<Double>> ugradss = gradss.get(unit.getKey());
+			List<GaussianDistribution> gaussians = unit.getValue();
+			for (int k = 0; k < gaussians.size(); k++) {
+				GaussianDistribution gaussian = gaussians.get(k);
+				List<Double> agrads = ugrads.get(k);
+				List<Double> agradst = zeroflagt ? ugradst.get(k) : null;
+				List<Double> agradss = zeroflags ? ugradss.get(k) : null;
+				gaussian.derivative(cumulative, agrads, agradst, agradss, scoreT, scoreS);
 			}
 		}
 	}
 	
 	
 	/**
-	 * If the variable we are considering is in the head portion, then the tail portion is a constant. 
-	 * What we do by this method is computing such constant.
+	 * Compute the intermediate values needed in gradients computation.
 	 * 
-	 * @param key    which specifics a specific portion (head variable or tail variable)
-	 * @param caches see {@link #computeCaches(Component, List, List)} and {@link #integral(GaussianDistribution, GaussianMixture, List)}
-	 * @return       in logarithmic
+	 * @param ggrads which stores intermediate values in computing gradients
+	 * @param counts which decides if expected counts exist (true) or not (false)
+	 * @param caches see {@link #computeCaches(List, List)}
+	 * @return
 	 */
-	protected double factorButKey(RuleUnit key, EnumMap<RuleUnit, List<List<Double>>> caches) {
-		double factor = 0;
-		for (Entry<RuleUnit, List<List<Double>>> cache : caches.entrySet()) {
-			if (!key.equals(cache.getKey())) {
-				List<Double> values = cache.getValue().get(0);
-				factor += values.get(values.size() - 1); // the last item in the first row is what we need
+	public boolean derivative(EnumMap<RuleUnit, List<List<Double>>> ggrads, 
+			List<EnumMap<RuleUnit, GaussianMixture>> counts, List<EnumMap<RuleUnit, List<List<List<Double>>>>> caches) {
+		if (counts == null) { return false; }
+		double logw, factor;
+		boolean cumulative = false;
+		switch (binding) {
+		case RHSPACE: {
+			List<GaussianDistribution> gaussians = gausses.get(RuleUnit.C);
+			for (int i = 0; i < counts.size(); i++) {
+				List<List<List<Double>>> cache = caches.get(i).get(RuleUnit.C);
+				List<List<Double>> grads = ggrads.get(RuleUnit.C);
+				for (int k = 0; k < ncomponent; k++) {
+					logw = weights.get(k);
+					GaussianDistribution gaussian = gaussians.get(k);
+					List<List<Double>> kcache = cache.get(k);
+					List<Double> kgrad = grads.get(k);
+					factor = logw;
+					factor = Math.exp(factor);
+					cumulative = (i != 0);
+					gaussian.derivative(cumulative, factor, kgrad, kcache);
+				}
 			}
+			break;
 		}
-		return factor; // in logarithmic form
+		case LHSPACE: {
+			List<GaussianDistribution> gaussians = gausses.get(RuleUnit.P);
+			for (int i = 0; i < counts.size(); i++) {
+				List<List<List<Double>>> cache = caches.get(i).get(RuleUnit.P);
+				List<List<Double>> grads = ggrads.get(RuleUnit.P);
+				for (int k = 0; k < ncomponent; k++) {
+					logw = weights.get(k);
+					GaussianDistribution gaussian = gaussians.get(k);
+					List<List<Double>> kcache = cache.get(k);
+					List<Double> kgrad = grads.get(k);
+					factor = logw;
+					factor = Math.exp(factor);
+					cumulative = (i != 0);
+					gaussian.derivative(cumulative, factor, kgrad, kcache);
+				}
+			}
+			break;
+		}
+		case LRURULE: {
+			List<GaussianDistribution> pGaussians = gausses.get(RuleUnit.P);
+			List<GaussianDistribution> ucGaussians = gausses.get(RuleUnit.UC);
+			int nuc = ucGaussians.size(), np = pGaussians.size(), idx;
+			GaussianDistribution gaussian;
+			for (int i = 0; i < counts.size(); i++) {
+				List<List<Double>> grads = ggrads.get(RuleUnit.P);
+				List<List<List<Double>>> pCache = caches.get(i).get(RuleUnit.P);
+				List<List<List<Double>>> ucCache = caches.get(i).get(RuleUnit.UC);
+				
+				for (int ip = 0; ip < np; ip++) {
+					gaussian = pGaussians.get(ip);
+					List<Double> kgrad = grads.get(ip);
+					List<List<Double>> kcache = pCache.get(ip);
+					for (int iuc = 0; iuc < nuc; iuc++) {
+						idx = ip * nuc + iuc;
+						logw = weights.get(idx);
+						List<Double> cache = ucCache.get(iuc).get(0);
+						factor = logw + cache.get(cache.size() - 1);
+						factor = Math.exp(factor);
+						cumulative = ((i != 0) || (iuc != 0));
+						gaussian.derivative(cumulative, factor, kgrad, kcache);
+					}
+				}
+				
+				grads = ggrads.get(RuleUnit.UC);
+				for (int iuc = 0; iuc < nuc; iuc++) {
+					gaussian = ucGaussians.get(iuc);
+					List<Double> kgrad = grads.get(iuc);
+					List<List<Double>> kcache = ucCache.get(iuc);
+					for (int ip = 0; ip < np; ip++) {
+						idx = ip * nuc + iuc;
+						logw = weights.get(idx);
+						List<Double> cache = pCache.get(ip).get(0);
+						factor = logw + cache.get(cache.size() - 1);
+						factor = Math.exp(factor);
+						cumulative = ((i != 0) || (ip != 0));
+						gaussian.derivative(cumulative, factor, kgrad, kcache);
+					}
+				}
+			}
+			break;
+		}
+		case LRBRULE: { // idx = np * |nlc| * |nrc| + nlc * |nrc| + nrc
+			List<GaussianDistribution> pGaussians = gausses.get(RuleUnit.P);
+			List<GaussianDistribution> lcGaussians = gausses.get(RuleUnit.LC);
+			List<GaussianDistribution> rcGaussians = gausses.get(RuleUnit.RC);
+			int nlc = lcGaussians.size(), nrc = rcGaussians.size(), np = pGaussians.size(), idx;
+			
+			GaussianDistribution gaussian;
+			for (int i = 0; i < counts.size(); i++) {
+				List<List<Double>> grads = ggrads.get(RuleUnit.P);
+				List<List<List<Double>>> pCache = caches.get(i).get(RuleUnit.P);
+				List<List<List<Double>>> lcCache = caches.get(i).get(RuleUnit.LC);
+				List<List<List<Double>>> rcCache = caches.get(i).get(RuleUnit.RC);
+				
+				for (int ip = 0; ip < np; ip++) {
+					gaussian = pGaussians.get(ip);
+					List<Double> kgrad = grads.get(ip);
+					List<List<Double>> kcache = pCache.get(ip);
+					for (int ilc = 0; ilc < nlc; ilc++) {
+						for (int irc = 0; irc < nrc; irc++) {
+							idx = ip * nlc * nrc + ilc * nrc + irc;
+							logw = weights.get(idx);
+							List<Double> lcache = lcCache.get(ilc).get(0);
+							List<Double> rcache = rcCache.get(irc).get(0);
+							factor = logw + lcache.get(lcache.size() - 1) + rcache.get(rcache.size() - 1);
+							factor = Math.exp(factor);
+							cumulative = ((i != 0) || (ilc != 0) || (irc != 0));
+							gaussian.derivative(cumulative, factor, kgrad, kcache);
+						}
+					}
+				}
+				
+				grads = ggrads.get(RuleUnit.LC);
+				for (int ilc = 0; ilc < nlc; ilc++) {
+					gaussian = lcGaussians.get(ilc);
+					List<Double> kgrad = grads.get(ilc);
+					List<List<Double>> kcache = lcCache.get(ilc);
+					for (int ip = 0; ip < np; ip++) {
+						for (int irc = 0; irc < nrc; irc++) {
+							idx = ip * nlc * nrc + ilc * nrc + irc;
+							logw = weights.get(idx);
+							List<Double> cache = pCache.get(ip).get(0);
+							List<Double> rcache = rcCache.get(irc).get(0);
+							factor = logw + cache.get(cache.size() - 1) + rcache.get(rcache.size() - 1);
+							factor = Math.exp(factor);
+							cumulative = ((i != 0) || (ip != 0) || (irc != 0));
+							gaussian.derivative(cumulative, factor, kgrad, kcache);
+						}
+					}
+				}
+				
+				
+				grads = ggrads.get(RuleUnit.RC);
+				for (int irc = 0; irc < nrc; irc++) {
+					gaussian = rcGaussians.get(irc);
+					List<Double> kgrad = grads.get(irc);
+					List<List<Double>> kcache = rcCache.get(irc);
+					for (int ip = 0; ip < np; ip++) {
+						for (int ilc = 0; ilc < nlc; ilc++) {
+							idx = ip * nlc * nrc + ilc * nrc + irc;
+							logw = weights.get(idx);
+							List<Double> cache = pCache.get(ip).get(0);
+							List<Double> lcache = lcCache.get(ilc).get(0);
+							factor = logw + cache.get(cache.size() - 1) + lcache.get(lcache.size() - 1);
+							factor = Math.exp(factor);
+							cumulative = ((i != 0) || (ip != 0) || (ilc != 0));
+							gaussian.derivative(cumulative, factor, kgrad, kcache);
+						}
+					}
+				}
+			}
+			break;
+		}
+		default: {
+			throw new RuntimeException("Not consistent with any grammar rule type. Existing type: " + binding);
+		}
+		}
+		return true;
 	}
 	
 	
@@ -935,27 +633,21 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	 * @param caches integrals holder 
 	 * @return       in logarithmic form
 	 */
-	protected double computeCaches(Component comp, List<EnumMap<RuleUnit, GaussianMixture>> counts, List<EnumMap<RuleUnit, List<List<Double>>>> caches) {
-		if (counts == null) { return Double.NEGATIVE_INFINITY; }
-		double values = Double.NEGATIVE_INFINITY;
+	protected void computeCaches(List<EnumMap<RuleUnit, GaussianMixture>> counts, List<EnumMap<RuleUnit, List<List<List<Double>>>>> caches) {
+		if (counts == null) { return; }
 		for (int i = 0; i < counts.size(); i++) {
-			double value = 0.0, vtmp = 0.0;
 			EnumMap<RuleUnit, GaussianMixture> count = counts.get(i);
-			EnumMap<RuleUnit, List<List<Double>>> cache = caches.get(i);
-			for (Entry<RuleUnit, Set<GaussianDistribution>> node : comp.multivnd.entrySet()) {
-				vtmp = 0;
-				GaussianMixture ios = count.get(node.getKey());
-				List<List<Double>> space = cache.get(node.getKey());
-				for (GaussianDistribution gd : node.getValue()) {
-					vtmp = integral(gd, ios, space); // outside score & head variable or inside score & tail variable
-					break; // only loop once, in fact, this break is not necessary
+			EnumMap<RuleUnit, List<List<List<Double>>>> cache = caches.get(i);
+			for (Entry<RuleUnit, List<GaussianDistribution>> unit : gausses.entrySet()) {
+				List<GaussianDistribution> gaussians = unit.getValue();
+				List<List<List<Double>>> cunit = cache.get(unit.getKey());
+				GaussianMixture ios = count.get(unit.getKey());
+				for (int j = 0; j < gaussians.size(); j++) {
+					List<List<Double>> gunit = cunit.get(j);
+					integral(gaussians.get(j), ios, gunit);
 				}
-				value += vtmp; // multiplication between different portions (head variable or tail variable)
 			}
-			value += comp.weight; // counts for an occurrence
-			values = FunUtil.logAdd(values, value); // sum of the integrals from all occurrences
 		}
-		return values;
 	}
 	
 	
@@ -970,29 +662,36 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	protected double integral(GaussianDistribution gd, GaussianMixture gm, List<List<Double>> cache) {
 		double value = Double.NEGATIVE_INFINITY, vtmp;
 		List<Double> weights = cache.get(cache.size() - 1);
-		for (Component comp : gm.components) {
-			weights.add(comp.weight);
-			GaussianDistribution ios = comp.squeeze(null);
-			vtmp = gd.integral(ios, cache);
-			vtmp += comp.weight; // integral contributed by one component
+		for (SimpleView view : gm.spviews) {
+			vtmp = gd.integral(view.gaussian, cache);
+			vtmp += view.weight; // integral contributed by one component
 			value = FunUtil.logAdd(value, vtmp);
+			weights.add(view.weight);
 		}
 		List<Double> sumvals = cache.get(0); // the last item in the first row
-		sumvals.add(value); // sum of integrals from the current portion, in logarithmic form
+		sumvals.add(value); // sum of integrals from the current unit, in logarithmic form
 		return value;
 	}
 	
 	
+	/**
+	 * Assure the equality between the size of counts and that of the caches. 
+	 * 
+	 * @param cntsWithT   rule counts given parse tree
+	 * @param cntsWithS   rule counts given the sentence
+	 * @param cachesWithT see {@link #computeCaches(List, List)}
+	 * @param cachesWithS see {@link #computeCaches(List, List)}
+	 */
 	protected void allocateMemory(List<EnumMap<RuleUnit, GaussianMixture>> cntsWithT, List<EnumMap<RuleUnit, GaussianMixture>> cntsWithS, 
-			List<EnumMap<RuleUnit, List<List<Double>>>> cachesWithT, List<EnumMap<RuleUnit, List<List<Double>>>> cachesWithS) {
+			List<EnumMap<RuleUnit, List<List<List<Double>>>>> cachesWithT, List<EnumMap<RuleUnit, List<List<List<Double>>>>> cachesWithS) {
 		int delta = -1;
 		if (cntsWithT != null && (delta = cntsWithT.size() - cachesWithT.size()) > 0) {
-			List<EnumMap<RuleUnit, List<List<Double>>>> wantage = cachelike(0, delta, 50);
+			List<EnumMap<RuleUnit, List<List<List<Double>>>>> wantage = cachelike(delta, 50);
 			cachesWithT.addAll(wantage);
 		}
 		delta = -1;
 		if (cntsWithS != null && (delta = cntsWithS.size() - cachesWithS.size()) > 0) {
-			List<EnumMap<RuleUnit, List<List<Double>>>> wantage = cachelike(0, delta, 50);
+			List<EnumMap<RuleUnit, List<List<List<Double>>>>> wantage = cachelike(delta, 50);
 			cachesWithS.addAll(wantage);
 		}
 	}
@@ -1006,16 +705,22 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	 * @param wgrads     gradients of the mixing weights of MoG
 	 * @param minexp     minimum exponent representing the exponential mixing weight
 	 */
-	public void update(int iComponent, EnumMap<RuleUnit, List<Double>> ggrads, List<Double> wgrads, double minexp) {
-		Component comp = components.get(iComponent);
-		for (Entry<RuleUnit, Set<GaussianDistribution>> gaussian : comp.multivnd.entrySet()) {
-			List<Double> grads = ggrads.get(gaussian.getKey());
-			for (GaussianDistribution gd : gaussian.getValue()) {
-				gd.update(grads);
+	public void update(EnumMap<RuleUnit, List<List<Double>>> ggrads, List<Double> wgrads, double minexp) {
+		for (Entry<RuleUnit, List<GaussianDistribution>> unit : gausses.entrySet()) {
+			List<GaussianDistribution> gaussians = unit.getValue();
+			List<List<Double>> grads = ggrads.get(unit.getKey());
+			assert(gaussians.size() == grads.size());
+			for (int i = 0; i < grads.size(); i++) {
+				gaussians.get(i).update(grads.get(i));
 			}
 		}
-		comp.weight += wgrads.get(iComponent);
-		comp.weight = comp.weight < minexp ? minexp : comp.weight;
+		double weight = 0.0;
+		for (int i = 0; i < weights.size(); i++) {
+			weight = weights.get(i) + wgrads.get(i);
+			weight = weight < minexp ? minexp : weight;
+			weights.set(i, weight);
+		}
+		updateSimpleView();
 	}
 	
 	
@@ -1025,49 +730,23 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	 * @param pad pad the allocated memory (true) or not (false)
 	 * @return gradients holder
 	 */
-	public List<EnumMap<RuleUnit, List<Double>>> zeroslike(boolean pad) {
-		List<EnumMap<RuleUnit, List<Double>>> grads = new ArrayList<>(ncomponent);
-		for (Component comp : components) {
-			EnumMap<RuleUnit, List<Double>> gcomp = new EnumMap<>(RuleUnit.class);
-			for (Entry<RuleUnit, Set<GaussianDistribution>> gaussian : comp.multivnd.entrySet()) {
-				if (gaussian.getValue().size() > 1) { logger.error("Invalid rule weight.\n"); }
-				for (GaussianDistribution gd : gaussian.getValue()) {
-					List<Double> grad = new ArrayList<>(gd.dim * 2);
-					if (pad) {
-						for (int i = 0; i < gd.dim * 2; i++) {
-							grad.add(0.0); // preallocate memo
-						}
+	public EnumMap<RuleUnit, List<List<Double>>> zeroslike(boolean pad) {
+		EnumMap<RuleUnit, List<List<Double>>> grads = new EnumMap<>(RuleUnit.class);
+		for (Entry<RuleUnit, List<GaussianDistribution>> unit : gausses.entrySet()) {
+			List<GaussianDistribution> gaussians = unit.getValue();
+			List<List<Double>> gunit = new ArrayList<>(gaussians.size());
+			for (GaussianDistribution gd : gaussians) {
+				List<Double> grad = new ArrayList<>(gd.dim * 2);
+				if (pad) {
+					for (int i = 0; i < gd.dim * 2; i++) {
+						grad.add(0.0); // preallocate memo
 					}
-					gcomp.put(gaussian.getKey(), grad);
 				}
+				gunit.add(grad);
 			}
-			grads.add(gcomp);
+			grads.put(unit.getKey(), gunit);
 		}
 		return grads;
-	}
-	
-	
-	/**
-	 * Allocate memory space for samples.
-	 * 
-	 * @param icomponent 0 by default, since all components are of the same dimension
-	 * @return
-	 */
-	public List<EnumMap<RuleUnit, List<Double>>> zeroslike(int iComponent) {
-		Component comp = components.get(iComponent);
-		List<EnumMap<RuleUnit, List<Double>>> holder = new ArrayList<>(2);
-		EnumMap<RuleUnit, List<Double>> sample = new EnumMap<>(RuleUnit.class);
-		EnumMap<RuleUnit, List<Double>> truths = new EnumMap<>(RuleUnit.class);
-		for (Entry<RuleUnit, Set<GaussianDistribution>> gaussian : comp.multivnd.entrySet()) {
-			if (gaussian.getValue().size() > 1) { logger.error("Invalid rule weight.\n"); }
-			for (GaussianDistribution gd : gaussian.getValue()) {
-				sample.put(gaussian.getKey(), new ArrayList<>(gd.dim));
-				truths.put(gaussian.getKey(), new ArrayList<>(gd.dim));
-			}
-		}
-		holder.add(sample);
-		holder.add(truths);
-		return holder;
 	}
 	
 	
@@ -1077,75 +756,27 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	 * @param iComponent 0 by default, since all components have the same portions.
 	 * @return caches holder
 	 */
-	public List<EnumMap<RuleUnit, List<List<Double>>>> cachelike(int iComponent, int ncnt, int capacity) {
-		Component comp = components.get(iComponent);
-		List<EnumMap<RuleUnit, List<List<Double>>>> caches = new ArrayList<>(ncnt);
+	public List<EnumMap<RuleUnit, List<List<List<Double>>>>> cachelike(int ncnt, int capacity) {
+		int size = 0;
+		List<EnumMap<RuleUnit, List<List<List<Double>>>>> caches = new ArrayList<>(ncnt);
 		for (int i = 0; i < ncnt; i++) {
-			EnumMap<RuleUnit, List<List<Double>>> cache = new EnumMap<>(RuleUnit.class);
-			for (Entry<RuleUnit, Set<GaussianDistribution>> gaussian : comp.multivnd.entrySet()) {
-				int size = 3 * comp.squeeze(gaussian.getKey()).dim + 1;
-				List<List<Double>> comps = new ArrayList<>(size); // nn * d, xnn * d, xxnn * d, w
-				for (int j = 0; j < size; j++) {
-					comps.add(new ArrayList<>(capacity));
+			EnumMap<RuleUnit, List<List<List<Double>>>> cache = new EnumMap<>(RuleUnit.class);
+			for (Entry<RuleUnit, List<GaussianDistribution>> unit : gausses.entrySet()) {
+				List<GaussianDistribution> gaussians = unit.getValue();
+				List<List<List<Double>>> cunit = new ArrayList<>();
+				for (GaussianDistribution gd : gaussians) {
+					size = gd.dim * 3 + 1;
+					List<List<Double>> gunit = new ArrayList<>(size);
+					for (int j = 0; j < size; j++) {
+						gunit.add(new ArrayList<>(capacity));
+					}
+					cunit.add(gunit);
 				}
-				cache.put(gaussian.getKey(), comps);
+				cache.put(unit.getKey(), cunit);
 			}
 			caches.add(cache);
 		}
 		return caches;
-	}
-	
-	
-	/**
-	 * Sample from N(0, 1), and then restore the real sample according to the parameters of the gaussian distribution. 
-	 * 
-	 * @param icomponent index of the component
-	 * @param sample     the sample from N(0, 1)
-	 * @param truths     the placeholder
-	 * @param rnd        random
-	 */
-	public void sample(int iComponent, EnumMap<RuleUnit, List<Double>> sample, EnumMap<RuleUnit, List<Double>> truths, Random rnd) {
-		Component comp = components.get(iComponent);
-		for (Entry<RuleUnit, Set<GaussianDistribution>> gaussian : comp.multivnd.entrySet()) {
-			 List<Double> slice = sample.get(gaussian.getKey());
-			 List<Double> truth = truths.get(gaussian.getKey());
-			 if (gaussian.getValue().size() > 1) { logger.error("Invalid rule weight.\n"); }
-			 for (GaussianDistribution gd : gaussian.getValue()) {
-				 gd.sample(slice, truth, rnd);
-			 }
-		}
-	}
-	
-	
-	/**
-	 * Restore the real sample from the sample that is sampled from the standard normal distribution.
-	 * 
-	 * @param icomponent index of the component
-	 * @param sample     the sample from N(0, 1)
-	 * @param truths     the placeholder
-	 */
-	public void restoreSample(int iComponent, EnumMap<RuleUnit, List<Double>> sample, EnumMap<RuleUnit, List<Double>> truths) {
-		Component comp = components.get(iComponent);
-		for (Entry<RuleUnit, Set<GaussianDistribution>> gaussian : comp.multivnd.entrySet()) {
-			List<Double> slice = sample.get(gaussian.getKey());
-			List<Double> truth = truths.get(gaussian.getKey());
-			for (GaussianDistribution gd : gaussian.getValue()) {
-				gd.restoreSample(slice, truth);
-				// break; // CHECK only one gaussian is allowed
-			}
-		}
-	}
-	
-	
-	public int dim(int iComponent, RuleUnit key) {
-		Component comp = null;
-		if ((comp = components.get(iComponent)) != null) {
-			Set<GaussianDistribution> gausses = comp.multivnd.get(key);
-			for (GaussianDistribution gd : gausses) {
-				return gd.dim;
-			}
-		}
-		return -1;
 	}
 	
 	
@@ -1154,83 +785,40 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	}
 	
 	
-	public List<Component> components() {
-		return components;
-	}
-	
-	public int size(int iComponent) {
-		Component comp = null;
-		if ((comp = components.get(iComponent)) != null) {
-			return comp.multivnd.size();
-		}
-		return -1;
-	}
-	
-	
-	public void rectifyId() {
-		if (components == null) { return; }
-		ncomponent = components.size();
-		for (short i = 0; i < ncomponent; i++) {
-			components.get(i).id = i;
-		}
-	}
-	
-	
 	public void setWeight(int iComponent, double weight) {
-		Component comp = null;
-		if ((comp = components.get(iComponent)) != null) {
-			comp.setWeight(weight);
-		}
+		weights.set(iComponent, weight);
 	}
 	
 	
 	public double getWeight(int iComponent) {
-		Component comp = null;
-		if ((comp = components.get(iComponent)) != null) {
-			return comp.weight;
-		}
-		return 0.0;
+		return weights.get(iComponent);
 	}
 	
 	
 	public void setWeights(double weight) {
-		for (Component comp : components) {
-			comp.setWeight(weight);
+		for (int i = 0; i < weights.size(); i++) {
+			weights.set(i, weight);
 		}
 	}
 	
 	
 	public List<Double> getWeights() {
-		List<Double> weights = new ArrayList<>(ncomponent);
-		for (Component comp : components) {
-			weights.add(comp.weight);
-		}
 		return weights;
 	}
 	
 	
-	public List<EnumMap<RuleUnit, Set<GaussianDistribution>>> getMixture() {
-		List<EnumMap<RuleUnit, Set<GaussianDistribution>>> mixture = new ArrayList<>(ncomponent);
-		for (Component comp : components) {
-			mixture.add(comp.multivnd);
+	public List<?> getMixture() {
+		if (binding == null || spviews.size() > 0) {
+			return spviews;
+		} else {
+			List<SimpleComponent> mixture = new ArrayList<>(ncomponent + 1);
+			for (int i = 0; i < ncomponent; i++) {
+				SimpleComponent comp = new SimpleComponent();
+				component(i, comp);
+				mixture.add(comp);
+			}
+			return mixture;
 		}
-		return mixture;
-	}
-	
-	
-	public boolean isValid(short ncomp) {
-		return (components != null && components.size() == ncomponent);
-	}
-	
-	
-	public void destroy(short ncomp) {
-		clear();
-		components = null;
-	}
-	
-	
-	public void clear(short ncomp) {
-		clear();
 	}
 	
 	
@@ -1240,35 +828,24 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 		} else {
 			this.bias = 0.0;
 			this.ncomponent = 0;
-			if (components != null) {
-				components.clear();
-			}
+			gausses.clear();
+			weights.clear();
+			spviews.clear();
 		}
 	}
 	
 	
-	/**
-	 * Memory clean.
-	 */
 	private void clear() {
 		this.bias = 0.0;
 		this.ncomponent = 0;
-		if (components != null) {
-			for (Component comp : components) {
-				comp.clear();
-			}
-			this.components.clear();
-		}
+		gausses.clear();
+		weights.clear();
+		spviews.clear();
 	}
 	
 	
-	public short getKey() {
-		return key;
-	}
-	
-	
-	public void setKey(short key) {
-		this.key = key;
+	public void clear(short ncomp) {
+		clear();
 	}
 	
 	
@@ -1308,99 +885,492 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	
 	@Override
 	public String toString() {
-		return "GM [bias=" + bias + ", ncomponent=" + ncomponent + ", weights=" + 
+		return "GM [bias=" + bias + ", ncomp=" + ncomponent + ", weights=" + 
 //				FunUtil.double2str(getWeights(), 16, -1, false, false) + "<->" +
 				FunUtil.double2str(getWeights(), LVeGTrainer.precision, -1, true, true) + ", mixture=" + getMixture() + "]";
 	}
+
 	
-	/*
-	// http://stackoverflow.com/questions/17804704/notserializableexception-on-anonymous-class
-	protected static Comparator<Component> wcomparator = new Comparator<Component>() {
-		@Override
-		public int compare(Component o1, Component o2) {
-			double diff = o1.weight - o2.weight;
-			return diff > 0 ? -1 : (diff < 0 ? 1 : 0);
+	
+	protected RuleType binding; // to which kind of rule type the GM is bounded
+	protected List<Double> weights;
+	protected EnumMap<RuleUnit, List<GaussianDistribution>> gausses;
+	
+	// which is valid only for single variated MoG, we need this for the sake of 
+	// representing in(out)-side scores regardless of which unit these Gaussians
+	// exactly correspond to.
+	protected List<SimpleView> spviews; 
+	
+	public RuleType getBinding() {
+		return binding;
+	}
+	
+	public void setBinding(RuleType binding) {
+		this.binding = binding;
+	}
+	
+	public List<SimpleView> spviews() {
+		return spviews;
+	}
+	
+	public void initMixingW(int ncomponent) {
+		this.ncomponent = ncomponent;
+		for (int i = 0; i < ncomponent; i++) {
+			weights.add(0.0);
 		}
-	};
-	*/
-	protected static Comparator<Component> wcomparator = new PriorityComparator<>();
-	protected static class PriorityComparator<T> implements Comparator<T>, Serializable {
+	}
+	
+	public void add(GaussianMixture gm, boolean prune) {
+		ncomponent += gm.ncomponent;
+		spviews.addAll(gm.spviews);
+		if (prune) { delTrivia(); }
+	}
+	
+	/**
+	 * The mixing weights should also be adjusted after calling this method.
+	 * 
+	 * @param key       id of the gaussian unit
+	 * @param gaussians a set of gaussians corresponding to the 'key'
+	 */
+	protected void add(RuleUnit key, List<GaussianDistribution> gaussians) {
+		List<GaussianDistribution> unit = null;
+		if (gausses.containsKey(key) && (unit = gausses.get(key)) != null) {
+			unit.addAll(gaussians);
+		} else {
+			gausses.put(key, gaussians);
+		}
+	}
+	
+	/**
+	 * Make a copy of the MoG, only copy the internal data (gausses and weights).
+	 * 
+	 * @param des  the placeholder of MoG
+	 * @param deep boolean value, indicating deep (true) or shallow (false) copy
+	 */
+	protected void copy(GaussianMixture des, boolean deep) {
+		des.binding = binding;
+		des.ncomponent = ncomponent;
+		for (Entry<RuleUnit, List<GaussianDistribution>> unit : gausses.entrySet()) {
+			if (deep) {
+				List<GaussianDistribution> gaussians = unit.getValue();
+				List<GaussianDistribution> holder = new ArrayList<>(gaussians.size());
+				for (GaussianDistribution gaussian : gaussians) {
+					holder.add(gaussian.copy());
+				}
+				des.gausses.put(unit.getKey(), holder);
+			} else {
+				des.gausses.put(unit.getKey(), unit.getValue());
+			}
+		}
+		des.weights.addAll(weights);
+		des.buildSimpleView();
+	}
+	
+	/**
+	 * Build the view for the single variated MoG, which may facilitate the computation of in(out)-scores.
+	 * 
+	 * @return whether the view has been built (true) or not (false)
+	 */
+	protected boolean buildSimpleView() {
+		spviews.clear();
+		if (gausses.size() == 1) {
+			for (Entry<RuleUnit, List<GaussianDistribution>> unit : gausses.entrySet()) {
+				List<GaussianDistribution> gaussians = unit.getValue();
+				assert(gaussians.size() == weights.size());
+				for (int i = 0; i < weights.size(); i++) {
+					spviews.add(new SimpleView(weights.get(i), gaussians.get(i)));
+				}
+				// break; // should break 
+			}
+			return true;
+		} else if (gausses.size() == 0) {
+			for (int i = 0; i < weights.size(); i++) {
+				spviews.add(new SimpleView(weights.get(i), null));
+			}
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
+	/**
+	 * Note that views are valid only for single variated MoG, and the Gaussians are stored via 
+	 * references while weights are not, thus weights of views must be updated after performing
+	 * the modifications on them.
+	 * 
+	 * @return whether the view has been built (true) or not (false)
+	 */
+	protected boolean updateSimpleView() {
+		int size = gausses.size();
+		if (size == 0 || size == 1) {
+			for (int i = 0; i < weights.size(); i++) {
+				spviews.get(i).weight = weights.get(i);
+			}
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
+	/**
+	 * Marginalize the specific unit of the MoG.
+	 * 
+	 * @param key the unit to be marginalized
+	 * @return 
+	 */
+	public boolean marginalize(RuleUnit key, List<Double> factors) {
+		switch (binding) {
+		case RHSPACE:
+		case LHSPACE: {
+			for (int i = 0; i < weights.size(); i++) {
+				weights.set(i, weights.get(i) + factors.get(i));
+			}
+			gausses.remove(key);
+			break;
+		}
+		case LRURULE: { // idx = np * |nuc| + nuc
+			int nuc = 1, np = 1, idx;
+			boolean valid = false;
+			List<GaussianDistribution> gaussians = null;
+			if ((gaussians = gausses.get(RuleUnit.UC)) != null && gaussians.size() > 0) {
+				nuc = gaussians.size();
+				valid = true;
+			}
+			if ((gaussians = gausses.get(RuleUnit.P)) != null && gaussians.size() > 0) {
+				np = gaussians.size();
+				valid = true;
+			}
+			if (valid) { // valid only when there is something available to be marginalized
+				double logsum, tmp;
+				switch (key) {
+				case P: {
+					for (int iuc = 0; iuc < nuc; iuc++) {
+						logsum = Double.NEGATIVE_INFINITY;
+						for (int ip = 0; ip < np; ip++) {
+							idx = ip * nuc + iuc;
+							tmp = weights.get(idx) + factors.get(ip);
+							logsum = FunUtil.logAdd(logsum, tmp);
+						}
+						weights.add(logsum);
+					}
+					break;
+				}
+				case UC: {
+					for (int ip = 0; ip < np; ip++) {
+						logsum = Double.NEGATIVE_INFINITY;
+						for (int iuc = 0; iuc < nuc; iuc++) {
+							idx = ip * nuc + iuc;
+							tmp = weights.get(idx) + factors.get(iuc);
+							logsum = FunUtil.logAdd(logsum, tmp);
+						}
+						weights.add(logsum);
+					}
+					break;
+				}
+				default:
+					break;
+				}
+				weights.subList(0, ncomponent).clear();
+				ncomponent = weights.size();
+				gausses.remove(key);
+			} else {
+				//
+			}
+			break;
+		}
+		case LRBRULE: { // idx = np * |nlc| * |nrc| + nlc * |nrc| + nrc
+			int nlc = 1, nrc = 1, np = 1, idx;
+			boolean valid = false;
+			List<GaussianDistribution> gaussians = null;
+			if ((gaussians = gausses.get(RuleUnit.RC)) != null && gaussians.size() > 0) {
+				nrc = gaussians.size();
+				valid = true;
+			}
+			if ((gaussians = gausses.get(RuleUnit.LC)) != null && gaussians.size() > 0) {
+				nlc = gaussians.size();
+				valid = true;
+			}
+			if ((gaussians = gausses.get(RuleUnit.P)) != null && gaussians.size() > 0) {
+				np = gaussians.size();
+				valid = true;
+			}
+			if (valid) {
+				double logsum, tmp;
+				switch (key) {
+				case P: {
+					for (int ilc = 0; ilc < nlc; ilc++) {
+						for (int irc = 0; irc < nrc; irc++) {
+							logsum = Double.NEGATIVE_INFINITY;
+							for (int ip = 0; ip < np; ip++) {
+								idx = ip * nlc * nrc + ilc * nrc + irc;
+								tmp = weights.get(idx) + factors.get(ip);
+								logsum = FunUtil.logAdd(logsum, tmp);
+							}
+							weights.add(logsum);
+						}
+					}
+					break;
+				}
+				case LC: {
+					for (int ip = 0; ip < np; ip++) {
+						for (int irc = 0; irc < nrc; irc++) {
+							logsum = Double.NEGATIVE_INFINITY;
+							for (int ilc = 0; ilc < nlc; ilc++) {
+								idx = ip * nlc * nrc + ilc * nrc + irc;
+								tmp = weights.get(idx) + factors.get(ilc);
+								logsum = FunUtil.logAdd(logsum, tmp);
+							}
+							weights.add(logsum);
+						}
+					}
+					break;
+				}
+				case RC: {
+					for (int ip = 0; ip < np; ip++) {
+						for (int ilc = 0; ilc < nlc; ilc++) {
+							logsum = Double.NEGATIVE_INFINITY;
+							for (int irc = 0; irc < nrc; irc++) {
+								idx = ip * nlc * nrc + ilc * nrc + irc;
+								tmp = weights.get(idx) + factors.get(irc);
+								logsum = FunUtil.logAdd(logsum, tmp);
+							}
+							weights.add(logsum);
+						}
+					}
+					break;
+				}
+				default:
+					break;
+				}
+				weights.subList(0, ncomponent).clear();
+				ncomponent = weights.size();
+				gausses.remove(key);
+			} else {
+				//
+			}
+			break;
+		}
+		default: {
+			throw new RuntimeException("Not consistent with any grammar rule type. Existing type: " + binding);
+		}
+		}
+		return buildSimpleView(); // build views for single variated MoG
+	}
+	
+	/**
+	 * Evaluate the value of MoG given a set of assignments.
+	 * 
+	 * @param factors the inputs used to instantiate MoG
+	 * @return in logarithmic form
+	 */
+	public double eval(EnumMap<RuleUnit, List<Double>> factors) {
+		double values = Double.NEGATIVE_INFINITY, value;
+		switch (binding) {
+		case RHSPACE: {
+			List<Double> integrals = factors.get(RuleUnit.C);
+			for (int i = 0; i < ncomponent; i++) {
+				value = weights.get(i) + integrals.get(i);
+				values = FunUtil.logAdd(values, value);
+			}
+			break;
+		}
+		case LHSPACE: {
+			List<Double> integrals = factors.get(RuleUnit.P);
+			for (int i = 0; i < ncomponent; i++) {
+				value = weights.get(i) + integrals.get(i);
+				values = FunUtil.logAdd(values, value);
+			}
+			break;
+		}
+		case LRURULE: { // idx = np * |nuc| + nuc
+			int nuc = 1, np = 1, idx;
+			boolean valid = false;
+			List<Double> pIntegrals = null, ucIntegrals = null;
+			if ((pIntegrals = factors.get(RuleUnit.P)) != null && pIntegrals.size() > 0) {
+				nuc = pIntegrals.size();
+				valid = true;
+			}
+			if ((ucIntegrals = factors.get(RuleUnit.UC)) != null && ucIntegrals.size() > 0) {
+				np = ucIntegrals.size();
+				valid = true;
+			}
+			if (valid) {
+				for (int ip = 0; ip < np; ip++) {
+					for (int iuc = 0; iuc < nuc; iuc++) {
+						idx = ip * nuc + iuc;
+						value = weights.get(idx) + pIntegrals.get(ip) + ucIntegrals.get(iuc);
+						values = FunUtil.logAdd(values, value);
+					}
+				}
+			} else {
+				//
+			}
+			break;
+		}
+		case LRBRULE: { // idx = np * |nlc| * |nrc| + nlc * |nrc| + nrc
+			int nlc = 1, nrc = 1, np = 1, idx;
+			boolean valid = false;
+			List<Double> pIntegrals = null, lcIntegrals = null, rcIntegrals = null;
+			if ((rcIntegrals = factors.get(RuleUnit.RC)) != null && rcIntegrals.size() > 0) {
+				nrc = rcIntegrals.size();
+				valid = true;
+			}
+			if ((lcIntegrals = factors.get(RuleUnit.LC)) != null && lcIntegrals.size() > 0) {
+				nlc = lcIntegrals.size();
+				valid = true;
+			}
+			if ((pIntegrals = factors.get(RuleUnit.P)) != null && pIntegrals.size() > 0) {
+				np = pIntegrals.size();
+				valid = true;
+			}
+			if (valid) {
+				for (int ip = 0; ip < np; ip++) {
+					for (int ilc = 0; ilc < nlc; ilc++) {
+						for (int irc = 0; irc < nrc; irc++) {
+							idx = ip * nlc * nrc + ilc * nrc + irc;
+							value = weights.get(idx) + pIntegrals.get(ip) + lcIntegrals.get(ilc) + rcIntegrals.get(irc);
+							values = FunUtil.logAdd(values, value);
+						}
+					}
+				}
+			} else {
+				//
+			}
+			break;
+		}
+		default: {
+			throw new RuntimeException("Not consistent with any grammar rule type. Existing type: " + binding);
+		}
+		}
+		return values;
+	}
+	
+	/**
+	 * Return a specific component of the mixture of Gaussians.
+	 * 
+	 * @param iComponent which specifies the id of the component to be queried
+	 * @param holder     in which the returned data is stored
+	 */
+	public void component(int iComponent, SimpleComponent holder) {
+		if (iComponent >= ncomponent) { // sanity check
+			throw new RuntimeException("Invalid component index. Queried: " + iComponent + ", Maximum: " + ncomponent);
+		} 
+		holder.clear();
+		holder.weight = weights.get(iComponent);
+		switch (binding) {
+		case RHSPACE: {
+			List<GaussianDistribution> gaussians = null;
+			if ((gaussians = gausses.get(RuleUnit.C)) != null) {
+				holder.gausses.put(RuleUnit.C, gaussians.get(iComponent));
+			}
+			break;
+		}
+		case LHSPACE: {
+			List<GaussianDistribution> gaussians = null;
+			if ((gaussians = gausses.get(RuleUnit.P)) != null) {
+				holder.gausses.put(RuleUnit.P, gaussians.get(iComponent));
+			}
+			break;
+		}
+		case LRURULE: { // idx = np * |nuc| + nuc
+			int nuc = 1;
+			List<GaussianDistribution> gaussians = null;
+			if ((gaussians = gausses.get(RuleUnit.UC)) != null && gaussians.size() > 0) {
+				nuc = gaussians.size();
+				holder.gausses.put(RuleUnit.UC, gaussians.get(iComponent % nuc));
+			}
+			if ((gaussians = gausses.get(RuleUnit.P)) != null && gaussians.size() > 0) {
+				holder.gausses.put(RuleUnit.P, gaussians.get(iComponent / nuc));
+			}
+			break;
+		}
+		case LRBRULE: { // idx = np * |nlc| * |nrc| + nlc * |nrc| + nrc
+			int nlc = 1, nrc = 1, ip;
+			List<GaussianDistribution> gaussians, lcGaussians, rcGaussians;
+			if ((rcGaussians = gausses.get(RuleUnit.RC)) != null && rcGaussians.size() > 0) {
+				nrc = rcGaussians.size();
+			}
+			if ((lcGaussians = gausses.get(RuleUnit.LC)) != null && lcGaussians.size() > 0) {
+				nlc = rcGaussians.size();
+			}
+			ip = iComponent / (nlc * nrc);
+			if ((gaussians = gausses.get(RuleUnit.P)) != null && gaussians.size() > 0) {
+				holder.gausses.put(RuleUnit.P, gaussians.get(ip));
+			}
+			iComponent %= (nlc * nrc);
+			if (rcGaussians != null && rcGaussians.size() > 0) {
+				holder.gausses.put(RuleUnit.RC, rcGaussians.get(iComponent % nrc));
+			}
+			if (lcGaussians != null && lcGaussians.size() > 0) {
+				holder.gausses.put(RuleUnit.LC, lcGaussians.get(iComponent / nrc));
+			}
+			break;
+		}
+		default: {
+			throw new RuntimeException("Not consistent with any grammar rule type. Existing type: " + binding);
+		}
+		}
+	}
+
+	
+	public static class SimpleView implements Serializable {
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -2293951438943599036L;
+		public double weight;
+		public GaussianDistribution gaussian;
+		
+		public SimpleView(double weight, GaussianDistribution gaussian) {
+			this.weight = weight;
+			this.gaussian = gaussian;
+		}
+
+		@Override
+		public String toString() {
+			return "VIEW [W=" + String.format( "%." + LVeGTrainer.precision + "f", weight) + ", G=" + gaussian + "]";
+		}
+		
+	}
+	
+	public static class SimpleComponent implements Serializable {
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 2562366397356025676L;
+		public double weight;
+		public EnumMap<RuleUnit, GaussianDistribution> gausses;
+		
+		public SimpleComponent() {
+			this.gausses = new EnumMap<>(RuleUnit.class);
+		}
+		
+		public SimpleComponent(double weight, EnumMap<RuleUnit, GaussianDistribution> gausses) {
+			this.weight = weight;
+			this.gausses = gausses;
+		}
+		
+		public void clear() {
+			this.weight = Double.NEGATIVE_INFINITY;
+			this.gausses.clear();
+		}
+
+		@Override
+		public String toString() {
+			return "COMP [W=" + String.format( "%." + LVeGTrainer.precision + "f", weight) + ", G=" + gausses + "]";
+		}
+	}
+	
+	protected static Comparator<SimpleView> vcomparator = new SimpleViewComparator<>();
+	protected static class SimpleViewComparator<T> implements Comparator<T>, Serializable {
 		/**
 		 * 
 		 */
 		private static final long serialVersionUID = -8813462045781155697L;
 		@Override
 		public int compare(T o1, T o2) {
-			double diff = ((Component) o1).weight - ((Component) o2).weight;
+			double diff = ((SimpleView) o1).weight - ((SimpleView) o2).weight;
 			return diff > 0 ? -1 : (diff < 0 ? 1 : 0);
 		}
 	}
-	public static class Component implements Serializable {
-		/**
-		 * 
-		 */
-		private static final long serialVersionUID = -1211997783170967017L;
-		protected short id;
-		protected double weight;
-		protected EnumMap<RuleUnit, Set<GaussianDistribution>> multivnd; // Multivariate Normal Distribution
-		
-		public Component(short id, double weight, EnumMap<RuleUnit, Set<GaussianDistribution>> multivnd) {
-			this.id = id;
-			this.weight = weight;
-			this.multivnd = multivnd;
-		}
-		
-		public GaussianDistribution squeeze(RuleUnit key) {
-			Set<GaussianDistribution> gaussians = null;
-			if (key == null) {
-				for (Entry<RuleUnit, Set<GaussianDistribution>> gaussian : multivnd.entrySet()) {
-					gaussians = gaussian.getValue();
-					break;
-				}
-			} else {
-				gaussians = multivnd.get(key);
-			}
-			if (gaussians != null) {
-				for (GaussianDistribution gd : gaussians) {
-					return gd;
-				}
-			}
-			return null;
-		}
-		
-		public EnumMap<RuleUnit, Set<GaussianDistribution>> getMultivnd() {
-			return multivnd;
-		}
-		
-		public void setWeight(double weight) {
-			this.weight = weight;
-		}
-		
-		public double getWeight() {
-			return weight;
-		}
-		
-		public void clear() {
-			id = -1;
-			weight = Double.NEGATIVE_INFINITY;
-			for (Entry<RuleUnit, Set<GaussianDistribution>> gaussian : multivnd.entrySet()) {
-				Set<GaussianDistribution> value = null;
-				if ((value = gaussian.getValue()) != null) {
-					for (GaussianDistribution gd : value) {
-						if (gd != null) { 
-							gd.clear(); 
-						}
-					}
-					value.clear();
-				}
-			}
-			multivnd.clear();
-		}
-		
-		@Override
-		public String toString() {
-			return "GM [id=" + id + ", weight=" + String.format( "%." + LVeGTrainer.precision + "f", weight) + ", multivnd=" + multivnd + "]";
-		}
-	}
-	
 }

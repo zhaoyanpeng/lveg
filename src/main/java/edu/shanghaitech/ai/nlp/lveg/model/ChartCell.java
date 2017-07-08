@@ -662,6 +662,8 @@ public class ChartCell {
 		public String toString(boolean simple, int nfirst, boolean quantity, Numberer numberer) {
 			if (simple) {
 				String name;
+				simple = false;
+				quantity = false;
 				StringBuffer sb = new StringBuffer();
 				if (totals != null) {
 					sb.append("Cell [status=" + status + ", size=" + totals.size());

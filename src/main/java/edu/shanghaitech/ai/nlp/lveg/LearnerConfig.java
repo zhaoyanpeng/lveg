@@ -7,15 +7,12 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Random;
 import java.util.Set;
-
-import org.apache.commons.pool2.impl.GenericKeyedObjectPoolConfig;
 
 import edu.berkeley.nlp.PCFGLA.Binarization;
 import edu.berkeley.nlp.PCFGLA.Corpus;
@@ -25,19 +22,9 @@ import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.data.StateTreeList;
 import edu.shanghaitech.ai.nlp.data.LVeGCorpus;
 import edu.shanghaitech.ai.nlp.data.ObjectFileManager.CorpusFile;
-import edu.shanghaitech.ai.nlp.lveg.impl.BinaryGrammarRule;
-import edu.shanghaitech.ai.nlp.lveg.impl.GaussFactory;
-import edu.shanghaitech.ai.nlp.lveg.impl.MoGFactory;
 import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGLexicon;
-import edu.shanghaitech.ai.nlp.lveg.impl.UnaryGrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
-import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture.Component;
-import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
-import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
-import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
-import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleType;
-import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleUnit;
 import edu.shanghaitech.ai.nlp.optimization.Optimizer.OptChoice;
 import edu.shanghaitech.ai.nlp.optimization.ParallelOptimizer.ParallelMode;
 import edu.shanghaitech.ai.nlp.syntax.State;
@@ -451,21 +438,6 @@ public class LearnerConfig extends Recorder {
 		iomask = opts.iomask;
 		squeezeexp = opts.sexp;
 		Params.config(opts);
-		
-		GenericKeyedObjectPoolConfig config = new GenericKeyedObjectPoolConfig();
-		config.setMaxTotalPerKey(Integer.MAX_VALUE);
-		config.setMaxTotal(Integer.MAX_VALUE);
-		
-		config.setBlockWhenExhausted(true); // by default
-		config.setMaxWaitMillis(250);
-//		config.setTestOnBorrow(true); // by default
-//		config.setTestOnCreate(true);
-//		config.setTestOnReturn(true);
-		
-		MoGFactory mfactory = new MoGFactory(opts.ncomponent, opts.maxmw, opts.nwratio, random);
-		GaussFactory gfactory = new GaussFactory(opts.dim, opts.maxmu, opts.maxvar, opts.nmratio, opts.nvratio, random);
-		mogPool = new ObjectPool<>(mfactory, config);
-		gaussPool = new ObjectPool<>(gfactory, config);
 	}
 	
 	public static  Map<String, StateTreeList> loadData(Numberer wrapper, Options opts) {
@@ -659,7 +631,7 @@ public class LearnerConfig extends Recorder {
 		return filterList;
 	}
 	
-	
+/*	
 	protected static void resetRuleWeight(LVeGGrammar grammar, LVeGLexicon lexicon, Numberer numberer, double factor, Options opts) {
 		int ntag = numberer.size(), nrule, count, ncomp;
 		List<GrammarRule> gUruleWithP, gBruleWithP, lUruleWithP;
@@ -667,7 +639,7 @@ public class LearnerConfig extends Recorder {
 		int a = 0, b = 0, c = 0, d = 0, e = 0;
 		GaussianMixture ruleW;
 		boolean resetc;
-		/*
+		
 		// probabilities of lexicon rules
 		// since LHS tags of lexicon rules and CNF rules do not overlap
 		// we do not need to specifically initialize the probabilities of lexicon rules
@@ -685,7 +657,7 @@ public class LearnerConfig extends Recorder {
 			}
 			logger.debug(i + "\t: " + count + "\n");
 		}
-		*/
+		
 		// for nonterminal rules
 		for (int i = 0; i < ntag; i++) {
 			count = 0;
@@ -752,8 +724,8 @@ public class LearnerConfig extends Recorder {
 			resetRuleWeightParams(grammar, lexicon, numberer, opts);
 		}
 	}
-	
-	
+*/	
+/*	
 	protected static void resetRuleWeightParams(LVeGGrammar grammar, LVeGLexicon lexicon, Numberer numberer, Options opts) {
 		int ntag = numberer.size(), nrule;
 		List<GrammarRule> gUruleWithP, gBruleWithP, lUruleWithP;
@@ -800,8 +772,8 @@ public class LearnerConfig extends Recorder {
 			}
 		}
 	}
-	
-	
+*/	
+/*	
 	private static void resetRuleWeightParams(GrammarRule rule, List[][] tmus) {
 		GaussianMixture ruleW = rule.weight;
 		int ncomp = ruleW.ncomponent();
@@ -884,5 +856,5 @@ public class LearnerConfig extends Recorder {
 			throw new RuntimeException("Not consistent with any grammar rule type. Type: " + type);
 		}
 	}	
-	
+*/	
 }

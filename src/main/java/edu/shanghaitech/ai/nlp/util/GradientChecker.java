@@ -11,6 +11,7 @@ import edu.shanghaitech.ai.nlp.lveg.impl.LVeGParser;
 import edu.shanghaitech.ai.nlp.lveg.impl.Valuator;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture.SimpleComponent;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleType;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleUnit;
@@ -102,22 +103,23 @@ public class GradientChecker extends Recorder {
 		if (gradients != null) {
 			Grads grads = (Grads) gradients;
 			sb.append("\n---\nWgrads: ");
+			
 			List<Double> wgrads = new ArrayList<>(grads.wgrads.size());
 			for (Double dw : grads.wgrads) {
 				wgrads.add(dw / maxsample);
 			}
-			List<EnumMap<RuleUnit, List<Double>>> ggrads = new ArrayList<>(grads.ggrads.size());
-			for (Map<RuleUnit, List<Double>> comp : grads.ggrads) {
-				EnumMap<RuleUnit, List<Double>> gauss = new EnumMap<>(RuleUnit.class);
-				for (Entry<RuleUnit, List<Double>> gaussian : comp.entrySet()) {
-					List<Double> params = new ArrayList<>(gaussian.getValue().size());
-					for (Double dg : gaussian.getValue()) {
-						params.add(dg / maxsample);
-					}
-					gauss.put(gaussian.getKey(), params);
+			
+			EnumMap<RuleUnit, List<List<Double>>> ggrads = new EnumMap<>(RuleUnit.class);
+			for (Entry<RuleUnit, List<List<Double>>> unit : grads.ggrads.entrySet()) {
+				List<List<Double>> ugrads = new ArrayList<>();
+				for (List<Double> cgrads : unit.getValue()) {
+					List<Double> copy = new ArrayList<>(cgrads.size());
+					copy.addAll(cgrads);
+					ugrads.add(copy);
 				}
-				ggrads.add(gauss);
+				ggrads.put(unit.getKey(), ugrads);
 			}
+			
 			logger.trace("\n---\nWgrads: " + wgrads + "\nGgrads: " + ggrads + "\n---\n");
 		}
 	}
@@ -132,7 +134,14 @@ public class GradientChecker extends Recorder {
 		double llInit = ltInit - lsInit;
 		
 		// w.r.t. mixing weight
-		GaussianDistribution gd = gm.getComponent((short) 0).squeeze(null);
+		SimpleComponent comp = new SimpleComponent();
+		gm.component(0, comp);
+		
+		GaussianDistribution gd = null;
+		for (Entry<RuleUnit, GaussianDistribution> unit : comp.gausses.entrySet()) {
+			gd = unit.getValue();
+			break;
+		}
 		List<Double> mus = gd.getMus();
 		
 		double src = mus.get(0);
@@ -154,12 +163,12 @@ public class GradientChecker extends Recorder {
 		double ltAfter = lvegParser.doInsideOutsideWithTree(tree);
 		double lsAfter = lvegParser.doInsideOutside(tree);
 		double llAfter = ltAfter - lsAfter;
-		/*
+/*		
 		logger.trace(
 				"\nltI: " + ltInit + "\tlsI: " + lsInit + "\tllI: " + llInit + "\n" +
 				"ltB: " + ltBefore + "\tlsB: " + lsBefore + "\tllB: " + llBefore + "\n" +
 				"ltA: " + ltAfter + "\tlsA: " + lsAfter + "\tllA: " + llAfter);
-		*/
+*/		
 		double t2 = mus.get(0);
 		
 		// restore
@@ -183,7 +192,14 @@ public class GradientChecker extends Recorder {
 		double llInit = ltInit - lsInit;
 		
 		// w.r.t. mixing weight
-		GaussianDistribution gd = gm.getComponent((short) 0).squeeze(null);
+		SimpleComponent comp = new SimpleComponent();
+		gm.component(0, comp);
+		
+		GaussianDistribution gd = null;
+		for (Entry<RuleUnit, GaussianDistribution> unit : comp.gausses.entrySet()) {
+			gd = unit.getValue();
+			break;
+		}
 		List<Double> vars = gd.getVars();
 		
 		double src = vars.get(0);
@@ -205,12 +221,12 @@ public class GradientChecker extends Recorder {
 		double ltAfter = lvegParser.doInsideOutsideWithTree(tree);
 		double lsAfter = lvegParser.doInsideOutside(tree);
 		double llAfter = ltAfter - lsAfter;
-		/*
+/*		
 		logger.trace(
 				"\nltI: " + ltInit + "\tlsI: " + lsInit + "\tllI: " + llInit + "\n" +
 				"ltB: " + ltBefore + "\tlsB: " + lsBefore + "\tllB: " + llBefore + "\n" +
 				"ltA: " + ltAfter + "\tlsA: " + lsAfter + "\tllA: " + llAfter);
-		*/
+*/		
 		double t2 = vars.get(0);
 		
 		// restore
@@ -223,4 +239,5 @@ public class GradientChecker extends Recorder {
 				"B : " + src + "\tA : " + des + "\t(B - A)  =" + (des - src) + "\n" +
 				"t1: " + t1 + "\tt2: " + t2 + "\t(t1 - t2)=" + (t1 - t2) + "\n-----\n");
 	}
+
 }
