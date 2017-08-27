@@ -11,7 +11,7 @@
 -nbatchSave, 10,
 -saveGrammar, true,
 
--lr, 0.01,
+-lr, 1,
 -reg, false,
 -clip, false,
 -absmax, 5.0,
@@ -57,7 +57,7 @@
 -maxvar, 5,
 -nvratio, 0.8,
 -ncomponent, 2,
--dim, 2,
+-dim, 1,
 -resetw, false,
 -resetc, false,
 -mwfactor, 1.0,
@@ -88,7 +88,7 @@
 -ef1ontrain, false,
 -ef1imwrite, false,
 
--runtag, toy_0601_sample3_test1_1_1_bs1,
+-runtag, toy_0827_complex_test1_2_1_bs1,
 -logroot, log/,
 -logtype, 0,
 -verbose, false,

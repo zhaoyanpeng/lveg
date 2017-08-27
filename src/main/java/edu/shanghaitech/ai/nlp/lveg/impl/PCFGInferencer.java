@@ -206,14 +206,15 @@ public class PCFGInferencer extends Inferencer {
 	
 	
 	public static void createPosteriorMask(int nword, Chart chart, double scoreS, double threshold) {
-		int idx;
-		boolean retainall;
+		int idx, cnt;
 		Set<Short> iset, oset;
+		boolean retainall, stay;
 		double oscore, iscore, posterior;
 		
 		for (int ilayer = nword - 1; ilayer >= 0; ilayer--) {
 			for (int left = 0; left < nword - ilayer; left++) {
 				idx = Chart.idx(left, nword - ilayer);
+				cnt = 0;
 				retainall = idx == 0;
 				iset = chart.keySetMask(idx, true);
 				oset = chart.keySetMask(idx, false);
@@ -224,8 +225,11 @@ public class PCFGInferencer extends Inferencer {
 						continue;
 					}
 					posterior = iscore + oscore - scoreS; // in logarithmic form
-					if (retainall || posterior > threshold) {
+					stay = (retainall && (ikey == ROOT || cnt < 6));
+					if (stay || posterior > threshold) {
+//					if (retainall || posterior > threshold) {
 						chart.addPosteriorMask(ikey, idx);
+						cnt++;
 					}		
 				}
 			}

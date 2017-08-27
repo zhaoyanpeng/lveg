@@ -62,11 +62,11 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 //			 rndn = /*0.5*/ 0;
 			mus.add(rndn);
 		} // better initialize mu and var in the different loops
-		for (int i = 0; i < dim; i++) {
-			double rndn = (defRnd.nextDouble() - defNegVRatio) * defMaxVar;
-			 rndn = /*0.5*/ 0 /*Math.log(1e-12)*/;
-			vars.add(rndn);
-		}	
+//		for (int i = 0; i < dim; i++) {
+		double rndn = (defRnd.nextDouble() - defNegVRatio) * defMaxVar;
+		rndn = /*0.5*/ 0 /*Math.log(1e-12)*/;
+		vars.add(rndn);
+//		}	
 	}
 	
 	@Override
@@ -81,12 +81,12 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 	protected double eval(List<Double> sample, boolean normal) { 
 		if (sample != null && sample.size() == dim) {
 			// sample = normalize(sample);
-			double astd, norm, exps = 0.0, sinv = 0.0;
+			double astd, norm, exps = 0.0, sinv = 0.0, var = vars.get(0);
 			for (int i = 0; i < dim; i++) {
-				astd = Math.exp(vars.get(i));
+				astd = Math.exp(var);
 				norm = normal ? sample.get(i) : (sample.get(i) - mus.get(i)) / astd;
 				exps -= Math.pow(norm, 2) / 2;
-				sinv -= vars.get(i);
+				sinv -= var;
 			}
 			double value = -(dim / 2.0) * Math.log(2 * Math.PI) + sinv + exps; // (dim / 2) - (dim / 2.0)
 			return value;
@@ -110,12 +110,12 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 	public void derivative(boolean cumulative, List<Double> grads, List<Double> gradst, List<Double> gradss, double scoreT, double scoreS) {
 		if (!cumulative) {
 			grads.clear();
-			for (int i = 0; i < dim * 2; i++) {
+			for (int i = 0; i < dim * 2 + 1; i++) {
 				grads.add(0.0);
 			}
 		}
 		double tmps, tmpt, grad, ss, st;
-		for (int i = 0; i < dim * 2; i++) {
+		for (int i = 0; i < dim * 2 + 1; i++) {
 			tmpt = gradst == null ? 0 : gradst.get(i);
 			tmps = gradss == null ? 0 : gradss.get(i);
 //			grad = tmps / scoreS - tmpt / scoreT;
@@ -138,12 +138,13 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 	public void derivative(boolean cumulative, double factor, List<Double> grads, List<List<Double>> caches) {
 		if (!cumulative) {
 			grads.clear();
-			for (int i = 0; i < dim * 2; i++) {
+			for (int i = 0; i < dim * 2 + 1; i++) {
 				grads.add(0.0);
 			}
 		}
 		int ncomp = caches.get(0).size() - 1;
-		double mgrad, vgrad, vtmp0, vtmp1, mu, var;
+		double mgrad, vgrad, vtmp0, vtmp1, mu;
+		double var = Math.exp(vars.get(0) * 2), sum = 0;
 		double mall = 0, vall = 0, munit = 0, vunit = 0;
 		double aconst = Math.log(2 * Math.PI) * (-dim / 2.0);
 		List<Double> weights = caches.get(caches.size() - 1);
@@ -151,7 +152,6 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 			mall = 0;
 			vall = 0;
 			mu = mus.get(i);
-			var = Math.exp(vars.get(i) * 2);
 			for (int icomp = 0; icomp < ncomp; icomp++) {
 				vtmp0 = weights.get(icomp);
 				vtmp1 = weights.get(icomp);
@@ -177,24 +177,27 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 				mall += mgrad;
 				vall += vgrad;
 			}
+			sum  += vall;
 			mgrad = factor * mall;
 			vgrad = factor * vall;
 			grads.set(i * 2, grads.get(i * 2) + mgrad);
 			grads.set(i * 2 + 1, grads.get(i * 2 + 1) + vgrad);
 		}
+		sum *= factor; // gradients of var of the spherical Gaussian
+		grads.set(dim * 2, grads.get(dim * 2) + sum);
 	}
-	
+
 	
 	@Override
 	public double integral(GaussianDistribution gd, List<List<Double>> cache) {
 		if (gd != null && gd.getDim() == dim) {
 			double value = 0, vtmp = 0, epsilon = 0;
+			double var = vars.get(0), var1 = gd.getVars().get(0);
 			List<Double> order0, order1, order2;
-			List<Double> vars1 = gd.getVars();
 			List<Double> mus1 = gd.getMus();
 			for (int i = 0; i < dim; i++) {
 				double mu0 = mus.get(i), mu1 = mus1.get(i);
-				double vr0 = Math.exp(vars.get(i) * 2), vr1 = Math.exp(vars1.get(i) * 2);
+				double vr0 = Math.exp(var * 2), vr1 = Math.exp(var1 * 2);
 				vtmp = vr0 + vr1 + epsilon;
 				// int NN dx
 				order0 = cache.get(i);
@@ -208,7 +211,7 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 				// int xxNN dx
 				order2 = cache.get(dim * 2 + i);
 				double part20 = 2 * Math.log(Math.abs(shared1));
-				double part21 = 2 * (vars.get(i) + vars1.get(i)) - Math.log(vtmp);
+				double part21 = 2 * (var + var1) - Math.log(vtmp);
 				realval = FunUtil.logAdd(part20, part21) + shared0;
 				order2.add(realval); // in logarithmic form
 				// complete integral
@@ -226,10 +229,10 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 	public double mulAndMarginalize(GaussianDistribution gd) { 
 		if (gd != null && gd.getDim() == dim) {
 			double value = 0, vtmp = 0, epsilon = /*1e-8*/0;
-			List<Double> vars1 = gd.getVars();
+			double var = vars.get(0), var1 = gd.getVars().get(0);
 			List<Double> mus1 = gd.getMus();
 			for (int i = 0; i < dim; i++) {
-				vtmp = 2 * (Math.exp(vars.get(i) * 2) + Math.exp(vars1.get(i) * 2)) + epsilon;
+				vtmp = 2 * (Math.exp(var * 2) + Math.exp(var1 * 2)) + epsilon;
 				value += -0.5 * Math.log(vtmp * Math.PI) - Math.pow(mus.get(i) - mus1.get(i), 2) / vtmp;
 			}
 			return value;

@@ -85,8 +85,8 @@ public class LVeGToy extends LearnerConfig {
 		Map<String, StateTreeList> trees = 
 				/*makeAugmentedData(wrapper, opts);*/
 				/*loadPPTrees(wrapper, opts);*/
-				makeData(wrapper, opts); 
-				/*makeComplexData(wrapper, opts);*/
+				/*makeData(wrapper, opts); */
+				makeComplexData(wrapper, opts);
 		
 		// training
 		long startTime = System.currentTimeMillis();

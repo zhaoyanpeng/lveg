@@ -716,18 +716,18 @@ public class LearnerConfig extends Recorder {
 				
 				if (resetc && rulecnt > opts.pivota) {
 					RuleType type = rule.getType();
-					short increment = 0;
+					int increment = 0;
 					
 					if (rulecnt < opts.pivotb) {
 						ncomp += 1;
 						b++;
-						increment = 1;
+						increment = type == RuleType.LHSPACE ? 2 : 3;
 					} else {
 						ncomp += 2;
 						c++;
-						increment = 2;
+						increment = type == RuleType.LHSPACE ? 2 : 3;
 					}
-					rule.addWeightComponent(type, increment, (short) -1);
+					rule.addWeightComponent(type, (short) increment, (short) -1);
 					
 					ruleW = rule.getWeight();
 					ruleW.setBias(rulecnt);
@@ -736,7 +736,7 @@ public class LearnerConfig extends Recorder {
 				ruleW.setProb(logprob);
 				
 				ncomp = ruleW.ncomponent();
-				prob = prob * factor / ncomp;
+				 prob = prob * factor /*/ ncomp*/;
 				logprob = Math.log(prob);
 				for (int icomp = 0; icomp < ncomp; icomp++) {
 					ruleW.setWeight(icomp, logprob);
