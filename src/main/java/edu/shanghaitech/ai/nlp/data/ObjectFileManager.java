@@ -9,6 +9,7 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Set;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -119,6 +120,23 @@ public class ObjectFileManager {
 		
 		public LVeGLexicon getLexicon() {
 			return lexicon;
+		}
+	}
+	
+	
+	public static class Constraint extends ObjectFile {
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -235658934972194254L;
+		private Set<String>[][][] constraints;
+		
+		public Constraint(Set<String>[][][] constraints) {
+			this.constraints = constraints;
+		}
+		
+		public Set<String>[][][] getConstraints() {
+			return constraints;
 		}
 	}
 }

@@ -144,6 +144,8 @@ public class LearnerConfig extends Recorder {
 		public boolean saveCorpus = false;
 		@Option(name = "-loadCorpus", usage = "load corpus from the object file(true) or not (false) (default: false)")
 		public boolean loadCorpus = false;
+		@Option(name = "-consfile", usage = "constraints for parsing (default: null)")
+		public String consfile = null;
 		/* corpus section ends */
 		
 		/* optimization-parameter section begins*/

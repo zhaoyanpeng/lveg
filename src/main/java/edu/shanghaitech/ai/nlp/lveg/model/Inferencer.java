@@ -133,6 +133,18 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	}
 	
 	
+	private static void nonempty(Chart chart, boolean inside, int idx, short level, List<GrammarRule> rules) {
+		if (chart.keySet(idx, inside, level) == null) {
+			if (inside) {
+				for (GrammarRule rule : rules) {
+					chart.addInsideScore(rule.lhs, idx, rule.getWeight().copy(true), level);
+					chart.addPosteriorMask(rule.lhs, idx);
+				}
+			}
+		}
+	}
+	
+	
 	/**
 	 * Compute the inside score given the sentence and grammar rules.
 	 * 
@@ -157,6 +169,8 @@ public abstract class Inferencer extends Recorder implements Serializable {
 				
 				chart.addInsideScore(rule.lhs, iCell, rule.getWeight().copy(true), (short) 0);
 			}
+			
+			nonempty(chart, true, iCell, (short) 0, rules); // ensure of a parse
 			
 			if (prune) { chart.pruneInsideScore(iCell, (short) 0); }
 			insideScoreForUnaryRule(chart, iCell, prune, usemask, iomask);
