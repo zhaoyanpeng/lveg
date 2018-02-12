@@ -4,9 +4,11 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -16,7 +18,9 @@ import edu.shanghaitech.ai.nlp.util.FunUtil;
 import edu.shanghaitech.ai.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.util.OptionParser;
 import edu.shanghaitech.ai.nlp.util.ThreadPool;
+import edu.shanghaitech.ai.nlp.data.ObjectFileManager;
 import edu.shanghaitech.ai.nlp.data.StateTreeList;
+import edu.shanghaitech.ai.nlp.data.ObjectFileManager.Constraint;
 import edu.shanghaitech.ai.nlp.data.ObjectFileManager.GrammarFile;
 import edu.shanghaitech.ai.nlp.lveg.impl.LVeGParser;
 import edu.shanghaitech.ai.nlp.lveg.impl.MaxRuleParser;
@@ -37,7 +41,7 @@ import edu.shanghaitech.ai.nlp.syntax.State;
  * @author Yanpeng Zhao
  *
  */
-public class LVeGTrainer extends LearnerConfig {
+public class LVeGTrainerImp extends LearnerConfig {
 	/**
 	 * 
 	 */
@@ -181,23 +185,23 @@ public class LVeGTrainer extends LearnerConfig {
 			logger.trace("\n--->Initializing optimizer is over...\n");
 		}
 		
-//		logger.trace(grammar);
-//		logger.trace(lexicon);
+		logger.trace(grammar);
+		logger.trace(lexicon);
 //		System.exit(0);
+		
 		System.out.println("--------" + opts.runtag);
 		
 		lexicon.labelTrees(trainTrees); // FIXME no errors, just alert you to pay attention to it 
 		lexicon.labelTrees(testTrees); // save the search time cost by finding a specific tag-word
 		lexicon.labelTrees(devTrees); // pair in in Lexicon.score(...)
 		
-		lvegParser = new LVeGParser<Tree<State>, List<Double>>(grammar, lexicon, opts.maxslen, 
-				opts.ntcyker, opts.pcyker, opts.iosprune, opts.usemasks, null);
+
 		mrParser = new MaxRuleParser<Tree<State>, Tree<String>>(grammar, lexicon, opts.maxslen, 
 				opts.ntcyker, opts.pcyker, opts.ef1prune, false, null);
 		valuator = new Valuator<Tree<State>, Double>(grammar, lexicon, opts.maxslen, 
 				opts.ntcyker, opts.pcyker, opts.ellprune, false);
 		mvaluator = new ThreadPool(valuator, opts.nteval);
-		trainer = new ThreadPool(lvegParser, opts.ntbatch);
+		
 		double ll = Double.NEGATIVE_INFINITY;
 		
 		// initial likelihood of the training set
@@ -234,6 +238,11 @@ public class LVeGTrainer extends LearnerConfig {
 		logger.info("\n---SGD CONFIG---\n[parallel: batch-" + opts.pbatch + ", grad-" + 
 				opts.pgrad + ", eval-" + opts.peval + "] " + Params.toString(false) + "\n");
 		
+		
+		
+		
+		
+		/*
 		ftrainTrees = new ArrayList<>(trainTrees.size());
 		for (Tree<State> tree : trainTrees) {
 			if (opts.eonlylen > 0) {
@@ -241,10 +250,53 @@ public class LVeGTrainer extends LearnerConfig {
 			}
 			ftrainTrees.add(tree);
 		}
+		
 		if (opts.efraction > 0) {
 			ftrainTrees = sampleTrees(ftrainTrees, opts);
 			logger.debug(", " + ftrainTrees.size() + "\n\n");
 		}
+		*/
+		
+		ftrainTrees = new ArrayList<Tree<State>>(trainTrees.size());
+		List<Integer> idxes = new ArrayList<Integer>();
+		int idx = 0, cnt = 0;
+		for (Tree<State> tree : trainTrees) {
+			if (tree.getYield().size() <= opts.eonlylen) {
+				ftrainTrees.add(tree);
+				idxes.add(idx);
+			}
+			idx += 1;
+		}
+		
+		Set<String>[][][] allmasks = null, masks = null;
+		if (opts.consfile != null && !opts.consfile.equals("")) { // not safe, since load() may returns null
+			Object cons = ObjectFileManager.ObjectFile.load(opts.datadir + opts.consfile);
+			if (cons != null) {
+				allmasks = ((Constraint) cons).getConstraints(); 
+			}
+		}
+		
+		if (allmasks != null) {
+			masks = new HashSet[idxes.size()][][];
+			for (int i = 0; i < idxes.size(); i++) {
+				masks[i] = allmasks[idxes.get(i)];
+			}
+			
+			idx = 0;
+			for (Tree<State> tree : ftrainTrees) {
+				tree.getLabel().setName(String.valueOf(idx));
+				idx += 1;
+			}
+			
+			logger.trace("--only train on " + masks.length + " sentences.\n");
+		}
+		
+		lvegParser = new LVeGParser<Tree<State>, List<Double>>(grammar, lexicon, opts.maxslen, 
+				opts.ntcyker, opts.pcyker, opts.iosprune, opts.usemasks, masks);
+		trainer = new ThreadPool(lvegParser, opts.ntbatch);
+		
+		
+		
 		sorter = new PriorityQueue<>(opts.bsize + 5, wcomparator);
 		
 		if (opts.pbatch) {

@@ -46,7 +46,7 @@ public class GradientChecker extends Recorder {
 		double src = gm.getWeight(0);
 		
 		double ltInit = lvegParser.doInsideOutsideWithTree(tree);
-		double lsInit = lvegParser.doInsideOutside(tree);
+		double lsInit = lvegParser.doInsideOutside(tree, -1);
 		double llInit = ltInit - lsInit;
 		
 		// w.r.t. mixing weight
@@ -55,7 +55,7 @@ public class GradientChecker extends Recorder {
 		
 //		double llBefore = valuator.probability(tree);
 		double ltBefore = lvegParser.doInsideOutsideWithTree(tree);
-		double lsBefore = lvegParser.doInsideOutside(tree);
+		double lsBefore = lvegParser.doInsideOutside(tree, -1);
 		double llBefore = ltBefore - lsBefore;
 		
 		
@@ -66,7 +66,7 @@ public class GradientChecker extends Recorder {
 		
 //		double llAfter = valuator.probability(tree);
 		double ltAfter = lvegParser.doInsideOutsideWithTree(tree);
-		double lsAfter = lvegParser.doInsideOutside(tree);
+		double lsAfter = lvegParser.doInsideOutside(tree, -1);
 		double llAfter = ltAfter - lsAfter;
 		/*
 		logger.trace(
@@ -128,7 +128,7 @@ public class GradientChecker extends Recorder {
 		GaussianMixture gm = entry.getValue().getWeight();
 		
 		double ltInit = lvegParser.doInsideOutsideWithTree(tree);
-		double lsInit = lvegParser.doInsideOutside(tree);
+		double lsInit = lvegParser.doInsideOutside(tree, -1);
 		double llInit = ltInit - lsInit;
 		
 		// w.r.t. mixing weight
@@ -141,7 +141,7 @@ public class GradientChecker extends Recorder {
 		
 //		double llBefore = valuator.probability(tree);
 		double ltBefore = lvegParser.doInsideOutsideWithTree(tree);
-		double lsBefore = lvegParser.doInsideOutside(tree);
+		double lsBefore = lvegParser.doInsideOutside(tree, -1);
 		double llBefore = ltBefore - lsBefore;
 		
 		
@@ -152,7 +152,7 @@ public class GradientChecker extends Recorder {
 		
 //		double llAfter = valuator.probability(tree);
 		double ltAfter = lvegParser.doInsideOutsideWithTree(tree);
-		double lsAfter = lvegParser.doInsideOutside(tree);
+		double lsAfter = lvegParser.doInsideOutside(tree, -1);
 		double llAfter = ltAfter - lsAfter;
 		/*
 		logger.trace(
@@ -179,7 +179,7 @@ public class GradientChecker extends Recorder {
 		GaussianMixture gm = entry.getValue().getWeight();
 		
 		double ltInit = lvegParser.doInsideOutsideWithTree(tree);
-		double lsInit = lvegParser.doInsideOutside(tree);
+		double lsInit = lvegParser.doInsideOutside(tree, -1);
 		double llInit = ltInit - lsInit;
 		
 		// w.r.t. mixing weight
@@ -192,7 +192,7 @@ public class GradientChecker extends Recorder {
 		
 //		double llBefore = valuator.probability(tree);
 		double ltBefore = lvegParser.doInsideOutsideWithTree(tree);
-		double lsBefore = lvegParser.doInsideOutside(tree);
+		double lsBefore = lvegParser.doInsideOutside(tree, -1);
 		double llBefore = ltBefore - lsBefore;
 		
 		
@@ -203,7 +203,7 @@ public class GradientChecker extends Recorder {
 		
 //		double llAfter = valuator.probability(tree);
 		double ltAfter = lvegParser.doInsideOutsideWithTree(tree);
-		double lsAfter = lvegParser.doInsideOutside(tree);
+		double lsAfter = lvegParser.doInsideOutside(tree, -1);
 		double llAfter = ltAfter - lsAfter;
 		/*
 		logger.trace(

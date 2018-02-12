@@ -723,11 +723,11 @@ public class LearnerConfig extends Recorder {
 					if (rulecnt < opts.pivotb) {
 						ncomp += 1;
 						b++;
-						increment = type == RuleType.LHSPACE ? 2 : 3;
+						increment = type == RuleType.LHSPACE ? 1 : 3;
 					} else {
 						ncomp += 2;
 						c++;
-						increment = type == RuleType.LHSPACE ? 2 : 3;
+						increment = type == RuleType.LHSPACE ? 1 : 3;
 					}
 					rule.addWeightComponent(type, (short) increment, (short) -1);
 					
