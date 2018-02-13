@@ -736,9 +736,9 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 			List<GaussianDistribution> gaussians = unit.getValue();
 			List<List<Double>> gunit = new ArrayList<>(gaussians.size());
 			for (GaussianDistribution gd : gaussians) {
-				List<Double> grad = new ArrayList<>(gd.dim * 2);
+				List<Double> grad = new ArrayList<>(gd.dim * 2 + 1);
 				if (pad) {
-					for (int i = 0; i < gd.dim * 2; i++) {
+					for (int i = 0; i < gd.dim * 2 + 1; i++) {
 						grad.add(0.0); // preallocate memo
 					}
 				}

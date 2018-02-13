@@ -98,6 +98,7 @@ public class LVeGTester extends LearnerConfig {
 		logger.trace(lexicon);
 		System.exit(0);
 		*/
+		System.out.println("--------" + opts.runtag);
 		
 		lexicon.labelTrees(trainTrees); // FIXME no errors, just alert you to pay attention to it 
 		lexicon.labelTrees(testTrees); // save the search time cost by finding a specific tag-word

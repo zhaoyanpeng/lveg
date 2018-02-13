@@ -23,8 +23,13 @@ import edu.shanghaitech.ai.nlp.data.StateTreeList;
 import edu.shanghaitech.ai.nlp.data.LVeGCorpus;
 import edu.shanghaitech.ai.nlp.data.ObjectFileManager.CorpusFile;
 import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGLexicon;
+import edu.shanghaitech.ai.nlp.lveg.impl.UnaryGrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleType;
+import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
+import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
 import edu.shanghaitech.ai.nlp.optimization.Optimizer.OptChoice;
 import edu.shanghaitech.ai.nlp.optimization.ParallelOptimizer.ParallelMode;
 import edu.shanghaitech.ai.nlp.syntax.State;
@@ -631,7 +636,7 @@ public class LearnerConfig extends Recorder {
 		return filterList;
 	}
 	
-/*	
+	
 	protected static void resetRuleWeight(LVeGGrammar grammar, LVeGLexicon lexicon, Numberer numberer, double factor, Options opts) {
 		int ntag = numberer.size(), nrule, count, ncomp;
 		List<GrammarRule> gUruleWithP, gBruleWithP, lUruleWithP;
@@ -639,7 +644,7 @@ public class LearnerConfig extends Recorder {
 		int a = 0, b = 0, c = 0, d = 0, e = 0;
 		GaussianMixture ruleW;
 		boolean resetc;
-		
+		/*
 		// probabilities of lexicon rules
 		// since LHS tags of lexicon rules and CNF rules do not overlap
 		// we do not need to specifically initialize the probabilities of lexicon rules
@@ -657,7 +662,7 @@ public class LearnerConfig extends Recorder {
 			}
 			logger.debug(i + "\t: " + count + "\n");
 		}
-		
+		*/
 		// for nonterminal rules
 		for (int i = 0; i < ntag; i++) {
 			count = 0;
@@ -688,18 +693,18 @@ public class LearnerConfig extends Recorder {
 				
 				if (resetc && rulecnt > opts.pivota) {
 					RuleType type = rule.getType();
-					short increment = 0;
+					int increment = 0;
 					
 					if (rulecnt < opts.pivotb) {
 						ncomp += 1;
 						b++;
-						increment = 1;
+						increment = type == RuleType.LHSPACE ? 2 : 3;
 					} else {
 						ncomp += 2;
 						c++;
-						increment = 2;
+						increment = type == RuleType.LHSPACE ? 2 : 3;
 					}
-					rule.addWeightComponent(type, increment, (short) -1);
+//					rule.addWeightComponent(type, increment, (short) -1);
 					
 					ruleW = rule.getWeight();
 					ruleW.setBias(rulecnt);
@@ -708,7 +713,7 @@ public class LearnerConfig extends Recorder {
 				ruleW.setProb(logprob);
 				
 				ncomp = ruleW.ncomponent();
-				prob = prob * factor / ncomp;
+				prob = prob * factor /*/ ncomp*/;
 				logprob = Math.log(prob);
 				for (int icomp = 0; icomp < ncomp; icomp++) {
 					ruleW.setWeight(icomp, logprob);
@@ -721,10 +726,10 @@ public class LearnerConfig extends Recorder {
 				", # of larger than " + opts.pivota + " is " + e + "\n");
 		
 		if (opts.resetp) {
-			resetRuleWeightParams(grammar, lexicon, numberer, opts);
+//			resetRuleWeightParams(grammar, lexicon, numberer, opts);
 		}
 	}
-*/	
+
 /*	
 	protected static void resetRuleWeightParams(LVeGGrammar grammar, LVeGLexicon lexicon, Numberer numberer, Options opts) {
 		int ntag = numberer.size(), nrule;
@@ -772,7 +777,7 @@ public class LearnerConfig extends Recorder {
 			}
 		}
 	}
-*/	
+*/
 /*	
 	private static void resetRuleWeightParams(GrammarRule rule, List[][] tmus) {
 		GaussianMixture ruleW = rule.weight;
@@ -855,6 +860,6 @@ public class LearnerConfig extends Recorder {
 		default:
 			throw new RuntimeException("Not consistent with any grammar rule type. Type: " + type);
 		}
-	}	
+	}
 */	
 }

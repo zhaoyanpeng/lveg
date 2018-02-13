@@ -1,4 +1,4 @@
--datadir, E:/SourceCode/ParsersData/wsj/,
+-datadir, F:/sourcecode/ParsersData/wsj/,
 -train, wsj_s2-21_tree,
 -test, wsj_s23_tree,
 -dev, wsj_s22_tree,
@@ -57,7 +57,7 @@
 -maxvar, 5,
 -nvratio, 0.8,
 -ncomponent, 3,
--dim, 1,
+-dim, 2,
 -resetw, false,
 -resetc, false,
 -mwfactor, 1.0,
@@ -88,7 +88,7 @@
 -ef1ontrain, false,
 -ef1imwrite, false,
 
--runtag, toy_0707_complex3_test2_3_1_bs1_randmu,
+-runtag, toy_0213_complex_test0_3_2_bs1_sphere,
 -logroot, log/,
 -logtype, 0,
 -verbose, false,

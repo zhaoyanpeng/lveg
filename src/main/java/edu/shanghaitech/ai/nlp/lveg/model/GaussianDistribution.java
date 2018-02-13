@@ -54,7 +54,7 @@ public abstract class GaussianDistribution extends Recorder implements Comparabl
 		this.key = -2;
 		this.dim = ndimension;
 		this.mus = new ArrayList<>(dim);
-		this.vars = new ArrayList<>(dim);
+		this.vars = new ArrayList<>(1);
 	}
 	
 	
@@ -106,9 +106,9 @@ public abstract class GaussianDistribution extends Recorder implements Comparabl
 	public void copy(GaussianDistribution des) {
 		des.id = id;
 		des.dim = dim;
+		des.vars.add(vars.get(0));
 		for (int i = 0; i < dim; i++) {
 			des.mus.add(mus.get(i));
-			des.vars.add(vars.get(i));
 		}
 	}
 	
@@ -129,8 +129,9 @@ public abstract class GaussianDistribution extends Recorder implements Comparabl
 	 */
 	protected List<Double> normalize(List<Double> sample) {
 		List<Double> list = new ArrayList<>();
+		double var = vars.get(0);
 		for (int i = 0; i < dim; i++) {
-			list.add((sample.get(i) - mus.get(i)) / Math.exp(vars.get(i)));
+			list.add((sample.get(i) - mus.get(i)) / Math.exp(var));
 		}
 		return list;
 	}
@@ -176,13 +177,13 @@ public abstract class GaussianDistribution extends Recorder implements Comparabl
 	 * @param rnd   random
 	 */
 	protected void sample(List<Double> slice, List<Double> truth, Random rnd) {
-		double real, norm;
+		double real, norm, var = vars.get(0);
 		slice.clear();
 		truth.clear();
 		for (int i = 0; i < dim; i++) {
 			norm = defRnd.nextGaussian();
 //			norm = ThreadLocalRandom.current().nextGaussian();
-			real = norm * Math.exp(vars.get(i)) + mus.get(i);
+			real = norm * Math.exp(var) + mus.get(i);
 			slice.add(norm);
 			truth.add(real);
 		}
@@ -197,11 +198,11 @@ public abstract class GaussianDistribution extends Recorder implements Comparabl
 	 */
 	protected void restoreSample(List<Double> sample, List<Double> truth) {
 		assert(sample.size() == dim);
-		double real;
+		double real, var = vars.get(0);
 		truth.clear();
 		for (int i = 0; i < dim; i++) {
 			// CHECK std = Math.exp(var)
-			real = sample.get(i) * Math.exp(vars.get(i)) + mus.get(i);
+			real = sample.get(i) * Math.exp(var) + mus.get(i);
 			truth.add(real);
 		}
 	}
@@ -217,21 +218,21 @@ public abstract class GaussianDistribution extends Recorder implements Comparabl
 //			logger.warn("No need to update because no gradients could be applied.");
 			return; 
 		}
-		double mu, var;
+		double mu, var = vars.get(0);
 		for (int i = 0; i < dim; i++) {
 			mu = mus.get(i) + grads.get(i * 2);
-			var = vars.get(i) + grads.get(i * 2 + 1);
 			mus.set(i, mu);
-			vars.set(i, var);
 		}
+		var = vars.get(0) + grads.get(dim * 2); // gradient is stored as the last item
+		vars.set(0, var);
 	}
 	
 	
 	protected void disturbParams(double delta) {
 		for (int i = 0; i < dim; i++) {
 			mus.set(i, mus.get(i) + delta);
-			vars.set(i, vars.get(i) + delta);
 		}
+		vars.set(0, vars.get(0) + delta);
 	}
 	
 	
@@ -283,7 +284,7 @@ public abstract class GaussianDistribution extends Recorder implements Comparabl
 	
 	
 	public boolean isValid(short ndim) {
-		return (vars != null && mus != null && mus.size() == dim && vars.size() == dim);
+		return (vars != null && mus != null && mus.size() == dim && vars.size() == 1);
 	}
 	
 	
@@ -342,7 +343,7 @@ public abstract class GaussianDistribution extends Recorder implements Comparabl
 	@Override
 	public String toString() {
 		return "GD [dim=" + dim + ", mus=" + FunUtil.double2str(mus, LVeGTrainer.precision, -1, false, true) + 
-				", stds=" + FunUtil.double2str(vars, LVeGTrainer.precision, -1, true, true) + "]";
+				", stds=" + FunUtil.double2str(vars, LVeGTrainer.precision, -1, true, false) + "]";
 	}
 
 }
