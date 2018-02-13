@@ -9,7 +9,8 @@ public class LVeGTesterTest {
 		String[] args = {"param.f1"};
 		try {
 //			LVeGTester.main(args);
-			LVeGTesterImp.main(args);
+//			LVeGTesterImp.main(args);
+			LVeGTesterSim.main(args);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

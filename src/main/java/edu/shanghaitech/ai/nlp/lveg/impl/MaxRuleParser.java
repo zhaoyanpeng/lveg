@@ -152,6 +152,26 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 		GaussianMixture score = chart.getInsideScore((short) 0, Chart.idx(0, 1));
 		if (score != null) {
 			scoreS = score.eval(null, true);
+		} else if (usemask && masks != null) { // re-parse using pcfg pruning, assuming k-best pruning fails
+			chart.clear(nword);
+			
+			createPCFGMask(nword, chart, sentence);
+		
+			if (parallel) {
+				cpool.reset();
+				Inferencer.insideScore(chart, sentence, nword, iosprune, cpool);
+				Inferencer.setRootOutsideScore(chart);
+				cpool.reset();
+				Inferencer.outsideScore(chart, sentence, nword, iosprune, cpool);
+			} else {
+				Inferencer.insideScore(chart, sentence, nword, iosprune, usemask, LVeGTrainer.iomask);
+				Inferencer.setRootOutsideScore(chart);
+				Inferencer.outsideScore(chart, sentence, nword, iosprune, usemask, LVeGTrainer.iomask);
+			}
+			score = chart.getInsideScore((short) 0, Chart.idx(0, 1));
+			if (score != null) {
+				scoreS = score.eval(null, true);
+			}
 		}
 		return scoreS;
 	}

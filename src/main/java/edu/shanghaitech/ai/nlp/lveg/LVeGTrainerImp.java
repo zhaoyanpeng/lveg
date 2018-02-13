@@ -136,10 +136,10 @@ public class LVeGTrainerImp extends LearnerConfig {
 			if (matcher.find()) { // training continued starting from the input grammar
 				iepoch = Integer.valueOf(matcher.group(1).trim()) + 1;
 			}
-			
+			/*
 			logger.trace(grammar);
 			logger.trace(lexicon);
-			
+			*/
 			// reset the rule weight
 			/*
 			if (opts.resetw || opts.usemasks) {

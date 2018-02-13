@@ -585,4 +585,56 @@ public class Debugger extends Recorder {
 		logger.trace(sorted.values() + "\n");
 	}
 	
+	
+	public static void fillStateChart(Tree<State> tree, Set<String>[][] mask, Numberer numberer) {
+		if (tree.isLeaf()) { return; }
+		List<Tree<State>> children = tree.getChildren();
+		for (Tree<State> child : children) {
+			fillStateChart(child, mask, numberer);
+		}
+		
+		State parent = tree.getLabel();
+		short idParent = parent.getId();
+		
+		short x = parent.from, y = (short) (parent.to - 1);
+		mask[x][y].add((String) numberer.object(idParent));
+		
+		if (tree.isPreTerminal()) {
+			// StateSet word = children.get(0).getLabel();
+		} else {
+			switch (children.size()) {
+			case 0:
+				break;
+			case 1: {
+				State child = children.get(0).getLabel();
+				short idChild = child.getId();
+				
+				x = child.from;
+				y = (short) (child.to - 1);
+				mask[x][y].add((String) numberer.object(idChild));
+				
+				break;
+			}
+			case 2: {
+				State lchild = children.get(0).getLabel();
+				State rchild = children.get(1).getLabel();
+				short idlChild = lchild.getId();
+				short idrChild = rchild.getId();
+				
+				x = lchild.from;
+				y = (short) (lchild.to - 1);
+				mask[x][y].add((String) numberer.object(idlChild));
+				
+				x = rchild.from;
+				y = (short) (rchild.to - 1);
+				mask[x][y].add((String) numberer.object(idrChild));
+
+				break;
+			}
+			default:
+				throw new RuntimeException("Malformed tree: invalid # of children. # children: " + children.size());
+			}
+		}
+	}
+	
 }

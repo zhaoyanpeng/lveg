@@ -28,13 +28,14 @@ public class ConstraintTester {
 	
 	@Test
 	public void calConstraints() throws Exception {
-//		testF1er(3000);
-//		loadConstraints();
-//		isGoldenParseIncludedEntry(3000);
+		String root = "F:/sourcecode/Rets.Prd/gr.sophis";
+//		testF1erEntry(40000, root);
+//		isGoldenParseIncludedEntry(40000, root);
 		
-		String root = "F:/sourcecode/Package/stanford-parser-use";
-//		testF1erCacheEntry(40000, root);
 		loadConstraints(40000, root);
+		
+//		String root = "F:/sourcecode/Package/stanford-parser-use";
+//		testF1erCacheEntry(40000, root);
 //		isGoldenParseIncludedCacheEntry(40000, root);
 	}
 	
@@ -53,8 +54,8 @@ public class ConstraintTester {
 			System.out.println();
 		}
 		*/
-		String constr = DATA_ROOT + "/wsj.cache.40.200.21.cons";
-		String grfile = DATA_ROOT + "/gr.tb.gr";
+		String constr = DATA_ROOT + "/gr.200.21.cons";
+		String grfile = DATA_ROOT + "/gr.gr";
 		String treebk = TREE_ROOT + "/wsj/";
 		
 		ParserData pData = ParserData.Load(grfile);
@@ -98,28 +99,34 @@ public class ConstraintTester {
 	public void isGoldenParseIncludedCacheEntry(int N, String DATA_ROOT) throws Exception {
 //		String DATA_ROOT = "F:/sourcecode/Data.Prd";
 		
-		String infile = DATA_ROOT + "/wsj.cache.40.200.21.pred";
+		String infile = DATA_ROOT + "/wsj.cache.40.200.23.pred";
 		String grfile = DATA_ROOT + "/gr.tb.gr";
-		String constr = DATA_ROOT + "/wsj.cache.40.200.21.cons";
+		String constr = DATA_ROOT + "/wsj.cache.40.200.23.cons";
 		String treebk = TREE_ROOT + "/wsj/";
 		
-		isGoldenParseIncluded(N, infile, grfile, constr, treebk);
+		String section = "dev";
+		List<Tree<String>> trees = getTrees(treebk, section);
+		
+		isGoldenParseIncluded(N, infile, grfile, constr, trees);
 	}
 	
 	
 	public void isGoldenParseIncludedEntry(int N, String DATA_ROOT) throws Exception {
 //		String DATA_ROOT = "F:/sourcecode/Data.Prd";
 		
-		String infile = DATA_ROOT + "/gr.tb.200.final.best.200";
-		String grfile = DATA_ROOT + "/gr.tb.gr";
-		String constr = DATA_ROOT + "/gr.tb.200.cons";
-		String treebk = DATA_ROOT + "/wsj/";
+		String infile = DATA_ROOT + "/gr.200.train.best.200";
+		String grfile = DATA_ROOT + "/gr.gr";
+		String constr = DATA_ROOT + "/gr.200.21.cons";
+		String treebk = TREE_ROOT + "/wsj/";
 		
-		isGoldenParseIncluded(N, infile, grfile, constr, treebk);
+		String section = "train";
+		List<Tree<String>> trees = getTrees(treebk, section);
+		
+		isGoldenParseIncluded(N, infile, grfile, constr, trees);
 	}
 	
 	
-	public void isGoldenParseIncluded(int N, String infile, String grfile, String constr, String treebk) throws Exception {
+	public void isGoldenParseIncluded(int N, String infile, String grfile, String constr, List<Tree<String>> trees) throws Exception {
 
 		ParserData pData = ParserData.Load(grfile);
 		
@@ -131,18 +138,7 @@ public class ConstraintTester {
 		Set<String>[][][] goldenconst = new HashSet[N][][];
 		
 		int itree = 0;
-		Corpus corpus = new Corpus(treebk, TreeBankType.WSJ, 1.0, false);
-		List<Tree<String>> train = corpus.getTrainTrees();
-		List<Tree<String>> test = corpus.getFinalTestingTrees();
-		List<Tree<String>> val = corpus.getValidationTrees();
-		List<Tree<String>> dev = corpus.getDevTestingTrees();
-		
-		System.out.println("|train| = " + train.size() + ", |test| = " + test.size() +
-				", |val| = " + val.size() + ", |dev| = " + dev.size());
-		
-		test = train; 
-		
-		for (Tree<String> tree : test) {
+		for (Tree<String> tree : trees) {
 			List<Tree<String>> curTree = new ArrayList<Tree<String>>();
 			
 			curTree.add(tree);
@@ -150,7 +146,7 @@ public class ConstraintTester {
 			goldenconst[itree] = constraint;
 			itree += 1;
 		}
-		System.out.println("--total " + test.size());
+		System.out.println("--total " + trees.size());
 		
 		
 		try {
@@ -169,10 +165,17 @@ public class ConstraintTester {
 						System.out.print("iline " + iline + ", idx " + idx);
 					}
 					
-					
-					Set<String>[][] constraint = candidate(someTrees, numberer, numSubStatesArray);
-					Set<String>[][] goldencons = goldenconst[itest - 1];
+					Set<String>[][] constraint;
+					if (someTrees.size() == 0) {
+						Tree<String> gold = trees.get(itest - 1);
+						int len = gold.getYield().size();
+						constraint = getMem(len);
+					} else {
+						constraint = candidate(someTrees, numberer, numSubStatesArray);
+					}
 					constraints[itest - 1] = constraint;
+					
+					Set<String>[][] goldencons = goldenconst[itest - 1];
 					
 					if (!isIncluded(constraint, goldencons)) {
 						nerr += 1;
@@ -189,11 +192,8 @@ public class ConstraintTester {
 				iline += 1;
 				someTrees.add((new Trees.PennTreeReader(new StringReader(line))).next());
 			}
-			System.out.println("--ntest " + itest + ", nerr " + nerr + " / " + test.size());
+			System.out.println("--ntest " + itest + ", nerr " + nerr + " / " + trees.size());
 			br.close();
-			
-//			Constraint cons = new Constraint(constraints);
-//			cons.save(constr);
 			
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -223,32 +223,51 @@ public class ConstraintTester {
 		String constr = DATA_ROOT + "/wsj.cache.40.200.21.cons";
 		String treebk = TREE_ROOT + "/wsj/";
 		
-//		testF1er(N, infile, grfile, constr);
-		testF1erTraindata(N, infile, grfile, constr, treebk);
+		String section = "final";
+		List<Tree<String>> trees = getTrees(treebk, section);
+		if ("train".equals(section)) {
+			testF1erTraindata(N, infile, grfile, constr, trees);
+		} else {
+			testF1er(N, infile, grfile, constr, trees);
+		}
 	}
 	
 	
+	
+	private static List<Tree<String>> getTrees(String treebk, String section) {
+		Corpus corpus = new Corpus(treebk, TreeBankType.WSJ, 1.0, false);
+		List<Tree<String>> trees = null;
+		if ("train".equals(section)) {
+			trees = corpus.getTrainTrees();
+		} else if ("final".equals(section)) {
+			trees = corpus.getFinalTestingTrees();
+		} else if ("dev".equals(section)) {
+			trees = corpus.getDevTestingTrees();
+		}
+		return trees;
+	}
 	
 	public static void testF1erEntry(int N, String DATA_ROOT) throws Exception {
-//		String DATA_ROOT = "F:/sourcecode/Data.Prd";
+		String infile = DATA_ROOT + "/gr.200.train.best.200";
+		String grfile = DATA_ROOT + "/gr.gr";
+		String constr = DATA_ROOT + "/gr.200.21.cons";
+		String treebk = TREE_ROOT + "/wsj/";
 		
-		String infile = DATA_ROOT + "/gr.tb.200.final.best.200";
-		String grfile = DATA_ROOT + "/gr.tb.gr";
-		String constr = DATA_ROOT + "/gr.tb.200.cons";
-		
-		testF1er(N, infile, grfile, constr);
+		String section = "train";
+		List<Tree<String>> trees = getTrees(treebk, section);
+		if ("train".equals(section)) {
+			testF1erTraindata(N, infile, grfile, constr, trees);
+		} else {
+			testF1er(N, infile, grfile, constr, trees);
+		}
 	}
 	
 	
-	public static void testF1erTraindata(int N, String infile, String grfile, String constr, String treebk) throws Exception {
+	public static void testF1erTraindata(int N, String infile, String grfile, String constr, List<Tree<String>> trees) throws Exception {
 		ParserData pData = ParserData.Load(grfile);
-		
 		Numberer.setNumberers(pData.getNumbs());
 		Numberer numberer = Numberer.getGlobalNumberer("tags");
 		short[] numSubStatesArray = pData.getGrammar().numSubStates;
-		
-		Corpus corpus = new Corpus(treebk, TreeBankType.WSJ, 1.0, false);
-		List<Tree<String>> train = corpus.getTrainTrees();
 		
 		Set<String>[][][] constraints = new HashSet[N][][];
 		
@@ -269,7 +288,7 @@ public class ConstraintTester {
 					}
 					System.out.println();
 					
-					Tree<String> gold = train.get(itest - 1);
+					Tree<String> gold = trees.get(itest - 1);
 					someTrees.add(gold);
 					
 					Set<String>[][] constraint = candidate(someTrees, numberer, numSubStatesArray);
@@ -296,9 +315,8 @@ public class ConstraintTester {
 	
 	
 	
-	public static void testF1er(int N, String infile, String grfile, String constr) throws Exception {
+	public static void testF1er(int N, String infile, String grfile, String constr, List<Tree<String>> trees) throws Exception {
 		ParserData pData = ParserData.Load(grfile);
-		
 		Numberer.setNumberers(pData.getNumbs());
 		Numberer numberer = Numberer.getGlobalNumberer("tags");
 		short[] numSubStatesArray = pData.getGrammar().numSubStates;
@@ -322,8 +340,14 @@ public class ConstraintTester {
 					}
 					System.out.println();
 					
-					Set<String>[][] constraint = candidate(someTrees, numberer, numSubStatesArray);
-					constraints[itest - 1] = constraint;
+					if (someTrees.size() == 0) {
+						Tree<String> gold = trees.get(itest - 1);
+						int len = gold.getYield().size();
+						constraints[itest - 1] = getMem(len);
+					} else {
+						Set<String>[][] constraint = candidate(someTrees, numberer, numSubStatesArray);
+						constraints[itest - 1] = constraint;
+					}
 					
 					idx = 0;
 					someTrees.clear();
@@ -345,6 +369,17 @@ public class ConstraintTester {
 	}
 	
 	
+	private static Set<String>[][] getMem(int nword) {
+		Set<String>[][] mask = new HashSet[nword][nword];
+		for (int i = 0; i < nword; i++) {
+			for (int j = i; j < nword; j++) {
+				mask[i][j] = new HashSet<String>();
+			}
+		}
+		return mask;
+	}
+	
+	
 	public static Set<String>[][] candidate(List<Tree<String>> data, Numberer numberer, short[] numSubStatesArray) {
 		List<Tree<String>> trees = Corpus.binarizeAndFilterTrees(
 				data, 1, 0, 10000, Binarization.RIGHT, false, false);
@@ -352,12 +387,7 @@ public class ConstraintTester {
 				trees, numSubStatesArray, false, numberer);
 		
 		int len = stateTreeList.get(0).getYield().size();
-		Set<String>[][] mask = new HashSet[len][len];
-		for (int i = 0; i < len; i++) {
-			for (int j = i; j < len; j++) {
-				mask[i][j] = new HashSet<String>();
-			}
-		}
+		Set<String>[][] mask = getMem(len);
 		
 		for (Tree<StateSet> tree : stateTreeList) {
 			if (tree.getYield().size() != len) {
