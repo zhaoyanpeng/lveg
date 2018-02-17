@@ -301,6 +301,8 @@ public class LearnerConfig extends Recorder {
 		public boolean eontrain = true;
 		@Option(name = "-eonextradev", usage = "evaluating the grammar on the sentences of length less than or equal to [eonlylen + 5] (true) or not (false) (default: true)")
 		public boolean eonextradev = true;
+		@Option(name = "-eusestag", usage = "evaluating the grammar with golden tags (true) or without (false) (default: false)")
+		public boolean eusestag = true;
 		@Option(name = "-ellprune", usage = "applying pruning when evaluating (log-likelihood) the grammar (true) or not (false) (default: false)")
 		public boolean ellprune = false;
 		@Option(name = "-ellimwrite", usage = "write parse tree to image (true) or not (false) when evaluating ll (default: false)")

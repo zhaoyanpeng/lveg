@@ -21,22 +21,22 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 	private static final long serialVersionUID = 514004588461969299L;
 	private MaxRuleInferencer inferencer;
 	
-	private Set<String>[][][] masks;
-	
 	
 	private MaxRuleParser(MaxRuleParser<?, ?> parser) {
 		super(parser.maxslen, parser.nthread, parser.parallel, parser.iosprune, parser.usemask);
 		this.inferencer = parser.inferencer;
 		this.chart = new Chart(parser.maxslen, true, true, parser.usemask);
+		this.usestag = parser.usestag;
 		this.masks = parser.masks;
 	}
 	
 	
 	public MaxRuleParser(LVeGGrammar grammar, LVeGLexicon lexicon, short maxLenParsing, short nthread, 
-			boolean parallel, boolean iosprune, boolean usemasks, Set<String>[][][] masks) {
+			boolean parallel, boolean iosprune, boolean usemasks, boolean usestag, Set<String>[][][] masks) {
 		super(maxLenParsing, nthread, parallel, iosprune, usemasks);
 		this.inferencer = new MaxRuleInferencer(grammar, lexicon);
 		this.chart = new Chart(maxLenParsing, true, true, usemasks);
+		this.usestag = usestag;
 		this.masks = masks;
 	}
 	
@@ -118,6 +118,7 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 	 * @return
 	 */
 	private double doInsideOutside(Tree<State> tree, List<State> sentence, int itree, int nword) {
+		List<State> goldentag = usestag ? tree.getPreTerminalYield() : null;
 		if (chart != null) {
 			chart.clear(nword);
 		} else {
@@ -140,7 +141,7 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 			Inferencer.outsideScore(chart, sentence, nword, iosprune, cpool);
 		} else {
 //			logger.trace("\nInside score...\n"); // DEBUG
-			Inferencer.insideScore(chart, sentence, nword, iosprune, usemask, LVeGTrainer.iomask);
+			Inferencer.insideScore(chart, sentence, goldentag, nword, iosprune, usemask, LVeGTrainer.iomask);
 //			FunUtil.debugChart(chart.getChart(true), (short) -1, tree.getYield().size()); // DEBUG
 
 			Inferencer.setRootOutsideScore(chart);
@@ -164,7 +165,7 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 				cpool.reset();
 				Inferencer.outsideScore(chart, sentence, nword, iosprune, cpool);
 			} else {
-				Inferencer.insideScore(chart, sentence, nword, iosprune, usemask, LVeGTrainer.iomask);
+				Inferencer.insideScore(chart, sentence, goldentag, nword, iosprune, usemask, LVeGTrainer.iomask);
 				Inferencer.setRootOutsideScore(chart);
 				Inferencer.outsideScore(chart, sentence, nword, iosprune, usemask, LVeGTrainer.iomask);
 			}

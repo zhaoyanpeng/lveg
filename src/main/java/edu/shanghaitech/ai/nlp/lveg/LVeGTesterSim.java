@@ -15,13 +15,13 @@ import java.util.TreeMap;
 
 import edu.berkeley.nlp.PCFGLA.TreeAnnotations;
 import edu.berkeley.nlp.syntax.Tree;
-import edu.shanghaitech.ai.nlp.data.ConstraintTester;
 import edu.shanghaitech.ai.nlp.data.ObjectFileManager;
 import edu.shanghaitech.ai.nlp.data.StateTreeList;
 import edu.shanghaitech.ai.nlp.eval.EnglishPennTreebankParseEvaluator;
 import edu.shanghaitech.ai.nlp.data.ObjectFileManager.Constraint;
 import edu.shanghaitech.ai.nlp.data.ObjectFileManager.GrammarFile;
 import edu.shanghaitech.ai.nlp.lveg.impl.MaxRuleParser;
+import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGLexicon;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
@@ -77,6 +77,22 @@ public class LVeGTesterSim extends LearnerConfig {
 		long endTime = System.currentTimeMillis();
 		logger.trace("[total time consumed by LVeG tester] " + (endTime - startTime) / 1000.0 + "\n");
 	}
+	
+	
+	private static void peepGrammars() {
+		SimpleLVeGLexicon ll = (SimpleLVeGLexicon) lexicon;
+		int nunk = 0, total = ll.wordIndexer.size();
+		for (int i = 0; i < total; i++) {
+			String word = ll.wordIndexer.get(i);
+			if (word.startsWith("UNK")) {
+				logger.trace(word + "\n");
+				nunk += 1;
+			}
+		}
+		logger.trace("--there are " + nunk + " / " + total + " unknown word categories.\n");
+		System.exit(0);
+	}
+	
 
 	
 	private static void train(Map<String, StateTreeList> trees, Numberer wrapper) throws Exception {
@@ -100,6 +116,10 @@ public class LVeGTesterSim extends LearnerConfig {
 		GrammarFile gfile = (GrammarFile) GrammarFile.load(subdatadir + opts.inGrammar);
 		grammar = gfile.getGrammar();
 		lexicon = gfile.getLexicon();
+		
+		
+		peepGrammars();
+		
 		
 		/*
 		logger.trace(grammar);
@@ -144,7 +164,7 @@ public class LVeGTesterSim extends LearnerConfig {
 				new HashSet<String>(Arrays.asList(new String[] { "ROOT", "PSEUDO" })), 
 				new HashSet<String>(Arrays.asList(new String[] { "''", "``", ".", ":", "," })));
 		mrParser = new MaxRuleParser<Tree<State>, Tree<String>>(grammar, lexicon, opts.maxslen, 
-				opts.ntcyker, opts.pcyker, opts.ef1prune, opts.usemasks, masks);
+				opts.ntcyker, opts.pcyker, opts.ef1prune, opts.usemasks, false, masks);
 		mparser = new ThreadPool(mrParser, opts.nttest);
 		
 		logger.info("\n---F1 CONFIG---\n[parallel: batch-" + opts.pbatch + ", grad-" + 

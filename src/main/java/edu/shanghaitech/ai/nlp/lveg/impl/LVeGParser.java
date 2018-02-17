@@ -25,8 +25,6 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 	private static final long serialVersionUID = -1363406979999225830L;
 	private LVeGInferencer inferencer;
 	
-	private Set<String>[][][] masks;
-	
 	
 	private LVeGParser(LVeGParser<?, ?> parser) {
 		super(parser.maxslen, parser.nthread, parser.parallel, parser.iosprune, parser.usemask);
@@ -156,7 +154,7 @@ public class LVeGParser<I, O> extends Parser<I, O> {
 				Inferencer.outsideScore(chart, sentence, nword, iosprune, cpool);
 			} else {
 //				logger.trace("\nInside score...\n"); // DEBUG
-				Inferencer.insideScore(chart, sentence, nword, iosprune, usemask, LVeGTrainer.iomask);
+				Inferencer.insideScore(chart, sentence, null, nword, iosprune, usemask, LVeGTrainer.iomask);
 //				FunUtil.debugChart(chart.getChart(true), (short) -1, tree.getYield().size(), Inferencer.grammar.numberer); // DEBUG
 		
 //				logger.trace("\nOutside score...\n"); // DEBUG

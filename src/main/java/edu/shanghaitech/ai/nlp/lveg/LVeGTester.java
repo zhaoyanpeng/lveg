@@ -108,7 +108,7 @@ public class LVeGTester extends LearnerConfig {
 				new HashSet<String>(Arrays.asList(new String[] { "ROOT", "PSEUDO" })), 
 				new HashSet<String>(Arrays.asList(new String[] { "''", "``", ".", ":", "," })));
 		mrParser = new MaxRuleParser<Tree<State>, Tree<String>>(grammar, lexicon, opts.maxslen, 
-				opts.ntcyker, opts.pcyker, opts.ef1prune, opts.usemasks, null);
+				opts.ntcyker, opts.pcyker, opts.ef1prune, opts.usemasks, false, null);
 		mparser = new ThreadPool(mrParser, opts.nttest);
 		
 		logger.info("\n---F1 CONFIG---\n[parallel: batch-" + opts.pbatch + ", grad-" + 

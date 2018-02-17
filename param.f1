@@ -35,7 +35,7 @@
 -sexp, 0.35,
 
 -eratio, -0.1, 
--eonlylen, 200,
+-eonlylen, 3,
 -efirstk, 3000,
 -eonextradev, false,
 
@@ -43,6 +43,7 @@
 -ef1tag, debug,
 -consfile, wsj.cache.40.200.23.cons,
 -inGrammar, lveg_final.gr,
+-eusestag, false,
 -ef1prune, true,
 -ef1ondev, false,
 -ef1ontrain, false,
