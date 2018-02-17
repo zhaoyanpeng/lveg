@@ -118,7 +118,7 @@ public class LVeGTesterSim extends LearnerConfig {
 		lexicon = gfile.getLexicon();
 		
 		
-		peepGrammars();
+//		peepGrammars();
 		
 		
 		/*
@@ -164,7 +164,7 @@ public class LVeGTesterSim extends LearnerConfig {
 				new HashSet<String>(Arrays.asList(new String[] { "ROOT", "PSEUDO" })), 
 				new HashSet<String>(Arrays.asList(new String[] { "''", "``", ".", ":", "," })));
 		mrParser = new MaxRuleParser<Tree<State>, Tree<String>>(grammar, lexicon, opts.maxslen, 
-				opts.ntcyker, opts.pcyker, opts.ef1prune, opts.usemasks, false, masks);
+				opts.ntcyker, opts.pcyker, opts.ef1prune, opts.usemasks, opts.eusestag, masks);
 		mparser = new ThreadPool(mrParser, opts.nttest);
 		
 		logger.info("\n---F1 CONFIG---\n[parallel: batch-" + opts.pbatch + ", grad-" + 
@@ -208,7 +208,7 @@ public class LVeGTesterSim extends LearnerConfig {
 	
 	
 	protected static void debugTree(List<Tree<State>> trees, Numberer numberer, Set<String>[][][] goldmasks) {
-		int index = 1083;
+		int index = 332;
 		Tree<State> atree = trees.get(index);
 		logger.trace(Debugger.debugTree(atree, false, (short) 2, numberer, true) + "\n");
 		List<State> words = atree.getYield();

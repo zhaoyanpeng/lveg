@@ -32,7 +32,9 @@ public class ConstraintTester {
 //		testF1erEntry(40000, root);
 //		isGoldenParseIncludedEntry(40000, root);
 		
-		loadConstraints(40000, root);
+//		loadConstraints(40000, root);
+		
+		averageNumOfTrees(root + "/gr.200.final.best.200");
 		
 //		String root = "F:/sourcecode/Package/stanford-parser-use";
 //		testF1erCacheEntry(40000, root);
@@ -366,6 +368,52 @@ public class ConstraintTester {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
+	
+	
+	/**
+	 * @param infile
+	 * @throws Exception
+	 * Inf: F:/sourcecode/Rets.Prd/gr.sophis//gr.200.final.best.200
+	 * Ret: iline 323691, idx 12--itest 2416 done; --ntest 2416, nerr 0 / 2416, ntree = 321476, average # of parses 133.0612582781457
+	 */
+	public void averageNumOfTrees(String infile) throws Exception {
+		try {
+			List<Tree<String>> someTrees = new ArrayList<Tree<String>>();
+			BufferedReader br = new BufferedReader(new FileReader(infile));
+			String line;
+			int itest = 0, idx = 0, iline = 0, nerr = 0, ntree = 0;
+			while ((line = br.readLine()) != null) {
+				line = line.trim();
+				if (line.equals("")) {
+					iline += 1;
+					itest += 1;
+					
+					System.out.print("--itest " + itest + " done; ");
+					if (idx != 200) {
+						System.out.print("iline " + iline + ", idx " + idx);
+					}
+					System.out.println();
+					
+					ntree += someTrees.size();
+					
+					idx = 0;
+					someTrees.clear();
+					continue;
+				}
+				idx += 1;
+				iline += 1;
+				someTrees.add((new Trees.PennTreeReader(new StringReader(line))).next());
+			}
+			double average = ntree / (double) itest;
+			System.out.println("--ntest " + itest + ", nerr " + nerr + " / " + itest + 
+					", ntree = " + ntree + ", average # of parses " + average);
+			br.close();
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
 	}
 	
 	
