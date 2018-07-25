@@ -27,6 +27,10 @@ import edu.shanghaitech.ai.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.util.OptionParser;
 import edu.shanghaitech.ai.nlp.util.ThreadPool;
 
+/**
+ * @author Yanpeng Zhao
+ * @deprecated
+ */
 public class LVeGTester extends LearnerConfig {
 	/**
 	 * 

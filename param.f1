@@ -41,7 +41,7 @@
 
 -pf1, false,
 -ef1tag, debug,
--consfile, wsj.cache.40.200.23.cons,
+-consfile, gr.sophis.200.23.cons,
 -inGrammar, lveg_final.gr,
 -eusestag, true,
 -ef1prune, true,

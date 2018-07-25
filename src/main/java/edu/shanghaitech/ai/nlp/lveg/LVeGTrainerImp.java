@@ -185,8 +185,8 @@ public class LVeGTrainerImp extends LearnerConfig {
 			logger.trace("\n--->Initializing optimizer is over...\n");
 		}
 		
-		logger.trace(grammar);
-		logger.trace(lexicon);
+//		logger.trace(grammar);
+//		logger.trace(lexicon);
 //		System.exit(0);
 		
 		System.out.println("--------" + opts.runtag);

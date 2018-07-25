@@ -35,7 +35,7 @@ import edu.shanghaitech.ai.nlp.syntax.State;
  * There is only one Grammar instance shared by trainer, lvegParser, maxRuleParser, and valuator.
  * 
  * @author Yanpeng Zhao
- *
+ * @deprecated
  */
 public class LVeGTrainer extends LearnerConfig {
 	/**

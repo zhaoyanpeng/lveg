@@ -1,4 +1,4 @@
--datadir, F:/SourceCode/ParsersData/wsj/,
+-datadir, E:/SourceCode/ParsersData/wsj/,
 -train, wsj_s2-21_tree,
 -test, wsj_s23_tree,
 -dev, wsj_s22_tree,
@@ -74,8 +74,8 @@
 
 -eratio, -0.1, 
 -efraction, -0.25,
--eonlylen, 7,
--efirstk, 3000,
+-eonlylen, 3,
+-efirstk, 200,
 -eontrain, false,
 -eondev, true,
 -eonextradev, true,
