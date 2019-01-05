@@ -8,6 +8,8 @@ import org.junit.Test;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleType;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleUnit;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture.Component;
 import edu.shanghaitech.ai.nlp.util.FunUtil;
 import edu.shanghaitech.ai.nlp.util.Recorder;
@@ -34,12 +36,12 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		GaussianMixture.config((short) -1, 1e-6, 4, ncomp, 0.5, -1.0, -1.0, true, rnd, null);
 		GaussianDistribution.config(1, 5, ndim, 0.5, 0.8, rnd, null);
 		
-		GrammarRule ur01 = new UnaryGrammarRule((short) 0, (short) 1, GrammarRule.RHSPACE, true);	
-		GrammarRule ur03 = new UnaryGrammarRule((short) 0, (short) 3, GrammarRule.RHSPACE, true);	
-		GrammarRule ur12 = new UnaryGrammarRule((short) 1, (short) 2, GrammarRule.LRURULE, true);	
-		GrammarRule ur32 = new UnaryGrammarRule((short) 3, (short) 2, GrammarRule.LRURULE, true);	
-		GrammarRule ur20 = new UnaryGrammarRule((short) 2, (short) 0, GrammarRule.LHSPACE, true);	
-		GrammarRule ur21 = new UnaryGrammarRule((short) 2, (short) 1, GrammarRule.LHSPACE, true);	
+		GrammarRule ur01 = new UnaryGrammarRule((short) 0, (short) 1, RuleType.RHSPACE, true);	
+		GrammarRule ur03 = new UnaryGrammarRule((short) 0, (short) 3, RuleType.RHSPACE, true);	
+		GrammarRule ur12 = new UnaryGrammarRule((short) 1, (short) 2, RuleType.LRURULE, true);	
+		GrammarRule ur32 = new UnaryGrammarRule((short) 3, (short) 2, RuleType.LRURULE, true);	
+		GrammarRule ur20 = new UnaryGrammarRule((short) 2, (short) 0, RuleType.LHSPACE, true);	
+		GrammarRule ur21 = new UnaryGrammarRule((short) 2, (short) 1, RuleType.LHSPACE, true);	
 		
 		printRule(ur01);
 		printRule(ur03);
@@ -51,21 +53,21 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		logger.trace("\n---Inside Score---\n");
 		GaussianMixture cin20 = ur20.getWeight().copy(true);
 //		cin20.setWeight(0, -1e-3);
-		GaussianMixture cin12 = ur12.getWeight().mulForInsideOutside(cin20, GrammarRule.Unit.UC, true); // in logarithm
+		GaussianMixture cin12 = ur12.getWeight().mulAndMarginalize(cin20, null, RuleUnit.UC, true); // in logarithm
 		logger.trace("cin12    : " + cin12 + "\n");
-		GaussianMixture cin12copy = marginalize(ur12.getWeight(), cin20, GrammarRule.Unit.UC, true);    // in the normal way
+		GaussianMixture cin12copy = marginalize(ur12.getWeight(), cin20, RuleUnit.UC, true);    // in the normal way
 		logger.trace("cin12copy: " + cin12copy + "\n");
 		
-		GaussianMixture cin32 = ur32.getWeight().mulForInsideOutside(cin20, GrammarRule.Unit.UC, true);
+		GaussianMixture cin32 = ur32.getWeight().mulAndMarginalize(cin20, null, RuleUnit.UC, true);
 		logger.trace("cin32    : " + cin32 + "\n");
 		
 //		ur01.getWeight().setWeight(0, 1e-3);
 		
-		GaussianMixture cin01 = ur01.getWeight().mulForInsideOutside(cin12, GrammarRule.Unit.C, true);
+		GaussianMixture cin01 = ur01.getWeight().mulAndMarginalize(cin12, null, RuleUnit.C, true);
 		logger.trace("cin01    : " + cin01 + "\t" + FunUtil.logAdd(cin01.getWeight(0), cin01.getWeight(1)) + "\n");
-		GaussianMixture cin01copy = marginalize(ur01.getWeight(), cin12, GrammarRule.Unit.C, true);
+		GaussianMixture cin01copy = marginalize(ur01.getWeight(), cin12, RuleUnit.C, true);
 		logger.trace("cin01copy: " + cin01copy + "\n");
-		GaussianMixture cin03 = ur03.getWeight().mulForInsideOutside(cin32, GrammarRule.Unit.C, true);
+		GaussianMixture cin03 = ur03.getWeight().mulAndMarginalize(cin32, null, RuleUnit.C, true);
 		logger.trace("cin03    : " + cin03 + "\t" + FunUtil.logAdd(cin03.getWeight(0), cin03.getWeight(1)) + "\n");
 		
 		logger.trace("Score    : " + FunUtil.logAdd(cin01.marginalize(true), cin03.marginalize(true)) + "\n");
@@ -75,12 +77,12 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		outor.marginalizeToOne();
 		logger.trace("outor    :" + outor + "\n");
 		
-		GaussianMixture outx1 = ur01.getWeight().mulForInsideOutside(outor, GrammarRule.Unit.P, true);
+		GaussianMixture outx1 = ur01.getWeight().mulAndMarginalize(outor, null, RuleUnit.P, true);
 		logger.trace("outx1    :" + outx1 + "\n");
-		GaussianMixture outx3 = ur03.getWeight().mulForInsideOutside(outor, GrammarRule.Unit.P, true);
+		GaussianMixture outx3 = ur03.getWeight().mulAndMarginalize(outor, null, RuleUnit.P, true);
 		logger.trace("outx3    :" + outx3 + "\n");
-		GaussianMixture outx2 = ur12.getWeight().mulForInsideOutside(outx1, GrammarRule.Unit.P, true);
-		GaussianMixture out32 = ur32.getWeight().mulForInsideOutside(outx3, GrammarRule.Unit.P, true);
+		GaussianMixture outx2 = ur12.getWeight().mulAndMarginalize(outx1, null, RuleUnit.P, true);
+		GaussianMixture out32 = ur32.getWeight().mulAndMarginalize(outx3, null, RuleUnit.P, true);
 		outx2.add(out32, false);
 		logger.trace("outx2    :" + outx2 + "\n");
 		
@@ -168,12 +170,12 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		GaussianMixture.config((short) -1, 1e-6, 4, ncomp, 0.5, -1.0, -1.0, true, rnd, null);
 		GaussianDistribution.config(1, 5, ndim, 0.5, 0.8, rnd, null);
 		
-		GrammarRule ur01 = new UnaryGrammarRule((short) 0, (short) 1, GrammarRule.RHSPACE, true);	
-		GrammarRule ur03 = new UnaryGrammarRule((short) 0, (short) 3, GrammarRule.RHSPACE, true);	
-		GrammarRule ur12 = new UnaryGrammarRule((short) 1, (short) 2, GrammarRule.LRURULE, true);	
-		GrammarRule ur32 = new UnaryGrammarRule((short) 3, (short) 2, GrammarRule.LRURULE, true);	
-		GrammarRule ur20 = new UnaryGrammarRule((short) 2, (short) 0, GrammarRule.LHSPACE, true);	
-		GrammarRule ur21 = new UnaryGrammarRule((short) 2, (short) 1, GrammarRule.LHSPACE, true);	
+		GrammarRule ur01 = new UnaryGrammarRule((short) 0, (short) 1, RuleType.RHSPACE, true);	
+		GrammarRule ur03 = new UnaryGrammarRule((short) 0, (short) 3, RuleType.RHSPACE, true);	
+		GrammarRule ur12 = new UnaryGrammarRule((short) 1, (short) 2, RuleType.LRURULE, true);	
+		GrammarRule ur32 = new UnaryGrammarRule((short) 3, (short) 2, RuleType.LRURULE, true);	
+		GrammarRule ur20 = new UnaryGrammarRule((short) 2, (short) 0, RuleType.LHSPACE, true);	
+		GrammarRule ur21 = new UnaryGrammarRule((short) 2, (short) 1, RuleType.LHSPACE, true);	
 		
 		printRule(ur01);
 		printRule(ur03);
@@ -185,21 +187,21 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		logger.trace("\n---Inside Score---\n");
 		GaussianMixture cin20 = ur20.getWeight().copy(true);
 //		cin20.setWeight(0, -1e-3);
-		GaussianMixture cin12 = ur12.getWeight().mulForInsideOutside(cin20, GrammarRule.Unit.UC, true); // in logarithm
+		GaussianMixture cin12 = ur12.getWeight().mulAndMarginalize(cin20, null, RuleUnit.UC, true); // in logarithm
 		logger.trace("cin12    : " + cin12 + "\n");
-		GaussianMixture cin12copy = marginalize(ur12.getWeight(), cin20, GrammarRule.Unit.UC, true);    // in the normal way
+		GaussianMixture cin12copy = marginalize(ur12.getWeight(), cin20, RuleUnit.UC, true);    // in the normal way
 		logger.trace("cin12copy: " + cin12copy + "\n");
 		
-		GaussianMixture cin32 = ur32.getWeight().mulForInsideOutside(cin20, GrammarRule.Unit.UC, true);
+		GaussianMixture cin32 = ur32.getWeight().mulAndMarginalize(cin20, null, RuleUnit.UC, true);
 		logger.trace("cin32    : " + cin32 + "\n");
 		
 //		ur01.getWeight().setWeight(0, 1e-3);
 		
-		GaussianMixture cin01 = ur01.getWeight().mulForInsideOutside(cin12, GrammarRule.Unit.C, true);
+		GaussianMixture cin01 = ur01.getWeight().mulAndMarginalize(cin12, null, RuleUnit.C, true);
 		logger.trace("cin01    : " + cin01 + "\t" + FunUtil.logAdd(cin01.getWeight(0), cin01.getWeight(1)) + "\n");
-		GaussianMixture cin01copy = marginalize(ur01.getWeight(), cin12, GrammarRule.Unit.C, true);
+		GaussianMixture cin01copy = marginalize(ur01.getWeight(), cin12, RuleUnit.C, true);
 		logger.trace("cin01copy: " + cin01copy + "\n");
-		GaussianMixture cin03 = ur03.getWeight().mulForInsideOutside(cin32, GrammarRule.Unit.C, true);
+		GaussianMixture cin03 = ur03.getWeight().mulAndMarginalize(cin32, null, RuleUnit.C, true);
 		logger.trace("cin03    : " + cin03 + "\t" + FunUtil.logAdd(cin03.getWeight(0), cin03.getWeight(1)) + "\n");
 		
 		logger.trace("Score    : " + FunUtil.logAdd(cin01.marginalize(true), cin03.marginalize(true)) + "\n");
@@ -209,12 +211,12 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		outor.marginalizeToOne();
 		logger.trace("outor    :" + outor + "\n");
 		
-		GaussianMixture outx1 = ur01.getWeight().mulForInsideOutside(outor, GrammarRule.Unit.P, true);
+		GaussianMixture outx1 = ur01.getWeight().mulAndMarginalize(outor, null, RuleUnit.P, true);
 		logger.trace("outx1    :" + outx1 + "\n");
-		GaussianMixture outx3 = ur03.getWeight().mulForInsideOutside(outor, GrammarRule.Unit.P, true);
+		GaussianMixture outx3 = ur03.getWeight().mulAndMarginalize(outor, null, RuleUnit.P, true);
 		logger.trace("outx3    :" + outx3 + "\n");
-		GaussianMixture outx2 = ur12.getWeight().mulForInsideOutside(outx1, GrammarRule.Unit.P, true);
-		GaussianMixture out32 = ur32.getWeight().mulForInsideOutside(outx3, GrammarRule.Unit.P, true);
+		GaussianMixture outx2 = ur12.getWeight().mulAndMarginalize(outx1, null, RuleUnit.P, true);
+		GaussianMixture out32 = ur32.getWeight().mulAndMarginalize(outx3, null, RuleUnit.P, true);
 		outx2.add(out32, false);
 		logger.trace("outx2    :" + outx2 + "\n");
 		
@@ -298,12 +300,12 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		GaussianMixture.config((short) -1, 1e-6, 4, ncomp, 0.5, -1.0, -1.0, true, rnd, null);
 		GaussianDistribution.config(1, 5, ndim, 0.5, 0.8, rnd, null);
 		
-		GrammarRule ur01 = new UnaryGrammarRule((short) 0, (short) 1, GrammarRule.RHSPACE, true);	
-		GrammarRule ur03 = new UnaryGrammarRule((short) 0, (short) 3, GrammarRule.RHSPACE, true);	
-		GrammarRule ur12 = new UnaryGrammarRule((short) 1, (short) 2, GrammarRule.LRURULE, true);	
-		GrammarRule ur32 = new UnaryGrammarRule((short) 3, (short) 2, GrammarRule.LRURULE, true);	
-		GrammarRule ur20 = new UnaryGrammarRule((short) 2, (short) 0, GrammarRule.LHSPACE, true);	
-		GrammarRule ur21 = new UnaryGrammarRule((short) 2, (short) 1, GrammarRule.LHSPACE, true);	
+		GrammarRule ur01 = new UnaryGrammarRule((short) 0, (short) 1, RuleType.RHSPACE, true);	
+		GrammarRule ur03 = new UnaryGrammarRule((short) 0, (short) 3, RuleType.RHSPACE, true);	
+		GrammarRule ur12 = new UnaryGrammarRule((short) 1, (short) 2, RuleType.LRURULE, true);	
+		GrammarRule ur32 = new UnaryGrammarRule((short) 3, (short) 2, RuleType.LRURULE, true);	
+		GrammarRule ur20 = new UnaryGrammarRule((short) 2, (short) 0, RuleType.LHSPACE, true);	
+		GrammarRule ur21 = new UnaryGrammarRule((short) 2, (short) 1, RuleType.LHSPACE, true);	
 		
 		printRule(ur01);
 		printRule(ur03);
@@ -315,21 +317,21 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		logger.trace("\n---Inside Score---\n");
 		GaussianMixture cin20 = ur20.getWeight().copy(true);
 //		cin20.setWeight(0, -1e-3);
-		GaussianMixture cin12 = ur12.getWeight().mulForInsideOutside(cin20, GrammarRule.Unit.UC, true); // in logarithm
+		GaussianMixture cin12 = ur12.getWeight().mulAndMarginalize(cin20, null, RuleUnit.UC, true); // in logarithm
 		logger.trace("cin12    : " + cin12 + "\n");
-		GaussianMixture cin12copy = marginalize(ur12.getWeight(), cin20, GrammarRule.Unit.UC, true);    // in the normal way
+		GaussianMixture cin12copy = marginalize(ur12.getWeight(), cin20, RuleUnit.UC, true);    // in the normal way
 		logger.trace("cin12copy: " + cin12copy + "\n");
 		
-		GaussianMixture cin32 = ur32.getWeight().mulForInsideOutside(cin20, GrammarRule.Unit.UC, true);
+		GaussianMixture cin32 = ur32.getWeight().mulAndMarginalize(cin20, null, RuleUnit.UC, true);
 		logger.trace("cin32    : " + cin32 + "\n");
 		
 		ur01.getWeight().setWeight(0, 1e-3);
 		
-		GaussianMixture cin01 = ur01.getWeight().mulForInsideOutside(cin12, GrammarRule.Unit.C, true);
+		GaussianMixture cin01 = ur01.getWeight().mulAndMarginalize(cin12, null, RuleUnit.C, true);
 		logger.trace("cin01    : " + cin01 + "\t" + cin01.getWeight(0) + "\n");
-		GaussianMixture cin01copy = marginalize(ur01.getWeight(), cin12, GrammarRule.Unit.C, true);
+		GaussianMixture cin01copy = marginalize(ur01.getWeight(), cin12, RuleUnit.C, true);
 		logger.trace("cin01copy: " + cin01copy + "\n");
-		GaussianMixture cin03 = ur03.getWeight().mulForInsideOutside(cin32, GrammarRule.Unit.C, true);
+		GaussianMixture cin03 = ur03.getWeight().mulAndMarginalize(cin32, null, RuleUnit.C, true);
 		logger.trace("cin03    : " + cin03 + "\t" + cin03.getWeight(0) + "\n");
 		
 		logger.trace("Score    : " + FunUtil.logAdd(cin01.getWeight(0), cin03.getWeight(0)) + "\n");
@@ -339,12 +341,12 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		outor.marginalizeToOne();
 		logger.trace("outor    :" + outor + "\n");
 		
-		GaussianMixture outx1 = ur01.getWeight().mulForInsideOutside(outor, GrammarRule.Unit.P, true);
+		GaussianMixture outx1 = ur01.getWeight().mulAndMarginalize(outor, null, RuleUnit.P, true);
 		logger.trace("outx1    :" + outx1 + "\n");
-		GaussianMixture outx3 = ur03.getWeight().mulForInsideOutside(outor, GrammarRule.Unit.P, true);
+		GaussianMixture outx3 = ur03.getWeight().mulAndMarginalize(outor, null, RuleUnit.P, true);
 		logger.trace("outx3    :" + outx3 + "\n");
-		GaussianMixture outx2 = ur12.getWeight().mulForInsideOutside(outx1, GrammarRule.Unit.P, true);
-		GaussianMixture out32 = ur32.getWeight().mulForInsideOutside(outx3, GrammarRule.Unit.P, true);
+		GaussianMixture outx2 = ur12.getWeight().mulAndMarginalize(outx1, null, RuleUnit.P, true);
+		GaussianMixture out32 = ur32.getWeight().mulAndMarginalize(outx3, null, RuleUnit.P, true);
 		outx2.add(out32, false);
 		logger.trace("outx2    :" + outx2 + "\n");
 		
@@ -446,12 +448,12 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		GaussianMixture.config((short) -1, 1e-6, 4, ncomp, 0.5, -1.0, -1.0, true, rnd, null);
 		GaussianDistribution.config(1, 5, ndim, 0.5, 0.8, rnd, null);
 		
-		GrammarRule ur01 = new UnaryGrammarRule((short) 0, (short) 1, GrammarRule.RHSPACE, true);	
-		GrammarRule ur03 = new UnaryGrammarRule((short) 0, (short) 3, GrammarRule.RHSPACE, true);	
-		GrammarRule ur12 = new UnaryGrammarRule((short) 1, (short) 2, GrammarRule.LRURULE, true);	
-		GrammarRule ur32 = new UnaryGrammarRule((short) 3, (short) 2, GrammarRule.LRURULE, true);	
-		GrammarRule ur20 = new UnaryGrammarRule((short) 2, (short) 0, GrammarRule.LHSPACE, true);	
-		GrammarRule ur21 = new UnaryGrammarRule((short) 2, (short) 1, GrammarRule.LHSPACE, true);	
+		GrammarRule ur01 = new UnaryGrammarRule((short) 0, (short) 1, RuleType.RHSPACE, true);	
+		GrammarRule ur03 = new UnaryGrammarRule((short) 0, (short) 3, RuleType.RHSPACE, true);	
+		GrammarRule ur12 = new UnaryGrammarRule((short) 1, (short) 2, RuleType.LRURULE, true);	
+		GrammarRule ur32 = new UnaryGrammarRule((short) 3, (short) 2, RuleType.LRURULE, true);	
+		GrammarRule ur20 = new UnaryGrammarRule((short) 2, (short) 0, RuleType.LHSPACE, true);	
+		GrammarRule ur21 = new UnaryGrammarRule((short) 2, (short) 1, RuleType.LHSPACE, true);	
 		
 		printRule(ur01);
 		printRule(ur03);
@@ -463,19 +465,19 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		logger.trace("\n---Inside Score---\n");
 		GaussianMixture cin20 = ur20.getWeight().copy(true);
 //		cin20.setWeight(0, -0.1);
-		GaussianMixture cin12 = ur12.getWeight().mulForInsideOutside(cin20, GrammarRule.Unit.UC, true); // in logarithm
+		GaussianMixture cin12 = ur12.getWeight().mulAndMarginalize(cin20, null, RuleUnit.UC, true); // in logarithm
 		logger.trace("cin12    : " + cin12 + "\n");
-		GaussianMixture cin12copy = marginalize(ur12.getWeight(), cin20, GrammarRule.Unit.UC, true);    // in the normal way
+		GaussianMixture cin12copy = marginalize(ur12.getWeight(), cin20, RuleUnit.UC, true);    // in the normal way
 		logger.trace("cin12copy: " + cin12copy + "\n");
 		
-		GaussianMixture cin32 = ur32.getWeight().mulForInsideOutside(cin20, GrammarRule.Unit.UC, true);
+		GaussianMixture cin32 = ur32.getWeight().mulAndMarginalize(cin20, null, RuleUnit.UC, true);
 		logger.trace("cin32    : " + cin32 + "\n");
 		
-		GaussianMixture cin01 = ur01.getWeight().mulForInsideOutside(cin12, GrammarRule.Unit.C, true);
+		GaussianMixture cin01 = ur01.getWeight().mulAndMarginalize(cin12, null, RuleUnit.C, true);
 		logger.trace("cin01    : " + cin01 + "\t" + cin01.getWeight(0) + "\n");
-		GaussianMixture cin01copy = marginalize(ur01.getWeight(), cin12, GrammarRule.Unit.C, true);
+		GaussianMixture cin01copy = marginalize(ur01.getWeight(), cin12, RuleUnit.C, true);
 		logger.trace("cin01copy: " + cin01copy + "\n");
-		GaussianMixture cin03 = ur03.getWeight().mulForInsideOutside(cin32, GrammarRule.Unit.C, true);
+		GaussianMixture cin03 = ur03.getWeight().mulAndMarginalize(cin32, null, RuleUnit.C, true);
 		logger.trace("cin03    : " + cin03 + "\t" + cin03.getWeight(0) + "\n");
 		
 		double scoret = cin01.getWeight(0);;
@@ -488,12 +490,12 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		outor.marginalizeToOne();
 		logger.trace("outor    :" + outor + "\n");
 		
-		GaussianMixture outx1 = ur01.getWeight().mulForInsideOutside(outor, GrammarRule.Unit.P, true);
+		GaussianMixture outx1 = ur01.getWeight().mulAndMarginalize(outor, null, RuleUnit.P, true);
 		logger.trace("outx1    :" + outx1 + "\n");
-		GaussianMixture outx3 = ur03.getWeight().mulForInsideOutside(outor, GrammarRule.Unit.P, true);
+		GaussianMixture outx3 = ur03.getWeight().mulAndMarginalize(outor, null, RuleUnit.P, true);
 		logger.trace("outx3    :" + outx3 + "\n");
-		GaussianMixture outx2 = ur12.getWeight().mulForInsideOutside(outx1, GrammarRule.Unit.P, true);
-		GaussianMixture out32 = ur32.getWeight().mulForInsideOutside(outx3, GrammarRule.Unit.P, true);
+		GaussianMixture outx2 = ur12.getWeight().mulAndMarginalize(outx1, null, RuleUnit.P, true);
+		GaussianMixture out32 = ur32.getWeight().mulAndMarginalize(outx3, null, RuleUnit.P, true);
 		outx2.add(out32, false);
 		logger.trace("outx2    :" + outx2 + "\n");
 		
@@ -581,12 +583,12 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		GaussianMixture.config((short) -1, 1e-6, 4, ncomp, 0.5, -1.0, -1.0, true, rnd, null);
 		GaussianDistribution.config(1, 5, ndim, 0.5, 0.8, rnd, null);
 		
-		GrammarRule ur01 = new UnaryGrammarRule((short) 0, (short) 1, GrammarRule.RHSPACE, true);	
-		GrammarRule ur03 = new UnaryGrammarRule((short) 0, (short) 3, GrammarRule.RHSPACE, true);	
-		GrammarRule ur12 = new UnaryGrammarRule((short) 1, (short) 2, GrammarRule.LRURULE, true);	
-		GrammarRule ur32 = new UnaryGrammarRule((short) 3, (short) 2, GrammarRule.LRURULE, true);	
-		GrammarRule ur20 = new UnaryGrammarRule((short) 2, (short) 0, GrammarRule.LHSPACE, true);	
-		GrammarRule ur21 = new UnaryGrammarRule((short) 2, (short) 1, GrammarRule.LHSPACE, true);	
+		GrammarRule ur01 = new UnaryGrammarRule((short) 0, (short) 1, RuleType.RHSPACE, true);	
+		GrammarRule ur03 = new UnaryGrammarRule((short) 0, (short) 3, RuleType.RHSPACE, true);	
+		GrammarRule ur12 = new UnaryGrammarRule((short) 1, (short) 2, RuleType.LRURULE, true);	
+		GrammarRule ur32 = new UnaryGrammarRule((short) 3, (short) 2, RuleType.LRURULE, true);	
+		GrammarRule ur20 = new UnaryGrammarRule((short) 2, (short) 0, RuleType.LHSPACE, true);	
+		GrammarRule ur21 = new UnaryGrammarRule((short) 2, (short) 1, RuleType.LHSPACE, true);	
 		
 		Component comp01 = ur01.getWeight().getComponent((short) 0);
 		Component comp03 = ur03.getWeight().getComponent((short) 0);
@@ -595,14 +597,14 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		Component comp20 = ur20.getWeight().getComponent((short) 0);
 		Component comp21 = ur21.getWeight().getComponent((short) 0);
 		
-		GaussianDistribution gd01 = comp01.squeeze(GrammarRule.Unit.C);
-		GaussianDistribution gd03 = comp03.squeeze(GrammarRule.Unit.C);
-		GaussianDistribution gd12p = comp12.squeeze(GrammarRule.Unit.P);
-		GaussianDistribution gd12c = comp12.squeeze(GrammarRule.Unit.UC);
-		GaussianDistribution gd32p = comp32.squeeze(GrammarRule.Unit.P);
-		GaussianDistribution gd32c = comp32.squeeze(GrammarRule.Unit.UC);
-		GaussianDistribution gd20 = comp20.squeeze(GrammarRule.Unit.P);
-		GaussianDistribution gd21 = comp21.squeeze(GrammarRule.Unit.P);
+		GaussianDistribution gd01 = comp01.squeeze(RuleUnit.C);
+		GaussianDistribution gd03 = comp03.squeeze(RuleUnit.C);
+		GaussianDistribution gd12p = comp12.squeeze(RuleUnit.P);
+		GaussianDistribution gd12c = comp12.squeeze(RuleUnit.UC);
+		GaussianDistribution gd32p = comp32.squeeze(RuleUnit.P);
+		GaussianDistribution gd32c = comp32.squeeze(RuleUnit.UC);
+		GaussianDistribution gd20 = comp20.squeeze(RuleUnit.P);
+		GaussianDistribution gd21 = comp21.squeeze(RuleUnit.P);
 		
 		double mua = 1.0, mub = -1.0;
 		gd01.getMus().set(0, mua);
@@ -635,23 +637,23 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		logger.trace("\n---Inside Score---\n");
 		GaussianMixture cin20 = ur20.getWeight().copy(true);
 //		cin20.setWeight(0, -1e-5);
-		GaussianMixture cin12 = ur12.getWeight().mulForInsideOutside(cin20, GrammarRule.Unit.UC, true); // in logarithm
+		GaussianMixture cin12 = ur12.getWeight().mulAndMarginalize(cin20, null, RuleUnit.UC, true); // in logarithm
 		logger.trace("cin12    : " + cin12 + "\t" + cin12.getWeight(0) + "\n");
-		GaussianMixture cin12copy = marginalize(ur12.getWeight(), cin20, GrammarRule.Unit.UC, true);    // in the normal way
+		GaussianMixture cin12copy = marginalize(ur12.getWeight(), cin20, RuleUnit.UC, true);    // in the normal way
 		logger.trace("cin12copy: " + cin12copy + "\t" + cin12copy.getWeight(0) + "\n");
 		
-		GaussianMixture cin32 = ur32.getWeight().mulForInsideOutside(cin20, GrammarRule.Unit.UC, true);
+		GaussianMixture cin32 = ur32.getWeight().mulAndMarginalize(cin20, null, RuleUnit.UC, true);
 		logger.trace("cin32    : " + cin32 + "\t" + cin32.getWeight(0) + "\n");
-		GaussianMixture cin32copy = marginalize(ur32.getWeight(), cin20, GrammarRule.Unit.UC, true);
+		GaussianMixture cin32copy = marginalize(ur32.getWeight(), cin20, RuleUnit.UC, true);
 		logger.trace("cin32copy: " + cin32copy + "\t" + cin32copy.getWeight(0) + "\n");
 		
 //		ur01.getWeight().setWeight(0, -1e-5);
 		
-		GaussianMixture cin01 = ur01.getWeight().mulForInsideOutside(cin12, GrammarRule.Unit.C, true);
+		GaussianMixture cin01 = ur01.getWeight().mulAndMarginalize(cin12, null, RuleUnit.C, true);
 		logger.trace("cin01    : " + cin01 + "\t" + cin01.getWeight(0) + "\n");
-		GaussianMixture cin01copy = marginalize(ur01.getWeight(), cin12, GrammarRule.Unit.C, true);
+		GaussianMixture cin01copy = marginalize(ur01.getWeight(), cin12, RuleUnit.C, true);
 		logger.trace("cin01copy: " + cin01copy + "\n");
-		GaussianMixture cin03 = ur03.getWeight().mulForInsideOutside(cin32, GrammarRule.Unit.C, true);
+		GaussianMixture cin03 = ur03.getWeight().mulAndMarginalize(cin32, null, RuleUnit.C, true);
 		logger.trace("cin03    : " + cin03 + "\t" + cin03.getWeight(0) + "\n");
 		
 		double scoret = cin01.getWeight(0);
@@ -664,13 +666,13 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		outor.marginalizeToOne();
 		logger.trace("outor    :" + outor + "\n");
 		
-		GaussianMixture outx1 = ur01.getWeight().mulForInsideOutside(outor, GrammarRule.Unit.P, true);
+		GaussianMixture outx1 = ur01.getWeight().mulAndMarginalize(outor, null, RuleUnit.P, true);
 		logger.trace("outx1    :" + outx1 + "\n");
-		GaussianMixture outx3 = ur03.getWeight().mulForInsideOutside(outor, GrammarRule.Unit.P, true);
+		GaussianMixture outx3 = ur03.getWeight().mulAndMarginalize(outor, null, RuleUnit.P, true);
 		logger.trace("outx3    :" + outx3 + "\n");
-		GaussianMixture outx2 = ur12.getWeight().mulForInsideOutside(outx1, GrammarRule.Unit.P, true);
+		GaussianMixture outx2 = ur12.getWeight().mulAndMarginalize(outx1, null, RuleUnit.P, true);
 		GaussianMixture outsidet = outx2.copy(true);
-		GaussianMixture out32 = ur32.getWeight().mulForInsideOutside(outx3, GrammarRule.Unit.P, true);
+		GaussianMixture out32 = ur32.getWeight().mulAndMarginalize(outx3, null, RuleUnit.P, true);
 		outx2.add(out32, false);
 		logger.trace("outx2    :" + outx2 + "\n");
 		
@@ -724,12 +726,12 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		GaussianMixture.config((short) -1, 1e-6, 4, ncomp, 0.5, -1.0, -1.0, true, rnd, null);
 		GaussianDistribution.config(1, 5, ndim, 0.5, 0.8, rnd, null);
 		
-		GrammarRule ur01 = new UnaryGrammarRule((short) 0, (short) 1, GrammarRule.RHSPACE, true);	
-		GrammarRule ur03 = new UnaryGrammarRule((short) 0, (short) 3, GrammarRule.RHSPACE, true);	
-		GrammarRule ur12 = new UnaryGrammarRule((short) 1, (short) 2, GrammarRule.LRURULE, true);	
-		GrammarRule ur32 = new UnaryGrammarRule((short) 3, (short) 2, GrammarRule.LRURULE, true);	
-		GrammarRule ur20 = new UnaryGrammarRule((short) 2, (short) 0, GrammarRule.LHSPACE, true);	
-		GrammarRule ur21 = new UnaryGrammarRule((short) 2, (short) 1, GrammarRule.LHSPACE, true);	
+		GrammarRule ur01 = new UnaryGrammarRule((short) 0, (short) 1, RuleType.RHSPACE, true);	
+		GrammarRule ur03 = new UnaryGrammarRule((short) 0, (short) 3, RuleType.RHSPACE, true);	
+		GrammarRule ur12 = new UnaryGrammarRule((short) 1, (short) 2, RuleType.LRURULE, true);	
+		GrammarRule ur32 = new UnaryGrammarRule((short) 3, (short) 2, RuleType.LRURULE, true);	
+		GrammarRule ur20 = new UnaryGrammarRule((short) 2, (short) 0, RuleType.LHSPACE, true);	
+		GrammarRule ur21 = new UnaryGrammarRule((short) 2, (short) 1, RuleType.LHSPACE, true);	
 		
 		Component comp01 = ur01.getWeight().getComponent((short) 0);
 		Component comp03 = ur03.getWeight().getComponent((short) 0);
@@ -745,14 +747,14 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		comp20.setWeight(0.0);
 		comp21.setWeight(0.0);
 		
-		GaussianDistribution gd01 = comp01.squeeze(GrammarRule.Unit.C);
-		GaussianDistribution gd03 = comp03.squeeze(GrammarRule.Unit.C);
-		GaussianDistribution gd12p = comp12.squeeze(GrammarRule.Unit.P);
-		GaussianDistribution gd12c = comp12.squeeze(GrammarRule.Unit.UC);
-		GaussianDistribution gd32p = comp32.squeeze(GrammarRule.Unit.P);
-		GaussianDistribution gd32c = comp32.squeeze(GrammarRule.Unit.UC);
-		GaussianDistribution gd20 = comp20.squeeze(GrammarRule.Unit.P);
-		GaussianDistribution gd21 = comp21.squeeze(GrammarRule.Unit.P);
+		GaussianDistribution gd01 = comp01.squeeze(RuleUnit.C);
+		GaussianDistribution gd03 = comp03.squeeze(RuleUnit.C);
+		GaussianDistribution gd12p = comp12.squeeze(RuleUnit.P);
+		GaussianDistribution gd12c = comp12.squeeze(RuleUnit.UC);
+		GaussianDistribution gd32p = comp32.squeeze(RuleUnit.P);
+		GaussianDistribution gd32c = comp32.squeeze(RuleUnit.UC);
+		GaussianDistribution gd20 = comp20.squeeze(RuleUnit.P);
+		GaussianDistribution gd21 = comp21.squeeze(RuleUnit.P);
 		
 		double mua = 0.0, mub = 0.0;
 		gd01.getMus().set(0, mua);
@@ -785,19 +787,19 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		logger.trace("\n---Inside Score---\n");
 		GaussianMixture cin20 = ur20.getWeight().copy(true);
 //		cin20.setWeight(0, -0.1);
-		GaussianMixture cin12 = ur12.getWeight().mulForInsideOutside(cin20, GrammarRule.Unit.UC, true); // in logarithm
+		GaussianMixture cin12 = ur12.getWeight().mulAndMarginalize(cin20, null, RuleUnit.UC, true); // in logarithm
 		logger.trace("cin12    : " + cin12 + "\n");
-		GaussianMixture cin12copy = marginalize(ur12.getWeight(), cin20, GrammarRule.Unit.UC, true);    // in the normal way
+		GaussianMixture cin12copy = marginalize(ur12.getWeight(), cin20, RuleUnit.UC, true);    // in the normal way
 		logger.trace("cin12copy: " + cin12copy + "\n");
 		
-		GaussianMixture cin32 = ur32.getWeight().mulForInsideOutside(cin20, GrammarRule.Unit.UC, true);
+		GaussianMixture cin32 = ur32.getWeight().mulAndMarginalize(cin20, null, RuleUnit.UC, true);
 		logger.trace("cin32    : " + cin32 + "\n");
 		
-		GaussianMixture cin01 = ur01.getWeight().mulForInsideOutside(cin12, GrammarRule.Unit.C, true);
+		GaussianMixture cin01 = ur01.getWeight().mulAndMarginalize(cin12, null, RuleUnit.C, true);
 		logger.trace("cin01    : " + cin01 + "\t" + cin01.getWeight(0) + "\n");
-		GaussianMixture cin01copy = marginalize(ur01.getWeight(), cin12, GrammarRule.Unit.C, true);
+		GaussianMixture cin01copy = marginalize(ur01.getWeight(), cin12, RuleUnit.C, true);
 		logger.trace("cin01copy: " + cin01copy + "\n");
-		GaussianMixture cin03 = ur03.getWeight().mulForInsideOutside(cin32, GrammarRule.Unit.C, true);
+		GaussianMixture cin03 = ur03.getWeight().mulAndMarginalize(cin32, null, RuleUnit.C, true);
 		logger.trace("cin03    : " + cin03 + "\t" + cin03.getWeight(0) + "\n");
 		
 		double scoret = cin03.getWeight(0);;
@@ -810,12 +812,12 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		outor.marginalizeToOne();
 		logger.trace("outor    :" + outor + "\n");
 		
-		GaussianMixture outx1 = ur01.getWeight().mulForInsideOutside(outor, GrammarRule.Unit.P, true);
+		GaussianMixture outx1 = ur01.getWeight().mulAndMarginalize(outor, null, RuleUnit.P, true);
 		logger.trace("outx1    :" + outx1 + "\n");
-		GaussianMixture outx3 = ur03.getWeight().mulForInsideOutside(outor, GrammarRule.Unit.P, true);
+		GaussianMixture outx3 = ur03.getWeight().mulAndMarginalize(outor, null, RuleUnit.P, true);
 		logger.trace("outx3    :" + outx3 + "\n");
-		GaussianMixture outx2 = ur12.getWeight().mulForInsideOutside(outx1, GrammarRule.Unit.P, true);
-		GaussianMixture out32 = ur32.getWeight().mulForInsideOutside(outx3, GrammarRule.Unit.P, true);
+		GaussianMixture outx2 = ur12.getWeight().mulAndMarginalize(outx1, null, RuleUnit.P, true);
+		GaussianMixture out32 = ur32.getWeight().mulAndMarginalize(outx3, null, RuleUnit.P, true);
 		outx2.add(out32, false);
 		logger.trace("outx2    :" + outx2 + "\n");
 		
@@ -843,9 +845,9 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		logger.trace("rule: " + rule.getWeight() + "\n\n");
 		
 		Component icomp = cinsides.getComponent((short) 0);
-		GaussianDistribution iscore = icomp.squeeze(GrammarRule.Unit.P);
+		GaussianDistribution iscore = icomp.squeeze(RuleUnit.P);
 		Component rcomp = rule.getWeight().getComponent((short) 0);
-		GaussianDistribution rscore = rcomp.squeeze(GrammarRule.Unit.C);
+		GaussianDistribution rscore = rcomp.squeeze(RuleUnit.C);
 		
 		logger.trace(icomp + "\n" + rcomp + "\n");
 		
@@ -884,7 +886,7 @@ public class DiagonalGaussianDistributionTest extends Recorder {
 		return Math.pow(2 * Math.PI * 1, -0.5) * Math.exp(-x * x / 2.0);
 	}
 	
-	public GaussianMixture marginalize(GaussianMixture gm0, GaussianMixture gm1, String key, boolean deep) {
+	public GaussianMixture marginalize(GaussianMixture gm0, GaussianMixture gm1, RuleUnit key, boolean deep) {
 		GaussianMixture amixture = gm0.copy(deep);
 		// calculating inside score can always remove some portions, but calculating outside score
 		// can not, because the rule ROOT->N has the dummy outside score for ROOT (one component but

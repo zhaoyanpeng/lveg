@@ -19,7 +19,9 @@ import java.util.regex.Pattern;
 
 import org.junit.Test;
 
+import edu.shanghaitech.ai.nlp.lveg.impl.BinaryGrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture.Component;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
 import edu.shanghaitech.ai.nlp.util.Debugger;
 import edu.shanghaitech.ai.nlp.util.FunUtil;
 
@@ -76,6 +78,30 @@ public class Java {
 		}
 	}
 	
+	enum XXX {
+		a(1), 
+		b(2), 
+		c(3);
+		
+		int x;
+		
+		XXX(int x) {
+			this.x = x;
+		}
+		
+		int value() {
+			return x;
+		}
+		
+		@Override
+		public String toString() {
+			return String.valueOf(x);
+		}
+	}
+	
+	enum YYY {
+		a, b, c
+	}
 	
 	@Test
 	public void c() {
@@ -94,6 +120,20 @@ public class Java {
 		double mm = 1;
 		System.out.println(FunUtil.logAdd(mm, xx));
 		
+		GrammarRule rule0 = new BinaryGrammarRule((short) 6, (short) 8, (short)8);
+		GrammarRule rule1 = new BinaryGrammarRule((short) 6, (short) 8, (short)8);
+
+		System.out.println(rule0 = rule1);
+		System.out.println(rule0.equals(rule1));
+		
+		System.out.println(XXX.b);
+		System.out.println(YYY.a.ordinal());
+		
+		XXX x1 = XXX.a;
+		XXX x2 = XXX.b;
+		System.out.println(x1 == x2);
+		System.out.println(x1.equals(x2));
+
 	}
 	
 //	@Test

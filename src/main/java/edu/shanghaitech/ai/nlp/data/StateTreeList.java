@@ -87,12 +87,12 @@ public class StateTreeList extends AbstractCollection<Tree<State>> implements Se
 	
 	
 	public StateTreeList() {
-		this.trees = new ArrayList<Tree<State>>();
+		this.trees = new ArrayList<>();
 	}
 	
 	
 	public StateTreeList(StateTreeList stateTreeList) {
-		this.trees = new ArrayList<Tree<State>>();
+		this.trees = new ArrayList<>();
 		for (Tree<State> tree: stateTreeList.trees) {
 			trees.add(copyTreeButLeaf(tree));
 		}
@@ -110,7 +110,7 @@ public class StateTreeList extends AbstractCollection<Tree<State>> implements Se
 	private Tree<State> copyTreeButLeaf(Tree<State> tree) {
 		if (tree.isLeaf()) { return tree; }
 		State state = new State(tree.getLabel(), false);
-		List<Tree<State>> children = new ArrayList<Tree<State>>();
+		List<Tree<State>> children = new ArrayList<>();
 		for (Tree<State> child : tree.getChildren()) {
 			children.add(copyTreeButLeaf(child));
 		}
@@ -128,8 +128,7 @@ public class StateTreeList extends AbstractCollection<Tree<State>> implements Se
 	
 	
 	private Tree<State> copyTree(Tree<State> tree) {
-		List<Tree<State>> children = 
-				new ArrayList<Tree<State>>(tree.getChildren().size());
+		List<Tree<State>> children = new ArrayList<>(tree.getChildren().size());
 		for (Tree<State> child : tree.getChildren()) {
 			children.add(copyTree(child));
 		}
@@ -138,7 +137,7 @@ public class StateTreeList extends AbstractCollection<Tree<State>> implements Se
 	
 	
 	public StateTreeList(List<Tree<String>> trees, Numberer numberer) {
-		this.trees = new ArrayList<Tree<State>>();
+		this.trees = new ArrayList<>();
 		for (Tree<String> tree : trees) {
 			this.trees.add(stringTreeToStateTree(tree, numberer));
 			tree = null; // clean the memory
@@ -222,7 +221,7 @@ public class StateTreeList extends AbstractCollection<Tree<State>> implements Se
 		
 		String name = (String) numberer.object(tree.getLabel().getId());
 		Tree<String> newTree = new Tree<String>(name);
-		List<Tree<String>> children = new ArrayList<Tree<String>>();
+		List<Tree<String>> children = new ArrayList<>();
 		
 		for (Tree<State> child : tree.getChildren()) {
 			Tree<String> newChild = stateTreeToStringTree(child, numberer);
@@ -254,7 +253,7 @@ public class StateTreeList extends AbstractCollection<Tree<State>> implements Se
 		// System.out.println(tree.getLabel().intern()); // tag name
 		State state = new State(null, id, (short) from, (short) to);
 		Tree<State> newTree = new Tree<State>(state);
-		List<Tree<State>> children = new ArrayList<Tree<State>>();
+		List<Tree<State>> children = new ArrayList<>();
 		for (Tree<String> child : tree.getChildren()) {
 			short length = (short) child.getYield().size();
 			Tree<State> newChild = stringTreeToStateTree(child, numberer, from, from + length);

@@ -2,13 +2,16 @@ package edu.shanghaitech.ai.nlp.optimization;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
 
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleType;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleUnit;
 import edu.shanghaitech.ai.nlp.util.Recorder;
 
 /**
@@ -22,9 +25,9 @@ public class SimpleMinimizer extends Recorder implements Serializable {
 	 * 
 	 */
 	private static final long serialVersionUID = -4030933989131874669L;
-	protected Map<String, List<Double>> truths;
-	protected Map<String, List<Double>> sample;
-	protected Map<String, List<Double>> ggrads;
+	protected EnumMap<RuleUnit, List<Double>> truths;
+	protected EnumMap<RuleUnit, List<Double>> sample;
+	protected EnumMap<RuleUnit, List<Double>> ggrads;
 	protected List<Double> wgrads;
 	protected double wgrad;
 	
@@ -33,25 +36,25 @@ public class SimpleMinimizer extends Recorder implements Serializable {
 	 * To avoid the excessive 'new' operations.
 	 */
 	public SimpleMinimizer() {
-		this.sample = new HashMap<String, List<Double>>();
-		sample.put(GrammarRule.Unit.P, new ArrayList<Double>());
-		sample.put(GrammarRule.Unit.C, new ArrayList<Double>());
-		sample.put(GrammarRule.Unit.UC, new ArrayList<Double>());
-		sample.put(GrammarRule.Unit.LC, new ArrayList<Double>());
-		sample.put(GrammarRule.Unit.RC, new ArrayList<Double>());
-		this.truths = new HashMap<String, List<Double>>();
-		truths.put(GrammarRule.Unit.P, new ArrayList<Double>());
-		truths.put(GrammarRule.Unit.C, new ArrayList<Double>());
-		truths.put(GrammarRule.Unit.UC, new ArrayList<Double>());
-		truths.put(GrammarRule.Unit.LC, new ArrayList<Double>());
-		truths.put(GrammarRule.Unit.RC, new ArrayList<Double>());
+		this.sample = new EnumMap<RuleUnit, List<Double>>(RuleUnit.class);
+		sample.put(RuleUnit.P, new ArrayList<>());
+		sample.put(RuleUnit.C, new ArrayList<>());
+		sample.put(RuleUnit.UC, new ArrayList<>());
+		sample.put(RuleUnit.LC, new ArrayList<>());
+		sample.put(RuleUnit.RC, new ArrayList<>());
+		this.truths = new EnumMap<>(RuleUnit.class);
+		truths.put(RuleUnit.P, new ArrayList<>());
+		truths.put(RuleUnit.C, new ArrayList<>());
+		truths.put(RuleUnit.UC, new ArrayList<>());
+		truths.put(RuleUnit.LC, new ArrayList<>());
+		truths.put(RuleUnit.RC, new ArrayList<>());
 		this.wgrads = new ArrayList<Double>();
-		this.ggrads = new HashMap<String, List<Double>>();
-		ggrads.put(GrammarRule.Unit.P, new ArrayList<Double>());
-		ggrads.put(GrammarRule.Unit.C, new ArrayList<Double>());
-		ggrads.put(GrammarRule.Unit.UC, new ArrayList<Double>());
-		ggrads.put(GrammarRule.Unit.LC, new ArrayList<Double>());
-		ggrads.put(GrammarRule.Unit.RC, new ArrayList<Double>());
+		this.ggrads = new EnumMap<RuleUnit, List<Double>>(RuleUnit.class);
+		ggrads.put(RuleUnit.P, new ArrayList<>());
+		ggrads.put(RuleUnit.C, new ArrayList<>());
+		ggrads.put(RuleUnit.UC, new ArrayList<>());
+		ggrads.put(RuleUnit.LC, new ArrayList<>());
+		ggrads.put(RuleUnit.RC, new ArrayList<>());
 	}
 	
 	
@@ -72,14 +75,14 @@ public class SimpleMinimizer extends Recorder implements Serializable {
 	private double derivateRuleWeight(
 			double scoreT, 
 			double scoreS, 
-			List<Map<String, GaussianMixture>> ioScoreWithT,
-			List<Map<String, GaussianMixture>> ioScoreWithS) {
+			List<EnumMap<RuleUnit, GaussianMixture>> ioScoreWithT,
+			List<EnumMap<RuleUnit, GaussianMixture>> ioScoreWithS) {
 		double countWithT = 0.0, countWithS = 0.0, cnt, part, dRuleW;
 		if (ioScoreWithT != null) {
-			for (Map<String, GaussianMixture> iosWithT : ioScoreWithT) {
+			for (Map<RuleUnit, GaussianMixture> iosWithT : ioScoreWithT) {
 				cnt = 1.0;
 				boolean found = false;
-				for (Map.Entry<String, GaussianMixture> ios : iosWithT.entrySet()) {
+				for (Entry<RuleUnit, GaussianMixture> ios : iosWithT.entrySet()) {
 					part = ios.getValue().evalInsideOutside(truths.get(ios.getKey()), false);
 					cnt *= part;
 					found = true;
@@ -88,10 +91,10 @@ public class SimpleMinimizer extends Recorder implements Serializable {
 			}
 		}
 		if (ioScoreWithS != null) {
-			for (Map<String, GaussianMixture> iosWithS : ioScoreWithS) {
+			for (Map<RuleUnit, GaussianMixture> iosWithS : ioScoreWithS) {
 				cnt = 1.0;
 				boolean found = false;
-				for (Map.Entry<String, GaussianMixture> ios : iosWithS.entrySet()) {
+				for (Entry<RuleUnit, GaussianMixture> ios : iosWithS.entrySet()) {
 					part = ios.getValue().evalInsideOutside(truths.get(ios.getKey()), false);
 					cnt *= part;
 					found = true;
@@ -117,33 +120,33 @@ public class SimpleMinimizer extends Recorder implements Serializable {
 			List<Double> scoresSandT) {
 		int batchsize = scoresSandT.size() / 2;
 		GaussianMixture ruleW = rule.getWeight();
-		List<Map<String, GaussianMixture>> iosWithT, iosWithS;
+		List<EnumMap<RuleUnit, GaussianMixture>> iosWithT, iosWithS;
 		boolean removed = false, cumulative, updated;
 		double scoreT, scoreS, dRuleW;
-		byte uRuleType = -1;
+		RuleType uRuleType = null;
 		
 		for (int icomponent = 0; icomponent < ruleW.ncomponent(); icomponent++) {
 			updated = false; // 
 			for (short isample = 0; isample < Optimizer.maxsample; isample++) {
 				switch (rule.getType()) {
-				case GrammarRule.LRBRULE: {
-					sample(sample.get(GrammarRule.Unit.P), ruleW.dim(icomponent, GrammarRule.Unit.P));
-					sample(sample.get(GrammarRule.Unit.LC), ruleW.dim(icomponent, GrammarRule.Unit.LC));
-					sample(sample.get(GrammarRule.Unit.RC), ruleW.dim(icomponent, GrammarRule.Unit.RC));
+				case LRBRULE: {
+					sample(sample.get(RuleUnit.P), ruleW.dim(icomponent, RuleUnit.P));
+					sample(sample.get(RuleUnit.LC), ruleW.dim(icomponent, RuleUnit.LC));
+					sample(sample.get(RuleUnit.RC), ruleW.dim(icomponent, RuleUnit.RC));
 					break;
 				}
-				case GrammarRule.LRURULE: {
-					sample(sample.get(GrammarRule.Unit.P), ruleW.dim(icomponent, GrammarRule.Unit.P));
-					sample(sample.get(GrammarRule.Unit.UC), ruleW.dim(icomponent, GrammarRule.Unit.UC));
+				case LRURULE: {
+					sample(sample.get(RuleUnit.P), ruleW.dim(icomponent, RuleUnit.P));
+					sample(sample.get(RuleUnit.UC), ruleW.dim(icomponent, RuleUnit.UC));
 					break;
 				}
-				case GrammarRule.LHSPACE: {
-					sample(sample.get(GrammarRule.Unit.P), ruleW.dim(icomponent, GrammarRule.Unit.P));
-					uRuleType = GrammarRule.LHSPACE;
+				case LHSPACE: {
+					sample(sample.get(RuleUnit.P), ruleW.dim(icomponent, RuleUnit.P));
+					uRuleType = RuleType.LHSPACE;
 					break;
 				}
-				case GrammarRule.RHSPACE: {
-					sample(sample.get(GrammarRule.Unit.C), ruleW.dim(icomponent, GrammarRule.Unit.C));
+				case RHSPACE: {
+					sample(sample.get(RuleUnit.C), ruleW.dim(icomponent, RuleUnit.C));
 					break;
 				}
 				default: {
@@ -163,12 +166,12 @@ public class SimpleMinimizer extends Recorder implements Serializable {
 					 * of the objective function w.r.t w(r) is (count(r | T_S) - count(r | S)) / w(r), 
 					 * which contains the term 1 / w(r), thus we could eliminate w(r) when computing it.
 					 */
-					if (!removed && uRuleType == GrammarRule.LHSPACE) { 
+					if (!removed && uRuleType == RuleType.LHSPACE) { 
 						if (iosWithT != null) { 
-							for (Map<String, GaussianMixture> ios : iosWithT) { ios.remove(GrammarRule.Unit.C); } 
+							for (Map<RuleUnit, GaussianMixture> ios : iosWithT) { ios.remove(RuleUnit.C); } 
 						}
 						if (iosWithS != null) { 
-							for (Map<String, GaussianMixture> ios : iosWithS) { ios.remove(GrammarRule.Unit.C); } 
+							for (Map<RuleUnit, GaussianMixture> ios : iosWithS) { ios.remove(RuleUnit.C); } 
 						}
 					}
 					// cumulative = (isample + i) > 0; // incorrect version

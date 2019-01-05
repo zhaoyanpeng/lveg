@@ -4,17 +4,24 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.PriorityQueue;
+import java.util.Set;
+import java.util.TreeMap;
 
 import edu.berkeley.nlp.PCFGLA.TreeAnnotations;
 import edu.berkeley.nlp.syntax.Tree;
+import edu.shanghaitech.ai.nlp.data.ObjectFileManager;
 import edu.shanghaitech.ai.nlp.data.StateTreeList;
 import edu.shanghaitech.ai.nlp.eval.EnglishPennTreebankParseEvaluator;
+import edu.shanghaitech.ai.nlp.data.ObjectFileManager.Constraint;
 import edu.shanghaitech.ai.nlp.data.ObjectFileManager.GrammarFile;
 import edu.shanghaitech.ai.nlp.lveg.impl.MaxRuleParser;
+import edu.shanghaitech.ai.nlp.lveg.impl.SimpleLVeGLexicon;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
@@ -22,16 +29,13 @@ import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleType;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
 import edu.shanghaitech.ai.nlp.syntax.State;
+import edu.shanghaitech.ai.nlp.util.Debugger;
 import edu.shanghaitech.ai.nlp.util.FunUtil;
 import edu.shanghaitech.ai.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.util.OptionParser;
 import edu.shanghaitech.ai.nlp.util.ThreadPool;
 
-/**
- * @author Yanpeng Zhao
- * @deprecated
- */
-public class LVeGTester extends LearnerConfig {
+public class LVeGTesterSim extends LearnerConfig {
 	/**
 	 * 
 	 */
@@ -73,6 +77,22 @@ public class LVeGTester extends LearnerConfig {
 		long endTime = System.currentTimeMillis();
 		logger.trace("[total time consumed by LVeG tester] " + (endTime - startTime) / 1000.0 + "\n");
 	}
+	
+	
+	private static void peepGrammars() {
+		SimpleLVeGLexicon ll = (SimpleLVeGLexicon) lexicon;
+		int nunk = 0, total = ll.wordIndexer.size();
+		for (int i = 0; i < total; i++) {
+			String word = ll.wordIndexer.get(i);
+			if (word.startsWith("UNK")) {
+				logger.trace(word + "\n");
+				nunk += 1;
+			}
+		}
+		logger.trace("--there are " + nunk + " / " + total + " unknown word categories.\n");
+		System.exit(0);
+	}
+	
 
 	
 	private static void train(Map<String, StateTreeList> trees, Numberer wrapper) throws Exception {
@@ -97,22 +117,54 @@ public class LVeGTester extends LearnerConfig {
 		grammar = gfile.getGrammar();
 		lexicon = gfile.getLexicon();
 		
+		
+//		peepGrammars();
+		
+		
 		/*
 		logger.trace(grammar);
 		logger.trace(lexicon);
 		System.exit(0);
 		*/
-		System.out.println("--------" + opts.runtag);
 		
 		lexicon.labelTrees(trainTrees); // FIXME no errors, just alert you to pay attention to it 
 		lexicon.labelTrees(testTrees); // save the search time cost by finding a specific tag-word
 		lexicon.labelTrees(devTrees); // pair in in Lexicon.score(...)
 		
+		
+		Set<String>[][][] allmasks = null, masks = null;
+		if (opts.consfile != null && !opts.consfile.equals("")) { // not safe, since load() may returns null
+			Object cons = ObjectFileManager.ObjectFile.load(opts.datadir + opts.consfile);
+			if (cons != null) {
+				allmasks = ((Constraint) cons).getConstraints(); 
+			}
+		}
+		
+		List<Tree<State>> tstTrees = new ArrayList<Tree<State>>();
+		List<Integer> idxes = new ArrayList<Integer>();
+		int idx = 0, cnt = 0;
+		for (Tree<State> tree : testTrees) {
+			if (tree.getYield().size() <= opts.eonlylen) {
+				tstTrees.add(tree);
+				idxes.add(idx);
+			}
+			idx += 1;
+		}
+		
+		if (allmasks != null) {
+			masks = new HashSet[idxes.size()][][];
+			for (int i = 0; i < idxes.size(); i++) {
+				masks[i] = allmasks[idxes.get(i)];
+			}
+			System.out.println("--only eval " + masks.length + " sentences");
+		}
+		
+		
 		scorer = new EnglishPennTreebankParseEvaluator.LabeledConstituentEval<String>(
 				new HashSet<String>(Arrays.asList(new String[] { "ROOT", "PSEUDO" })), 
 				new HashSet<String>(Arrays.asList(new String[] { "''", "``", ".", ":", "," })));
 		mrParser = new MaxRuleParser<Tree<State>, Tree<String>>(grammar, lexicon, opts.maxslen, 
-				opts.ntcyker, opts.pcyker, opts.ef1prune, opts.usemasks, false, null);
+				opts.ntcyker, opts.pcyker, opts.ef1prune, opts.usemasks, opts.eusestag, masks);
 		mparser = new ThreadPool(mrParser, opts.nttest);
 		
 		logger.info("\n---F1 CONFIG---\n[parallel: batch-" + opts.pbatch + ", grad-" + 
@@ -120,21 +172,100 @@ public class LVeGTester extends LearnerConfig {
 		sorter = new PriorityQueue<>(3000, wcomparator);
 		
 		StringBuffer sb = new StringBuffer();
-		sb.append("[test ]" + f1entry(testTrees, numberer, false) + "\n");
-		if (opts.ef1ontrain) { 
-			scorer.reset();
-			sb.append("[train]" + f1entry(trainTrees, numberer, true) + "\n");
-		}
-		if (opts.ef1ondev) {
-			scorer.reset();
-			sb.append("[dev  ]" + f1entry(devTrees, numberer, false) + "\n");
-		}
+		
+		
+		
+		
+		
+		// this file is just a copy of LVeGTester, I used it for testing a problematic lexicon rule VBZ->scoops, 
+		// which does not occur in training data but occurs in testing data. The max-rule parser fails when it 
+		// uses constrained parsing (e.g., constituent constraints from k-best parses). Thus I use pcfg pruning 
+		// to re-parse the sentence. See `git diff`.
+		debugTree(tstTrees, numberer, masks);
+		System.exit(0);
+		
+		
+		
+		
+		sb.append("[test ]" + f1entry(tstTrees, numberer, false) + "\n");
+		
+//		sb.append("[test ]" + f1entry(testTrees, numberer, false) + "\n");
+//		if (opts.ef1ontrain) { 
+//			scorer.reset();
+//			sb.append("[train]" + f1entry(trainTrees, numberer, true) + "\n");
+//		}
+//		if (opts.ef1ondev) {
+//			scorer.reset();
+//			sb.append("[dev  ]" + f1entry(devTrees, numberer, false) + "\n");
+//		}
 		logger.info("[summary]\n" + sb.toString() + "\n");
 		// kill threads
 		grammar.shutdown();
 		lexicon.shutdown();
 		mparser.shutdown();
 	}
+	
+	
+	
+	protected static void debugTree(List<Tree<State>> trees, Numberer numberer, Set<String>[][][] goldmasks) {
+		int index = 332;
+		Tree<State> atree = trees.get(index);
+		logger.trace(Debugger.debugTree(atree, false, (short) 2, numberer, true) + "\n");
+		List<State> words = atree.getYield();
+		int nword = words.size();
+		for (State state : words) {
+			logger.trace(state.getName() + " ");
+		}
+		logger.trace("\n" + nword + "\n");
+		
+		Set<String>[][] gold = new HashSet[nword][nword];
+		for (int i = 0; i < nword; i++) {
+			for (int j = i; j < nword; j++) {
+				gold[i][j] = new HashSet<String>();
+			}
+		}
+		Debugger.fillStateChart(atree, gold, numberer);
+		Map<Integer, String> rets = new TreeMap<Integer, String>();
+		
+		Set<String>[][] pred = goldmasks[index];
+		
+		boolean bbrk = false;
+		for (int i = 0; i < nword; i++) {
+			for (int j = i; j < nword; j++) {
+				if (!pred[i][j].containsAll(gold[i][j])) {
+					System.out.println("(" + i + ", " + j + ")");
+					bbrk = true;
+					break;
+				}
+			}
+			if (bbrk) { break; }
+		}
+		
+		
+		String ret;
+		int layer, idx;
+		for (int i = 0; i < nword; i++) {
+			for (int j = i; j < nword; j++) {
+				layer = nword - j + i; // nword - (j - i)
+				idx = layer * (layer - 1) / 2 + i; // (nword - 1 + 1)(nword - 1) / 2 
+				ret = "";
+				for (String str : gold[i][j]) {
+					int id = numberer.number(str);
+					ret += idx + ",\t" + id + ",\t" + str + "\t(" + i + ", " + j + ")\n";
+				}
+				rets.put(idx, ret);
+			}
+		}
+		for (Integer key : rets.keySet()) {
+			logger.trace(rets.get(key));
+		}
+		
+		
+		Tree<String> parsedtree = mrParser.parse(atree, index);
+		logger.trace(parsedtree + "\n");
+	}
+	
+	
 	
 	protected static void debugGrammars() {
 		for (int i = 0; i < 7; i++) {
@@ -162,7 +293,7 @@ public class LVeGTester extends LearnerConfig {
 		System.exit(0);
 	}
 	
-	public static String f1entry(StateTreeList trees, Numberer numberer, boolean istrain) {
+	public static String f1entry(List<Tree<State>> trees, Numberer numberer, boolean istrain) {
 		if (opts.pf1) {
 			return parallelFscore(opts, mparser, trees, numberer, istrain);
 		} else {
@@ -171,12 +302,12 @@ public class LVeGTester extends LearnerConfig {
 	}
 	
 
-	public static String parallelFscore(Options opts, ThreadPool mparser, StateTreeList stateTreeList, Numberer numberer, boolean istrain) {
+	public static String parallelFscore(Options opts, ThreadPool mparser, List<Tree<State>> trees, Numberer numberer, boolean istrain) {
 		Tree<State> goldTree = null;
 		Tree<String> parsedTree = null;
 		int nUnparsable = 0, cnt = 0, idx = 0;
-		List<Tree<State>> trees = new ArrayList<>(stateTreeList.size());
-		filterTrees(opts, stateTreeList, trees, numberer, istrain);
+//		List<Tree<State>> trees = new ArrayList<>(stateTreeList.size());
+//		filterTrees(opts, stateTreeList, trees, numberer, istrain);
 		
 		for (Tree<State> tree : trees) {
 			mparser.execute(tree);
@@ -210,13 +341,13 @@ public class LVeGTester extends LearnerConfig {
 		}
 		mparser.reset();
 		String summary = scorer.display();
-		logger.trace("\n[max rule parser: " + nUnparsable + " unparsable sample(s) of " + stateTreeList.size() + "(" + trees.size() + ") samples]\n");
+		logger.trace("\n[max rule parser: " + nUnparsable + " unparsable sample(s) of " + trees.size() + "(" + trees.size() + ") samples]\n");
 		logger.trace(summary + "\n\n");
 		return summary;
 	}
 	
 	
-	public static String serialFscore(Options opts, MaxRuleParser<?, ?> mrParser, StateTreeList stateTreeList, Numberer numberer, boolean istrain) {
+	public static String serialFscore(Options opts, MaxRuleParser<?, ?> mrParser, List<Tree<State>> trees, Numberer numberer, boolean istrain) {
 //		String str = "(ROOT (NP^g (@NP^g (NN EDUCATION) (NNS ADS)) (: :)))";
 //		String str = "(ROOT (SINV^g (@SINV^g (@SINV^g (VP^g (ADVP^g (JJS Hardest)) (NN hit)) (VP^g (VBP are))) (SBAR^g (WHNP^g (WP what)) (S^g (NP^g (PRP he)) (VP^g (VBZ calls) (S^g (NP^g (NP^g (@NP^g (@NP^g (`` ``) (JJ secondary)) ('' '')) (NNS sites)) (SBAR^g (WHNP^g (WDT that)) (S^g (ADVP^g (RB primarily)) (VP^g (VBP serve) (NP^g (NN neighborhood) (NNS residents))))))))))) (. .)))";
 //		Tree<String> strtree = (new Trees.PennTreeReader(new StringReader(str))).next();	
@@ -225,8 +356,8 @@ public class LVeGTester extends LearnerConfig {
 		
 		int nUnparsable = 0, idx = 0;
 		
-		List<Tree<State>> trees = new ArrayList<>(stateTreeList.size());
-		filterTrees(opts, stateTreeList, trees, numberer, istrain);
+//		List<Tree<State>> trees = new ArrayList<>(stateTreeList.size());
+//		filterTrees(opts, stateTreeList, trees, numberer, istrain);
 		
 //		List<Tree<State>> trees = getToyTrees(numberer);
 		
@@ -247,17 +378,17 @@ public class LVeGTester extends LearnerConfig {
 			if (tree.getYield().size() > 3) {
 				continue;
 			}
-			logger.trace(FunUtil.debugTree(tree, false, (short) 2, numberer, true) + "\n");
+			logger.trace(Debugger.debugTree(tree, false, (short) 2, numberer, true) + "\n");
 			*/
-//			logger.trace(FunUtil.debugTree(tree, false, (short) 2, numberer, true) + "\n");
-			Tree<String> parsedTree = mrParser.parse(tree, -1);
+			logger.trace(Debugger.debugTree(tree, false, (short) 2, numberer, true) + "\n");
+			Tree<String> parsedTree = mrParser.parse(tree, idx);
 			if (!saveTree(tree, parsedTree, numberer, idx)) {
 				nUnparsable++;
 			}
 			idx++; // index the State tree
 		}
 		String summary = scorer.display();
-		logger.trace("\n[max rule parser: " + nUnparsable + " unparsable sample(s) of " + stateTreeList.size() + "(" + trees.size() + ") samples]\n");
+		logger.trace("\n[max rule parser: " + nUnparsable + " unparsable sample(s) of " + trees.size() + "(" + trees.size() + ") samples]\n");
 		logger.trace(summary + "\n\n");
 		return summary;
 	}

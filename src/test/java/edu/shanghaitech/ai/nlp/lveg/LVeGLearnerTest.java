@@ -8,7 +8,8 @@ public class LVeGLearnerTest {
 	public void testLVeGLearner() {
 		String[] args = {"param.in"};
 		try {
-			LVeGTrainer.main(args);
+//			LVeGTrainer.main(args);
+			LVeGTrainerImp.main(args);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

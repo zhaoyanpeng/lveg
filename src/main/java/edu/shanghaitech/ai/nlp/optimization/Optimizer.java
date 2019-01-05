@@ -1,6 +1,7 @@
 package edu.shanghaitech.ai.nlp.optimization;
 
 import java.io.Serializable;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -8,6 +9,7 @@ import java.util.Set;
 
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleUnit;
 import edu.shanghaitech.ai.nlp.util.Recorder;
 
 /**
@@ -70,7 +72,7 @@ public abstract class Optimizer extends Recorder implements Serializable {
 	 * @param idx   index of the sample in this batch
 	 * @param withT type of the expected pseudo count
 	 */
-	public void addCount(GrammarRule rule, Map<String, GaussianMixture> cnt, short idx, boolean withT) {
+	public void addCount(GrammarRule rule, EnumMap<RuleUnit, GaussianMixture> cnt, short idx, boolean withT) {
 		Batch batch = null;
 		Map<GrammarRule, Batch> cnts = withT ? cntsWithT : cntsWithS;
 		if (rule != null && (batch = cnts.get(rule)) != null) {
@@ -88,7 +90,7 @@ public abstract class Optimizer extends Recorder implements Serializable {
 	 * @param withT type of the expected count
 	 * @return
 	 */
-	public Map<Short, List<Map<String, GaussianMixture>>> getCount(GrammarRule rule, boolean withT) {
+	public Map<Short, List<EnumMap<RuleUnit, GaussianMixture>>> getCount(GrammarRule rule, boolean withT) {
 		Batch batch = null;
 		Map<GrammarRule, Batch> cnts = withT ? cntsWithT : cntsWithS;
 		if (rule != null && (batch = cnts.get(rule)) != null) {

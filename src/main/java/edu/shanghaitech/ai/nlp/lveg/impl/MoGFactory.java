@@ -1,8 +1,7 @@
 package edu.shanghaitech.ai.nlp.lveg.impl;
 
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
@@ -13,6 +12,7 @@ import org.apache.commons.pool2.impl.DefaultPooledObject;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture.Component;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleUnit;
 
 public class MoGFactory implements KeyedPooledObjectFactory<Short, GaussianMixture> {
 	
@@ -41,7 +41,7 @@ public class MoGFactory implements KeyedPooledObjectFactory<Short, GaussianMixtu
 		List<Component> components = po.getObject().components();
 		for (int i = 0; i < ncomp; i++) {
 			double weight = (rnd.nextDouble() - nwratio) * maxmw;
-			Map<String, Set<GaussianDistribution>> multivnd = new HashMap<String, Set<GaussianDistribution>>();
+			EnumMap<RuleUnit, Set<GaussianDistribution>> multivnd = new EnumMap<>(RuleUnit.class);
 			// weight = /*-0.69314718056*/ 0; // mixing weight 0.5, 1, 2
 			components.add(new Component((short) i, weight, multivnd));
 		}

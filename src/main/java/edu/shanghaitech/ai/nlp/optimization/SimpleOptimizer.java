@@ -19,9 +19,9 @@ public class SimpleOptimizer extends Optimizer {
 	private SimpleMinimizer minimizer;
 	
 	private SimpleOptimizer() {
-		this.cntsWithS = new HashMap<GrammarRule, Batch>();
-		this.cntsWithT = new HashMap<GrammarRule, Batch>();
-		this.ruleSet = new HashSet<GrammarRule>();
+		this.cntsWithS = new HashMap<>();
+		this.cntsWithT = new HashMap<>();
+		this.ruleSet = new HashSet<>();
 	}
 	
 	

@@ -9,9 +9,7 @@ import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Random;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
@@ -34,7 +32,7 @@ public class ParallelOptimizer extends Optimizer {
 	 */
 	private static final long serialVersionUID = -6206396492328441930L;
 	public enum ParallelMode {
-		INVOKE_ALL, COMPLETION_SERVICE, CUSTOMIZED_BLOCK, FORK_JOIN, THREAD_POOL
+		INVOKE_ALL, FORK_JOIN, THREAD_POOL
 	}
 	private short nthread;
 	private boolean verbose;
@@ -45,18 +43,15 @@ public class ParallelOptimizer extends Optimizer {
 	private transient ThreadPool mpool;
 	private transient GrammarRule[] ruleArray;
 	private transient ExecutorService pool;
-	private transient List<Future<Boolean>> futures;
 	private transient List<Callable<Boolean>> tasks;
-	private transient CompletionService<Boolean> service;
 	
 	
 	private ParallelOptimizer() {
-		this.cntsWithS = new HashMap<GrammarRule, Batch>();
-		this.cntsWithT = new HashMap<GrammarRule, Batch>();
-		this.ruleSet = new HashSet<GrammarRule>();
-		this.gradients = new HashMap<GrammarRule, Gradient>();
+		this.cntsWithS = new HashMap<>();
+		this.cntsWithT = new HashMap<>();
+		this.ruleSet = new HashSet<>();
+		this.gradients = new HashMap<>();
 		this.mode = ParallelMode.THREAD_POOL;
-		this.futures = null;
 		this.tasks = null;
 	}
 	
@@ -80,7 +75,7 @@ public class ParallelOptimizer extends Optimizer {
 	
 	private void composeTasks(final List<Double> scoreSandT) {
 		if (tasks == null) {
-			tasks = new ArrayList<Callable<Boolean>>(ruleSet.size()); 
+			tasks = new ArrayList<>(ruleSet.size()); 
 		}
 		for (final GrammarRule rule : ruleSet) {
 			boolean updated = false;
@@ -110,18 +105,6 @@ public class ParallelOptimizer extends Optimizer {
 	
 	private void evalGradientsParallel(List<Double> scoreSandT) {
 		switch (mode) {
-		case COMPLETION_SERVICE: {
-			composeTasks(scoreSandT);
-			useCompletionService();
-			tasks.clear();
-			break;
-		}
-		case CUSTOMIZED_BLOCK: {
-			composeTasks(scoreSandT);
-			useCustomizedBlock();
-			tasks.clear();
-			break;
-		}
 		case THREAD_POOL: {
 			useThreadPool(scoreSandT);
 			break;
@@ -162,36 +145,6 @@ public class ParallelOptimizer extends Optimizer {
 		}
 		if (verbose) {
 			logger.trace("exit: " + exit + ", nchanged: " + nchanged + " of " + ruleSet.size() + "..." + pool.isTerminated() + "...");
-		}
-	}
-	
-	
-	/**
-	 * See comments in the method.
-	 */
-	private void useCompletionService() {
-		boolean exit = true;
-		int nchanged = 0, isdone = 0;
-		pool = Executors.newFixedThreadPool(nthread);
-		service = new ExecutorCompletionService<Boolean>(pool);
-		for (Callable<Boolean> task : tasks) {
-			service.submit(task);
-		}
-		try {
-			pool.shutdown();
-			// while (!pool.isTerminated()) { // CHECK why does it still returns false while all tasks are done?
-			for (int i = 0; i < ruleSet.size(); i++) {
-				Future<Boolean> future = service.take();
-				if (future.get()) { nchanged++; }
-				if (future.isDone()) { isdone++; }
-			}
-			// I found 10ms very useful than 0ms, because it can ensure the pool is terminated but 0ms cannot?
-			exit = pool.awaitTermination(10, TimeUnit.MILLISECONDS);
-		} catch (ExecutionException | InterruptedException e) {
-			e.printStackTrace();
-		}
-		if (verbose) {
-			logger.trace("exit: " + exit + ", nchanged: " + nchanged + " of " + ruleSet.size() + "(" + isdone + ")" + "..." + pool.isTerminated() + "...");
 		}
 	}
 	
@@ -237,45 +190,6 @@ public class ParallelOptimizer extends Optimizer {
 		}
 		if (verbose) {
 			logger.trace("nchanged=" + nchanged + "(" + nfailed + ") of " + ruleSet.size() + "(" + nskipped + ")" + "...");
-		}
-	}
-	
-	
-	/**
-	 * See comments in the method.
-	 */
-	private void useCustomizedBlock() {
-		boolean exit = true;
-		int nchanged = 0, isdone = 0;
-		if (futures == null) { 
-			futures = new ArrayList<Future<Boolean>>(ruleSet.size()); 
-		}
-		futures.clear();
-		pool = Executors.newFixedThreadPool(nthread);
-		for (Callable<Boolean> task : tasks) {
-			futures.add(pool.submit(task));
-		}
-		try {
-			pool.shutdown();
-			boolean done = true;
-			while (done) { 
-				for (Future<Boolean> future : futures) {
-					if (!future.isDone()) { done = false; } 
-				}
-				done = done ? false : true;
-			} // I observe that enumerating the futures can ensure right outputs, why?
-			// errors may occur when comment the while loop and the 'exit' line
-			exit = pool.awaitTermination(10, TimeUnit.MILLISECONDS);
-			for (Future<Boolean> future : futures) { // counting debugging data
-				if (future.get()) { nchanged++; }
-				if (future.isDone()) { isdone++; }
-				// exchange the above two lines, isdone would be wrongly counted, why?
-			}
-		} catch (ExecutionException | InterruptedException e) {
-			e.printStackTrace();
-		}
-		if (verbose) {
-			logger.trace("exit: " + exit + ", nchanged: " + nchanged + " of " + ruleSet.size() + "(" + isdone + ")" + "..." + pool.isTerminated() + "...");
 		}
 	}
 	

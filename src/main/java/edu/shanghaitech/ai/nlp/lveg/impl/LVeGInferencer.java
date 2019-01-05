@@ -1,6 +1,6 @@
 package edu.shanghaitech.ai.nlp.lveg.impl;
 
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +10,8 @@ import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.lveg.model.ChartCell.Chart;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleType;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleUnit;
 import edu.shanghaitech.ai.nlp.lveg.model.Inferencer;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
@@ -60,11 +62,11 @@ public class LVeGInferencer extends Inferencer {
 				short idChild = child.getId();
 				
 				if (idParent != 0) {
-					ruleScore = grammar.getURuleWeight(idParent, idChild, GrammarRule.LRURULE, false);
-					pinScore = ruleScore.mulAndMarginalize(cinScore, pinScore, GrammarRule.Unit.UC, true);
+					ruleScore = grammar.getURuleWeight(idParent, idChild, RuleType.LRURULE, false);
+					pinScore = ruleScore.mulAndMarginalize(cinScore, pinScore, RuleUnit.UC, true);
 				} else { // root, inside score of the root node is a constant in double
-					ruleScore = grammar.getURuleWeight(idParent, idChild, GrammarRule.RHSPACE, false);
-					pinScore = ruleScore.mulAndMarginalize(cinScore, pinScore, GrammarRule.Unit.C, true);
+					ruleScore = grammar.getURuleWeight(idParent, idChild, RuleType.RHSPACE, false);
+					pinScore = ruleScore.mulAndMarginalize(cinScore, pinScore, RuleUnit.C, true);
 				}
 				parent.setInsideScore(pinScore);
 				break;
@@ -81,8 +83,8 @@ public class LVeGInferencer extends Inferencer {
 				pinScore = parent.getInsideScore();
 				ruleScore = grammar.getBRuleWeight(idParent, idlChild, idrChild, false);
 				
-				pinScore = ruleScore.mulAndMarginalize(linScore, pinScore, GrammarRule.Unit.LC, true);
-				pinScore = pinScore.mulAndMarginalize(rinScore, pinScore, GrammarRule.Unit.RC, false);
+				pinScore = ruleScore.mulAndMarginalize(linScore, pinScore, RuleUnit.LC, true);
+				pinScore = pinScore.mulAndMarginalize(rinScore, pinScore, RuleUnit.RC, false);
 				parent.setInsideScore(pinScore);
 				break;
 			}
@@ -119,10 +121,10 @@ public class LVeGInferencer extends Inferencer {
 				short idChild = child.getId();
 				
 				if (idParent != 0) {
-					ruleScore = grammar.getURuleWeight(idParent, idChild, GrammarRule.LRURULE, false);
-					coutScore = ruleScore.mulAndMarginalize(poutScore, coutScore, GrammarRule.Unit.P, true);
+					ruleScore = grammar.getURuleWeight(idParent, idChild, RuleType.LRURULE, false);
+					coutScore = ruleScore.mulAndMarginalize(poutScore, coutScore, RuleUnit.P, true);
 				} else { // root
-					ruleScore = grammar.getURuleWeight(idParent, idChild, GrammarRule.RHSPACE, false);
+					ruleScore = grammar.getURuleWeight(idParent, idChild, RuleType.RHSPACE, false);
 					coutScore = ruleScore.copy(true); // since OS(ROOT) = 1
 				}
 				child.setOutsideScore(coutScore);
@@ -142,11 +144,11 @@ public class LVeGInferencer extends Inferencer {
 				routScore = rchild.getOutsideScore();
 				ruleScore = grammar.getBRuleWeight(idParent, idlChild, idrChild, false);
 				
-				loutScore = ruleScore.mulAndMarginalize(poutScore, loutScore, GrammarRule.Unit.P, true);
-				loutScore = loutScore.mulAndMarginalize(rinScore, loutScore, GrammarRule.Unit.RC, false);
+				loutScore = ruleScore.mulAndMarginalize(poutScore, loutScore, RuleUnit.P, true);
+				loutScore = loutScore.mulAndMarginalize(rinScore, loutScore, RuleUnit.RC, false);
 				
-				routScore = ruleScore.mulAndMarginalize(poutScore, routScore, GrammarRule.Unit.P, true);
-				routScore = routScore.mulAndMarginalize(linScore, routScore, GrammarRule.Unit.LC, false);
+				routScore = ruleScore.mulAndMarginalize(poutScore, routScore, RuleUnit.P, true);
+				routScore = routScore.mulAndMarginalize(linScore, routScore, RuleUnit.LC, false);
 				lchild.setOutsideScore(loutScore);
 				rchild.setOutsideScore(routScore);
 				break;
@@ -198,10 +200,10 @@ public class LVeGInferencer extends Inferencer {
 							linScore = chart.getInsideScore(rule.lchild, c0);
 							rinScore = chart.getInsideScore(rule.rchild, c1);
 							
-							Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>(3, 1);
-							scores.put(GrammarRule.Unit.P, outScore);
-							scores.put(GrammarRule.Unit.LC, linScore);
-							scores.put(GrammarRule.Unit.RC, rinScore);
+							EnumMap<RuleUnit, GaussianMixture> scores = new EnumMap<>(RuleUnit.class);
+							scores.put(RuleUnit.P, outScore);
+							scores.put(RuleUnit.LC, linScore);
+							scores.put(RuleUnit.RC, rinScore);
 							grammar.addCount(rule.lhs, rule.lchild, rule.rchild, scores, isample, false);
 						}
 					}
@@ -228,14 +230,14 @@ public class LVeGInferencer extends Inferencer {
 		State parent = tree.getLabel();
 		short idParent = parent.getId();
 		GaussianMixture outScore = parent.getOutsideScore();
-		Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>(3, 1);
-		scores.put(GrammarRule.Unit.P, outScore);
+		EnumMap<RuleUnit, GaussianMixture> scores = new EnumMap<>(RuleUnit.class);
+		scores.put(RuleUnit.P, outScore);
 		
 		if (tree.isPreTerminal()) {
 			State word = children.get(0).getLabel();
 			GaussianMixture cinScore = parent.getInsideScore();
-			scores.put(GrammarRule.Unit.C, cinScore);
-			lexicon.addCount(idParent, word.wordIdx, scores, GrammarRule.LHSPACE, isample, true);
+			scores.put(RuleUnit.C, cinScore);
+			lexicon.addCount(idParent, word.wordIdx, scores, RuleType.LHSPACE, isample, true);
 		} else {
 			switch (children.size()) {
 			case 0:
@@ -246,8 +248,8 @@ public class LVeGInferencer extends Inferencer {
 				short idChild = child.getId();
 				GaussianMixture cinScore = child.getInsideScore();
 				// root, if (idParent == 0) is true
-				String key = idParent == 0 ? GrammarRule.Unit.C : GrammarRule.Unit.UC;
-				byte type = idParent == 0 ? GrammarRule.RHSPACE : GrammarRule.LRURULE;
+				RuleUnit key = idParent == 0 ? RuleUnit.C : RuleUnit.UC;
+				RuleType type = idParent == 0 ? RuleType.RHSPACE : RuleType.LRURULE;
 				scores.put(key, cinScore);
 				grammar.addCount(idParent, idChild, scores, type, isample, true);
 				break;
@@ -261,8 +263,8 @@ public class LVeGInferencer extends Inferencer {
 				
 				linScore = lchild.getInsideScore();
 				rinScore = rchild.getInsideScore();
-				scores.put(GrammarRule.Unit.LC, linScore);
-				scores.put(GrammarRule.Unit.RC, rinScore);
+				scores.put(RuleUnit.LC, linScore);
+				scores.put(RuleUnit.RC, rinScore);
 				grammar.addCount(idParent, idlChild, idrChild, scores, isample, true);
 				break;
 			}
@@ -288,10 +290,10 @@ public class LVeGInferencer extends Inferencer {
 						UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
 						if (!chart.containsKey((short) rule.rhs, idx, true)) { continue; }
 						cinScore = chart.getInsideScore((short) rule.rhs, idx); // CHECK not correct? Yes, it's correct.
-						Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>(2, 1);
-						scores.put(GrammarRule.Unit.P, outScore);
-						scores.put(GrammarRule.Unit.C, cinScore);
-						grammar.addCount(rule.lhs, rule.rhs, scores, GrammarRule.RHSPACE, isample, false);
+						EnumMap<RuleUnit, GaussianMixture> scores = new EnumMap<>(RuleUnit.class);
+						scores.put(RuleUnit.P, outScore);
+						scores.put(RuleUnit.C, cinScore);
+						grammar.addCount(rule.lhs, rule.rhs, scores, RuleType.RHSPACE, isample, false);
 					}
 				}
 			}
@@ -299,7 +301,7 @@ public class LVeGInferencer extends Inferencer {
 			Map<GrammarRule, GrammarRule> uRuleMap = grammar.getURuleMap();
 			for (Map.Entry<GrammarRule, GrammarRule> rmap : uRuleMap.entrySet()) {
 				UnaryGrammarRule rule = (UnaryGrammarRule) rmap.getValue();
-				if (rule.type == GrammarRule.RHSPACE) { continue; }
+				if (rule.type == RuleType.RHSPACE) { continue; }
 				if (!chart.containsKey(rule.lhs, idx, false) || !chart.containsKey((short) rule.rhs, idx, true)) { continue; }
 				mergeUnaryRuleCount(chart, idx, rule, isample, (short) 0, (short) (0), prune); // O_{0}(X) I_{0}(Y)
 				mergeUnaryRuleCount(chart, idx, rule, isample, (short) 0, (short) (1), prune); // O_{0}(X) I_{1}(Y)
@@ -310,12 +312,12 @@ public class LVeGInferencer extends Inferencer {
 			rules = lexicon.getRulesWithWord(word);
 			for (GrammarRule rule : rules) {
 				if (chart.containsKey(rule.lhs, idx, false)) {
-					Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>(2, 1);
+					EnumMap<RuleUnit, GaussianMixture> scores = new EnumMap<>(RuleUnit.class);
 					cinScore = lexicon.score(word, rule.lhs);
 					outScore = chart.getOutsideScore(rule.lhs, idx);
-					scores.put(GrammarRule.Unit.P, outScore);
-					scores.put(GrammarRule.Unit.C, cinScore);
-					lexicon.addCount(rule.lhs, word.wordIdx, scores, GrammarRule.LHSPACE, isample, false);
+					scores.put(RuleUnit.P, outScore);
+					scores.put(RuleUnit.C, cinScore);
+					lexicon.addCount(rule.lhs, word.wordIdx, scores, RuleType.LHSPACE, isample, false);
 				}
 			}
 		}
@@ -325,12 +327,12 @@ public class LVeGInferencer extends Inferencer {
 	private void mergeUnaryRuleCount(Chart chart, int idx, UnaryGrammarRule rule, 
 			short isample, short olevel, short ilevel, boolean prune) {
 		if (chart.containsKey(rule.lhs, idx, false, olevel) && chart.containsKey((short) rule.rhs, idx, true, ilevel)) {
-			Map<String, GaussianMixture> scores = new HashMap<String, GaussianMixture>(2, 1);
+			EnumMap<RuleUnit, GaussianMixture> scores = new EnumMap<>(RuleUnit.class);
 			GaussianMixture cinScore = chart.getInsideScore((short) rule.rhs, idx, ilevel);
 			GaussianMixture outScore = chart.getOutsideScore((short) rule.lhs, idx, olevel);
-			scores.put(GrammarRule.Unit.P, outScore);
-			scores.put(GrammarRule.Unit.UC, cinScore);
-			grammar.addCount(rule.lhs, rule.rhs, scores, GrammarRule.LRURULE, isample, false);
+			scores.put(RuleUnit.P, outScore);
+			scores.put(RuleUnit.UC, cinScore);
+			grammar.addCount(rule.lhs, rule.rhs, scores, RuleType.LRURULE, isample, false);
 		}
 	}
 	

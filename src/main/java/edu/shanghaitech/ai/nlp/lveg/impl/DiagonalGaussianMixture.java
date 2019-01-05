@@ -1,14 +1,14 @@
 package edu.shanghaitech.ai.nlp.lveg.impl;
 
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
 import edu.shanghaitech.ai.nlp.lveg.LVeGTrainer;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleUnit;
 import edu.shanghaitech.ai.nlp.util.FunUtil;
 
 /**
@@ -43,7 +43,7 @@ public class DiagonalGaussianMixture extends GaussianMixture {
 	}
 	
 	public DiagonalGaussianMixture(
-			short ncomponent, List<Double> weights, List<Map<String, Set<GaussianDistribution>>> mixture) {
+			short ncomponent, List<Double> weights, List<EnumMap<RuleUnit, Set<GaussianDistribution>>> mixture) {
 		this();
 		this.ncomponent = ncomponent;
 		for (int i = 0; i < weights.size(); i++) {
@@ -73,7 +73,7 @@ public class DiagonalGaussianMixture extends GaussianMixture {
 	protected void initialize() {
 		for (int i = 0; i < ncomponent; i++) {
 			double weight = (defRnd.nextDouble() - defNegWRatio) * defMaxmw;
-			Map<String, Set<GaussianDistribution>> multivnd = new HashMap<String, Set<GaussianDistribution>>();
+			EnumMap<RuleUnit, Set<GaussianDistribution>> multivnd = new EnumMap<>(RuleUnit.class);
 			 weight = /*-0.69314718056*/ 0; // mixing weight 0.5, 1, 2
 			components.add(new Component((short) i, weight, multivnd));
 		}
@@ -88,7 +88,7 @@ public class DiagonalGaussianMixture extends GaussianMixture {
 	
 	
 	@Override
-	public DiagonalGaussianMixture replaceKeys(Map<String, String> keys) {
+	public DiagonalGaussianMixture replaceKeys(EnumMap<RuleUnit, RuleUnit> keys) {
 		DiagonalGaussianMixture gm = new DiagonalGaussianMixture();
 		replaceKeys(gm, keys);
 		return gm;
@@ -96,7 +96,7 @@ public class DiagonalGaussianMixture extends GaussianMixture {
 	
 	
 	@Override
-	public DiagonalGaussianMixture replaceAllKeys(String newkey) {
+	public DiagonalGaussianMixture replaceAllKeys(RuleUnit newkey) {
 		DiagonalGaussianMixture gm = new DiagonalGaussianMixture();
 		replaceAllKeys(gm, newkey);
 		return gm;
@@ -111,7 +111,7 @@ public class DiagonalGaussianMixture extends GaussianMixture {
 	}
 	
 	@Override
-	public GaussianMixture mulAndMarginalize(GaussianMixture gm, GaussianMixture des, String key, boolean deep) {
+	public GaussianMixture mulAndMarginalize(GaussianMixture gm, GaussianMixture des, RuleUnit key, boolean deep) {
 		// 'des' is exactly the same as 'this' when deep is false
 		if (des != null) { // placeholder
 			if (deep) { 
@@ -139,12 +139,12 @@ public class DiagonalGaussianMixture extends GaussianMixture {
 	}
 
 	@Override
-	public double mulAndMarginalize(Map<String, GaussianMixture> counts) {
+	public double mulAndMarginalize(EnumMap<RuleUnit, GaussianMixture> counts) {
 		if (counts == null) { return Double.NEGATIVE_INFINITY; }
 		double values = Double.NEGATIVE_INFINITY;
 		for (Component comp : components) {
 			double value = 0.0, vtmp = 0.0;
-			for (Entry<String, Set<GaussianDistribution>> node : comp.getMultivnd().entrySet()) {
+			for (Entry<RuleUnit, Set<GaussianDistribution>> node : comp.getMultivnd().entrySet()) {
 				vtmp = 0.0;
 				GaussianMixture gm = counts.get(node.getKey()); 
 				for (GaussianDistribution gd : node.getValue()) {

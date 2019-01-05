@@ -6,6 +6,7 @@ import java.util.Set;
 
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleType;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
 import edu.shanghaitech.ai.nlp.lveg.model.ChartCell.Chart;
@@ -115,7 +116,7 @@ public class PCFGMaxRuleInferencer extends PCFGInferencer {
 				Iterator<GrammarRule> iterator = rules.iterator();
 				while (iterator.hasNext()) {
 					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
-					if (rule.type == GrammarRule.RHSPACE) { continue; } // ROOT is excluded
+					if (rule.type == RuleType.RHSPACE) { continue; } // ROOT is excluded
 					if ((maxcnt = chart.getMaxRuleCount(rule.lhs, idx)) > count) { continue; }
 					
 					if (!chart.containsKeyMask(rule.lhs, idx, false, (short) 0)) { continue; }
@@ -180,8 +181,8 @@ public class PCFGMaxRuleInferencer extends PCFGInferencer {
 					outScore = chart.getOutsideScoreMask(okey, idx, (short) 0);
 					
 					for (Short mid : ikeyLevel1) {
-						if ((w0 = grammar.getURuleWeight(mid, ikey, GrammarRule.LRURULE, true)) == null ||
-								(w1 = grammar.getURuleWeight(okey, mid, GrammarRule.LRURULE, true)) == null) {
+						if ((w0 = grammar.getURuleWeight(mid, ikey, RuleType.LRURULE, true)) == null ||
+								(w1 = grammar.getURuleWeight(okey, mid, RuleType.LRURULE, true)) == null) {
 							continue;
 						}
 						
@@ -293,7 +294,7 @@ public class PCFGMaxRuleInferencer extends PCFGInferencer {
 				Iterator<GrammarRule> iterator = rules.iterator();
 				while (iterator.hasNext()) {
 					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
-					if (rule.type == GrammarRule.RHSPACE) { continue; } // ROOT is excluded
+					if (rule.type == RuleType.RHSPACE) { continue; } // ROOT is excluded
 					if ((maxcnt = chart.getMaxRuleCount(rule.lhs, idx)) > count) { continue; }
 					
 					if (!chart.containsKeyMask(rule.lhs, idx, false, (short) 0)) { continue; }
@@ -362,8 +363,8 @@ public class PCFGMaxRuleInferencer extends PCFGInferencer {
 					outScore = chart.getOutsideScoreMask(okey, idx, (short) 0);
 					
 					for (Short mid : ikeyLevel1) {
-						if ((w0 = grammar.getURuleWeight(mid, ikey, GrammarRule.LRURULE, true)) == null ||
-								(w1 = grammar.getURuleWeight(okey, mid, GrammarRule.LRURULE, true)) == null) {
+						if ((w0 = grammar.getURuleWeight(mid, ikey, RuleType.LRURULE, true)) == null ||
+								(w1 = grammar.getURuleWeight(okey, mid, RuleType.LRURULE, true)) == null) {
 							continue;
 						}
 						

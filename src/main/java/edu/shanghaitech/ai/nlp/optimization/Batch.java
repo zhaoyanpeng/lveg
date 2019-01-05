@@ -2,43 +2,45 @@ package edu.shanghaitech.ai.nlp.optimization;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleUnit;
 
 public class Batch implements Serializable {
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = -5018573183821755031L;
-	protected Map<Short, List<Map<String, GaussianMixture>>> batch;
+	protected Map<Short, List<EnumMap<RuleUnit, GaussianMixture>>> batch;
 	
 	/**
 	 * @param maxsize initialized by default if lower than 0, otherwise initialized with the specified capacity
 	 */
 	public Batch(int maxsize) {
 		if (maxsize > 0) {
-			batch = new HashMap<Short, List<Map<String, GaussianMixture>>>(maxsize, 1);
+			batch = new HashMap<>(maxsize, 1);
 		} else {
-			batch = new HashMap<Short, List<Map<String, GaussianMixture>>>();
+			batch = new HashMap<>();
 		}
 	}
 	
-	protected void add(short idx, Map<String, GaussianMixture> cnt) {
-		List<Map<String, GaussianMixture>> cnts = null;
+	protected void add(short idx, EnumMap<RuleUnit, GaussianMixture> cnt) {
+		List<EnumMap<RuleUnit, GaussianMixture>> cnts = null;
 		if ((cnts = batch.get(idx)) != null) {
 			cnts.add(cnt);
 		} else {
-			cnts = new ArrayList<Map<String, GaussianMixture>>();
+			cnts = new ArrayList<>();
 			cnts.add(cnt);
 			batch.put(idx, cnts);
 		}
 	}
 	
-	protected List<Map<String, GaussianMixture>> get(short i) {
+	protected List<EnumMap<RuleUnit, GaussianMixture>> get(short i) {
 		return batch.get(i);
 	}
 	

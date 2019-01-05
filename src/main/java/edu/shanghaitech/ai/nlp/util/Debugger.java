@@ -2,6 +2,7 @@ package edu.shanghaitech.ai.nlp.util;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -17,6 +18,8 @@ import edu.shanghaitech.ai.nlp.lveg.LearnerConfig.Options;
 import edu.shanghaitech.ai.nlp.lveg.impl.UnaryGrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleType;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleUnit;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
 import edu.shanghaitech.ai.nlp.lveg.model.ChartCell.Cell;
@@ -99,7 +102,7 @@ public class Debugger extends Recorder {
 				State child = children.get(0).getLabel();
 				short idChild = child.getId();
 				
-				byte type = idParent == 0 ? GrammarRule.RHSPACE : GrammarRule.LRURULE;
+				RuleType type = idParent == 0 ? RuleType.RHSPACE : RuleType.LRURULE;
 				ruleScore = grammar.getURuleWeight(idParent, idChild, type, false);
 				logger.trace("Unary\trule: [" + idParent + ", " + idChild + "] " + ruleScore + "\n"); // DEBUG
 				break;
@@ -130,7 +133,7 @@ public class Debugger extends Recorder {
 		logger.trace("\n---Unary Grammar Rules---\n\n");
 		for (Map.Entry<GrammarRule, GrammarRule> rmap : uRuleMap.entrySet()) {
 			GrammarRule rule = rmap.getValue();
-			Map<Short, List<Map<String, GaussianMixture>>> count = grammar.getCount(rule, false);
+			Map<Short, List<EnumMap<RuleUnit, GaussianMixture>>> count = grammar.getCount(rule, false);
 			logger.trace(rule + "\tcount=" + count + "\n");
 			if (++iiter >= niter) { break; }
 		}
@@ -140,7 +143,7 @@ public class Debugger extends Recorder {
 		logger.trace("\n---Binary Grammar Rules---\n\n");
 		for (Map.Entry<GrammarRule, GrammarRule> rmap : bRuleMap.entrySet()) {
 			GrammarRule rule = rmap.getValue();
-			Map<Short, List<Map<String, GaussianMixture>>> count = grammar.getCount(rule, false);
+			Map<Short, List<EnumMap<RuleUnit, GaussianMixture>>> count = grammar.getCount(rule, false);
 			logger.trace(rule + "\tcount=" + count + "\n");
 			if (++iiter > niter) { break; }
 		}
@@ -150,7 +153,7 @@ public class Debugger extends Recorder {
 		Set<GrammarRule> ruleSet = lexicon.getRuleSet();
 		logger.trace("\n---Unary Grammar Rules in Lexicon---\n");
 		for (GrammarRule rule : ruleSet) {
-			Map<Short, List<Map<String, GaussianMixture>>> count = lexicon.getCount(rule, false);
+			Map<Short, List<EnumMap<RuleUnit, GaussianMixture>>> count = lexicon.getCount(rule, false);
 			logger.trace(rule + "\tcount=" + count + "\n");
 			if (++iiter >= niter) { break; }
 		}
@@ -176,7 +179,7 @@ public class Debugger extends Recorder {
 		
 		if (tree.isPreTerminal()) {
 			State word = children.get(0).getLabel();
-			Map<Short, List<Map<String, GaussianMixture>>> count = lexicon.getCount(idParent, (short) word.wordIdx, true, GrammarRule.LHSPACE);
+			Map<Short, List<EnumMap<RuleUnit, GaussianMixture>>> count = lexicon.getCount(idParent, (short) word.wordIdx, true, RuleType.LHSPACE);
 			logger.trace("Word\trule: [" + idParent + ", " + word.wordIdx + "/" + word.getName() + "] count=" + count + "\n"); // DEBUG
 		} else {
 			switch (children.size()) {
@@ -188,9 +191,9 @@ public class Debugger extends Recorder {
 				short idChild = child.getId();
 				
 				// root, if (idParent == 0) is true
-				byte type = idParent == 0 ? GrammarRule.RHSPACE : GrammarRule.LRURULE;
+				RuleType type = idParent == 0 ? RuleType.RHSPACE : RuleType.LRURULE;
 				
-				Map<Short, List<Map<String, GaussianMixture>>> count = grammar.getCount(idParent, idChild, true, type);
+				Map<Short, List<EnumMap<RuleUnit, GaussianMixture>>> count = grammar.getCount(idParent, idChild, true, type);
 				logger.trace("Unary\trule: [" + idParent + ", " + idChild + "] count=" + count + "\n"); // DEBUG
 				break;
 			}
@@ -200,7 +203,7 @@ public class Debugger extends Recorder {
 				short idlChild = lchild.getId();
 				short idrChild = rchild.getId();
 				
-				Map<Short, List<Map<String, GaussianMixture>>> count = grammar.getCount(idParent, idlChild, idrChild, true);
+				Map<Short, List<EnumMap<RuleUnit, GaussianMixture>>> count = grammar.getCount(idParent, idlChild, idrChild, true);
 				logger.trace("Binary\trule: [" + idParent + ", " + idlChild + ", " + idrChild + "] count=" + count + "\n"); // DEBUG
 				break;
 			}
@@ -349,7 +352,7 @@ public class Debugger extends Recorder {
 		boolean found = false;
 		for (int i = 0; i < grammar.ntag; i++) {
 			int repeated = 0;
-			Set<Integer> visited = new LinkedHashSet<Integer>();
+			Set<Integer> visited = new LinkedHashSet<>();
 //			logger.trace("Tag " + i + "\t\n");
 			if ((repeated = checkUnaryRuleCircle(grammar, lexicon, i, visited, startWithC)) > 0) {
 				logger.error("Repeated item: " + repeated + "\tin the path that begins with " + i + " was found: " + visited + "\n");
@@ -547,7 +550,7 @@ public class Debugger extends Recorder {
 	
 	
 	public static void lengthSummary(StateTreeList trees) {
-		Map<Integer, Integer> summary = new HashMap<Integer, Integer>();
+		Map<Integer, Integer> summary = new HashMap<>();
 		for (Tree<State> tree : trees) {
 			int len = tree.getTerminalYield().size();
 			if (summary.containsKey(len)) {
@@ -561,7 +564,7 @@ public class Debugger extends Recorder {
 		logger.trace(summary.values() + "\n");
 		
 		int nbin = 150;
-		Map<Integer, Integer> lens = new HashMap<Integer, Integer>();
+		Map<Integer, Integer> lens = new HashMap<>();
 		for (Map.Entry<Integer, Integer> entry : summary.entrySet()) {
 			for (int i = 0; i < nbin ; i += 10) {
 				int len = entry.getKey();
@@ -576,10 +579,62 @@ public class Debugger extends Recorder {
 		}
 		
 		KeyComparator bykey = new KeyComparator(lens);
-		TreeMap<Integer, Integer> sorted = new TreeMap<Integer, Integer>(bykey);
+		TreeMap<Integer, Integer> sorted = new TreeMap<>(bykey);
 		sorted.putAll(lens);
 		logger.trace(sorted.keySet() + "\n");
 		logger.trace(sorted.values() + "\n");
+	}
+	
+	
+	public static void fillStateChart(Tree<State> tree, Set<String>[][] mask, Numberer numberer) {
+		if (tree.isLeaf()) { return; }
+		List<Tree<State>> children = tree.getChildren();
+		for (Tree<State> child : children) {
+			fillStateChart(child, mask, numberer);
+		}
+		
+		State parent = tree.getLabel();
+		short idParent = parent.getId();
+		
+		short x = parent.from, y = (short) (parent.to - 1);
+		mask[x][y].add((String) numberer.object(idParent));
+		
+		if (tree.isPreTerminal()) {
+			// StateSet word = children.get(0).getLabel();
+		} else {
+			switch (children.size()) {
+			case 0:
+				break;
+			case 1: {
+				State child = children.get(0).getLabel();
+				short idChild = child.getId();
+				
+				x = child.from;
+				y = (short) (child.to - 1);
+				mask[x][y].add((String) numberer.object(idChild));
+				
+				break;
+			}
+			case 2: {
+				State lchild = children.get(0).getLabel();
+				State rchild = children.get(1).getLabel();
+				short idlChild = lchild.getId();
+				short idrChild = rchild.getId();
+				
+				x = lchild.from;
+				y = (short) (lchild.to - 1);
+				mask[x][y].add((String) numberer.object(idlChild));
+				
+				x = rchild.from;
+				y = (short) (rchild.to - 1);
+				mask[x][y].add((String) numberer.object(idrChild));
+
+				break;
+			}
+			default:
+				throw new RuntimeException("Malformed tree: invalid # of children. # children: " + children.size());
+			}
+		}
 	}
 	
 }

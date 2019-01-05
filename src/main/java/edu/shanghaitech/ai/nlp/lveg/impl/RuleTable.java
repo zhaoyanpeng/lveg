@@ -24,7 +24,7 @@ public class RuleTable<T> implements Serializable {
 	
 	
 	public RuleTable(Class<T> type) {
-		this.table = new HashMap<GrammarRule, GaussianMixture>();
+		this.table = new HashMap<>();
 		this.type = type;
 	}
 	

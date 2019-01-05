@@ -2,14 +2,17 @@ package edu.shanghaitech.ai.nlp.optimization;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
 
 import edu.shanghaitech.ai.nlp.lveg.LearnerConfig.Params;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleType;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleUnit;
 import edu.shanghaitech.ai.nlp.optimization.Optimizer.OptChoice;
 import edu.shanghaitech.ai.nlp.util.Recorder;
 
@@ -24,8 +27,8 @@ public class Gradient extends Recorder implements Serializable {
 	private static final long serialVersionUID = 2620919219751675203L;
 	public static class Grads {
 		public List<Double> wgrads;
-		public List<Map<String, List<Double>>> ggrads;
-		public Grads(List<Double> wgrads, List<Map<String, List<Double>>> ggrads) {
+		public List<EnumMap<RuleUnit, List<Double>>> ggrads;
+		public Grads(List<Double> wgrads, List<EnumMap<RuleUnit, List<Double>>> ggrads) {
 			this.wgrads = wgrads;
 			this.ggrads = ggrads;
 		}
@@ -40,13 +43,13 @@ public class Gradient extends Recorder implements Serializable {
 	protected double cntUpdate;
 	protected double partition;
 	protected List<Double> wgrads, wgrads1, wgrads2;
-	protected List<Map<String, List<Double>>> ggrads, ggrads1, ggrads2, ggradst, ggradss;
+	protected List<EnumMap<RuleUnit, List<Double>>> ggrads, ggrads1, ggrads2, ggradst, ggradss;
 	
-	protected Map<String, List<Double>> truths;
-	protected Map<String, List<Double>> sample;
+	protected EnumMap<RuleUnit, List<Double>> truths;
+	protected EnumMap<RuleUnit, List<Double>> sample;
 	
-	protected List<Map<String, List<List<Double>>>> cachesWithT;
-	protected List<Map<String, List<List<Double>>>> cachesWithS;
+	protected List<EnumMap<RuleUnit, List<List<Double>>>> cachesWithT;
+	protected List<EnumMap<RuleUnit, List<List<Double>>>> cachesWithS;
 	
 	public Gradient(GrammarRule rule, Random random, int msample, short bsize) {
 		GaussianMixture ruleW = rule.getWeight();
@@ -54,8 +57,8 @@ public class Gradient extends Recorder implements Serializable {
 		this.cntUpdate = 0;
 		this.partition = Optimizer.batchsize * Optimizer.maxsample;
 		// TODO use lazy initialization?
-		this.wgrads1 = new ArrayList<Double>(ruleW.ncomponent());
-		this.wgrads2 = new ArrayList<Double>(ruleW.ncomponent());
+		this.wgrads1 = new ArrayList<>(ruleW.ncomponent());
+		this.wgrads2 = new ArrayList<>(ruleW.ncomponent());
 		this.ggrads1 = ruleW.zeroslike(true);
 		this.ggrads2 = ruleW.zeroslike(true);
 		this.ggradst = ruleW.zeroslike(false);
@@ -69,8 +72,8 @@ public class Gradient extends Recorder implements Serializable {
 	
 	private void initialize(GaussianMixture ruleW) {
 		this.ggrads = ruleW.zeroslike(false);
-		this.wgrads = new ArrayList<Double>(ruleW.ncomponent());
-		List<HashMap<String, List<Double>>> holder = ruleW.zeroslike(0); 
+		this.wgrads = new ArrayList<>(ruleW.ncomponent());
+		List<EnumMap<RuleUnit, List<Double>>> holder = ruleW.zeroslike(0); 
 		this.sample = holder.get(0);
 		this.truths = holder.get(1);
 		this.cumulative = false;
@@ -95,8 +98,8 @@ public class Gradient extends Recorder implements Serializable {
 	
 	protected void reset() {
 		wgrads.clear();
-		for (Map<String, List<Double>> ggrad : ggrads) {
-			for (Map.Entry<String, List<Double>> part : ggrad.entrySet()) {
+		for (Map<RuleUnit, List<Double>> ggrad : ggrads) {
+			for (Entry<RuleUnit, List<Double>> part : ggrad.entrySet()) {
 				part.getValue().clear();
 			}
 		}
@@ -106,15 +109,15 @@ public class Gradient extends Recorder implements Serializable {
 	
 	
 	protected void clearCaches() {
-		for (Map<String, List<List<Double>>> caches : cachesWithT) {
-			for (Map.Entry<String, List<List<Double>>> part : caches.entrySet()) {
+		for (Map<RuleUnit, List<List<Double>>> caches : cachesWithT) {
+			for (Entry<RuleUnit, List<List<Double>>> part : caches.entrySet()) {
 				for (List<Double> cache : part.getValue()) {
 					cache.clear();
 				}
 			}
 		}
-		for (Map<String, List<List<Double>>> caches : cachesWithS) {
-			for (Map.Entry<String, List<List<Double>>> part : caches.entrySet()) {
+		for (Map<RuleUnit, List<List<Double>>> caches : cachesWithS) {
+			for (Entry<RuleUnit, List<List<Double>>> part : caches.entrySet()) {
 				for (List<Double> cache : part.getValue()) {
 					cache.clear();
 				}
@@ -157,9 +160,9 @@ public class Gradient extends Recorder implements Serializable {
 	 * @param scoreSandT
 	 */
 	protected boolean evalintegral(GrammarRule rule, Batch ioScoreWithT, Batch ioScoreWithS, List<Double> scoreSandT) {
-		List<Map<String, GaussianMixture>> iosWithT, iosWithS;
+		List<EnumMap<RuleUnit, GaussianMixture>> iosWithT, iosWithS;
 		boolean removed = false, allocated, iallocated;
-		Map<String, List<Double>> grads, gradst, gradss;
+		EnumMap<RuleUnit, List<Double>> grads, gradst, gradss;
 		double scoreT, scoreS;
 		
 		GaussianMixture ruleW = rule.getWeight();
@@ -175,21 +178,21 @@ public class Gradient extends Recorder implements Serializable {
 				scoreT = scoreSandT.get(i * 2);
 				scoreS = scoreSandT.get(i * 2 + 1);
 				// cancel the denominator w(r) 
-				if (!removed && rule.getType() == GrammarRule.LHSPACE) { 
+				if (!removed && rule.getType() == RuleType.LHSPACE) { 
 					if (iosWithT != null) { 
-						for (Map<String, GaussianMixture> ios : iosWithT) { ios.remove(GrammarRule.Unit.C); } 
+						for (Map<RuleUnit, GaussianMixture> ios : iosWithT) { ios.remove(RuleUnit.C); } 
 					}
 					if (iosWithS != null) { 
-						for (Map<String, GaussianMixture> ios : iosWithS) { ios.remove(GrammarRule.Unit.C); } 
+						for (Map<RuleUnit, GaussianMixture> ios : iosWithS) { ios.remove(RuleUnit.C); } 
 					}
 				}
 				// remove the meaningless outside score of ROOT
-				if (!removed && rule.getType() == GrammarRule.RHSPACE) { 
+				if (!removed && rule.getType() == RuleType.RHSPACE) { 
 					if (iosWithT != null) { 
-						for (Map<String, GaussianMixture> ios : iosWithT) { ios.remove(GrammarRule.Unit.P); } 
+						for (Map<RuleUnit, GaussianMixture> ios : iosWithT) { ios.remove(RuleUnit.P); } 
 					}
 					if (iosWithS != null) { 
-						for (Map<String, GaussianMixture> ios : iosWithS) { ios.remove(GrammarRule.Unit.P); } 
+						for (Map<RuleUnit, GaussianMixture> ios : iosWithS) { ios.remove(RuleUnit.P); } 
 					}
 				}
 				allocated = cumulative ? true : (iallocated ? true : false);
@@ -214,9 +217,9 @@ public class Gradient extends Recorder implements Serializable {
 	 * @param scoreSandT
 	 */
 	protected boolean evalsampling(GrammarRule rule, Batch ioScoreWithT, Batch ioScoreWithS, List<Double> scoreSandT) {
-		List<Map<String, GaussianMixture>> iosWithT, iosWithS;
+		List<EnumMap<RuleUnit, GaussianMixture>> iosWithT, iosWithS;
 		GaussianMixture ruleW = rule.getWeight();
-		Map<String, List<Double>> ggrad;
+		EnumMap<RuleUnit, List<Double>> ggrad;
 		boolean removed = false, allocated, iallocated;
 		double scoreT, scoreS, dRuleW;
 		
@@ -240,12 +243,12 @@ public class Gradient extends Recorder implements Serializable {
 					 * of the objective function w.r.t w(r) is (count(r | T_S) - count(r | S)) / w(r), 
 					 * which contains the term 1 / w(r), thus we could eliminate w(r) when computing it.
 					 */
-					if (!removed && rule.getType() == GrammarRule.LHSPACE) { 
+					if (!removed && rule.getType() == RuleType.LHSPACE) { 
 						if (iosWithT != null) { 
-							for (Map<String, GaussianMixture> ios : iosWithT) { ios.remove(GrammarRule.Unit.C); } 
+							for (Map<RuleUnit, GaussianMixture> ios : iosWithT) { ios.remove(RuleUnit.C); } 
 						}
 						if (iosWithS != null) { 
-							for (Map<String, GaussianMixture> ios : iosWithS) { ios.remove(GrammarRule.Unit.C); } 
+							for (Map<RuleUnit, GaussianMixture> ios : iosWithS) { ios.remove(RuleUnit.C); } 
 						}
 					}
 					/* 
@@ -283,14 +286,14 @@ public class Gradient extends Recorder implements Serializable {
 	private double derivateRuleWeight(
 			double scoreT, 
 			double scoreS, 
-			List<Map<String, GaussianMixture>> ioScoreWithT,
-			List<Map<String, GaussianMixture>> ioScoreWithS) {
+			List<EnumMap<RuleUnit, GaussianMixture>> ioScoreWithT,
+			List<EnumMap<RuleUnit, GaussianMixture>> ioScoreWithS) {
 		double countWithT = 0.0, countWithS = 0.0, cnt, part, dRuleW;
 		if (ioScoreWithT != null) {
-			for (Map<String, GaussianMixture> iosWithT : ioScoreWithT) {
+			for (Map<RuleUnit, GaussianMixture> iosWithT : ioScoreWithT) {
 				cnt = 1.0;
 				boolean found = false;
-				for (Map.Entry<String, GaussianMixture> ios : iosWithT.entrySet()) {
+				for (Entry<RuleUnit, GaussianMixture> ios : iosWithT.entrySet()) {
 					part = ios.getValue().evalInsideOutside(truths.get(ios.getKey()), false);
 					cnt *= part;
 					found = true;
@@ -299,10 +302,10 @@ public class Gradient extends Recorder implements Serializable {
 			}
 		}
 		if (ioScoreWithS != null) {
-			for (Map<String, GaussianMixture> iosWithS : ioScoreWithS) {
+			for (Map<RuleUnit, GaussianMixture> iosWithS : ioScoreWithS) {
 				cnt = 1.0;
 				boolean found = false;
-				for (Map.Entry<String, GaussianMixture> ios : iosWithS.entrySet()) {
+				for (Entry<RuleUnit, GaussianMixture> ios : iosWithS.entrySet()) {
 					part = ios.getValue().evalInsideOutside(truths.get(ios.getKey()), false);
 					cnt *= part;
 					found = true;
@@ -356,8 +359,8 @@ public class Gradient extends Recorder implements Serializable {
 	private void normalize() {
 		double grad;
 		for (int k = 0; k < wgrads.size(); k++) { // component k
-			Map<String, List<Double>> gcomp = ggrads.get(k);
-			for (Map.Entry<String, List<Double>> grads : gcomp.entrySet()) {
+			EnumMap<RuleUnit, List<Double>> gcomp = ggrads.get(k);
+			for (Entry<RuleUnit, List<Double>> grads : gcomp.entrySet()) {
 				List<Double> grads0 = grads.getValue();
 				for (int d = 0; d < grads0.size(); d++) { // dimension d
 					grad = -Params.lr * Math.signum(grads0.get(d)) / partition;
@@ -375,9 +378,9 @@ public class Gradient extends Recorder implements Serializable {
 	private void sgd() {
 		double g1st, grad;
 		for (int k = 0; k < wgrads.size(); k++) { // component k
-			Map<String, List<Double>> gcomp = ggrads.get(k);
-			Map<String, List<Double>> gcomp1 = ggrads1.get(k);
-			for (Map.Entry<String, List<Double>> grads : gcomp.entrySet()) {
+			EnumMap<RuleUnit, List<Double>> gcomp = ggrads.get(k);
+			EnumMap<RuleUnit, List<Double>> gcomp1 = ggrads1.get(k);
+			for (Entry<RuleUnit, List<Double>> grads : gcomp.entrySet()) {
 				List<Double> grads0 = grads.getValue();
 				List<Double> grads1 = gcomp1.get(grads.getKey());
 				for (int d = 0; d < grads0.size(); d++) { // dimension d
@@ -402,9 +405,9 @@ public class Gradient extends Recorder implements Serializable {
 	private void momentum() {
 		double g1st, grad;
 		for (int k = 0; k < wgrads.size(); k++) { // component k
-			Map<String, List<Double>> gcomp = ggrads.get(k);
-			Map<String, List<Double>> gcomp1 = ggrads1.get(k);
-			for (Map.Entry<String, List<Double>> grads : gcomp.entrySet()) {
+			EnumMap<RuleUnit, List<Double>> gcomp = ggrads.get(k);
+			EnumMap<RuleUnit, List<Double>> gcomp1 = ggrads1.get(k);
+			for (Entry<RuleUnit, List<Double>> grads : gcomp.entrySet()) {
 				List<Double> grads0 = grads.getValue();
 				List<Double> grads1 = gcomp1.get(grads.getKey());
 				for (int d = 0; d < grads0.size(); d++) { // dimension d
@@ -429,9 +432,9 @@ public class Gradient extends Recorder implements Serializable {
 	private void adagrad() {
 		double g2nd, grad;
 		for (int k = 0; k < wgrads.size(); k++) { // component k
-			Map<String, List<Double>> gcomp = ggrads.get(k);
-			Map<String, List<Double>> gcomp2 = ggrads2.get(k);
-			for (Map.Entry<String, List<Double>> grads : gcomp.entrySet()) {
+			EnumMap<RuleUnit, List<Double>> gcomp = ggrads.get(k);
+			EnumMap<RuleUnit, List<Double>> gcomp2 = ggrads2.get(k);
+			for (Entry<RuleUnit, List<Double>> grads : gcomp.entrySet()) {
 				List<Double> grads0 = grads.getValue();
 				List<Double> grads2 = gcomp2.get(grads.getKey());
 				for (int d = 0; d < grads0.size(); d++) { // dimension d
@@ -456,9 +459,9 @@ public class Gradient extends Recorder implements Serializable {
 	private void rmsprop() {
 		double g2nd, grad;
 		for (int k = 0; k < wgrads.size(); k++) { // component k
-			Map<String, List<Double>> gcomp = ggrads.get(k);
-			Map<String, List<Double>> gcomp2 = ggrads2.get(k);
-			for (Map.Entry<String, List<Double>> grads : gcomp.entrySet()) {
+			EnumMap<RuleUnit, List<Double>> gcomp = ggrads.get(k);
+			EnumMap<RuleUnit, List<Double>> gcomp2 = ggrads2.get(k);
+			for (Entry<RuleUnit, List<Double>> grads : gcomp.entrySet()) {
 				List<Double> grads0 = grads.getValue();
 				List<Double> grads2 = gcomp2.get(grads.getKey());
 				for (int d = 0; d < grads0.size(); d++) { // dimension d
@@ -483,10 +486,10 @@ public class Gradient extends Recorder implements Serializable {
 	private void adadelta() {
 		double v2nd, g2nd, grad;
 		for (int k = 0; k < wgrads.size(); k++) { // component k
-			Map<String, List<Double>> gcomp = ggrads.get(k);
-			Map<String, List<Double>> gcomp1 = ggrads1.get(k);
-			Map<String, List<Double>> gcomp2 = ggrads2.get(k);
-			for (Map.Entry<String, List<Double>> grads : gcomp.entrySet()) {
+			EnumMap<RuleUnit, List<Double>> gcomp = ggrads.get(k);
+			EnumMap<RuleUnit, List<Double>> gcomp1 = ggrads1.get(k);
+			EnumMap<RuleUnit, List<Double>> gcomp2 = ggrads2.get(k);
+			for (Entry<RuleUnit, List<Double>> grads : gcomp.entrySet()) {
 				List<Double> grads0 = grads.getValue();
 				List<Double> grads1 = gcomp1.get(grads.getKey());
 				List<Double> grads2 = gcomp2.get(grads.getKey());
@@ -520,10 +523,10 @@ public class Gradient extends Recorder implements Serializable {
 		double ldecay1 = 1 - Math.pow(Params.lambda1, cntUpdate);
 		double ldecay2 = 1 - Math.pow(Params.lambda2, cntUpdate);
 		for (int k = 0; k < wgrads.size(); k++) { // component k
-			Map<String, List<Double>> gcomp = ggrads.get(k);
-			Map<String, List<Double>> gcomp1 = ggrads1.get(k);
-			Map<String, List<Double>> gcomp2 = ggrads2.get(k);
-			for (Map.Entry<String, List<Double>> grads : gcomp.entrySet()) {
+			EnumMap<RuleUnit, List<Double>> gcomp = ggrads.get(k);
+			EnumMap<RuleUnit, List<Double>> gcomp1 = ggrads1.get(k);
+			EnumMap<RuleUnit, List<Double>> gcomp2 = ggrads2.get(k);
+			for (Entry<RuleUnit, List<Double>> grads : gcomp.entrySet()) {
 				List<Double> grads0 = grads.getValue();
 				List<Double> grads1 = gcomp1.get(grads.getKey());
 				List<Double> grads2 = gcomp2.get(grads.getKey());

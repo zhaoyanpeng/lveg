@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Set;
 
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleType;
 import edu.shanghaitech.ai.nlp.lveg.model.Inferencer;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
@@ -145,7 +146,7 @@ public class PCFGInferencer extends Inferencer {
 				cinScore = chart.getInsideScoreMask(idTag, idx, level);
 				while (iterator.hasNext()) {
 					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
-					if (idx != 0 && rule.type == GrammarRule.RHSPACE) { continue; } // ROOT is allowed only when it is in cell 0 and is in level 1 or 2
+					if (idx != 0 && rule.type == RuleType.RHSPACE) { continue; } // ROOT is allowed only when it is in cell 0 and is in level 1 or 2
 					pinScore = rule.weight.getProb() + cinScore;
 					chart.addInsideScoreMask(rule.lhs, idx, pinScore, (short) (level + 1));
 				}
@@ -160,7 +161,7 @@ public class PCFGInferencer extends Inferencer {
 				cinScore = chart.getInsideScoreMask(idTag, idx, LENGTH_UCHAIN);
 				while (iterator.hasNext()) {
 					UnaryGrammarRule rule = (UnaryGrammarRule) iterator.next();
-					if (rule.type != GrammarRule.RHSPACE) { continue; } // only consider ROOT in level 3
+					if (rule.type != RuleType.RHSPACE) { continue; } // only consider ROOT in level 3
 					pinScore = rule.weight.getProb() + cinScore;
 					chart.addInsideScoreMask(rule.lhs, idx, pinScore, (short) (LENGTH_UCHAIN + 1));
 				}
@@ -205,14 +206,15 @@ public class PCFGInferencer extends Inferencer {
 	
 	
 	public static void createPosteriorMask(int nword, Chart chart, double scoreS, double threshold) {
-		int idx;
-		boolean retainall;
+		int idx, cnt;
 		Set<Short> iset, oset;
+		boolean retainall, stay;
 		double oscore, iscore, posterior;
 		
 		for (int ilayer = nword - 1; ilayer >= 0; ilayer--) {
 			for (int left = 0; left < nword - ilayer; left++) {
 				idx = Chart.idx(left, nword - ilayer);
+				cnt = 0;
 				retainall = idx == 0;
 				iset = chart.keySetMask(idx, true);
 				oset = chart.keySetMask(idx, false);
@@ -223,8 +225,11 @@ public class PCFGInferencer extends Inferencer {
 						continue;
 					}
 					posterior = iscore + oscore - scoreS; // in logarithmic form
-					if (retainall || posterior > threshold) {
+					stay = (retainall && (ikey == ROOT || cnt < 6));
+					if (stay || posterior > threshold) {
+//					if (retainall || posterior > threshold) {
 						chart.addPosteriorMask(ikey, idx);
+						cnt++;
 					}		
 				}
 			}
@@ -291,7 +296,7 @@ public class PCFGInferencer extends Inferencer {
 				rules = grammar.getURuleWithC(mkey);
 				for (GrammarRule arule : rules) {
 					UnaryGrammarRule rule = (UnaryGrammarRule) arule;
-					if (rule.type == GrammarRule.RHSPACE) { continue; }
+					if (rule.type == RuleType.RHSPACE) { continue; }
 					if ((maxprob = chart.getMaxRuleCount(rule.lhs, idx)) > prob) { continue; }
 					newprob = prob + rule.weight.getProb();
 					if (newprob > maxprob) {

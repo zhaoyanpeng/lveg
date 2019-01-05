@@ -1,8 +1,9 @@
 package edu.shanghaitech.ai.nlp.lveg.impl;
 
-import java.util.Map;
+import java.util.EnumMap;
 
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleUnit;
 
 public class GeneralGaussianMixture extends GaussianMixture {
 	/**
@@ -30,7 +31,7 @@ public class GeneralGaussianMixture extends GaussianMixture {
 	}
 
 	@Override
-	public double mulAndMarginalize(Map<String, GaussianMixture> counts) {
+	public double mulAndMarginalize(EnumMap<RuleUnit, GaussianMixture> counts) {
 		return 0;
 	}
 
@@ -39,7 +40,7 @@ public class GeneralGaussianMixture extends GaussianMixture {
 	}
 
 	@Override
-	public GaussianMixture mulAndMarginalize(GaussianMixture gm, GaussianMixture des, String key, boolean deep) {
+	public GaussianMixture mulAndMarginalize(GaussianMixture gm, GaussianMixture des, RuleUnit key, boolean deep) {
 		return null;
 	}
 

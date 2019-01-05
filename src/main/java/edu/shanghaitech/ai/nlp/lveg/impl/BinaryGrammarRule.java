@@ -23,13 +23,13 @@ public class BinaryGrammarRule extends GrammarRule implements Comparable<Object>
 		this.lhs = lhs;
 		this.lchild = lchild;
 		this.rchild = rchild;
-		this.type = LRBRULE;
+		this.type = RuleType.LRBRULE;
 	}
 	
 	
 	public BinaryGrammarRule(short lhs, short lchild, short rchild, boolean init) {
 		this(lhs, lchild, rchild);
-		if (init) { initializeWeight(GrammarRule.LRBRULE, (short) -1, (short) -1); }
+		if (init) { initializeWeight(RuleType.LRBRULE, (short) -1, (short) -1); }
 	}
 	
 	
@@ -39,11 +39,13 @@ public class BinaryGrammarRule extends GrammarRule implements Comparable<Object>
 	}
 	
 	
-	public void initializeWeight(byte type, short ncomponent, short ndim) {
-		weight = rndRuleWeight(GrammarRule.LRBRULE, ncomponent, ndim);
+	@Override
+	public void initializeWeight(RuleType type, short ncomponent, short ndim) {
+		weight = rndRuleWeight(RuleType.LRBRULE, ncomponent, ndim);
 	}
 
 	
+	@Override
 	public GrammarRule copy() {
 		BinaryGrammarRule rule = new BinaryGrammarRule(lhs, lchild, rchild);
 		rule.weight = weight.copy(true);
