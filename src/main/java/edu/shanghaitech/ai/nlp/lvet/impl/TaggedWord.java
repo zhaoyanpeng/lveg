@@ -13,6 +13,8 @@ public class TaggedWord extends Word {
 	
 	protected GaussianMixture insideScore;
 	protected GaussianMixture outsideScore;
+	protected GaussianMixture insWithWord;
+	protected GaussianMixture outWithWord;
 	
 	public TaggedWord(String tag, String word) {
 		super(word);
@@ -34,7 +36,7 @@ public class TaggedWord extends Word {
 	public void setTagIdx(int tagIdx) {
 		this.tagIdx = tagIdx;
 	}
-
+	
 	public GaussianMixture getInsideScore() {
 		return insideScore;
 	}
@@ -49,6 +51,60 @@ public class TaggedWord extends Word {
 
 	public void setOutsideScore(GaussianMixture outsideScore) {
 		this.outsideScore = outsideScore;
+	}
+	
+	public GaussianMixture getInsideScore(boolean withWord) {
+		return withWord ? insWithWord : insideScore;
+	}
+	
+	public void setInsideScore(GaussianMixture insideScore, boolean withWord) {
+		if (withWord) {
+			this.insWithWord = insideScore;
+		} else {
+			this.insideScore = insideScore;
+		}
+	}
+	
+	public GaussianMixture getOutsideScore(boolean withWord) {
+		return withWord ? outWithWord : outsideScore;
+	}
+	
+	public void setOutsideScore(GaussianMixture outsideScore, boolean withWord) {
+		if (withWord) {
+			this.outWithWord = outsideScore;
+		} else {
+			this.outsideScore = outsideScore;
+		}
+	}
+	
+	private void resetScore() {
+		if (insideScore != null) { 
+			insideScore.clear(true); 
+		}
+		if (outsideScore != null) { 
+			outsideScore.clear(true); 
+		}
+		if (insWithWord != null) {
+			insWithWord.clear(true);
+		}
+		if (outWithWord != null) {
+			outWithWord.clear(true);
+		}
+		this.insideScore = null;
+		this.outsideScore = null;
+	}
+	
+	public void clear(boolean deep) {
+		if (deep) {
+			this.tag = null;
+			this.tagIdx = -1;
+			this.word = null; // would be better if reset in `Word`
+		} 
+		resetScore();
+	}
+	
+	public void clear() {
+		clear(true);
 	}
 
 	@Override

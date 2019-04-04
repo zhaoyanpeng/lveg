@@ -3,7 +3,9 @@ package edu.shanghaitech.ai.nlp.lvet.impl;
 import java.util.ArrayList;
 import java.util.List;
 
+import edu.shanghaitech.ai.nlp.lveg.impl.UnaryGrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleType;
 import edu.shanghaitech.ai.nlp.lvet.model.Pair;
 import edu.shanghaitech.ai.nlp.util.Numberer;
 
@@ -13,12 +15,9 @@ public class TagTPair extends Pair {
 	 */
 	private static final long serialVersionUID = 5243987757351187035L;
 	
-	public TagTPair() {
-		super();
-	}
 	
 	public TagTPair(Numberer numberer, int ntag) {
-		this();
+		super();
 		if (numberer == null) {
 			this.numberer = null;
 			this.ntag = ntag;
@@ -45,26 +44,26 @@ public class TagTPair extends Pair {
 	public void postInitialize() {
 		for (GrammarRule edge : edgeTable.keySet()) {
 			edge.getWeight().setBias(edgeTable.getCount(edge).getBias());
-			addEdge((DirectedEdge) edge);
+			addEdge((UnaryGrammarRule) edge);
 		}
 	}
 
 	@Override
-	public void tallyTaggedSample(List<TaggedWord> sample) {
+	public void tallyTaggedWords(List<TaggedWord> words) {
 		int pretag = LEADING_IDX;
-		for (int i = 0; i < sample.size(); i++) {
-			TaggedWord word = sample.get(i);
-			byte type = i == 0 ? GrammarRule.RHSPACE : GrammarRule.LRURULE;
-			GrammarRule edge = new DirectedEdge((short) pretag, word.tagIdx, type);
+		for (int i = 0; i < words.size(); i++) {
+			TaggedWord word = words.get(i);
+			RuleType type = i == 0 ? RuleType.RHSPACE : RuleType.LRURULE;
+			GrammarRule edge = new UnaryGrammarRule((short) pretag, word.tagIdx, type);
 			if (!edgeTable.containsKey(edge)) {
 				edge.initializeWeight(type, (short) -1, (short) -1);
 			}
 			edgeTable.addCount(edge, 1.0);
 			pretag = word.tagIdx;
 		}
-		GrammarRule edge = new DirectedEdge((short) pretag, ENDING_IDX, GrammarRule.LHSPACE);
+		GrammarRule edge = new UnaryGrammarRule((short) pretag, ENDING_IDX, RuleType.LHSPACE);
 		if (!edgeTable.containsKey(edge)) {
-			edge.initializeWeight(GrammarRule.LHSPACE, (short) -1, (short) -1);
+			edge.initializeWeight(RuleType.LHSPACE, (short) -1, (short) -1);
 		}
 		edgeTable.addCount(edge, 1.0);
 	}
@@ -93,4 +92,5 @@ public class TagTPair extends Pair {
 		sb.append("\n");
 		return sb.toString();
 	}
+
 }

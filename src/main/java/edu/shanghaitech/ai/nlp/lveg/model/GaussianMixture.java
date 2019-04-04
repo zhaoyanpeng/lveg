@@ -283,6 +283,7 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	public abstract GaussianMixture instance(short ncomponent, boolean init);
 	public abstract double mulAndMarginalize(EnumMap<RuleUnit, GaussianMixture> counts);
 	public abstract GaussianMixture mulAndMarginalize(GaussianMixture gm, GaussianMixture des, RuleUnit key, boolean deep);
+	public abstract GaussianMixture mul(GaussianMixture gm, GaussianMixture des, RuleUnit key);
 	
 	/**
 	 * Make a copy of this MoG. This will create a new instance of MoG.
@@ -308,6 +309,22 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 				des.components.add(comp);
 			}
 		}
+	}
+	
+	
+	/**
+	 * Make a copy of the component of the mixture of gaussians.
+	 * 
+	 * @param component a component of the mixture of gaussians
+	 * @return
+	 */
+	public static EnumMap<RuleUnit, Set<GaussianDistribution>> copyExceptKey(Map<RuleUnit, Set<GaussianDistribution>> component, RuleUnit key) {
+		EnumMap<RuleUnit, Set<GaussianDistribution>> replica = new EnumMap<>(RuleUnit.class);
+		for (Entry<RuleUnit, Set<GaussianDistribution>> gaussian : component.entrySet()) {
+			if (gaussian.getKey() == key) { continue; }
+			replica.put(gaussian.getKey(), copy(gaussian.getValue()));
+		}
+		return replica;
 	}
 	
 	

@@ -3,9 +3,11 @@ package edu.shanghaitech.ai.nlp.lvet.impl;
 import java.util.ArrayList;
 import java.util.List;
 
-import edu.shanghaitech.ai.nlp.lveg.LVeGTrainer;
+import edu.shanghaitech.ai.nlp.lveg.impl.UnaryGrammarRule;
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleType;
+import edu.shanghaitech.ai.nlp.lvet.LVeTTrainer;
 import edu.shanghaitech.ai.nlp.lvet.model.Pair;
 import edu.shanghaitech.ai.nlp.lvet.model.Word;
 import edu.shanghaitech.ai.nlp.util.Indexer;
@@ -66,26 +68,26 @@ public class TagWPair extends Pair {
 		}
 		for (GrammarRule edge : edgeTable.keySet()) {
 			edge.getWeight().setBias(edgeTable.getCount(edge).getBias());
-			addEdge((DirectedEdge) edge);
+			addEdge((UnaryGrammarRule) edge);
 		}
 	}
 
 	@Override
-	public void tallyTaggedSample(List<TaggedWord> sample) {
-		for (TaggedWord word : sample) {
+	public void tallyTaggedWords(List<TaggedWord> words) {
+		for (TaggedWord word : words) {
 			String name = word.word;
 			wordIndexer.add(name);
 			word.wordIdx = wordIndexer.indexof(name);
 			short tagIdx = (short) word.tagIdx;
-			GrammarRule edge = new DirectedEdge(tagIdx, word.wordIdx, GrammarRule.LHSPACE);
+			GrammarRule edge = new UnaryGrammarRule(tagIdx, word.wordIdx, RuleType.LHSPACE);
 			if (!edgeTable.containsKey(edge)) {
-				edge.initializeWeight(GrammarRule.LHSPACE, (short) -1, (short) -1); 
+				edge.initializeWeight(RuleType.LHSPACE, (short) -1, (short) -1); 
 			}
 			edgeTable.addCount(edge, 1.0);
 		}
 	}	
 	
-	public List<GrammarRule> getRulesWithWord(Word word) {
+	public List<GrammarRule> getEdgesWithWord(Word word) {
 		int wordIdx = getWordIdx(word);
 		return edgesWithC[wordIdx];
 	}
@@ -94,16 +96,16 @@ public class TagWPair extends Pair {
 		int wordIdx = getWordIdx(word); // should be >= 0
 		if (wordIdx == -1) { // double check
 			Recorder.logger.warn("\nUnknown Word Signature [P: " + itag + ", UC: " + wordIdx + ", word = " + word.getName() + ", sig = (UNK)]\n");
-			GaussianMixture weight = GrammarRule.rndRuleWeight(GrammarRule.LHSPACE, (short) -1, (short) -1);
-			weight.setWeights(LVeGTrainer.minmw);
+			GaussianMixture weight = GrammarRule.rndRuleWeight(RuleType.LHSPACE, (short) -1, (short) -1);
+			weight.setWeights(LVeTTrainer.minmw);
 			return weight;
 		}
-		GrammarRule rule = getEdge(itag, wordIdx, GrammarRule.LHSPACE);
+		GrammarRule rule = getEdge(itag, wordIdx, RuleType.LHSPACE);
 		if (rule == null) { // double check
 			Recorder.logger.warn("\nUnknown Lexicon Rule [P: " + itag + ", UC: " + wordIdx + ", word = " + word.getName() + ", sig = (UNK)]\n");
-			GaussianMixture weight = GrammarRule.rndRuleWeight(GrammarRule.LHSPACE, (short) -1, (short) -1);
+			GaussianMixture weight = GrammarRule.rndRuleWeight(RuleType.LHSPACE, (short) -1, (short) -1);
 			/*weight.setWeights(Double.NEGATIVE_INFINITY);*/
-			weight.setWeights(LVeGTrainer.minmw);
+			weight.setWeights(LVeTTrainer.minmw);
 			return weight;
 		}
 		return rule.getWeight();
@@ -138,9 +140,9 @@ public class TagWPair extends Pair {
 	}
 	
 	public void labelSequences(List<List<TaggedWord>> sequences) {
-		for (List<TaggedWord> sequence : sequences) {
+		for (List<TaggedWord> words : sequences) {
 			int pos = 0;
-			for (TaggedWord word : sequence) {
+			for (TaggedWord word : words) {
 				word.wordIdx = wordIndexer.indexof(word.word);
 				word.signIdx = -1;
 				word.from = pos;

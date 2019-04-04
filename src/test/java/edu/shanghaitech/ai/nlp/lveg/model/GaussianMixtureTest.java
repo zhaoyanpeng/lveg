@@ -72,6 +72,162 @@ public class GaussianMixtureTest {
 	}
 	
 	
+	@Test
+	public void testGaussianMul() {
+		Random random = new Random(0);
+		short ncomponent = 1, dim = 1;
+		GaussianMixture.config((short) -30, 1e-6, 4, ncomponent, 0.8, 2, -0.2, false, random, null);
+		GaussianDistribution.config(1, 5, dim, 0.5, 0.8, random, null);
+		
+		GaussianMixture s_a = new DiagonalGaussianMixture(ncomponent);
+		GaussianMixture a_b = new DiagonalGaussianMixture(ncomponent);
+		GaussianMixture a_d = new DiagonalGaussianMixture(ncomponent);
+		GaussianMixture b_e = new DiagonalGaussianMixture(ncomponent);
+		GaussianMixture a_w = new DiagonalGaussianMixture(ncomponent);
+		GaussianMixture b_w = new DiagonalGaussianMixture(ncomponent);
+		GaussianMixture d_w = new DiagonalGaussianMixture(ncomponent);
+		for (int i = 0; i < ncomponent; i++) {
+			EnumMap<RuleUnit, Set<GaussianDistribution>> map = new EnumMap<>(RuleUnit.class);
+			Set<GaussianDistribution> list0 = new HashSet<GaussianDistribution>();
+			Set<GaussianDistribution> list1 = new HashSet<GaussianDistribution>();
+			list0.add(new DiagonalGaussianDistribution(dim));
+			list1.add(new DiagonalGaussianDistribution(dim));
+			map.put(RuleUnit.C, list1);
+			s_a.add(i, map);
+		}
+		for (int i = 0; i < ncomponent; i++) {
+			EnumMap<RuleUnit, Set<GaussianDistribution>> map = new EnumMap<>(RuleUnit.class);
+			Set<GaussianDistribution> list0 = new HashSet<GaussianDistribution>();
+			Set<GaussianDistribution> list1 = new HashSet<GaussianDistribution>();
+			list0.add(new DiagonalGaussianDistribution(dim));
+			list1.add(new DiagonalGaussianDistribution(dim));
+			map.put(RuleUnit.P, list0);
+			map.put(RuleUnit.UC, list0);
+			a_b.add(i, map);
+		}
+		
+		for (int i = 0; i < ncomponent; i++) {
+			EnumMap<RuleUnit, Set<GaussianDistribution>> map = new EnumMap<>(RuleUnit.class);
+			Set<GaussianDistribution> list0 = new HashSet<GaussianDistribution>();
+			Set<GaussianDistribution> list1 = new HashSet<GaussianDistribution>();
+			list0.add(new DiagonalGaussianDistribution(dim));
+			list1.add(new DiagonalGaussianDistribution(dim));
+			map.put(RuleUnit.P, list0);
+			b_e.add(i, map);
+		}
+		
+		for (int i = 0; i < ncomponent; i++) {
+			EnumMap<RuleUnit, Set<GaussianDistribution>> map = new EnumMap<>(RuleUnit.class);
+			Set<GaussianDistribution> list0 = new HashSet<GaussianDistribution>();
+			Set<GaussianDistribution> list1 = new HashSet<GaussianDistribution>();
+			list0.add(new DiagonalGaussianDistribution(dim));
+			list1.add(new DiagonalGaussianDistribution(dim));
+			map.put(RuleUnit.P, list0);
+			a_w.add(i, map);
+		}
+		for (int i = 0; i < ncomponent; i++) {
+			EnumMap<RuleUnit, Set<GaussianDistribution>> map = new EnumMap<>(RuleUnit.class);
+			Set<GaussianDistribution> list0 = new HashSet<GaussianDistribution>();
+			Set<GaussianDistribution> list1 = new HashSet<GaussianDistribution>();
+			list0.add(new DiagonalGaussianDistribution(dim));
+			list1.add(new DiagonalGaussianDistribution(dim));
+			map.put(RuleUnit.P, list0);
+			b_w.add(i, map);
+		}
+		
+		System.out.println("\n\n");
+		System.out.println("s_a---" + s_a);
+		System.out.println("a_b---" + a_b);
+		System.out.println("b_e---" + b_e);
+		System.out.println("a_w---" + a_w);
+		System.out.println("b_w---" + b_w);
+		System.out.println();
+		
+		GaussianMixture i_a = s_a.copy(true);
+		GaussianMixture i_a_w = a_w.mul(i_a, null, RuleUnit.P);
+		GaussianMixture i_b = a_b.mulAndMarginalize(i_a_w, null, RuleUnit.P, true);
+		GaussianMixture i_d = i_b.copy(true);
+		GaussianMixture i_b_w = b_w.mul(i_b, null, RuleUnit.P);
+		GaussianMixture i_d_w = i_b_w.copy(true);
+		
+		System.out.println("i_a---" + i_a);
+		System.out.println("i_a_w-" + i_a_w);
+		System.out.println("i_b---" + i_b);
+		System.out.println("i_b_w-" + i_b_w);
+		System.out.println("i_d---" + i_d);
+		System.out.println("i_d_w-" + i_d_w);
+		
+		GaussianMixture i_b_e = b_e.mulAndMarginalize(i_b_w, null, RuleUnit.P, true);
+		double scoreT = i_b_e.evalInsideOutside(null, false);
+		
+		GaussianMixture d_e = b_e.copy(true);
+		GaussianMixture i_d_e = d_e.mulAndMarginalize(i_d_w, null, RuleUnit.P, true); 
+		GaussianMixture i_e_all = i_b_e.copy(true);
+		i_e_all.add(i_d_e, false);
+		double scoreS = i_e_all.evalInsideOutside(null, false);
+		
+		System.out.println("i_b_e---" + i_b_e);
+		System.out.println("i_d_e---" + i_d_e);
+		System.out.print("\n");
+		
+		System.out.println("i_e---" + i_b_e);
+		System.out.println("i_e_all---" + i_e_all);
+		
+		System.out.println("score of T: " + scoreT + "\t" + Math.log(scoreT));
+		System.out.println("score of S: " + scoreS + "\t" + Math.log(scoreS));
+		
+		List<List<Double>> cache = new ArrayList<>(5);
+		for (int i = 0; i < 4; i++) {
+			cache.add(new ArrayList<>(5));
+		}
+		Component comp_w = i_d_w.getComponent((short) 0);
+		GaussianDistribution gd_w = comp_w.squeeze(null);
+		
+		Component comp_e = d_e.getComponent((short) 0);
+		GaussianDistribution gd_e = comp_e.squeeze(null);
+		
+		System.out.println("gd_w " + gd_w);
+		System.out.println("gd_e " + gd_e);
+		
+		cache.get(3).add(comp_w.weight);
+		double val = gd_e.integral(gd_w, cache);
+		System.out.println(cache);
+		System.out.println(val);
+		
+		double nn = cache.get(0).get(0);
+		double nnx = cache.get(1).get(0);
+		double nnxx = cache.get(2).get(0);
+		double mxw = cache.get(3).get(0);
+		
+		GaussianMixture gnn = d_e.mul(i_d_w, null, RuleUnit.P);
+		System.out.println("gnn " + gnn);
+		
+		
+		double v0 = 0.5, v1 = 1;
+		double vr0 = v0 * v0, vr1 = v1 * v1;
+		double a = (vr0 + vr1) / (2 * vr0 * vr1);
+		double b = 0;
+		double a_nn = Math.exp(i_d_e.eval(null, true));
+		double a_nnx = b / (2 * a) * a_nn;
+		double a_nnxx = (b * b + 2 * a) / (4 * a * a) * a_nn;
+		
+		System.out.println("a_nn: " + a_nn + "\ta_nnx: " + a_nnx + "\ta_nnxx: " + a_nnxx);
+		System.out.println(" _nn: " + nn + "\t _nnx: " + nnx + "\t _nnxx: " + nnxx);
+		double mm = val - Math.log(2 * Math.PI) * (-dim / 2.0);
+		double pi = 1 / Math.sqrt(2 * Math.PI) * Math.exp(mxw);
+		System.out.println(mm + "\t" + pi + "\t" + (1 / Math.sqrt(2 * Math.PI)));
+		double b_nn = Math.exp(nn) * pi;
+		double b_nnx = nnx * pi;
+		double b_nnxx = Math.exp(nnxx) * pi;
+		System.out.println("b_nn: " + b_nn + "\tb_nnx: " + b_nnx + "\tb_nnxx: " + b_nnxx);
+		
+		double dw = b_nn / scoreS;
+		double du = 0;
+		double dv = (b_nnxx - b_nn) / scoreS;
+		System.out.println(dw + "\t" + dv);
+	}
+	
+	
 	//@Test
 	public void testGaussianMixture() {
 		String key = "hello", value = "world";
@@ -90,7 +246,6 @@ public class GaussianMixtureTest {
 	public void testParams(Map<String, String> map, String key, String value) {
 		map.put(key, value);
 	}
-	
 	
 	//@Test
 	public void testHashSet() {
@@ -257,7 +412,7 @@ public class GaussianMixtureTest {
 	}
 	
 	
-	@Test
+//	@Test
 	public void testMultiply() {
 		
 		GaussianMixture gm3 = gm0.multiply(gm1);

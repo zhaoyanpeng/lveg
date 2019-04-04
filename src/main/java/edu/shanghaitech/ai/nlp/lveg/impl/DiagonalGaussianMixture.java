@@ -1,7 +1,9 @@
 package edu.shanghaitech.ai.nlp.lveg.impl;
 
 import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -137,6 +139,38 @@ public class DiagonalGaussianMixture extends GaussianMixture {
 		}
 		return des;
 	}
+	
+	@Override
+	public GaussianMixture mul(GaussianMixture gm, GaussianMixture des, RuleUnit key) {
+		if (des != null) { 
+			des.clear(false); 
+		} else {
+			des = new DiagonalGaussianMixture();
+		}
+		
+		for (Component comp : components) {
+			double mw = comp.getWeight();
+			GaussianDistribution gd = comp.squeeze(key);
+			
+			for (Component comp1 : gm.components()) {
+				GaussianDistribution gd1 = comp1.squeeze(null);
+				Map<Double, GaussianDistribution> prod = gd.mul(gd1);
+				
+				if (prod == null) { return null; } // do not throw exception here
+				
+				for (Map.Entry<Double, GaussianDistribution> entry : prod.entrySet()) {
+					double mw0 = mw + comp1.getWeight() + entry.getKey();
+					EnumMap<RuleUnit, Set<GaussianDistribution>> multivnd = copyExceptKey(comp.getMultivnd(), key);
+					Set<GaussianDistribution> value = new HashSet<>();
+					value.add(entry.getValue());
+					multivnd.put(key, value);
+					des.add(mw0, multivnd);
+					break;
+				}
+			}
+		}
+		return des;
+	}
 
 	@Override
 	public double mulAndMarginalize(EnumMap<RuleUnit, GaussianMixture> counts) {
@@ -158,7 +192,6 @@ public class DiagonalGaussianMixture extends GaussianMixture {
 		}
 		return values;
 	}
-	
 	
 	public static double mulAndMarginalize(GaussianMixture gm, GaussianDistribution gd) {
 		double value = Double.NEGATIVE_INFINITY, vtmp;

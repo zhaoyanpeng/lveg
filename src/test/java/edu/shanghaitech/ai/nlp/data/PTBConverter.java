@@ -9,30 +9,39 @@ import org.junit.Test;
 
 public class PTBConverter {
 	
-	private final static String ROOT = "E:/SourceCode/ParsersData/wsj/";
+	private final static String ROOT = "/home/oops/Data/berkeley/data/Data.Prd/tag/";
 	
 	@Test
 	public void testPTBConverter() throws Exception {
-		String train = ROOT + "wsj_s2-21_tree";
-		String test = ROOT + "wsj_s23_tree";
-		String dev = ROOT + "wsj_s22_tree";
+		String train = ROOT + "wsj.21";
+		String test = ROOT + "wsj.23";
+		String dev = ROOT + "wsj.22";
 		
 		
-		FileWriter w1 = new FileWriter(ROOT + "wsj_s2-21.prd");
-		FileWriter w2 = new FileWriter(ROOT + "wsj_s23.prd");
-		FileWriter w3 = new FileWriter(ROOT + "wsj_s22.prd");
+		FileWriter w1 = new FileWriter(ROOT + "wsj.21.mrg");
+		FileWriter w2 = new FileWriter(ROOT + "wsj.23.mrg");
+		FileWriter w3 = new FileWriter(ROOT + "wsj.22.mrg");
 		
-		String line = null;
-		BufferedReader reader = new BufferedReader(new FileReader(new File(dev)));
-		while ((line = reader.readLine()) != null) {
-			line = line.trim();
-			if (line.length() > 0) {
-				line = line.substring(6, line.length() - 1);
-				w1.write(line);
-				w1.write("\n");
+		String[] filenames = {train, test, dev};
+		FileWriter[] writers = {w1, w2, w3};
+		
+		for (int i = 0; i < 3; i++) {
+			FileWriter w = writers[i];
+			String filename = filenames[i];
+					
+			String line = null;
+			BufferedReader reader = new BufferedReader(new FileReader(new File(filename)));
+			while ((line = reader.readLine()) != null) {
+				line = line.trim();
+				if (line.length() > 0) {
+					line = line.substring(6, line.length() - 1);
+					w.write(line);
+					w.write("\n");
+				}
 			}
+			w.close();
+			reader.close();
 		}
-		w1.close();
 		
 	}
 
