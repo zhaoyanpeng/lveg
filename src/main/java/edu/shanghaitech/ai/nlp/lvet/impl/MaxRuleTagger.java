@@ -19,14 +19,14 @@ public class MaxRuleTagger<I, O> extends Tagger<I, O> {
 	private MaxRuleTagger(MaxRuleTagger<?, ?> tagger) {
 		super(tagger.maxslen, tagger.iosprune);
 		this.inferencer = tagger.inferencer;
-		this.chart = new Chart(tagger.maxslen, true, false, tagger.usemask, true);
+		this.chart = new Chart(tagger.maxslen, true, true, tagger.usemask, true);
 		this.masks = tagger.masks;
 	}
 	
 	public MaxRuleTagger(TagTPair ttpair, TagWPair twpair, short maxLenParsing, boolean iosprune) {
 		super(maxLenParsing, iosprune);
 		this.inferencer = new MaxRuleInferencer(ttpair, twpair);
-		this.chart = new Chart(maxLenParsing, true, false, false, true);
+		this.chart = new Chart(maxLenParsing, true, true, false, true);
 	}
 
 	@Override

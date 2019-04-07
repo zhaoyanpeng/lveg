@@ -1,5 +1,6 @@
 package edu.shanghaitech.ai.nlp.lvet;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -9,15 +10,24 @@ import java.util.Random;
 
 import edu.berkeley.nlp.PCFGLA.Binarization;
 import edu.berkeley.nlp.PCFGLA.Corpus.TreeBankType;
+import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.data.LVeGCorpus;
+import edu.shanghaitech.ai.nlp.data.StateTreeList;
 import edu.shanghaitech.ai.nlp.lveg.LearnerConfig.Options;
 import edu.shanghaitech.ai.nlp.lveg.LearnerConfig.Params;
+import edu.shanghaitech.ai.nlp.lveg.model.GaussianMixture;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule;
+import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
+import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
+import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleType;
+import edu.shanghaitech.ai.nlp.lvet.impl.TagTPair;
 import edu.shanghaitech.ai.nlp.lvet.impl.TagWPair;
 import edu.shanghaitech.ai.nlp.lvet.impl.TaggedWord;
 import edu.shanghaitech.ai.nlp.lvet.io.CoNLLFileReader;
 import edu.shanghaitech.ai.nlp.lvet.model.Pair;
 import edu.shanghaitech.ai.nlp.optimization.Optimizer.OptChoice;
 import edu.shanghaitech.ai.nlp.optimization.ParallelOptimizer.ParallelMode;
+import edu.shanghaitech.ai.nlp.syntax.State;
 import edu.shanghaitech.ai.nlp.util.FunUtil;
 import edu.shanghaitech.ai.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.util.Option;
@@ -161,4 +171,126 @@ public class LVeTConfig extends Recorder {
 			return o2.size() - o1.size();
 		}
 	};
+	
+	protected static void resetRuleWeight(TagTPair grammar, TagWPair lexicon, Numberer numberer, double factor, Options opts) {
+		int ntag = numberer.size(), count, ncomp;
+		List<GrammarRule> gUruleWithP, lUruleWithP;
+		double prob, rulecnt, logprob;
+		int a = 0, b = 0, c = 0, d = 0, e = 0;
+		GaussianMixture ruleW;
+		boolean resetc;
+		
+		// probabilities of lexicon rules
+		// since LHS tags of lexicon rules and CNF rules do not overlap
+		// we do not need to specifically initialize the probabilities of lexicon rules
+		for (int i = 0; i < ntag; i++) {
+			count = 0;
+			lUruleWithP = lexicon.getEdgeWithP(i);
+			for (GrammarRule rule : lUruleWithP) {
+				count += rule.getWeight().getBias();
+			}
+			short increment = 1;
+			for (GrammarRule rule : lUruleWithP) {
+				rulecnt = rule.getWeight().getBias();
+				prob = rulecnt / count;
+				ruleW = rule.getWeight();
+				
+				if (!opts.resetl) {
+					d++;
+					resetc = false;
+				} else {
+					resetc = opts.resetc;
+				}
+				
+				if (resetc && rulecnt > opts.pivota) {
+					c++;
+					rule.addWeightComponent(rule.type, increment, (short) -1);
+					ruleW = rule.getWeight();
+					ruleW.setBias(rulecnt);
+				} else {
+					a++;
+				}
+				logprob = Math.log(prob);
+				ruleW.setProb(logprob);
+				
+				ncomp = ruleW.ncomponent();
+				prob = prob * factor /*/ ncomp*/;
+				logprob = Math.log(prob);
+				for (int icomp = 0; icomp < ncomp; icomp++) {
+					ruleW.setWeight(icomp, logprob);
+				}
+			}
+//			logger.debug(i + "\t: " + count + "\n");
+		}
+		
+		// for nonterminal rules
+		for (int i = 0; i < ntag; i++) {
+			count = 0;
+			gUruleWithP = grammar.getEdgeWithP(i);
+			for (GrammarRule rule : gUruleWithP) {
+				count += rule.getWeight().getBias();
+			}
+			
+			short increment = 3;
+			for (GrammarRule rule : gUruleWithP) {
+				rulecnt = rule.getWeight().getBias();
+				prob = rulecnt / count;
+				ruleW = rule.getWeight();
+				
+				if (opts.resetc && rulecnt > opts.pivota) {
+					b++;
+					rule.addWeightComponent(rule.type, increment, (short) -1);
+					ruleW = rule.getWeight();
+					ruleW.setBias(rulecnt);
+				} else { a++; }
+				logprob = Math.log(prob);
+				ruleW.setProb(logprob);
+				
+				ncomp = ruleW.ncomponent();
+				prob = prob * factor /*/ ncomp*/;
+				logprob = Math.log(prob);
+				for (int icomp = 0; icomp < ncomp; icomp++) {
+					ruleW.setWeight(icomp, logprob);
+				}
+			}
+//			logger.debug(i + "\t: " + count + "\n");
+		}
+		logger.debug("# of 1-comp: " + a + ", # of 2-comps: " + c + ", # of 4-comps: " + b +
+				", skip # of lexicon rules: " + d +
+				", # of larger than " + opts.pivota + " is " + e + "\n");
+		
+		if (opts.resetp) {
+//			resetRuleWeightParams(grammar, lexicon, numberer, opts);
+		}
+	}
+	
+	public static void filterTrees(Options opts, List<List<TaggedWord>> stateTreeList, List<List<TaggedWord>> container, Numberer numberer, boolean istrain) {
+		int cnt = 0;
+		if (container != null) { container.clear(); }
+		int maxlen = istrain ? /*1*/opts.eonlylen : (opts.eonextradev ? opts.eonlylen + 5 : opts.eonlylen);
+		for (List<TaggedWord> tree : stateTreeList) {
+			if (opts.eonlylen > 0) {
+				if (tree.size() > maxlen) { continue; }
+			}
+			if (istrain && opts.eratio > 0) {
+				if (random.nextDouble() > opts.eratio) { continue; }
+			}
+			if (opts.efirstk > 0) {
+				if (++cnt > opts.efirstk) { break; } // DEBUG
+			}
+			container.add(tree);
+			/*
+			Tree<String> strTree = strTree2stateTree(Tree<State> tree, Numberer numberer)
+			logger.trace((cnt - 1) + "\t" + strTree + "\n");
+			*/
+			// logger.trace((cnt - 1) + "\t" + FunUtil.debugTree(tree, false, (short) -1, numberer, true) + "\n");
+		}
+		// sort the samples by descending sentence length
+		sorter.clear();
+		sorter.addAll(container);
+		container.clear();
+		while (!sorter.isEmpty()) {
+			container.add(sorter.poll());
+		}
+	}
 }

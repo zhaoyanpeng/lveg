@@ -75,14 +75,14 @@ public class LVeTTagger<I, O> extends Tagger<I, O> {
 	
 	public List<Double> evalEdgeCounts(List<TaggedWord> sequence, short isequence) {
 		double scoreT = doForwardBackwardWithTags(sequence);
-		logger.trace("\nInside/outside scores with the tree...\n\n"); // DEBUG
-		logger.trace(Debugger.debugSequence(sequence, false, (short) 5, Inferencer.ttpair.numberer) + "\n");
+//		logger.trace("\nInside/outside scores with the tree...\n\n"); // DEBUG
+//		logger.trace(Debugger.debugSequence(sequence, false, (short) 5, Inferencer.ttpair.numberer) + "\n");
 
 		double scoreS = doForwardBackward(sequence, isequence);
-		logger.trace("\nInside scores with the sentence...\n\n"); // DEBUG
-		Debugger.debugChart(chart.getChart(true), (short) 5, sequence.size(), Inferencer.ttpair.numberer); // DEBUG
-		logger.trace("\nOutside scores with the sentence...\n\n"); // DEBUG
-		Debugger.debugChart(chart.getChart(false), (short) 5, sequence.size(), Inferencer.ttpair.numberer); // DEBUG
+//		logger.trace("\nInside scores with the sentence...\n\n"); // DEBUG
+//		Debugger.debugChart(chart.getChart(true), (short) 5, sequence.size(), Inferencer.ttpair.numberer); // DEBUG
+//		logger.trace("\nOutside scores with the sentence...\n\n"); // DEBUG
+//		Debugger.debugChart(chart.getChart(false), (short) 5, sequence.size(), Inferencer.ttpair.numberer); // DEBUG
 		
 		List<Double> scores = new ArrayList<>(3);
 		scores.add(scoreT);
@@ -92,14 +92,14 @@ public class LVeTTagger<I, O> extends Tagger<I, O> {
 			try { // do NOT expect it to crash
 				synchronized (inferencer) {
 					inferencer.evalEdgeCountWithTags(sequence, isequence);
-					logger.trace("\nCheck rule count with the tree...\n"); // DEBUG
-					Debugger.debugCount(Inferencer.ttpair, Inferencer.twpair, true);
-					logger.trace("\nEval count with the tree over.\n"); // DEBUG
+//					logger.trace("\nCheck rule count with the tree...\n"); // DEBUG
+//					Debugger.debugCount(Inferencer.ttpair, Inferencer.twpair, true);
+//					logger.trace("\nEval count with the tree over.\n"); // DEBUG
 					
 					inferencer.evalEdgeCount(sequence, chart, isequence);
-					logger.trace("\nCheck rule count with the sentence...\n"); // DEBUG
-					Debugger.debugCount(Inferencer.ttpair, Inferencer.twpair, false);
-					logger.trace("\nEval count with the sentence over.\n"); // DEBUG
+//					logger.trace("\nCheck rule count with the sentence...\n"); // DEBUG
+//					Debugger.debugCount(Inferencer.ttpair, Inferencer.twpair, false);
+//					logger.trace("\nEval count with the sentence over.\n"); // DEBUG
 				}
 			} catch (Exception e) {
 				e.printStackTrace();

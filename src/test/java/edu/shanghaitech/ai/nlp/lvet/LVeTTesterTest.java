@@ -2,12 +2,12 @@ package edu.shanghaitech.ai.nlp.lvet;
 
 import org.junit.Test;
 
-public class LVeTTrainerTester {
+public class LVeTTesterTest {
 	@Test
 	public void testLVeTTrainer() {
-		String[] args = {"tagging.in"};
+		String[] args = {"tagging.f1"};
 		try {
-			LVeTTrainer.main(args);
+			LVeTTester.main(args);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

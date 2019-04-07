@@ -10,6 +10,7 @@ import java.util.PriorityQueue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.data.ObjectFileManager.TaggerFile;
 import edu.shanghaitech.ai.nlp.lveg.LearnerConfig.Options;
 import edu.shanghaitech.ai.nlp.lveg.LearnerConfig.Params;
@@ -23,6 +24,7 @@ import edu.shanghaitech.ai.nlp.lvet.impl.TaggedWord;
 import edu.shanghaitech.ai.nlp.lvet.impl.Valuator;
 import edu.shanghaitech.ai.nlp.optimization.Optimizer;
 import edu.shanghaitech.ai.nlp.optimization.ParallelOptimizer;
+import edu.shanghaitech.ai.nlp.syntax.State;
 import edu.shanghaitech.ai.nlp.util.FunUtil;
 import edu.shanghaitech.ai.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.util.OptionParser;
@@ -140,10 +142,10 @@ public class LVeTTrainer extends LVeTConfig {
 			logger.trace("post-initializing is over.\n");
 			
 			// reset the rule weight
-//			if (opts.resetw || opts.usemasks) {
-//				logger.trace("--->Reset rule weights according to treebank grammars...\n");
-//				resetRuleWeight(grammar, lexicon, numberer, opts.mwfactor, opts);
-//			}
+			if (opts.resetw || opts.usemasks) {
+				logger.trace("--->Reset rule weights according to treebank grammars...\n");
+				resetRuleWeight(ttpairs, twpairs, numberer, opts.mwfactor, opts);
+			}
 			
 			ttpairs.initializeOptimizer();
 			twpairs.initializeOptimizer();
@@ -152,7 +154,7 @@ public class LVeTTrainer extends LVeTConfig {
 		
 		logger.trace(ttpairs);
 		logger.trace(twpairs);
-		System.exit(0);
+//		System.exit(0);
 		
 		twpairs.labelSequences(trainTrees); // FIXME no errors, just alert you to pay attention to it 
 		twpairs.labelSequences(testTrees); // save the search time cost by finding a specific tag-word
@@ -536,8 +538,8 @@ public class LVeTTrainer extends LVeTConfig {
 	public static double parallelLL(Options opts, ThreadPool valuator, List<List<TaggedWord>> sequences, Numberer numberer, boolean istrain) {
 		double ll = 0, sumll = 0;
 		int nUnparsable = 0, cnt = 0;
-		
-		// filterTrees(opts, stateTreeList, trees, numberer, istrain);
+		List<List<TaggedWord>> trees = new ArrayList<>(sequences.size());
+		filterTrees(opts, sequences, trees, numberer, istrain);
 		
 		for (List<TaggedWord> sequence: sequences) {
 			valuator.execute(sequence);
@@ -570,8 +572,8 @@ public class LVeTTrainer extends LVeTConfig {
 	public static double serialLL(Options opts, Valuator<?, ?> valuator, List<List<TaggedWord>> sequences, Numberer numberer, boolean istrain) {
 		double ll = 0, sumll = 0;
 		int nUnparsable = 0, cnt = 0;
-		
-		//filterTrees(opts, stateTreeList, trees, numberer, istrain);
+		List<List<TaggedWord>> trees = new ArrayList<>(sequences.size());
+		filterTrees(opts, sequences, trees, numberer, istrain);
 		
 		for (List<TaggedWord> sequence : sequences) {
 			ll = valuator.probability(sequence);

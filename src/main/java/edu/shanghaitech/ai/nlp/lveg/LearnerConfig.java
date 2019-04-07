@@ -740,7 +740,7 @@ public class LearnerConfig extends Recorder {
 				ruleW.setProb(logprob);
 				
 				ncomp = ruleW.ncomponent();
-				 prob = prob * factor /*/ ncomp*/;
+				prob = prob * factor /*/ ncomp*/;
 				logprob = Math.log(prob);
 				for (int icomp = 0; icomp < ncomp; icomp++) {
 					ruleW.setWeight(icomp, logprob);

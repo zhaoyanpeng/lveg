@@ -2,6 +2,7 @@ package edu.shanghaitech.ai.nlp.lvet.model;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -128,10 +129,11 @@ public class Inferencer implements Serializable {
 			}
 		}
 		// last time step 0
-		tkeys = chart.keySet(0, false, LEVEL_ZERO);
-		if (tkeys == null || tkeys.size() == 0) {
+		Set<Short> keys = chart.keySet(0, false, LEVEL_ZERO);
+		if (keys == null || keys.size() == 0) {
 			throw new RuntimeException("OOPS_BUG: key set of tags in time step " + (nword - 1) + " should not be empty.");
 		}
+		tkeys = new HashSet<Short>(keys); // to avoid `java.util.ConcurrentModificationException` since we need to add LEADING_IDX to the cell
 		for (Short tkey : tkeys) {
 			GrammarRule tedge = null;
 			if ((tedge = ttpair.getEdge((short) Pair.LEADING_IDX, tkey, RuleType.RHSPACE)) == null) {
