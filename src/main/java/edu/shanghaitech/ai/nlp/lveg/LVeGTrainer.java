@@ -35,7 +35,7 @@ import edu.shanghaitech.ai.nlp.syntax.State;
  * There is only one Grammar instance shared by trainer, lvegParser, maxRuleParser, and valuator.
  * 
  * @author Yanpeng Zhao
- *
+ * @deprecated
  */
 public class LVeGTrainer extends LearnerConfig {
 	/**
@@ -193,9 +193,9 @@ public class LVeGTrainer extends LearnerConfig {
 		lexicon.labelTrees(devTrees); // pair in in Lexicon.score(...)
 		
 		lvegParser = new LVeGParser<Tree<State>, List<Double>>(grammar, lexicon, opts.maxslen, 
-				opts.ntcyker, opts.pcyker, opts.iosprune, opts.usemasks);
+				opts.ntcyker, opts.pcyker, opts.iosprune, opts.usemasks, null);
 		mrParser = new MaxRuleParser<Tree<State>, Tree<String>>(grammar, lexicon, opts.maxslen, 
-				opts.ntcyker, opts.pcyker, opts.ef1prune, false);
+				opts.ntcyker, opts.pcyker, opts.ef1prune, false, false, null);
 		valuator = new Valuator<Tree<State>, Double>(grammar, lexicon, opts.maxslen, 
 				opts.ntcyker, opts.pcyker, opts.ellprune, false);
 		mvaluator = new ThreadPool(valuator, opts.nteval);
@@ -227,7 +227,7 @@ public class LVeGTrainer extends LearnerConfig {
 			stringTree = TreeAnnotations.unAnnotateTree(stringTree, false);
 			FunUtil.saveTree2image(null, treename + "_ua", stringTree, numberer);
 			
-			Tree<String> parseTree = mrParser.parse(globalTree);
+			Tree<String> parseTree = mrParser.parse(globalTree, -1);
 			FunUtil.saveTree2image(null, treeFile + "_ini", parseTree, numberer);
 			stringTree = TreeAnnotations.unAnnotateTree(stringTree, false);
 			FunUtil.saveTree2image(null, treeFile + "_ini_ua", parseTree, numberer);
@@ -567,7 +567,7 @@ public class LVeGTrainer extends LearnerConfig {
 		// visualize the parse tree
 		if (opts.ellimwrite) {
 			String treename = ends ? treeFile + "_" + iepoch : treeFile + "_" + iepoch + "_" + ibatch;
-			Tree<String> parseTree = mrParser.parse(globalTree);
+			Tree<String> parseTree = mrParser.parse(globalTree, -1);
 			FunUtil.saveTree2image(null, treename, parseTree, numberer);
 			parseTree = TreeAnnotations.unAnnotateTree(parseTree, false);
 			FunUtil.saveTree2image(null, treename + "_ua", parseTree, numberer);

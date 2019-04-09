@@ -133,6 +133,18 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	}
 	
 	
+	private static void nonempty(Chart chart, boolean inside, int idx, short level, List<GrammarRule> rules) {
+		if (chart.keySet(idx, inside, level) == null) {
+			if (inside) {
+				for (GrammarRule rule : rules) {
+					chart.addInsideScore(rule.lhs, idx, rule.getWeight().copy(true), level);
+					chart.addPosteriorMask(rule.lhs, idx);
+				}
+			}
+		}
+	}
+	
+	
 	/**
 	 * Compute the inside score given the sentence and grammar rules.
 	 * 
@@ -140,7 +152,7 @@ public abstract class Inferencer extends Recorder implements Serializable {
 	 * @param tree  in which only the sentence is used
 	 * @param nword # of words in the sentence
 	 */
-	public static void insideScore(Chart chart, List<State> sentence, int nword, boolean prune, boolean usemask, boolean iomask) {
+	public static void insideScore(Chart chart, List<State> sentence, List<State> goldentag, int nword, boolean prune, boolean usemask, boolean iomask) {
 		List<GrammarRule> rules;
 		int x0, y0, x1, y1, c0, c1, c2;
 		GaussianMixture pinScore, linScore, rinScore, ruleScore;
@@ -148,15 +160,27 @@ public abstract class Inferencer extends Recorder implements Serializable {
 		for (int i = 0; i < nword; i++) {
 			int iCell = Chart.idx(i, nword);
 			rules = lexicon.getRulesWithWord(sentence.get(i));
-			for (GrammarRule rule : rules) {
-				if (usemask && iomask) {
-					if (!chart.isAllowed(rule.lhs, iCell, true)) { continue; } 
-				} else if (usemask) {
-					if (!chart.isPosteriorAllowed(rule.lhs, iCell)) { continue; }
+			if (goldentag == null) {
+				for (GrammarRule rule : rules) {
+					if (usemask && iomask) {
+						if (!chart.isAllowed(rule.lhs, iCell, true)) { continue; } 
+					} else if (usemask) {
+						if (!chart.isPosteriorAllowed(rule.lhs, iCell)) { continue; }
+					}
+					
+					chart.addInsideScore(rule.lhs, iCell, rule.getWeight().copy(true), (short) 0);
 				}
-				
-				chart.addInsideScore(rule.lhs, iCell, rule.getWeight().copy(true), (short) 0);
+			} else { // to use golden tags
+				short tag = goldentag.get(i).getId();
+				for (GrammarRule rule : rules) {
+					if (rule.lhs == tag) {
+						chart.addInsideScore(rule.lhs, iCell, rule.getWeight().copy(true), (short) 0);
+						break;
+					}
+				}
 			}
+			
+			nonempty(chart, true, iCell, (short) 0, rules); // ensure of a parse
 			
 			if (prune) { chart.pruneInsideScore(iCell, (short) 0); }
 			insideScoreForUnaryRule(chart, iCell, prune, usemask, iomask);

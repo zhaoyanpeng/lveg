@@ -226,7 +226,7 @@ public class PCFGInferencer extends Inferencer {
 					}
 					posterior = iscore + oscore - scoreS; // in logarithmic form
 					stay = (retainall && (ikey == ROOT || cnt < 6));
-					if (stay || posterior > threshold) {					
+					if (stay || posterior > threshold) {
 //					if (retainall || posterior > threshold) {
 						chart.addPosteriorMask(ikey, idx);
 						cnt++;

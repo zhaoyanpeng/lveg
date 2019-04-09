@@ -5,6 +5,10 @@ import java.awt.Graphics2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
@@ -57,6 +61,18 @@ public class FunUtil extends Recorder {
 		public int compare(Integer o1, Integer o2) {
 			return o1 - o2;
 		}
+	}
+	
+	
+	/**
+	 * @param path     file to be read
+	 * @param encoding encoding of the file
+	 * @return         contents of the file in String
+	 * @throws IOException
+	 */
+	public static String readFile(String path, Charset encoding) throws IOException {
+		  byte[] encoded = Files.readAllBytes(Paths.get(path));
+		  return new String(encoded, encoding);
 	}
 	
 	

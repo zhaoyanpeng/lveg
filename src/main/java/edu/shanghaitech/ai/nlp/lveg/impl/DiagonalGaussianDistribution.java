@@ -1,6 +1,8 @@
 package edu.shanghaitech.ai.nlp.lveg.impl;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import edu.shanghaitech.ai.nlp.lveg.LVeGTrainer;
 import edu.shanghaitech.ai.nlp.lveg.LearnerConfig.Params;
@@ -59,7 +61,7 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 	protected void initialize() {
 		for (int i = 0; i < dim; i++) {
 			double rndn = (defRnd.nextDouble() - defNegMRatio) * defMaxMu;
-//			 rndn = /*0.5*/ 0;
+			 rndn = /*0.5*/ 0;
 			mus.add(rndn);
 		} // better initialize mu and var in the different loops
 //		for (int i = 0; i < dim; i++) {
@@ -186,7 +188,7 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 		sum *= factor; // gradients of var of the spherical Gaussian
 		grads.set(dim * 2, grads.get(dim * 2) + sum);
 	}
-	
+
 	
 	@Override
 	public double integral(GaussianDistribution gd, List<List<Double>> cache) {
@@ -222,6 +224,36 @@ public class DiagonalGaussianDistribution extends GaussianDistribution {
 		}
 		logger.error("Invalid multipliers. input: " + gd + ", this: " + this + "\n");
 		return Double.NEGATIVE_INFINITY; 
+	}
+	
+	
+	@Override
+	public Map<Double, GaussianDistribution> mul(GaussianDistribution gd) {
+		if (gd != null && gd.getDim() == dim) {
+			GaussianDistribution gd0 = new DiagonalGaussianDistribution(dim, false);
+			double var = vars.get(0), var1 = gd.getVars().get(0);
+			double v = Math.exp(var * 2), v1 = Math.exp(var1 * 2);
+			double vsum = v + v1, mu, epsilon = /*1e-8*/0;
+			double vtmp = 2 * vsum + epsilon, scalar = 0;
+			
+			List<Double> mus0 = gd0.getMus();
+			List<Double> mus1 = gd.getMus();
+			for (int i = 0; i < dim; i++) {
+				scalar += -0.5 * Math.log(vtmp * Math.PI) - Math.pow(mus.get(i) - mus1.get(i), 2) / vtmp;
+				
+				mu = (mus.get(i) * v1 + mus1.get(i) * v) / vsum;
+				mus0.add(mu);
+			}
+			
+			double var0 = var + var1 - Math.log(v + v1) / 2; // Math.log((v * v1 / (v + v1))^(1/2))
+			gd0.getVars().add(var0);
+			
+			Map<Double, GaussianDistribution> ret = new HashMap<>(2, 1);
+			ret.put(scalar, gd0);
+			return ret;
+		}
+		logger.error("Invalid multipliers. input: " + gd + ", this: " + this + "\n");
+		return null; 
 	}
 	
 	

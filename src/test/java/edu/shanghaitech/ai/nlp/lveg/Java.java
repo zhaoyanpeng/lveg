@@ -135,6 +135,9 @@ public class Java {
 		System.out.println(String.format(format, yy));
 		System.out.println(formatter.format(yy));
 		
+		double mm = 1;
+		System.out.println(FunUtil.logAdd(mm, xx));
+		
 		GrammarRule rule0 = new BinaryGrammarRule((short) 6, (short) 8, (short)8);
 		GrammarRule rule1 = new BinaryGrammarRule((short) 6, (short) 8, (short)8);
 

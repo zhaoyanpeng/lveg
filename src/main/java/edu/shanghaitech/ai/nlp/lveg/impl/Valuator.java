@@ -112,7 +112,7 @@ public class Valuator<I, O> extends Parser<I, O> {
 			cpool.reset();
 			Inferencer.insideScore(chart, sentence, nword, iosprune, cpool);
 		} else {
-			Inferencer.insideScore(chart, sentence, nword, iosprune, false, false);
+			Inferencer.insideScore(chart, sentence, null, nword, iosprune, false, false);
 		}
 		double scoreS = Double.NEGATIVE_INFINITY;
 		GaussianMixture score = chart.getInsideScore((short) 0, Chart.idx(0, 1));

@@ -44,4 +44,10 @@ public class GeneralGaussianMixture extends GaussianMixture {
 		return null;
 	}
 
+	@Override
+	public GaussianMixture mul(GaussianMixture gm, GaussianMixture des, RuleUnit key) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 }

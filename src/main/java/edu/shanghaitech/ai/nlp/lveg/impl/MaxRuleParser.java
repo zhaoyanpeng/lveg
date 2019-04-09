@@ -1,6 +1,7 @@
 package edu.shanghaitech.ai.nlp.lveg.impl;
 
 import java.util.List;
+import java.util.Set;
 
 import edu.berkeley.nlp.syntax.Tree;
 import edu.shanghaitech.ai.nlp.data.StateTreeList;
@@ -25,14 +26,18 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 		super(parser.maxslen, parser.nthread, parser.parallel, parser.iosprune, parser.usemask);
 		this.inferencer = parser.inferencer;
 		this.chart = new Chart(parser.maxslen, true, true, parser.usemask);
+		this.usestag = parser.usestag;
+		this.masks = parser.masks;
 	}
 	
 	
 	public MaxRuleParser(LVeGGrammar grammar, LVeGLexicon lexicon, short maxLenParsing, short nthread, 
-			boolean parallel, boolean iosprune, boolean usemasks) {
+			boolean parallel, boolean iosprune, boolean usemasks, boolean usestag, Set<String>[][][] masks) {
 		super(maxLenParsing, nthread, parallel, iosprune, usemasks);
 		this.inferencer = new MaxRuleInferencer(grammar, lexicon);
 		this.chart = new Chart(maxLenParsing, true, true, usemasks);
+		this.usestag = usestag;
+		this.masks = masks;
 	}
 	
 	
@@ -45,7 +50,7 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 	@Override
 	public synchronized Object call() throws Exception {
 		Tree<State> sample = (Tree<State>) task;
-		Tree<String> parsed = parse(sample);
+		Tree<String> parsed = parse(sample, itask);
 		Meta<O> cache = new Meta(itask, parsed);
 		synchronized (caches) {
 			caches.add(cache);
@@ -62,10 +67,10 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 	 * @param tree the golden parse tree
 	 * @return     parse tree given the sentence
 	 */
-	public Tree<String> parse(Tree<State> tree) {
+	public Tree<String> parse(Tree<State> tree, int itree) {
 		Tree<String> parsed = null;
 		try { // do NOT expect it to crash
-			boolean valid = evalMaxRuleCount(tree);
+			boolean valid = evalMaxRuleCount(tree, itree);
 			if (valid) {
 				parsed = StateTreeList.stateTreeToStringTree(tree, Inferencer.grammar.numberer);
 				parsed = Inferencer.extractBestMaxRuleParse(chart, parsed.getYield());
@@ -86,10 +91,10 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 	 * @param tree the golden parse tree
 	 * @return     whether the sentence can be parsed (true) of not (false)
 	 */
-	private boolean evalMaxRuleCount(Tree<State> tree) {
+	private boolean evalMaxRuleCount(Tree<State> tree, int itree) {
 		List<State> sentence = tree.getYield();
 		int nword = sentence.size();
-		double scoreS = doInsideOutside(tree, sentence, nword);
+		double scoreS = doInsideOutside(tree, sentence, itree, nword);
 //		logger.trace("\nInside scores with the sentence...\n\n"); // DEBUG
 //		FunUtil.debugChart(chart.getChart(true), (short) -1, tree.getYield().size()); // DEBUG
 //		logger.trace("\nOutside scores with the sentence...\n\n"); // DEBUG
@@ -112,19 +117,20 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 	 * @param nword    length of the sentence
 	 * @return
 	 */
-	private double doInsideOutside(Tree<State> tree, List<State> sentence, int nword) {
+	private double doInsideOutside(Tree<State> tree, List<State> sentence, int itree, int nword) {
+		List<State> goldentag = usestag ? tree.getPreTerminalYield() : null;
 		if (chart != null) {
 			chart.clear(nword);
 		} else {
 			chart = new Chart(nword, true, true, usemask);
 		}
 		if (usemask) {
-			PCFGInferencer.insideScore(chart, sentence, nword, LVeGTrainer.iomask, LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
-			PCFGInferencer.setRootOutsideScore(chart);
-			PCFGInferencer.outsideScore(chart, sentence, nword, LVeGTrainer.iomask,  LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
-			if (!LVeGTrainer.iomask) { // not use inside/outside score masks
-				double score = chart.getInsideScoreMask((short) 0, Chart.idx(0, 1));
-				PCFGInferencer.createPosteriorMask(nword, chart, score, LVeGTrainer.tgProb);
+			boolean status = usemask;
+			if (masks != null) { // obtained from kbest PCFG parsing
+				status = createKbestMask(nword, chart, masks[itree]);
+			}
+			if (!status || masks == null) { // posterior probability
+				createPCFGMask(nword, chart, sentence);
 			}
 		}
 		if (parallel) {
@@ -135,7 +141,7 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 			Inferencer.outsideScore(chart, sentence, nword, iosprune, cpool);
 		} else {
 //			logger.trace("\nInside score...\n"); // DEBUG
-			Inferencer.insideScore(chart, sentence, nword, iosprune, usemask, LVeGTrainer.iomask);
+			Inferencer.insideScore(chart, sentence, goldentag, nword, iosprune, usemask, LVeGTrainer.iomask);
 //			FunUtil.debugChart(chart.getChart(true), (short) -1, tree.getYield().size()); // DEBUG
 
 			Inferencer.setRootOutsideScore(chart);
@@ -147,8 +153,56 @@ public class MaxRuleParser<I, O> extends Parser<I, O> {
 		GaussianMixture score = chart.getInsideScore((short) 0, Chart.idx(0, 1));
 		if (score != null) {
 			scoreS = score.eval(null, true);
+		} else if (usemask && masks != null) { // re-parse using pcfg pruning, assuming k-best pruning fails
+			chart.clear(nword);
+			
+			createPCFGMask(nword, chart, sentence);
+		
+			if (parallel) {
+				cpool.reset();
+				Inferencer.insideScore(chart, sentence, nword, iosprune, cpool);
+				Inferencer.setRootOutsideScore(chart);
+				cpool.reset();
+				Inferencer.outsideScore(chart, sentence, nword, iosprune, cpool);
+			} else {
+				Inferencer.insideScore(chart, sentence, goldentag, nword, iosprune, usemask, LVeGTrainer.iomask);
+				Inferencer.setRootOutsideScore(chart);
+				Inferencer.outsideScore(chart, sentence, nword, iosprune, usemask, LVeGTrainer.iomask);
+			}
+			score = chart.getInsideScore((short) 0, Chart.idx(0, 1));
+			if (score != null) {
+				scoreS = score.eval(null, true);
+			}
 		}
 		return scoreS;
+	}
+	
+	
+	private static boolean createKbestMask(int nword, Chart chart, Set<String>[][] mask) {
+		int len = mask.length, idx, layer;
+		if (nword != len) { return false; }
+		for (int i = 0; i < len; i++) {
+			for (int j = i; j < len; j++) {
+				layer = nword - j + i; // nword - (j - i)
+				idx = layer * (layer - 1) / 2 + i; // (nword - 1 + 1)(nword - 1) / 2 
+				for (String label : mask[i][j]) {
+					short ikey = (short) Inferencer.grammar.numberer.number(label);
+					chart.addPosteriorMask(ikey, idx);
+				}
+			}
+		}
+		return true;
+	}
+	
+	
+	private static void createPCFGMask(int nword, Chart chart, List<State> sentence) {
+		PCFGInferencer.insideScore(chart, sentence, nword, LVeGTrainer.iomask, LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
+		PCFGInferencer.setRootOutsideScore(chart);
+		PCFGInferencer.outsideScore(chart, sentence, nword, LVeGTrainer.iomask,  LVeGTrainer.tgBase, LVeGTrainer.tgRatio);
+		if (!LVeGTrainer.iomask) { // not use inside/outside score masks
+			double score = chart.getInsideScoreMask((short) 0, Chart.idx(0, 1));
+			PCFGInferencer.createPosteriorMask(nword, chart, score, LVeGTrainer.tgProb);
+		}
 	}
 	
 }

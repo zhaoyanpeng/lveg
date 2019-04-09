@@ -153,9 +153,9 @@ public class LVeGToy extends LearnerConfig {
 		lexicon.labelTrees(trainTrees); // FIXME no errors, just alert you to pay attention to it 
 		
 		lvegParser = new LVeGParser<Tree<State>, List<Double>>(grammar, lexicon, opts.maxslen, 
-				opts.ntcyker, opts.pcyker, opts.iosprune, opts.usemasks);
+				opts.ntcyker, opts.pcyker, opts.iosprune, opts.usemasks, null);
 		mrParser = new MaxRuleParser<Tree<State>, Tree<String>>(grammar, lexicon, opts.maxslen, 
-				opts.ntcyker, opts.pcyker, opts.ef1prune, opts.usemasks);
+				opts.ntcyker, opts.pcyker, opts.ef1prune, opts.usemasks, false, null);
 		valuator = new Valuator<Tree<State>, Double>(grammar, lexicon, opts.maxslen, 
 				opts.ntcyker, opts.pcyker, opts.ellprune, opts.usemasks);
 		mvaluator = new ThreadPool(valuator, opts.nteval);

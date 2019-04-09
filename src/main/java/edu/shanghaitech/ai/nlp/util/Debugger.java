@@ -22,8 +22,13 @@ import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleType;
 import edu.shanghaitech.ai.nlp.lveg.model.GrammarRule.RuleUnit;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGGrammar;
 import edu.shanghaitech.ai.nlp.lveg.model.LVeGLexicon;
-import edu.shanghaitech.ai.nlp.lveg.model.ChartCell.Cell;
-import edu.shanghaitech.ai.nlp.lveg.model.ChartCell.Chart;
+import edu.shanghaitech.ai.nlp.lvet.impl.TagTPair;
+import edu.shanghaitech.ai.nlp.lvet.impl.TagWPair;
+import edu.shanghaitech.ai.nlp.lvet.impl.TaggedWord;
+import edu.shanghaitech.ai.nlp.lvet.model.ChartCell.Cell;
+import edu.shanghaitech.ai.nlp.lvet.model.ChartCell.Chart;
+//import edu.shanghaitech.ai.nlp.lveg.model.ChartCell.Cell;
+//import edu.shanghaitech.ai.nlp.lveg.model.ChartCell.Chart;
 import edu.shanghaitech.ai.nlp.syntax.State;
 import edu.shanghaitech.ai.nlp.util.FunUtil.KeyComparator;
 
@@ -165,6 +170,48 @@ public class Debugger extends Recorder {
 		checkCount(grammar, lexicon, tree);
 	}
 	
+	public static void debugSeqChart(List<Cell> chart, short nfirst, int nword, Numberer numberer) {
+		int size = nword;
+		if (chart != null) {
+			for (int i = 0; i < size; i++) {
+				logger.debug(i + "\t" + chart.get(i).toString(true, nfirst, true, numberer) + "\n\n");
+			}
+		}
+	}
+	
+	public static String debugSequence(List<TaggedWord> sequence, boolean simple, short nfirst, Numberer numberer) {
+		StringBuilder sb = new StringBuilder();
+		for (TaggedWord word : sequence) {
+			String tag = (String) numberer.object(word.getTagIdx());
+			sb.append(tag + "\tiscore=" + word.getInsideScore(false).toString(simple, nfirst) + "\n");
+			sb.append("\toscore=" + word.getOutsideScore(false).toString(simple, nfirst) + "\n");
+			sb.append("\tiscore w/word=" + word.getInsideScore(true).toString(simple, nfirst) + "\n");
+			sb.append("\toscore w/word=" + word.getOutsideScore(true).toString(simple, nfirst) + "\n");
+		}
+		return sb.toString();
+	}
+	
+	public static void debugCount(TagTPair grammar, TagWPair lexicon, boolean withTree) {
+		int niter = 20, iiter = 0;
+		Map<GrammarRule, GrammarRule> uRuleMap = grammar.getEdgeMap();
+		// unary grammar rules
+		logger.trace("\n---Unary Grammar Rules---\n\n");
+		for (Map.Entry<GrammarRule, GrammarRule> rmap : uRuleMap.entrySet()) {
+			GrammarRule rule = rmap.getValue();
+			Map<Short, List<EnumMap<RuleUnit, GaussianMixture>>> count = grammar.getCount(rule, withTree);
+			logger.trace(rule + "\tcount=" + count + "\n");
+			if (++iiter >= niter) { break; }
+		}
+		iiter = 0;
+		// lexicon grammar rules
+		Set<GrammarRule> ruleSet = lexicon.getRuleSet();
+		logger.trace("\n---Lexicon Grammar Rules---\n\n");
+		for (GrammarRule rule : ruleSet) {
+			Map<Short, List<EnumMap<RuleUnit, GaussianMixture>>> count = lexicon.getCount(rule, withTree);
+			logger.trace(rule + "\tcount=" + count + "\n");
+			if (++iiter >= niter) { break; }
+		}
+	}
 	
 	public static void checkCount(LVeGGrammar grammar, LVeGLexicon lexicon, Tree<State> tree) {
 		if (tree.isLeaf()) { return; }
@@ -218,7 +265,7 @@ public class Debugger extends Recorder {
 		int size = nword * (nword + 1) / 2;
 		if (chart != null) {
 			for (int i = 0; i < size; i++) {
-				logger.debug(i + "\t" + chart.get(i).toString(true, nfirst, true, numberer) + "\n\n");
+				logger.debug(i + "\t" + chart.get(i).toString(true, nfirst, false, numberer) + "\n\n");
 			}
 		}
 	}
@@ -583,6 +630,58 @@ public class Debugger extends Recorder {
 		sorted.putAll(lens);
 		logger.trace(sorted.keySet() + "\n");
 		logger.trace(sorted.values() + "\n");
+	}
+	
+	
+	public static void fillStateChart(Tree<State> tree, Set<String>[][] mask, Numberer numberer) {
+		if (tree.isLeaf()) { return; }
+		List<Tree<State>> children = tree.getChildren();
+		for (Tree<State> child : children) {
+			fillStateChart(child, mask, numberer);
+		}
+		
+		State parent = tree.getLabel();
+		short idParent = parent.getId();
+		
+		short x = parent.from, y = (short) (parent.to - 1);
+		mask[x][y].add((String) numberer.object(idParent));
+		
+		if (tree.isPreTerminal()) {
+			// StateSet word = children.get(0).getLabel();
+		} else {
+			switch (children.size()) {
+			case 0:
+				break;
+			case 1: {
+				State child = children.get(0).getLabel();
+				short idChild = child.getId();
+				
+				x = child.from;
+				y = (short) (child.to - 1);
+				mask[x][y].add((String) numberer.object(idChild));
+				
+				break;
+			}
+			case 2: {
+				State lchild = children.get(0).getLabel();
+				State rchild = children.get(1).getLabel();
+				short idlChild = lchild.getId();
+				short idrChild = rchild.getId();
+				
+				x = lchild.from;
+				y = (short) (lchild.to - 1);
+				mask[x][y].add((String) numberer.object(idlChild));
+				
+				x = rchild.from;
+				y = (short) (rchild.to - 1);
+				mask[x][y].add((String) numberer.object(idrChild));
+
+				break;
+			}
+			default:
+				throw new RuntimeException("Malformed tree: invalid # of children. # children: " + children.size());
+			}
+		}
 	}
 	
 }

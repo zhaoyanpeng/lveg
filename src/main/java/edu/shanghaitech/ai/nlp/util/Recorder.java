@@ -9,7 +9,7 @@ public class Recorder implements Serializable {
 	 * 
 	 */
 	private static final long serialVersionUID = 7851876682201361771L;
-	protected static Logger logger   = null;
-	protected static LogUtil logUtil = LogUtil.getLogger();
+	public static Logger logger   = null;
+	public static LogUtil logUtil = LogUtil.getLogger();
 	
 }

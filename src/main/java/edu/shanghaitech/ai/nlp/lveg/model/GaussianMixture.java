@@ -62,7 +62,7 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	public abstract GaussianMixture instance(short ncomponent, boolean init);
 	public abstract double mulAndMarginalize(EnumMap<RuleUnit, GaussianMixture> counts);
 	public abstract GaussianMixture mulAndMarginalize(GaussianMixture gm, GaussianMixture des, RuleUnit key, boolean deep);
-	
+	public abstract GaussianMixture mul(GaussianMixture gm, GaussianMixture des, RuleUnit key);
 	
 	/**
 	 * To facilitate the parameter tuning.
@@ -451,6 +451,7 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 		}
 	}
 	
+
 	
 	/**
 	 * Compute the intermediate values needed in gradients computation.
@@ -672,7 +673,6 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 		sumvals.add(value); // sum of integrals from the current unit, in logarithmic form
 		return value;
 	}
-	
 	
 	/**
 	 * Assure the equality between the size of counts and that of the caches. 
@@ -1311,7 +1311,6 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 		}
 		}
 	}
-
 	
 	public static class SimpleView implements Serializable {
 		/**

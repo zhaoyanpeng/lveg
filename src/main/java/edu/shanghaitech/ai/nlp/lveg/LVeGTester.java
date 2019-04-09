@@ -27,6 +27,10 @@ import edu.shanghaitech.ai.nlp.util.Numberer;
 import edu.shanghaitech.ai.nlp.util.OptionParser;
 import edu.shanghaitech.ai.nlp.util.ThreadPool;
 
+/**
+ * @author Yanpeng Zhao
+ * @deprecated
+ */
 public class LVeGTester extends LearnerConfig {
 	/**
 	 * 
@@ -108,7 +112,7 @@ public class LVeGTester extends LearnerConfig {
 				new HashSet<String>(Arrays.asList(new String[] { "ROOT", "PSEUDO" })), 
 				new HashSet<String>(Arrays.asList(new String[] { "''", "``", ".", ":", "," })));
 		mrParser = new MaxRuleParser<Tree<State>, Tree<String>>(grammar, lexicon, opts.maxslen, 
-				opts.ntcyker, opts.pcyker, opts.ef1prune, opts.usemasks);
+				opts.ntcyker, opts.pcyker, opts.ef1prune, opts.usemasks, false, null);
 		mparser = new ThreadPool(mrParser, opts.nttest);
 		
 		logger.info("\n---F1 CONFIG---\n[parallel: batch-" + opts.pbatch + ", grad-" + 
@@ -246,7 +250,7 @@ public class LVeGTester extends LearnerConfig {
 			logger.trace(FunUtil.debugTree(tree, false, (short) 2, numberer, true) + "\n");
 			*/
 //			logger.trace(FunUtil.debugTree(tree, false, (short) 2, numberer, true) + "\n");
-			Tree<String> parsedTree = mrParser.parse(tree);
+			Tree<String> parsedTree = mrParser.parse(tree, -1);
 			if (!saveTree(tree, parsedTree, numberer, idx)) {
 				nUnparsable++;
 			}

@@ -1,6 +1,7 @@
 package edu.shanghaitech.ai.nlp.lveg.model;
 
 import java.util.PriorityQueue;
+import java.util.Set;
 
 import edu.shanghaitech.ai.nlp.lveg.model.ChartCell.Chart;
 import edu.shanghaitech.ai.nlp.lveg.model.Inferencer.InputToSubCYKer;
@@ -21,11 +22,13 @@ public abstract class Parser<I, O> extends Recorder implements Executor<I, O> {
 	protected boolean parallel;
 	protected boolean iosprune;
 	protected boolean usemask;
+	protected boolean usestag; // use golden tags in the sentence
 	
 	protected I task;
 	protected int itask;
 	protected Chart chart;
 	protected PriorityQueue<Meta<O>> caches;
+	protected Set<String>[][][] masks;
 	
 	protected transient ThreadPool cpool;
 	
@@ -33,6 +36,7 @@ public abstract class Parser<I, O> extends Recorder implements Executor<I, O> {
 		this.maxslen = maxslen;
 		this.iosprune = iosprune;
 		this.usemask = usemask;
+		this.usestag = false;
 		this.parallel = parallel;
 		this.nthread = nthread < 0 ? 1 : nthread;
 		if (parallel) {

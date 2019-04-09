@@ -1,6 +1,7 @@
 package edu.shanghaitech.ai.nlp.lveg.impl;
 
 import java.util.List;
+import java.util.Map;
 
 import edu.shanghaitech.ai.nlp.lveg.model.GaussianDistribution;
 
@@ -43,6 +44,12 @@ public class GeneralGaussianDistribution extends GaussianDistribution {
 	protected void initialize() {
 		// TODO Auto-generated method stub
 		
+	}
+
+	@Override
+	public Map<Double, GaussianDistribution> mul(GaussianDistribution gd) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }

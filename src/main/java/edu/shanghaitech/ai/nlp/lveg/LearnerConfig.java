@@ -136,6 +136,8 @@ public class LearnerConfig extends Recorder {
 		public boolean saveCorpus = false;
 		@Option(name = "-loadCorpus", usage = "load corpus from the object file(true) or not (false) (default: false)")
 		public boolean loadCorpus = false;
+		@Option(name = "-consfile", usage = "constraints for parsing (default: null)")
+		public String consfile = null;
 		/* corpus section ends */
 		
 		/* optimization-parameter section begins*/
@@ -291,6 +293,8 @@ public class LearnerConfig extends Recorder {
 		public boolean eontrain = true;
 		@Option(name = "-eonextradev", usage = "evaluating the grammar on the sentences of length less than or equal to [eonlylen + 5] (true) or not (false) (default: true)")
 		public boolean eonextradev = true;
+		@Option(name = "-eusestag", usage = "evaluating the grammar with golden tags (true) or without (false) (default: false)")
+		public boolean eusestag = true;
 		@Option(name = "-ellprune", usage = "applying pruning when evaluating (log-likelihood) the grammar (true) or not (false) (default: false)")
 		public boolean ellprune = false;
 		@Option(name = "-ellimwrite", usage = "write parse tree to image (true) or not (false) when evaluating ll (default: false)")
@@ -698,11 +702,11 @@ public class LearnerConfig extends Recorder {
 					if (rulecnt < opts.pivotb) {
 						ncomp += 1;
 						b++;
-						increment = type == RuleType.LHSPACE ? 2 : 3;
+						increment = type == RuleType.LHSPACE ? 1 : 3;
 					} else {
-						ncomp += 2;
+						ncomp += 1;
 						c++;
-						increment = type == RuleType.LHSPACE ? 2 : 3;
+						increment = type == RuleType.LHSPACE ? 1 : 3;
 					}
 //					rule.addWeightComponent(type, increment, (short) -1);
 					

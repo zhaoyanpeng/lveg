@@ -3,6 +3,7 @@ package edu.shanghaitech.ai.nlp.lveg.model;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -146,6 +147,15 @@ public abstract class GaussianDistribution extends Recorder implements Comparabl
 	 * @param cache integrals
 	 */
 	public double integral(GaussianDistribution gd, List<List<Double>> cache) { return Double.NEGATIVE_INFINITY; }
+	
+	
+	/**
+	 * Take the product of two gaussians with the same variables, which results in a new gaussian with a scalar.
+	 * 
+	 * @param gd a gaussian as a multiplier
+	 * @return   a new gaussian associated with an extra scalar
+	 */
+	public abstract Map<Double, GaussianDistribution> mul(GaussianDistribution gd);
 	
 	
 	/**

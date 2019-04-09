@@ -1,4 +1,4 @@
--datadir, F:/sourcecode/ParsersData/wsj/,
+-datadir, /home/oops/Data/data_lveg/wsj/,
 -train, wsj_s2-21_tree,
 -test, wsj_s23_tree,
 -dev, wsj_s22_tree,
@@ -11,7 +11,7 @@
 -nbatchSave, 10,
 -saveGrammar, true,
 
--lr, 0.01,
+-lr, 1,
 -reg, false,
 -clip, false,
 -absmax, 5.0,
