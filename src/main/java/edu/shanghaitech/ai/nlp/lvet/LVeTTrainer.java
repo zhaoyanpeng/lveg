@@ -154,6 +154,14 @@ public class LVeTTrainer extends LVeTConfig {
 		
 		logger.trace(ttpairs);
 		logger.trace(twpairs);
+		TaggerFile gfile = new TaggerFile(ttpairs, twpairs);
+		String filename = subdatadir + opts.outGrammar + ".gr";
+		logger.info("\n-------saving the initial grammars ...");
+		if (gfile.save(filename)) {
+			logger.info(" to \'" + filename + "\' successfully.\n");
+		} else {
+			logger.info(" to \'" + filename + "\' failed.\n");
+		}
 //		System.exit(0);
 		
 		twpairs.labelSequences(trainTrees); // FIXME no errors, just alert you to pay attention to it 

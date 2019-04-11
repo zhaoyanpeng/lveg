@@ -216,9 +216,7 @@ public class LVeTConfig extends Recorder {
 				ncomp = ruleW.ncomponent();
 				prob = prob * factor /*/ ncomp*/;
 				logprob = Math.log(prob);
-				for (int icomp = 0; icomp < ncomp; icomp++) {
-					ruleW.setWeight(icomp, logprob);
-				}
+				ruleW.setWeights(logprob);
 			}
 //			logger.debug(i + "\t: " + count + "\n");
 		}
@@ -249,9 +247,7 @@ public class LVeTConfig extends Recorder {
 				ncomp = ruleW.ncomponent();
 				prob = prob * factor /*/ ncomp*/;
 				logprob = Math.log(prob);
-				for (int icomp = 0; icomp < ncomp; icomp++) {
-					ruleW.setWeight(icomp, logprob);
-				}
+				ruleW.setWeights(logprob);
 			}
 //			logger.debug(i + "\t: " + count + "\n");
 		}

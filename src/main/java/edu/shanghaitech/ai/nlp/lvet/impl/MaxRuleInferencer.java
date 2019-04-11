@@ -53,6 +53,8 @@ public class MaxRuleInferencer extends Inferencer {
 			cinScore = chart.getOutsideScore(eedge.lhs, 0, LEVEL_ONE); // is always indexed by P, word excluded
 			scores = new EnumMap<>(RuleUnit.class);
 			scores.put(RuleUnit.P, outScore);
+			
+			cinScore.setBinding(null);
 			rcount = cinScore.mulAndMarginalize(scores) - scoreS;
 			
 			newcnt = lcount + rcount;
@@ -99,6 +101,8 @@ public class MaxRuleInferencer extends Inferencer {
 					cinScore = chart.getOutsideScore(eedge.lhs, i, LEVEL_ONE); // is always indexed by P, word excluded
 					scores = new EnumMap<>(RuleUnit.class);
 					scores.put(RuleUnit.P, outScore);
+					
+					cinScore.setBinding(null);
 					rcount = cinScore.mulAndMarginalize(scores) - scoreS;
 					
 					newcnt = newcnt + lcount + rcount;
@@ -128,6 +132,8 @@ public class MaxRuleInferencer extends Inferencer {
 			}
 			scores = new EnumMap<>(RuleUnit.class);
 			scores.put(RuleUnit.P, outScore);
+			
+			cinScore.setBinding(null);
 			newcnt = newcnt + cinScore.mulAndMarginalize(scores);
 			if (newcnt > maxcnt) {
 				chart.addMaxRuleCount((short) Pair.ENDING_IDX, nword - 1, newcnt, tkey, (short) -1, LEVEL_ZERO);

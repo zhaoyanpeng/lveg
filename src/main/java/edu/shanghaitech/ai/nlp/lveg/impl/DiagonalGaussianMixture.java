@@ -2,7 +2,6 @@ package edu.shanghaitech.ai.nlp.lveg.impl;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -89,41 +88,53 @@ public class DiagonalGaussianMixture extends GaussianMixture {
 	
 	@Override
 	public GaussianMixture mul(GaussianMixture gm, GaussianMixture des, RuleUnit key) {
-		if (des != null) { 
-			des.clear(false); 
-		} else {
+		if (des == null) {
 			des = new DiagonalGaussianMixture();
 		}
-/*		
-		for (Component comp : components) {
-			double mw = comp.getWeight();
-			GaussianDistribution gd = comp.squeeze(key);
-			
-			for (Component comp1 : gm.components()) {
-				GaussianDistribution gd1 = comp1.squeeze(null);
-				Map<Double, GaussianDistribution> prod = gd.mul(gd1);
+		// assuming multiplication of two single-variated Gaussians, thus spviews of both which exist.
+		if (gausses.size() != 1) { return null; }
+		
+		List<Double> aweights = new ArrayList<>();
+		List<GaussianDistribution> agausses = new ArrayList<>();
+		for (SimpleView view : spviews) {
+			double mw = view.weight, aweight = 0;
+			GaussianDistribution gd = view.gaussian;
+			for (SimpleView aview : gm.spviews()) {
+				Map<Double, GaussianDistribution> prod = gd.mul(aview.gaussian);
 				
 				if (prod == null) { return null; } // do not throw exception here
 				
 				for (Map.Entry<Double, GaussianDistribution> entry : prod.entrySet()) {
-					double mw0 = mw + comp1.getWeight() + entry.getKey();
-					EnumMap<RuleUnit, Set<GaussianDistribution>> multivnd = copyExceptKey(comp.getMultivnd(), key);
-					Set<GaussianDistribution> value = new HashSet<>();
-					value.add(entry.getValue());
-					multivnd.put(key, value);
-					des.add(mw0, multivnd);
+					agausses.add(entry.getValue());
+					aweight = mw + aview.weight + entry.getKey();
+					aweights.add(aweight);
 					break;
 				}
 			}
 		}
-*/		
-		return des;
+		if (des.reset(aweights, agausses, key, null)) {
+			return des;
+		}
+		return null;
 	}
 
 	@Override
 	public double mulAndMarginalize(EnumMap<RuleUnit, GaussianMixture> counts) {
 		if (counts == null) { return Double.NEGATIVE_INFINITY; }
 		double values = Double.NEGATIVE_INFINITY, value, vtmp;
+		// special case where 'this' may come from in-/out-side scores and thus not a valid rule weight
+		if (binding == null) { // have to be set manually before entering here
+			GaussianMixture gm = counts.get(RuleUnit.P); 
+			for (SimpleView view : spviews) {
+				GaussianDistribution gd = view.gaussian;
+				for (SimpleView aview : gm.spviews()) {
+					vtmp = gd.mulAndMarginalize(view.gaussian);
+					vtmp = vtmp + view.weight + aview.weight; // in the same component
+					values = FunUtil.logAdd(values, vtmp); // among different components
+				}
+			}
+			return values;
+		}
 		EnumMap<RuleUnit, List<Double>> caches = new EnumMap<>(RuleUnit.class);
 		for (Entry<RuleUnit, List<GaussianDistribution>> unit : gausses.entrySet()) {
 			List<GaussianDistribution> gaussians = unit.getValue();

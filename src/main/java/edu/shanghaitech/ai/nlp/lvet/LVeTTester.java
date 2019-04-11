@@ -47,10 +47,14 @@ public class LVeTTester extends LVeTConfig {
 	protected static String treeFile;
 	protected static Options opts;
 	
+	protected static boolean doTest = false;
 	
 	public static void main(String[] args) throws Exception {
 		String fparams = args[0];
 		try {
+			if (args.length > 1 && "test".equals(args[1].trim())) {
+				doTest = true;
+			}
 			args = FunUtil.readFile(fparams, StandardCharsets.UTF_8).split(",");
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -96,8 +100,8 @@ public class LVeTTester extends LVeTConfig {
 		twpairs = gfile.getLexicon();
 		
 		
-		logger.trace(ttpairs);
-		logger.trace(twpairs);
+//		logger.trace(ttpairs);
+//		logger.trace(twpairs);
 //		System.exit(0);
 		
 		
@@ -117,7 +121,12 @@ public class LVeTTester extends LVeTConfig {
 		List<List<TaggedWord>> tstTrees = new ArrayList<List<TaggedWord>>();
 		List<Integer> idxes = new ArrayList<Integer>();
 		int idx = 0, cnt = 0;
-		for (List<TaggedWord> tree : trainTrees) {
+		
+		List<List<TaggedWord>> goTrees = devTrees;
+		if (doTest) {
+			goTrees = testTrees;
+		}
+		for (List<TaggedWord> tree : goTrees) {
 			if (tree.size() <= opts.eonlylen) {
 				tstTrees.add(tree);
 				idxes.add(idx);

@@ -787,6 +787,7 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 	
 	public void setWeight(int iComponent, double weight) {
 		weights.set(iComponent, weight);
+		buildSimpleView(); // TODO should only update the view at 'iComponent'
 	}
 	
 	
@@ -799,6 +800,7 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 		for (int i = 0; i < weights.size(); i++) {
 			weights.set(i, weight);
 		}
+		buildSimpleView();
 	}
 	
 	
@@ -964,6 +966,25 @@ public abstract class GaussianMixture extends Recorder implements Serializable {
 		}
 		des.weights.addAll(weights);
 		des.buildSimpleView();
+	}
+	
+	/**
+	 * Reset current single-variated gaussian mixtures with the given parameter values.
+	 * 
+	 * @param weights a list of double values
+	 * @param gausses a list of gaussian distributions
+	 * @param key     this unit
+	 * @param binding null by default
+	 * @return
+	 */
+	public boolean reset(List<Double> weights, List<GaussianDistribution> gausses, RuleUnit key, RuleType binding) {
+		assert(weights.size() == gausses.size());
+		this.clear(false);
+		this.binding = binding;
+		this.weights.addAll(weights);
+		this.gausses.put(key, gausses);
+		this.ncomponent = weights.size();
+		return buildSimpleView();
 	}
 	
 	/**

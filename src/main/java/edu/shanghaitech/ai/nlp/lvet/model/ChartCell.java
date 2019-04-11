@@ -688,7 +688,7 @@ public class ChartCell {
 							if (quantity) {
 								sb.append("\nid=" + detail.getKey() + ", " + name + "(nc)=" + detail.getValue().ncomponent());
 							} else {
-								sb.append("\nid=" + detail.getKey() + ", " + name + "=" + detail.getValue().toString(simple, nfirst));
+								sb.append("\nid=" + detail.getKey() + ", " + name + "=" + detail.getValue().toString(!simple, nfirst));
 							}
 						}
 						sb.append("\n");
